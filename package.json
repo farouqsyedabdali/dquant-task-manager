@@ -1,0 +1,20 @@
+{
+  "name": "dquant-task-manager",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/farouqsyedabdali/dquant-task-manager.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/farouqsyedabdali/dquant-task-manager/issues"
+  },
+  "homepage": "https://github.com/farouqsyedabdali/dquant-task-manager#readme",
+  "description": ""
+}
