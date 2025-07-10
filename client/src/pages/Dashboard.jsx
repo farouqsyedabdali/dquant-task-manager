@@ -3,11 +3,14 @@ import useTaskStore from '../stores/taskStore';
 import useAuthStore from '../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../utils/constants';
 import TaskCard from '../components/tasks/TaskCard';
+import TaskList from '../components/tasks/TaskList';
 import AddTaskModal from '../components/tasks/AddTaskModal';
 import TaskFilters from '../components/tasks/TaskFilters';
+import ViewSwitcher from '../components/tasks/ViewSwitcher';
 
 const Dashboard = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'list'
   const { tasks, fetchTasks, deleteTask, updateTaskStatus, updateTaskPriority, filters, setFilters, clearFilters, getFilteredTasks } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
 
@@ -51,11 +54,15 @@ const Dashboard = () => {
     }
   };
 
+  const handleViewChange = (newView) => {
+    setViewMode(newView);
+  };
+
   const filteredTasks = getFilteredTasks();
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center">
@@ -67,17 +74,23 @@ const Dashboard = () => {
                 {isAdmin() ? 'Manage all tasks and team assignments' : 'View and update your assigned tasks'}
               </p>
             </div>
-            {isAdmin() && (
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add New Task
-              </button>
-            )}
+            <div className="flex items-center space-x-4">
+              <ViewSwitcher 
+                currentView={viewMode} 
+                onViewChange={handleViewChange} 
+              />
+              {isAdmin() && (
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add New Task
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -140,9 +153,9 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Tasks Grid */}
+        {/* Tasks View */}
         <div className="bg-gray-800 rounded-lg shadow-lg p-6">
-          <div className="mb-6">
+          <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-white">
               {isAdmin() ? 'All Tasks' : 'My Tasks'} ({filteredTasks.length})
             </h2>
@@ -153,8 +166,8 @@ const Dashboard = () => {
               <div className="text-gray-400 text-lg mb-2">No tasks found</div>
               <p className="text-gray-500">Try adjusting your filters or create a new task.</p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          ) : viewMode === 'cards' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {filteredTasks.map((task) => (
                 <TaskCard
                   key={task.id}
@@ -165,6 +178,13 @@ const Dashboard = () => {
                 />
               ))}
             </div>
+          ) : (
+            <TaskList
+              tasks={filteredTasks}
+              onStatusChange={handleStatusChange}
+              onPriorityChange={handlePriorityChange}
+              onDelete={handleDelete}
+            />
           )}
         </div>
       </div>
