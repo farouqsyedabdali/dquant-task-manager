@@ -45,6 +45,14 @@ const CommentSection = ({ taskId }) => {
     }
   };
 
+  const handleCommentChange = (e) => {
+    const value = e.target.value;
+    // Limit to 200 characters
+    if (value.length <= 200) {
+      setNewComment(value);
+    }
+  };
+
   const handleDeleteComment = async (commentId) => {
     if (!isAdmin()) return;
     
@@ -92,12 +100,16 @@ const CommentSection = ({ taskId }) => {
         <div>
           <textarea
             value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
+            onChange={handleCommentChange}
             placeholder="Add a comment..."
             rows={3}
+            maxLength={200}
             className="textarea bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500"
             disabled={isLoading}
           />
+          <div className="text-xs text-gray-400 mt-1">
+            {newComment.length}/200 characters
+          </div>
         </div>
         <div className="flex justify-end">
           <button

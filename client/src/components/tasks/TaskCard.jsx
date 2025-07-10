@@ -66,8 +66,8 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
         onClick={handleCardClick}
       >
         {/* Task Header */}
-        <div className="flex justify-between items-start mb-3">
-          <h3 className="text-white font-medium text-lg truncate flex-1 mr-3">
+        <div className="mb-3">
+          <h3 className="text-white font-medium text-lg mb-2 line-clamp-2">
             {task.title}
           </h3>
           <div className="flex items-center space-x-2">
@@ -104,7 +104,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
             <div className="flex items-start space-x-2">
               <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></div>
               <div className="flex-1 min-w-0">
-                <p className="text-gray-300 text-sm truncate">
+                <p className="text-gray-300 text-sm line-clamp-2">
                   {lastUpdate.content}
                 </p>
                 <div className="flex items-center space-x-2 mt-1">

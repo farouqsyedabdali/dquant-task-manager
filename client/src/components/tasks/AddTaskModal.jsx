@@ -36,9 +36,18 @@ const AddTaskModal = ({ isOpen, onClose }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Apply character limits
+    let limitedValue = value;
+    if (name === 'title' && value.length > 50) {
+      limitedValue = value.slice(0, 50);
+    } else if (name === 'description' && value.length > 300) {
+      limitedValue = value.slice(0, 300);
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: limitedValue
     }));
     
     if (errors[name]) {
@@ -54,6 +63,12 @@ const AddTaskModal = ({ isOpen, onClose }) => {
     
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
+    } else if (formData.title.length > 50) {
+      newErrors.title = 'Title must be 50 characters or less';
+    }
+    
+    if (formData.description && formData.description.length > 300) {
+      newErrors.description = 'Description must be 300 characters or less';
     }
     
     setErrors(newErrors);
@@ -67,7 +82,13 @@ const AddTaskModal = ({ isOpen, onClose }) => {
       return;
     }
 
-    const result = await createTask(formData);
+    // Prepare the data for creation, converting empty string to null for assignedToId
+    const createData = {
+      ...formData,
+      assignedToId: formData.assignedToId ? parseInt(formData.assignedToId) : null
+    };
+
+    const result = await createTask(createData);
     if (result.success) {
       setFormData({
         title: '',
@@ -114,13 +135,14 @@ const AddTaskModal = ({ isOpen, onClose }) => {
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Title *
+              Title * ({formData.title.length}/50)
             </label>
             <input
               type="text"
               name="title"
               value={formData.title}
               onChange={handleChange}
+              maxLength={50}
               className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.title ? 'border-red-500' : ''}`}
               placeholder="Enter task title"
             />
@@ -132,16 +154,20 @@ const AddTaskModal = ({ isOpen, onClose }) => {
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Description
+              Description ({formData.description.length}/300)
             </label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
+              maxLength={300}
               rows={4}
               className="textarea bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500"
               placeholder="Enter task description"
             />
+            {errors.description && (
+              <p className="text-red-400 text-sm mt-1">{errors.description}</p>
+            )}
           </div>
 
           {/* Priority */}
