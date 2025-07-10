@@ -19,8 +19,8 @@ function App() {
 
   return (
     <Router>
-      <div className="App">
-      <Routes>
+      <div className="App bg-gray-900 min-h-screen">
+        <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           
@@ -29,7 +29,7 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen bg-gray-50">
+                <div className="min-h-screen bg-gray-900">
                   <Header />
                   <Dashboard />
                 </div>
@@ -41,7 +41,7 @@ function App() {
             path="/admin"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
-                <div className="min-h-screen bg-gray-50">
+                <div className="min-h-screen bg-gray-900">
                   <Header />
                   <Dashboard />
                 </div>
@@ -53,7 +53,7 @@ function App() {
             path="/employee"
             element={
               <ProtectedRoute allowedRoles={['EMPLOYEE']}>
-                <div className="min-h-screen bg-gray-50">
+                <div className="min-h-screen bg-gray-900">
                   <Header />
                   <Dashboard />
                 </div>
@@ -64,7 +64,7 @@ function App() {
           {/* Default redirect */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+        </Routes>
       </div>
     </Router>
   );

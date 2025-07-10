@@ -41,7 +41,6 @@ const AddTaskModal = ({ isOpen, onClose }) => {
       [name]: value
     }));
     
-    // Clear field error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -70,7 +69,6 @@ const AddTaskModal = ({ isOpen, onClose }) => {
 
     const result = await createTask(formData);
     if (result.success) {
-      // Reset form
       setFormData({
         title: '',
         description: '',
@@ -97,15 +95,15 @@ const AddTaskModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-2xl">
+      <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-gray-900">
+          <h3 className="text-2xl font-bold text-white">
             Create New Task
           </h3>
           <button
             onClick={handleClose}
-            className="btn btn-ghost btn-sm btn-circle"
+            className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
           >
             ✕
           </button>
@@ -115,7 +113,7 @@ const AddTaskModal = ({ isOpen, onClose }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Title *
             </label>
             <input
@@ -123,17 +121,17 @@ const AddTaskModal = ({ isOpen, onClose }) => {
               name="title"
               value={formData.title}
               onChange={handleChange}
-              className={`input input-bordered w-full ${errors.title ? 'input-error' : ''}`}
+              className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.title ? 'border-red-500' : ''}`}
               placeholder="Enter task title"
             />
             {errors.title && (
-              <p className="text-error text-sm mt-1">{errors.title}</p>
+              <p className="text-red-400 text-sm mt-1">{errors.title}</p>
             )}
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Description
             </label>
             <textarea
@@ -141,21 +139,21 @@ const AddTaskModal = ({ isOpen, onClose }) => {
               value={formData.description}
               onChange={handleChange}
               rows={4}
-              className="textarea textarea-bordered w-full"
+              className="textarea bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500"
               placeholder="Enter task description"
             />
           </div>
 
           {/* Priority */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Priority
             </label>
             <select
               name="priority"
               value={formData.priority}
               onChange={handleChange}
-              className="select select-bordered w-full"
+              className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
             >
               {PRIORITY_OPTIONS.map(({ value, label }) => (
                 <option key={value} value={value}>{label}</option>
@@ -165,14 +163,14 @@ const AddTaskModal = ({ isOpen, onClose }) => {
 
           {/* Assign To */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Assign To
             </label>
             <select
               name="assignedToId"
               value={formData.assignedToId}
               onChange={handleChange}
-              className="select select-bordered w-full"
+              className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
               disabled={isLoadingUsers}
             >
               <option value="">Select an employee</option>
@@ -186,7 +184,7 @@ const AddTaskModal = ({ isOpen, onClose }) => {
               }
             </select>
             {isLoadingUsers && (
-              <p className="text-sm text-gray-500 mt-1">Loading employees...</p>
+              <p className="text-sm text-gray-400 mt-1">Loading employees...</p>
             )}
           </div>
 
@@ -195,14 +193,14 @@ const AddTaskModal = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={handleClose}
-              className="btn btn-outline"
+              className="btn bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="btn btn-primary"
+              className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
             >
               {isLoading ? (
                 <>
@@ -216,9 +214,6 @@ const AddTaskModal = ({ isOpen, onClose }) => {
           </div>
         </form>
       </div>
-      
-      {/* Backdrop */}
-      <div className="modal-backdrop" onClick={handleClose}></div>
     </div>
   );
 };

@@ -68,22 +68,22 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8">
-        <div className="bg-white rounded-lg shadow-xl p-8">
+        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            <h2 className="text-3xl font-bold text-white mb-2">
               Welcome Back
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-400">
               Sign in to your account to continue
             </p>
           </div>
 
           {/* Error Alert */}
           {error && (
-            <div className="alert alert-error mb-6">
+            <div className="alert bg-red-900 border-red-700 text-red-200 mb-6">
               <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -94,7 +94,7 @@ const Login = () => {
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
                 Email Address
               </label>
               <input
@@ -105,16 +105,16 @@ const Login = () => {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className={`input input-bordered w-full ${errors.email ? 'input-error' : ''}`}
+                className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.email ? 'border-red-500' : ''}`}
                 placeholder="Enter your email"
               />
               {errors.email && (
-                <p className="text-error text-sm mt-1">{errors.email}</p>
+                <p className="text-red-400 text-sm mt-1">{errors.email}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
                 Password
               </label>
               <input
@@ -125,18 +125,18 @@ const Login = () => {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className={`input input-bordered w-full ${errors.password ? 'input-error' : ''}`}
+                className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.password ? 'border-red-500' : ''}`}
                 placeholder="Enter your password"
               />
               {errors.password && (
-                <p className="text-error text-sm mt-1">{errors.password}</p>
+                <p className="text-red-400 text-sm mt-1">{errors.password}</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="btn btn-primary w-full"
+              className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 w-full"
             >
               {isLoading ? (
                 <>
@@ -150,9 +150,9 @@ const Login = () => {
           </form>
 
           {/* Demo Credentials */}
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Demo Credentials:</h3>
-            <div className="text-xs text-gray-600 space-y-1">
+          <div className="mt-8 p-4 bg-gray-700 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-300 mb-2">Demo Credentials:</h3>
+            <div className="text-xs text-gray-400 space-y-1">
               <p><strong>Admin:</strong> admin@dquant.com / admin123</p>
               <p><strong>Employee:</strong> john@dquant.com / employee123</p>
             </div>

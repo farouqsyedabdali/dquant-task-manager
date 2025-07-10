@@ -1,0 +1,103 @@
+/* Custom CSS for dark theme */
+:root {
+  --background: #1a1a1a;
+  --surface: #2a2a2a;
+  --primary: #6366f1;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --border: #3f3f46;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.App {
+  background-color: var(--background);
+  min-height: 100vh;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Task card hover effects */
+.task-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Status badges */
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-todo {
+  background-color: #374151;
+  color: #d1d5db;
+}
+
+.status-in-progress {
+  background-color: #1e40af;
+  color: #93c5fd;
+}
+
+.status-completed {
+  background-color: #059669;
+  color: #6ee7b7;
+}
+
+/* Priority indicators */
+.priority-urgent {
+  background-color: #dc2626;
+  color: #fecaca;
+}
+
+.priority-high {
+  background-color: #ea580c;
+  color: #fed7aa;
+}
+
+.priority-medium {
+  background-color: #d97706;
+  color: #fed7aa;
+}
+
+.priority-low {
+  background-color: #059669;
+  color: #6ee7b7;
+}

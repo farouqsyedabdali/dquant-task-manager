@@ -77,11 +77,9 @@ const CommentSection = ({ taskId }) => {
 
   return (
     <div className="space-y-4">
-      <h4 className="text-lg font-semibold text-gray-900">Comments</h4>
-
       {/* Error Alert */}
       {error && (
-        <div className="alert alert-error">
+        <div className="alert bg-red-900 border-red-700 text-red-200">
           <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -97,7 +95,7 @@ const CommentSection = ({ taskId }) => {
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Add a comment..."
             rows={3}
-            className="textarea textarea-bordered w-full"
+            className="textarea bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500"
             disabled={isLoading}
           />
         </div>
@@ -105,7 +103,7 @@ const CommentSection = ({ taskId }) => {
           <button
             type="submit"
             disabled={isLoading || !newComment.trim()}
-            className="btn btn-primary btn-sm"
+            className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 btn-sm"
           >
             {isLoading ? (
               <>
@@ -126,25 +124,25 @@ const CommentSection = ({ taskId }) => {
             <span className="loading loading-spinner loading-md"></span>
           </div>
         ) : comments.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-gray-400">
             <p>No comments yet</p>
             <p className="text-sm">Be the first to add a comment!</p>
           </div>
         ) : (
           comments.map((comment) => (
-            <div key={comment.id} className="bg-gray-50 rounded-lg p-4">
+            <div key={comment.id} className="bg-gray-700 border border-gray-600 rounded-lg p-4">
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center space-x-2">
                   <div className="avatar placeholder">
-                    <div className="bg-primary text-primary-content rounded-full w-6">
+                    <div className="bg-indigo-600 text-white rounded-full w-6">
                       <span className="text-xs">{comment.author.name.charAt(0)}</span>
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-white">
                       {comment.author.name}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-400">
                       {formatDate(comment.createdAt)}
                     </p>
                   </div>
@@ -152,14 +150,14 @@ const CommentSection = ({ taskId }) => {
                 {isAdmin() && (
                   <button
                     onClick={() => handleDeleteComment(comment.id)}
-                    className="btn btn-ghost btn-xs text-error"
+                    className="btn btn-ghost btn-xs text-red-400 hover:text-red-300"
                     title="Delete comment"
                   >
                     🗑️
                   </button>
                 )}
               </div>
-              <p className="text-gray-700 whitespace-pre-wrap">
+              <p className="text-gray-300 whitespace-pre-wrap">
                 {comment.content}
               </p>
             </div>
