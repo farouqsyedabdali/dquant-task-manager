@@ -1,18 +1,73 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom"
-import Login from "./pages/Login"
-import AdminDashboard from "./pages/AdminDashboard"
-import EmployeeDashboard from "./pages/EmployeeDashboard"
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import useAuthStore from './context/authStore';
+import ProtectedRoute from './layouts/ProtectedRoute';
+import Header from './components/layout/Header';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import './App.css';
 
 function App() {
+  const { getMe, isAuthenticated } = useAuthStore();
+
+  useEffect(() => {
+    // Check if user is authenticated and get user info
+    if (isAuthenticated()) {
+      getMe();
+    }
+  }, [getMe, isAuthenticated]);
+
   return (
-    <BrowserRouter>
+    <Router>
+      <div className="App">
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/employee" element={<EmployeeDashboard />} />
+          {/* Public Routes */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen bg-gray-50">
+                  <Header />
+                  <Dashboard />
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <div className="min-h-screen bg-gray-50">
+                  <Header />
+                  <Dashboard />
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/employee"
+            element={
+              <ProtectedRoute allowedRoles={['EMPLOYEE']}>
+                <div className="min-h-screen bg-gray-50">
+                  <Header />
+                  <Dashboard />
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-    </BrowserRouter>
-  )
+      </div>
+    </Router>
+  );
 }
 
-export default App
+export default App;
