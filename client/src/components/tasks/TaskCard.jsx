@@ -49,12 +49,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
         time: new Date(lastComment.createdAt).toLocaleDateString()
       };
     }
-    return {
-      type: 'status',
-      content: `Status changed to ${STATUS_LABELS[task.status]}`,
-      author: task.createdBy.name,
-      time: new Date(task.updatedAt).toLocaleDateString()
-    };
+    return null;
   };
 
   const lastUpdate = getLastUpdate();
@@ -100,21 +95,34 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
           </div>
 
           {/* Last Update */}
-          <div className="border-t border-gray-700 pt-3">
-            <div className="flex items-start space-x-2">
-              <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-gray-300 text-sm line-clamp-2">
-                  {lastUpdate.content}
-                </p>
-                <div className="flex items-center space-x-2 mt-1">
-                  <span className="text-gray-500 text-xs">{lastUpdate.author}</span>
-                  <span className="text-gray-500 text-xs">•</span>
-                  <span className="text-gray-500 text-xs">{lastUpdate.time}</span>
+          {lastUpdate ? (
+            <div className="border-t border-gray-700 pt-3">
+              <div className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-gray-300 text-sm line-clamp-2">
+                    {lastUpdate.content}
+                  </p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className="text-gray-500 text-xs">{lastUpdate.author}</span>
+                    <span className="text-gray-500 text-xs">•</span>
+                    <span className="text-gray-500 text-xs">{lastUpdate.time}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="border-t border-gray-700 pt-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-gray-500 rounded-full flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-gray-500 text-sm">
+                    No recent updates
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Quick Actions */}

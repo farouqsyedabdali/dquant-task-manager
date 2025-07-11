@@ -217,6 +217,19 @@ const updateTask = async (req, res) => {
             id: true,
             name: true
           }
+        },
+        comments: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
         }
       }
     });
@@ -290,6 +303,19 @@ const updateTaskStatus = async (req, res) => {
             id: true,
             name: true
           }
+        },
+        comments: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
         }
       }
     });
@@ -334,6 +360,19 @@ const updateTaskPriority = async (req, res) => {
           select: {
             id: true,
             name: true
+          }
+        },
+        comments: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
           }
         }
       }

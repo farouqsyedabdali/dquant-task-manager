@@ -10,7 +10,10 @@ import ViewSwitcher from '../components/tasks/ViewSwitcher';
 
 const Dashboard = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'list'
+  const [viewMode, setViewMode] = useState(() => {
+    // Get view mode from localStorage, default to 'cards'
+    return localStorage.getItem('taskViewMode') || 'cards';
+  });
   const { tasks, fetchTasks, deleteTask, updateTaskStatus, updateTaskPriority, filters, setFilters, clearFilters, getFilteredTasks } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
 
@@ -56,6 +59,8 @@ const Dashboard = () => {
 
   const handleViewChange = (newView) => {
     setViewMode(newView);
+    // Save view mode to localStorage
+    localStorage.setItem('taskViewMode', newView);
   };
 
   const filteredTasks = getFilteredTasks();
@@ -118,31 +123,7 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Priority Alerts */}
-        {(stats.urgent > 0 || stats.high > 0) && (
-          <div className="mb-8 space-y-3">
-            {stats.urgent > 0 && (
-              <div className="alert bg-red-900 border-red-700 text-red-200">
-                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <span>
-                  <strong>{stats.urgent}</strong> urgent task{stats.urgent !== 1 ? 's' : ''} require{stats.urgent !== 1 ? '' : 's'} immediate attention
-                </span>
-              </div>
-            )}
-            {stats.high > 0 && (
-              <div className="alert bg-orange-900 border-orange-700 text-orange-200">
-                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <span>
-                  <strong>{stats.high}</strong> high priority task{stats.high !== 1 ? 's' : ''} need{stats.high !== 1 ? '' : 's'} attention
-                </span>
-              </div>
-            )}
-          </div>
-        )}
+        
 
         {/* Filters */}
         <div className="mb-6">
