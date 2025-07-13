@@ -57,7 +57,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
   return (
     <>
       <div 
-        className="task-card bg-gray-800 border border-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-750 transition-all duration-200"
+        className="task-card bg-gray-800 border border-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-900 transition-all duration-200"
         onClick={handleCardClick}
       >
         {/* Task Header */}

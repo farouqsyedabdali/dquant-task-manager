@@ -30,24 +30,6 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex space-x-8">
-            <button
-              onClick={() => handleNavigation('/dashboard')}
-              className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Dashboard
-            </button>
-            {isAdmin() && (
-              <button
-                onClick={() => handleNavigation('/admin')}
-                className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Admin Panel
-              </button>
-            )}
-          </nav>
-
           {/* User Menu */}
           <div className="flex items-center space-x-4">
             {/* User Info */}
@@ -89,20 +71,6 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-gray-700">
-              <button
-                onClick={() => handleNavigation('/dashboard')}
-                className="text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors"
-              >
-                Dashboard
-              </button>
-              {isAdmin() && (
-                <button
-                  onClick={() => handleNavigation('/admin')}
-                  className="text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors"
-                >
-                  Admin Panel
-                </button>
-              )}
               <div className="border-t border-gray-700 pt-4 mt-4">
                 <div className="flex items-center space-x-3 px-3 py-2">
                   <div className="avatar placeholder">

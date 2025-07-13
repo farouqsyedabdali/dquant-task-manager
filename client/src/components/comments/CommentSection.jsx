@@ -104,7 +104,7 @@ const CommentSection = ({ taskId }) => {
             placeholder="Add a comment..."
             rows={3}
             maxLength={200}
-            className="textarea bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500"
+            className="textarea bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 rounded-lg"
             disabled={isLoading}
           />
           <div className="text-xs text-gray-400 mt-1">

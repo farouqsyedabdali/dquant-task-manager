@@ -199,7 +199,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                     onChange={handleChange}
                     maxLength={300}
                     rows={4}
-                    className="textarea bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500"
+                    className="textarea bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full rounded-lg focus:border-indigo-500 focus:ring-indigo-500"
                     placeholder="Enter task description"
                   />
                   <div className="text-xs text-gray-400 mt-1">
@@ -243,14 +243,6 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(task.status)}`}>
                     {STATUS_LABELS[task.status]}
                   </span>
-                  {isAdmin() && (
-                    <button
-                      onClick={() => onStatusChange(task.id, task.status === 'TODO' ? 'IN_PROGRESS' : task.status === 'IN_PROGRESS' ? 'COMPLETED' : 'TODO')}
-                      className="btn btn-xs bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-                    >
-                      Change
-                    </button>
-                  )}
                 </div>
               )}
             </div>
@@ -274,14 +266,6 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(task.priority)}`}>
                     {PRIORITY_LABELS[task.priority]}
                   </span>
-                  {isAdmin() && (
-                    <button
-                      onClick={() => onPriorityChange(task.id, task.priority === 'LOW' ? 'MEDIUM' : task.priority === 'MEDIUM' ? 'HIGH' : task.priority === 'HIGH' ? 'URGENT' : 'LOW')}
-                      className="btn btn-xs bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-                    >
-                      Change
-                    </button>
-                  )}
                 </div>
               )}
             </div>
