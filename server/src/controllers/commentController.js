@@ -8,11 +8,18 @@ const getComments = async (req, res) => {
     const { taskId } = req.params;
     const userId = req.user.id;
     const userRole = req.user.role;
+    const companyId = req.user.companyId;
 
     // Check if user has access to this task
-    let whereClause = { id: parseInt(taskId) };
+    let whereClause = { 
+      id: parseInt(taskId),
+      companyId: companyId
+    };
     if (userRole === 'EMPLOYEE') {
-      whereClause.assignedToId = userId;
+      whereClause.OR = [
+        { assigneeId: userId },
+        { assignerId: userId }
+      ];
     }
 
     const task = await prisma.task.findFirst({
@@ -24,7 +31,10 @@ const getComments = async (req, res) => {
     }
 
     const comments = await prisma.comment.findMany({
-      where: { taskId: parseInt(taskId) },
+      where: { 
+        taskId: parseInt(taskId),
+        companyId: companyId
+      },
       include: {
         author: {
           select: {
@@ -52,15 +62,22 @@ const createComment = async (req, res) => {
     const { content } = req.body;
     const authorId = req.user.id;
     const userRole = req.user.role;
+    const companyId = req.user.companyId;
 
     if (!content) {
       return res.status(400).json({ error: 'Comment content is required' });
     }
 
     // Check if user has access to this task
-    let whereClause = { id: parseInt(taskId) };
+    let whereClause = { 
+      id: parseInt(taskId),
+      companyId: companyId
+    };
     if (userRole === 'EMPLOYEE') {
-      whereClause.assignedToId = authorId;
+      whereClause.OR = [
+        { assigneeId: authorId },
+        { assignerId: authorId }
+      ];
     }
 
     const task = await prisma.task.findFirst({
@@ -75,7 +92,8 @@ const createComment = async (req, res) => {
       data: {
         content,
         taskId: parseInt(taskId),
-        authorId
+        authorId,
+        companyId
       },
       include: {
         author: {
@@ -99,13 +117,17 @@ const updateComment = async (req, res) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
+    const companyId = req.user.companyId;
 
     if (!content) {
       return res.status(400).json({ error: 'Comment content is required' });
     }
 
-    const comment = await prisma.comment.findUnique({
-      where: { id: parseInt(id) }
+    const comment = await prisma.comment.findFirst({
+      where: { 
+        id: parseInt(id),
+        companyId: companyId
+      }
     });
 
     if (!comment) {
@@ -136,9 +158,13 @@ const updateComment = async (req, res) => {
 const deleteComment = async (req, res) => {
   try {
     const { id } = req.params;
+    const companyId = req.user.companyId;
 
-    const comment = await prisma.comment.findUnique({
-      where: { id: parseInt(id) }
+    const comment = await prisma.comment.findFirst({
+      where: { 
+        id: parseInt(id),
+        companyId: companyId
+      }
     });
 
     if (!comment) {

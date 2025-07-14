@@ -14,11 +14,8 @@ const auth = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true
+      include: {
+        company: true
       }
     });
 
@@ -26,7 +23,9 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid token.' });
     }
 
+    // Add company context to request
     req.user = user;
+    req.companyId = user.companyId;
     next();
   } catch (error) {
     res.status(401).json({ error: 'Invalid token.' });

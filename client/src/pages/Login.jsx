@@ -1,23 +1,33 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    companyEmail: ''
   });
   const [errors, setErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
   
   const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (isAuthenticated()) {
       navigate('/dashboard');
     }
     clearError();
-  }, [isAuthenticated, navigate, clearError]);
+    
+    // Check for success message from signup
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      // Clear the message from location state
+      navigate(location.pathname, { replace: true });
+    }
+  }, [isAuthenticated, navigate, clearError, location]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -91,11 +101,38 @@ const Login = () => {
             </div>
           )}
 
+          {/* Success Alert */}
+          {successMessage && (
+            <div className="alert bg-green-900 border-green-700 text-green-200 mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{successMessage}</span>
+            </div>
+          )}
+
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
+              <label htmlFor="companyEmail" className="block text-sm font-medium text-gray-300 mb-2">
+                Company Email (Optional)
+              </label>
+              <input
+                id="companyEmail"
+                name="companyEmail"
+                type="email"
+                autoComplete="email"
+                value={formData.companyEmail}
+                onChange={handleChange}
+                className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500`}
+                placeholder="company@example.com (optional)"
+              />
+              <p className="text-gray-500 text-xs mt-1">Leave empty if you're not sure</p>
+            </div>
+
+            <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Email Address
+                Your Email Address
               </label>
               <input
                 id="email"
@@ -156,6 +193,16 @@ const Login = () => {
               <p><strong>Admin:</strong> admin@dquant.com / admin123</p>
               <p><strong>Employee:</strong> john@dquant.com / employee123</p>
             </div>
+          </div>
+
+          {/* Signup Link */}
+          <div className="mt-6 text-center">
+            <p className="text-gray-400">
+              Don't have a company account?{' '}
+              <Link to="/signup" className="text-indigo-400 hover:text-indigo-300 font-medium">
+                Create your company
+              </Link>
+            </p>
           </div>
         </div>
       </div>

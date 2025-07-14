@@ -2,10 +2,12 @@ import { useState } from 'react';
 import useAuthStore from '../../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
 import TaskModal from './TaskModal';
+import AddSubtaskModal from './AddSubtaskModal';
 
 const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { isAdmin } = useAuthStore();
+  const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
+  const { user, isAdmin } = useAuthStore();
 
   const handleCardClick = () => {
     setIsModalOpen(true);
@@ -80,19 +82,35 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
           {/* Assigned To */}
           <div className="flex items-center space-x-2">
             <span className="text-gray-400 text-sm">Assigned to:</span>
-            {task.assignedTo ? (
+            {task.assignee ? (
               <div className="flex items-center space-x-2">
                 <div className="avatar placeholder">
                   <div className="bg-indigo-600 text-white rounded-full w-6">
-                    <span className="text-xs">{task.assignedTo.name.charAt(0)}</span>
+                    <span className="text-xs">{task.assignee.name.charAt(0)}</span>
                   </div>
                 </div>
-                <span className="text-white text-sm">{task.assignedTo.name}</span>
+                <span className="text-white text-sm">{task.assignee.name}</span>
               </div>
             ) : (
               <span className="text-gray-500 text-sm">Unassigned</span>
             )}
           </div>
+
+          {/* Parent Task Info */}
+          {task.parentTask && (
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-400 text-sm">Parent:</span>
+              <span className="text-indigo-400 text-sm">{task.parentTask.title}</span>
+            </div>
+          )}
+
+          {/* Subtasks Count */}
+          {task.subtasks && task.subtasks.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-400 text-sm">Subtasks:</span>
+              <span className="text-white text-sm">{task.subtasks.length}</span>
+            </div>
+          )}
 
           {/* Last Update */}
           {lastUpdate ? (
@@ -129,7 +147,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-700">
           <div className="flex items-center space-x-2">
             <span className="text-gray-400 text-xs">
-              Created by {task.createdBy.name}
+              Created by {task.assigner.name}
             </span>
           </div>
           <div className="flex items-center space-x-2">
@@ -138,6 +156,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
                 💬 {task.comments.length}
               </span>
             )}
+            
           </div>
         </div>
       </div>
@@ -151,6 +170,15 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
           onStatusChange={onStatusChange}
           onPriorityChange={onPriorityChange}
           onDelete={onDelete}
+        />
+      )}
+
+      {/* Subtask Modal */}
+      {isSubtaskModalOpen && (
+        <AddSubtaskModal
+          isOpen={isSubtaskModalOpen}
+          onClose={() => setIsSubtaskModalOpen(false)}
+          parentTask={task}
         />
       )}
     </>

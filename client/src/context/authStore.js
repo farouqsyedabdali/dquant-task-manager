@@ -25,6 +25,32 @@ const useAuthStore = create((set, get) => ({
     }
   },
 
+  registerCompany: async (companyData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authAPI.registerCompany(companyData);
+      set({ isLoading: false });
+      return { success: true, data: response.data };
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Company registration failed';
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  deleteCompany: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authAPI.deleteCompany();
+      set({ isLoading: false });
+      return { success: true, data: response.data };
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Company deletion failed';
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage };
+    }
+  },
+
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');

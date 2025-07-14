@@ -3,6 +3,7 @@ const {
   getTasks,
   getTask,
   createTask,
+  createSubtask,
   updateTask,
   deleteTask,
   updateTaskStatus,
@@ -22,19 +23,22 @@ router.get('/', getTasks);
 // Get single task
 router.get('/:id', getTask);
 
-// Create task (admin only)
-router.post('/', adminOnly, createTask);
+// Create task (anyone can create tasks)
+router.post('/', createTask);
 
-// Update task (admin: full update, employee: status only)
+// Create subtask (assignee can create subtasks from tasks assigned to them)
+router.post('/:id/subtasks', createSubtask);
+
+// Update task (assigner can edit, assignee can only change status)
 router.put('/:id', updateTask);
 
-// Delete task (admin only)
-router.delete('/:id', adminOnly, deleteTask);
+// Delete task (admin or assigner can delete)
+router.delete('/:id', deleteTask);
 
-// Update task status (employee)
+// Update task status (assigner or assignee can update)
 router.patch('/:id/status', updateTaskStatus);
 
-// Update task priority (admin only)
-router.patch('/:id/priority', adminOnly, updateTaskPriority);
+// Update task priority (admin or assigner can update)
+router.patch('/:id/priority', updateTaskPriority);
 
 module.exports = router; 

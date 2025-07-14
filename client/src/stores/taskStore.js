@@ -26,6 +26,20 @@ const useTaskStore = create((set, get) => ({
     }
   },
 
+  // Get tasks by type
+  fetchTasksByType: async (type = 'all', filters = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await tasksAPI.getAll({ ...filters, type });
+      set({ tasks: response.data, isLoading: false });
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Failed to fetch tasks';
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage };
+    }
+  },
+
   // Get single task
   fetchTask: async (id) => {
     set({ isLoading: true, error: null });
@@ -53,6 +67,28 @@ const useTaskStore = create((set, get) => ({
       return { success: true, data: newTask };
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Failed to create task';
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  // Create subtask
+  createSubtask: async (parentTaskId, taskData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await tasksAPI.createSubtask(parentTaskId, taskData);
+      const newSubtask = response.data;
+      set(state => ({
+        tasks: state.tasks.map(task => 
+          task.id === parseInt(parentTaskId) 
+            ? { ...task, subtasks: [...(task.subtasks || []), newSubtask] }
+            : task
+        ),
+        isLoading: false
+      }));
+      return { success: true, data: newSubtask };
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Failed to create subtask';
       set({ error: errorMessage, isLoading: false });
       return { success: false, error: errorMessage };
     }

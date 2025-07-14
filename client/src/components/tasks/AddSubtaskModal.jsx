@@ -3,7 +3,7 @@ import useTaskStore from '../../stores/taskStore';
 import { PRIORITY_OPTIONS } from '../../utils/constants';
 import { usersAPI } from '../../services/api';
 
-const AddTaskModal = ({ isOpen, onClose }) => {
+const AddSubtaskModal = ({ isOpen, onClose, parentTask }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -14,7 +14,7 @@ const AddTaskModal = ({ isOpen, onClose }) => {
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
-  const { createTask, isLoading } = useTaskStore();
+  const { createSubtask, isLoading } = useTaskStore();
 
   useEffect(() => {
     if (isOpen) {
@@ -92,7 +92,7 @@ const AddTaskModal = ({ isOpen, onClose }) => {
       assigneeId: parseInt(formData.assigneeId)
     };
 
-    const result = await createTask(createData);
+    const result = await createSubtask(parentTask.id, createData);
     if (result.success) {
       setFormData({
         title: '',
@@ -123,9 +123,14 @@ const AddTaskModal = ({ isOpen, onClose }) => {
       <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-white">
-            Create New Task
-          </h3>
+          <div>
+            <h3 className="text-2xl font-bold text-white">
+              Create Subtask
+            </h3>
+            <p className="text-gray-400 text-sm mt-1">
+              Creating subtask for: <span className="text-white font-medium">{parentTask?.title}</span>
+            </p>
+          </div>
           <button
             onClick={handleClose}
             className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
@@ -148,7 +153,7 @@ const AddTaskModal = ({ isOpen, onClose }) => {
               onChange={handleChange}
               maxLength={50}
               className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.title ? 'border-red-500' : ''}`}
-              placeholder="Enter task title"
+              placeholder="Enter subtask title"
             />
             {errors.title && (
               <p className="text-red-400 text-sm mt-1">{errors.title}</p>
@@ -167,7 +172,7 @@ const AddTaskModal = ({ isOpen, onClose }) => {
               maxLength={300}
               rows={4}
               className="textarea bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500"
-              placeholder="Enter task description"
+              placeholder="Enter subtask description"
             />
             {errors.description && (
               <p className="text-red-400 text-sm mt-1">{errors.description}</p>
@@ -238,7 +243,7 @@ const AddTaskModal = ({ isOpen, onClose }) => {
                   Creating...
                 </>
               ) : (
-                'Create Task'
+                'Create Subtask'
               )}
             </button>
           </div>
@@ -248,4 +253,4 @@ const AddTaskModal = ({ isOpen, onClose }) => {
   );
 };
 
-export default AddTaskModal; 
+export default AddSubtaskModal; 

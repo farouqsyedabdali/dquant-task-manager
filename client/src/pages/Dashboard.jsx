@@ -14,12 +14,17 @@ const Dashboard = () => {
     // Get view mode from localStorage, default to 'cards'
     return localStorage.getItem('taskViewMode') || 'cards';
   });
-  const { tasks, fetchTasks, deleteTask, updateTaskStatus, updateTaskPriority, filters, setFilters, clearFilters, getFilteredTasks } = useTaskStore();
+  const [taskType, setTaskType] = useState('all');
+  const { tasks, fetchTasks, fetchTasksByType, deleteTask, updateTaskStatus, updateTaskPriority, filters, setFilters, clearFilters, getFilteredTasks } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    if (taskType === 'all') {
+      fetchTasks();
+    } else {
+      fetchTasksByType(taskType);
+    }
+  }, [fetchTasks, fetchTasksByType, taskType]);
 
   // Calculate statistics
   const stats = {
@@ -80,21 +85,34 @@ const Dashboard = () => {
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              {/* Task Type Selector */}
+              <div className="flex items-center space-x-2">
+                <label className="text-gray-300 text-sm">View:</label>
+                <select
+                  value={taskType}
+                  onChange={(e) => setTaskType(e.target.value)}
+                  className="select select-sm bg-gray-700 border-gray-600 text-white"
+                >
+                  <option value="all">All Tasks</option>
+                  <option value="assigned-to-me">Assigned to Me</option>
+                  <option value="created-by-me">Created by Me</option>
+                </select>
+              </div>
+              
               <ViewSwitcher 
                 currentView={viewMode} 
                 onViewChange={handleViewChange} 
               />
-              {isAdmin() && (
-                <button
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Add New Task
-                </button>
-              )}
+              
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add New Task
+              </button>
             </div>
           </div>
         </div>
@@ -138,7 +156,9 @@ const Dashboard = () => {
         <div className="bg-gray-800 rounded-lg shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-white">
-              {isAdmin() ? 'All Tasks' : 'My Tasks'} ({filteredTasks.length})
+              {taskType === 'all' ? 'All Tasks' : 
+               taskType === 'assigned-to-me' ? 'Tasks Assigned to Me' : 
+               'Tasks Created by Me'} ({filteredTasks.length})
             </h2>
           </div>
           

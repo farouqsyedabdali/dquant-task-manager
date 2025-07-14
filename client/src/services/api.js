@@ -40,6 +40,8 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
+  registerCompany: (companyData) => api.post('/auth/register-company', companyData),
+  deleteCompany: () => api.delete('/auth/company'),
   getMe: () => api.get('/auth/me'),
 };
 
@@ -48,6 +50,7 @@ export const tasksAPI = {
   getAll: (params = {}) => api.get('/tasks', { params }),
   getById: (id) => api.get(`/tasks/${id}`),
   create: (taskData) => api.post('/tasks', taskData),
+  createSubtask: (parentTaskId, taskData) => api.post(`/tasks/${parentTaskId}/subtasks`, taskData),
   update: (id, taskData) => api.put(`/tasks/${id}`, taskData),
   delete: (id) => api.delete(`/tasks/${id}`),
   updateStatus: (id, status) => api.patch(`/tasks/${id}/status`, { status }),
@@ -65,7 +68,10 @@ export const commentsAPI = {
 // Users API (for admin)
 export const usersAPI = {
   getAll: () => api.get('/users'),
+  getEmployees: () => api.get('/users/employees'),
   getById: (id) => api.get(`/users/${id}`),
+  createEmployee: (employeeData) => api.post('/users', employeeData),
+  deleteEmployee: (id) => api.delete(`/users/${id}`),
 };
 
 export default api;

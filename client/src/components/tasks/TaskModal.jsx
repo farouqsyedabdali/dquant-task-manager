@@ -3,6 +3,7 @@ import useTaskStore from '../../stores/taskStore';
 import useAuthStore from '../../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
 import CommentSection from '../comments/CommentSection';
+import AddSubtaskModal from './AddSubtaskModal';
 
 const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, onDelete }) => {
   const [formData, setFormData] = useState({
@@ -10,10 +11,11 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
     description: '',
     status: 'TODO',
     priority: 'MEDIUM',
-    assignedToId: ''
+    assigneeId: ''
   });
   const [isEditing, setIsEditing] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
 
   const { updateTask, isLoading } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
@@ -25,7 +27,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
         description: task.description || '',
         status: task.status || 'TODO',
         priority: task.priority || 'MEDIUM',
-        assignedToId: task.assignedToId?.toString() || ''
+        assigneeId: task.assigneeId?.toString() || ''
       });
     }
   }, [task]);
@@ -78,10 +80,10 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
       return;
     }
 
-    // Prepare the data for update, converting empty string to null for assignedToId
+    // Prepare the data for update
     const updateData = {
       ...formData,
-      assignedToId: formData.assignedToId ? parseInt(formData.assignedToId) : null
+      assigneeId: parseInt(formData.assigneeId)
     };
 
     const result = await updateTask(task.id, updateData);
@@ -154,13 +156,14 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
               </h3>
             )}
             <div className="flex items-center space-x-4 text-sm text-gray-400">
-              <span>Created by {task.createdBy?.name}</span>
+              <span>Created by {task.assigner?.name}</span>
               <span>•</span>
               <span>{new Date(task.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            {isAdmin() && (
+            {/* Check permissions for editing */}
+            {(isAdmin() || task.assignerId === user?.id) && (
               <button
                 onClick={() => setIsEditing(!isEditing)}
                 className="btn btn-sm bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
@@ -168,7 +171,8 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                 {isEditing ? 'Cancel' : 'Edit'}
               </button>
             )}
-            {isAdmin() && (
+            {/* Check permissions for deleting */}
+            {(isAdmin() || task.assignerId === user?.id) && (
               <button
                 onClick={handleDelete}
                 className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-0"
@@ -274,20 +278,69 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
             <div>
               <h4 className="text-lg font-semibold text-white mb-3">Assigned To</h4>
               <div className="flex items-center space-x-3">
-                {task.assignedTo ? (
+                {task.assignee ? (
                   <>
                     <div className="avatar placeholder">
                       <div className="bg-indigo-600 text-white rounded-full w-8">
-                        <span className="text-xs">{task.assignedTo.name.charAt(0)}</span>
+                        <span className="text-xs">{task.assignee.name.charAt(0)}</span>
                       </div>
                     </div>
-                    <span className="text-white">{task.assignedTo.name}</span>
+                    <span className="text-white">{task.assignee.name}</span>
                   </>
                 ) : (
                   <span className="text-gray-400">Unassigned</span>
                 )}
               </div>
             </div>
+
+            {/* Parent Task */}
+            {task.parentTask && (
+              <div>
+                <h4 className="text-lg font-semibold text-white mb-3">Parent Task</h4>
+                <div className="bg-gray-700 border border-gray-600 rounded-lg p-3">
+                  <span className="text-indigo-400">{task.parentTask.title}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Subtasks */}
+            {task.subtasks && task.subtasks.length > 0 && (
+              <div>
+                <h4 className="text-lg font-semibold text-white mb-3">Subtasks ({task.subtasks.length})</h4>
+                <div className="space-y-2">
+                  {task.subtasks.map((subtask) => (
+                    <div key={subtask.id} className="bg-gray-700 border border-gray-600 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white">{subtask.title}</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(subtask.status)}`}>
+                          {STATUS_LABELS[subtask.status]}
+                        </span>
+                      </div>
+                      <div className="text-gray-400 text-sm mt-1">
+                        Assigned to {subtask.assignee?.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Add Subtask Button (assigner or assignee only) */}
+            {(task.assignerId === user?.id || task.assigneeId === user?.id) && (
+              <button
+                className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 w-full mt-4"
+                onClick={() => setIsAddSubtaskOpen(true)}
+              >
+                + Add Subtask
+              </button>
+            )}
+            {/* AddSubtaskModal */}
+            {isAddSubtaskOpen && (
+              <AddSubtaskModal
+                isOpen={isAddSubtaskOpen}
+                onClose={() => setIsAddSubtaskOpen(false)}
+                parentTask={task}
+              />
+            )}
 
             {/* Save Button */}
             {isEditing && (

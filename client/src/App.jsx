@@ -4,7 +4,9 @@ import useAuthStore from './context/authStore';
 import ProtectedRoute from './layouts/ProtectedRoute';
 import Header from './components/layout/Header';
 import Login from './pages/Login';
+import CompanySignup from './pages/CompanySignup';
 import Dashboard from './pages/Dashboard';
+import Employees from './pages/Employees';
 import './App.css';
 
 function App() {
@@ -23,6 +25,7 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<CompanySignup />} />
           
           {/* Protected Routes */}
           <Route
@@ -44,6 +47,18 @@ function App() {
                 <div className="min-h-screen bg-gray-900">
                   <Header />
                   <Dashboard />
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/employees"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <div className="min-h-screen bg-gray-900">
+                  <Header />
+                  <Employees />
                 </div>
               </ProtectedRoute>
             }
