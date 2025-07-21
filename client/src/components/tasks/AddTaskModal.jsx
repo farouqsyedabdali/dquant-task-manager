@@ -205,9 +205,9 @@ const AddTaskModal = ({ isOpen, onClose }) => {
             >
               <option value="">Select an employee</option>
               {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.email})
-                </option>
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.email})
+                  </option>
               ))}
             </select>
             {errors.assigneeId && (

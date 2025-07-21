@@ -74,4 +74,9 @@ export const usersAPI = {
   deleteEmployee: (id) => api.delete(`/users/${id}`),
 };
 
+// AI API
+export const aiAPI = {
+  chat: (message) => api.post('/ai/chat', { message }),
+};
+
 export default api;
