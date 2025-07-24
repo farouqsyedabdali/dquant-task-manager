@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Send to AI Assistant",
+  "version": "1.0",
+  "description": "Send highlighted text to your AI assistant for task creation, summarization, or explanation.",
+  "permissions": [
+    "contextMenus",
+    "scripting",
+    "activeTab",
+    "notifications"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "icons": {
+    "48": "icon48.png"
+  }
+} 
