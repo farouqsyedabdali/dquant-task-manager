@@ -3,7 +3,7 @@ import useTaskStore from '../../stores/taskStore';
 import { PRIORITY_OPTIONS } from '../../utils/constants';
 import { usersAPI } from '../../services/api';
 
-const AddTaskModal = ({ isOpen, onClose }) => {
+const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -21,6 +21,35 @@ const AddTaskModal = ({ isOpen, onClose }) => {
       fetchUsers();
     }
   }, [isOpen]);
+
+  // Handle initial data from browser extension
+  useEffect(() => {
+    if (initialData && isOpen) {
+      setFormData(prev => ({
+        ...prev,
+        title: initialData.title || '',
+        description: initialData.description || '',
+        priority: initialData.priority || 'MEDIUM',
+        // We'll handle assignee after users are loaded
+      }));
+    }
+  }, [initialData, isOpen]);
+
+  // Set assignee after users are loaded and if initialData has assignee name
+  useEffect(() => {
+    if (initialData?.assignee && users.length > 0 && isOpen) {
+      const matchingUser = users.find(user => 
+        user.name.toLowerCase().includes(initialData.assignee.toLowerCase()) ||
+        initialData.assignee.toLowerCase().includes(user.name.toLowerCase())
+      );
+      if (matchingUser) {
+        setFormData(prev => ({
+          ...prev,
+          assigneeId: matchingUser.id.toString()
+        }));
+      }
+    }
+  }, [initialData, users, isOpen]);
 
   const fetchUsers = async () => {
     try {
@@ -123,9 +152,16 @@ const AddTaskModal = ({ isOpen, onClose }) => {
       <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
+          <div>
           <h3 className="text-2xl font-bold text-white">
             Create New Task
           </h3>
+            {initialData && (
+              <p className="text-sm text-indigo-400 mt-1">
+                ✨ Task details extracted from browser extension
+              </p>
+            )}
+          </div>
           <button
             onClick={handleClose}
             className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"

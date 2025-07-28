@@ -77,6 +77,7 @@ export const usersAPI = {
 // AI API
 export const aiAPI = {
   chat: (message) => api.post('/ai/chat', { message }),
+  extractTask: (text) => api.post('/ai/extract-task', { text }),
 };
 
 export default api;

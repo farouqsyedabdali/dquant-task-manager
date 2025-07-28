@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import useTaskStore from '../stores/taskStore';
 import useAuthStore from '../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../utils/constants';
@@ -10,6 +11,7 @@ import ViewSwitcher from '../components/tasks/ViewSwitcher';
 
 const Dashboard = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [extensionTaskData, setExtensionTaskData] = useState(null);
   const [viewMode, setViewMode] = useState(() => {
     // Get view mode from localStorage, default to 'cards'
     return localStorage.getItem('taskViewMode') || 'cards';
@@ -17,6 +19,8 @@ const Dashboard = () => {
   const [taskType, setTaskType] = useState('all');
   const { tasks, fetchTasks, fetchTasksByType, deleteTask, updateTaskStatus, updateTaskPriority, filters, setFilters, clearFilters, getFilteredTasks } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (taskType === 'all') {
@@ -25,6 +29,70 @@ const Dashboard = () => {
       fetchTasksByType(taskType);
     }
   }, [fetchTasks, fetchTasksByType, taskType]);
+
+  // Handle URL parameters for task data from browser extension
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const taskDataParam = urlParams.get('createTask');
+    const originalTextParam = urlParams.get('originalText');
+    
+    if (taskDataParam) {
+      try {
+        const taskData = JSON.parse(decodeURIComponent(taskDataParam));
+        setExtensionTaskData({
+          ...taskData,
+          originalText: originalTextParam ? decodeURIComponent(originalTextParam) : null
+        });
+        setIsAddModalOpen(true);
+        
+        // Clean up URL parameters
+        navigate('/dashboard', { replace: true });
+      } catch (error) {
+        console.error('Failed to parse task data from URL:', error);
+      }
+    }
+  }, [location, navigate]);
+
+  // Listen for messages from browser extension
+  useEffect(() => {
+    const handleMessage = (event) => {
+      // Verify origin for security
+      if (event.origin !== window.location.origin) return;
+      
+      console.log('Dashboard received window message:', event.data);
+      
+      if (event.data.type === 'CREATE_TASK_FROM_EXTENSION' && event.data.source === 'browser-extension') {
+        console.log('Processing task creation from extension');
+        setExtensionTaskData({
+          ...event.data.taskData,
+          originalText: event.data.originalText
+        });
+        setIsAddModalOpen(true);
+      }
+    };
+
+    // Also listen for custom events as fallback
+    const handleCustomEvent = (event) => {
+      console.log('Dashboard received custom event:', event.detail);
+      
+      if (event.detail.type === 'CREATE_TASK_FROM_EXTENSION' && event.detail.source === 'browser-extension') {
+        console.log('Processing task creation from extension (custom event)');
+        setExtensionTaskData({
+          ...event.detail.taskData,
+          originalText: event.detail.originalText
+        });
+        setIsAddModalOpen(true);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    window.addEventListener('taskFromExtension', handleCustomEvent);
+    
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('taskFromExtension', handleCustomEvent);
+    };
+  }, []);
 
   // Calculate statistics
   const stats = {
@@ -68,6 +136,16 @@ const Dashboard = () => {
     localStorage.setItem('taskViewMode', newView);
   };
 
+  const handleAddTask = () => {
+    setExtensionTaskData(null); // Clear any existing extension data
+    setIsAddModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsAddModalOpen(false);
+    setExtensionTaskData(null); // Clear extension data when modal closes
+  };
+
   const filteredTasks = getFilteredTasks();
 
   return (
@@ -105,7 +183,7 @@ const Dashboard = () => {
               />
               
               <button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={handleAddTask}
                 className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -194,7 +272,8 @@ const Dashboard = () => {
       {isAddModalOpen && (
         <AddTaskModal
           isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
+          onClose={handleCloseModal}
+          initialData={extensionTaskData}
         />
       )}
     </div>

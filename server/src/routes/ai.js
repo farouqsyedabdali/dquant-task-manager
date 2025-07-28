@@ -282,4 +282,139 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
   }
 });
 
+// POST /api/ai/extract-task
+router.post('/extract-task', async (req, res) => {
+  const { text } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: 'Text is required' });
+  }
+
+  try {
+    // Get user context
+    const userId = req.user.id;
+    const companyId = req.user.companyId;
+    const userName = req.user.name;
+
+    // System prompt specifically for task extraction
+    const systemPrompt = `
+You are an AI assistant specialized in extracting task information from text.
+Analyze the provided text and extract relevant task details. Return a JSON object with the following structure:
+{
+  "title": "Brief task title (max 50 characters)",
+  "description": "Detailed description (max 300 characters)",
+  "priority": "LOW|MEDIUM|HIGH|URGENT",
+  "dueDate": "YYYY-MM-DD or null if not mentioned",
+  "assignee": "Person's name if mentioned, or null"
+}
+
+Guidelines:
+- Extract the main action/task from the text
+- Include relevant context in the description
+- Determine priority based on urgency cues (ASAP, urgent, by Friday, etc.)
+- If no clear deadline, set dueDate to null
+- If no specific person mentioned for assignment, set assignee to null
+- Be concise but informative
+- If the text doesn't contain a clear task, create a reasonable interpretation
+
+Examples:
+Input: "Hi John! Can you finish the marketing report by Friday? Thanks, Sarah"
+Output: {"title": "Finish marketing report", "description": "Sarah requested completion of marketing report by Friday", "priority": "HIGH", "dueDate": "2024-01-19", "assignee": "John"}
+
+Input: "Remember to update the website homepage"
+Output: {"title": "Update website homepage", "description": "Update the website homepage", "priority": "MEDIUM", "dueDate": null, "assignee": null}
+`;
+
+    // Call Ollama for task extraction
+    const ollamaRes = await axios.post('http://localhost:11434/api/chat', {
+      model: 'gemma3',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Extract task information from this text: "${text}"` }
+      ]
+    }, { responseType: 'stream' });
+
+    let fullContent = '';
+    let buffer = '';
+    let responseHandled = false; // Flag to ensure only one response is sent
+    
+    return new Promise((resolve, reject) => {
+      // Timeout handler
+      const timeoutId = setTimeout(() => {
+        if (!responseHandled) {
+          responseHandled = true;
+          reject(new Error('AI service timeout'));
+        }
+      }, 30000);
+
+      ollamaRes.data.on('data', chunk => {
+        if (responseHandled) return; // Don't process if response already handled
+        
+        buffer += chunk.toString();
+        let lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            if (data.message && typeof data.message.content === 'string') {
+              fullContent += data.message.content;
+            }
+            if (data.done && !responseHandled) {
+              responseHandled = true;
+              clearTimeout(timeoutId);
+              
+              try {
+                // Extract JSON from the response
+                const jsonMatch = fullContent.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                  const taskData = JSON.parse(jsonMatch[0]);
+                  
+                  // Validate and clean the extracted data
+                  const cleanedTask = {
+                    title: (taskData.title || '').substring(0, 50),
+                    description: (taskData.description || '').substring(0, 300),
+                    priority: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(taskData.priority) ? taskData.priority : 'MEDIUM',
+                    dueDate: taskData.dueDate || null,
+                    assignee: taskData.assignee || null
+                  };
+                  
+                  resolve(res.json({ success: true, taskData: cleanedTask }));
+                } else {
+                  // Fallback: create basic task from the text
+                  const fallbackTask = {
+                    title: text.substring(0, 50),
+                    description: `Task extracted from: ${text.substring(0, 250)}`,
+                    priority: 'MEDIUM',
+                    dueDate: null,
+                    assignee: null
+                  };
+                  resolve(res.json({ success: true, taskData: fallbackTask }));
+                }
+              } catch (parseError) {
+                console.error('Failed to parse AI response:', parseError);
+                reject(new Error('Failed to extract task data'));
+              }
+            }
+          } catch (e) {
+            // Ignore malformed JSON lines
+          }
+        }
+      });
+
+      ollamaRes.data.on('error', (err) => {
+        if (!responseHandled) {
+          responseHandled = true;
+          clearTimeout(timeoutId);
+          console.error('AI service error:', err);
+          reject(new Error('AI service error'));
+        }
+      });
+    });
+
+  } catch (err) {
+    console.error('Task extraction error:', err);
+    return res.status(500).json({ error: 'Failed to extract task data' });
+  }
+});
+
 module.exports = router; 
