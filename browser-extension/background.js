@@ -5,7 +5,20 @@ chrome.runtime.onInstalled.addListener(() => {
     title: 'Send to AI Assistant',
     contexts: ['selection']
   });
-  console.log('Browser extension installed and context menu created');
+  
+  chrome.contextMenus.create({
+    id: 'create-task-ai',
+    title: '🆕 Create Task',
+    contexts: ['selection']
+  });
+  
+  chrome.contextMenus.create({
+    id: 'update-task-ai',
+    title: '📝 Update Task',
+    contexts: ['selection']
+  });
+  
+  console.log('Browser extension installed and context menus created');
 });
 
 // Function to validate token format
@@ -257,11 +270,201 @@ function openTaskManagerWithData(taskData, originalText) {
   });
 }
 
+// Function to handle task updates
+async function handleTaskUpdate(selectedText, retryCount = 0) {
+  console.log('Starting task update identification for text:', selectedText.substring(0, 100) + '...');
+  const apiUrl = 'http://localhost:3000/api/ai/identify-task-update';
+  
+  try {
+    // Get auth token from local storage
+    const authToken = await new Promise((resolve) => {
+      chrome.storage.local.get(['authToken'], (result) => {
+        console.log('Retrieved auth token for update:', {
+          exists: !!result.authToken,
+          isValid: isValidToken(result.authToken),
+          preview: result.authToken ? `${result.authToken.substring(0, 20)}...` : 'null'
+        });
+        resolve(result.authToken);
+      });
+    });
+
+    if (!authToken || !isValidToken(authToken)) {
+      console.log('No valid auth token found for update');
+      
+      if (retryCount === 0) {
+        const refreshed = await refreshTokenFromWebApp();
+        if (refreshed) {
+          setTimeout(() => handleTaskUpdate(selectedText, retryCount + 1), 2000);
+          return;
+        }
+      }
+      
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icon48.png',
+        title: 'AI Assistant',
+        message: 'Please login to your task manager first, then try again.'
+      });
+      return;
+    }
+
+    console.log('Making API call to identify task update...');
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ text: selectedText })
+    });
+
+    console.log('Task update API response status:', response.status);
+
+    if (response.status === 401 && retryCount === 0) {
+      console.log('Received 401 for update, attempting token refresh...');
+      chrome.storage.local.remove(['authToken']);
+      const refreshed = await refreshTokenFromWebApp();
+      if (refreshed) {
+        setTimeout(() => handleTaskUpdate(selectedText, retryCount + 1), 2000);
+        return;
+      }
+      
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icon48.png',
+        title: 'AI Assistant',
+        message: 'Please login to your task manager again and try again.'
+      });
+      return;
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Task update API call failed:', response.status, errorText);
+      throw new Error(`API call failed: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Task update identification successful:', data);
+    
+    if (data.success && data.updateData) {
+      const webAppUrl = 'http://localhost:5173';
+      const tabs = await chrome.tabs.query({ url: `${webAppUrl}/*` });
+      console.log('Found web app tabs for update:', tabs.length);
+      
+      if (tabs.length > 0) {
+        const tabId = tabs[0].id;
+        let scriptReady = await isContentScriptReady(tabId);
+        
+        if (!scriptReady) {
+          console.log('Content script not ready for update, attempting injection...');
+          await ensureContentScript(tabId);
+          scriptReady = await isContentScriptReady(tabId);
+        }
+        
+        if (scriptReady) {
+          const message = {
+            type: 'UPDATE_TASK_FROM_EXTENSION',
+            updateData: data.updateData,
+            originalText: selectedText
+          };
+          
+          console.log('Sending update message to web app tab:', message);
+          
+          chrome.tabs.sendMessage(tabId, message, (response) => {
+            if (chrome.runtime.lastError) {
+              console.error('Failed to send update message to web app:', chrome.runtime.lastError);
+              openTaskManagerWithUpdate(data.updateData, selectedText);
+            } else {
+              console.log('Update message sent successfully to web app');
+              
+              const notificationMessage = data.updateData.taskFound 
+                ? `Update ready for task: "${data.updateData.taskId}"`
+                : 'No matching task found - review suggested actions';
+                
+              chrome.notifications.create({
+                type: 'basic',
+                iconUrl: 'icon48.png',
+                title: 'Task Update',
+                message: notificationMessage
+              });
+            }
+          });
+        } else {
+          console.log('Content script failed to load for update, using URL fallback');
+          openTaskManagerWithUpdate(data.updateData, selectedText);
+        }
+        
+      } else {
+        openTaskManagerWithUpdate(data.updateData, selectedText);
+      }
+    } else {
+      throw new Error('Failed to identify task update');
+    }
+  } catch (err) {
+    console.error('Task update error:', err);
+    
+    let errorMessage = 'Failed to identify task update. Please try again.';
+    if (err.message.includes('401')) {
+      errorMessage = 'Please login to your task manager and try again.';
+    } else if (err.message.includes('Failed to fetch')) {
+      errorMessage = 'Cannot connect to task manager. Make sure it\'s running.';
+    }
+    
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icon48.png',
+      title: 'AI Assistant Error',
+      message: errorMessage
+    });
+  }
+}
+
+// Function to open task manager with update data (fallback method)
+function openTaskManagerWithUpdate(updateData, originalText) {
+  const webAppUrl = 'http://localhost:5173';
+  const url = `${webAppUrl}/dashboard?updateTask=${encodeURIComponent(JSON.stringify(updateData))}&originalText=${encodeURIComponent(originalText)}`;
+  console.log('Opening/updating tab with update URL method:', url);
+  
+  chrome.tabs.query({ url: `${webAppUrl}/*` }, (tabs) => {
+    if (tabs.length > 0) {
+      chrome.tabs.update(tabs[0].id, { url: url, active: true });
+    } else {
+      chrome.tabs.create({ url: url });
+    }
+  });
+  
+  const notificationMessage = updateData.taskFound 
+    ? `Task update will be loaded for task: "${updateData.taskId}"`
+    : 'No matching task found - suggestions will be provided';
+    
+  chrome.notifications.create({
+    type: 'basic',
+    iconUrl: 'icon48.png',
+    title: 'Task Update',
+    message: notificationMessage
+  });
+}
+
 // Handle context menu click
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId === 'send-to-ai' && info.selectionText) {
-    console.log('Context menu clicked with selection:', info.selectionText.substring(0, 100) + '...');
-    await handleTaskExtraction(info.selectionText);
+  if (!info.selectionText) return;
+  
+  console.log(`Context menu clicked: ${info.menuItemId} with selection:`, info.selectionText.substring(0, 100) + '...');
+  
+  switch (info.menuItemId) {
+    case 'send-to-ai':
+    case 'create-task-ai':
+      await handleTaskExtraction(info.selectionText);
+      break;
+      
+    case 'update-task-ai':
+      await handleTaskUpdate(info.selectionText);
+      break;
+      
+    default:
+      console.log('Unknown context menu item:', info.menuItemId);
   }
 });
 
@@ -300,6 +503,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Handle trigger from floating button in content script
     console.log('Triggered task extraction from floating button');
     handleTaskExtraction(request.selectedText);
+    sendResponse({ success: true });
+    return true;
+    
+  } else if (request.type === 'TRIGGER_TASK_UPDATE') {
+    // Handle trigger from floating button in content script
+    console.log('Triggered task update from floating button');
+    handleTaskUpdate(request.selectedText);
     sendResponse({ success: true });
     return true;
   }

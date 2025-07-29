@@ -417,4 +417,189 @@ Output: {"title": "Update website homepage", "description": "Update the website 
   }
 });
 
+// POST /api/ai/identify-task-update
+router.post('/identify-task-update', async (req, res) => {
+  const { text } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: 'Text is required' });
+  }
+
+  try {
+    // Get user context
+    const userId = req.user.id;
+    const companyId = req.user.companyId;
+    const userName = req.user.name;
+
+    // Fetch user's recent tasks for context
+    const userTasks = await prisma.task.findMany({
+      where: {
+        companyId: companyId,
+        OR: [
+          { assigneeId: userId },
+          { assignerId: userId }
+        ]
+      },
+      include: {
+        assignee: { select: { name: true } },
+        assigner: { select: { name: true } },
+        comments: {
+          select: { content: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          take: 3
+        }
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 20
+    });
+
+    // System prompt for task update identification
+    const systemPrompt = `
+You are an AI assistant specialized in identifying task updates and matching them to existing tasks.
+Analyze the provided text and determine which existing task it relates to, then generate an appropriate update comment.
+
+Available Tasks:
+${userTasks.map((task, idx) => `
+Task #${task.id}: "${task.title}"
+- Description: ${task.description || 'No description'}
+- Status: ${task.status}
+- Priority: ${task.priority}
+- Assigned to: ${task.assignee?.name}
+- Recent comments: ${task.comments.map(c => `"${c.content}"`).join(', ') || 'None'}
+`).join('\n')}
+
+Return a JSON object with this structure:
+{
+  "taskFound": true/false,
+  "taskId": number or null,
+  "confidence": 0.0-1.0,
+  "updateType": "progress|completion|issue|info|status_change|meeting|deadline",
+  "updateContent": "The comment to add to the task",
+  "suggestedActions": ["change_status", "change_priority", "add_subtask", etc.],
+  "reasoning": "Why this text matches the identified task"
+}
+
+Guidelines:
+- Match based on keywords, context, people mentioned, project names, deadlines
+- If no clear match (confidence < 0.6), set taskFound to false
+- Generate natural, professional update comments
+- Identify the type of update (progress, completion, issue, etc.)
+- Suggest relevant actions based on the update content
+- Include specific details from the text in the update
+
+Examples:
+Input: "Hi John, the marketing report is 80% complete. Should be done by Friday."
+Output: {"taskFound": true, "taskId": 123, "confidence": 0.9, "updateType": "progress", "updateContent": "Progress update: Marketing report is 80% complete and on track for Friday completion.", "suggestedActions": ["change_status"], "reasoning": "Matches marketing report task based on title and mentions John who is the assignee"}
+
+Input: "The server deployment failed due to configuration issues. Need to troubleshoot."
+Output: {"taskFound": true, "taskId": 456, "confidence": 0.85, "updateType": "issue", "updateContent": "Issue reported: Server deployment failed due to configuration issues. Troubleshooting required.", "suggestedActions": ["change_priority", "add_subtask"], "reasoning": "Matches server deployment task, indicates a blocking issue"}
+`;
+
+    // Call Ollama for task update identification
+    const ollamaRes = await axios.post('http://localhost:11434/api/chat', {
+      model: 'gemma3',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Analyze this text for task updates: "${text}"` }
+      ]
+    }, { responseType: 'stream' });
+
+    let fullContent = '';
+    let buffer = '';
+    let responseHandled = false;
+    
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        if (!responseHandled) {
+          responseHandled = true;
+          reject(new Error('AI service timeout'));
+        }
+      }, 30000);
+
+      ollamaRes.data.on('data', chunk => {
+        if (responseHandled) return;
+        
+        buffer += chunk.toString();
+        let lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            if (data.message && typeof data.message.content === 'string') {
+              fullContent += data.message.content;
+            }
+            if (data.done && !responseHandled) {
+              responseHandled = true;
+              clearTimeout(timeoutId);
+              
+              try {
+                // Extract JSON from the response
+                const jsonMatch = fullContent.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                  const updateData = JSON.parse(jsonMatch[0]);
+                  
+                  // Validate the response
+                  const validatedUpdate = {
+                    taskFound: updateData.taskFound || false,
+                    taskId: updateData.taskId || null,
+                    confidence: Math.min(Math.max(updateData.confidence || 0, 0), 1),
+                    updateType: updateData.updateType || 'info',
+                    updateContent: (updateData.updateContent || '').substring(0, 500),
+                    suggestedActions: Array.isArray(updateData.suggestedActions) ? updateData.suggestedActions : [],
+                    reasoning: (updateData.reasoning || '').substring(0, 200),
+                    originalText: text
+                  };
+                  
+                  // Verify task exists and user has access
+                  if (validatedUpdate.taskFound && validatedUpdate.taskId) {
+                    const task = userTasks.find(t => t.id === validatedUpdate.taskId);
+                    if (!task) {
+                      validatedUpdate.taskFound = false;
+                      validatedUpdate.taskId = null;
+                      validatedUpdate.reasoning = 'Task not found in user accessible tasks';
+                    }
+                  }
+                  
+                  resolve(res.json({ success: true, updateData: validatedUpdate }));
+                } else {
+                  // Fallback: no task found
+                  const fallbackUpdate = {
+                    taskFound: false,
+                    taskId: null,
+                    confidence: 0,
+                    updateType: 'info',
+                    updateContent: `Update from external source: ${text.substring(0, 300)}`,
+                    suggestedActions: ['create_new_task'],
+                    reasoning: 'No matching task found for this update',
+                    originalText: text
+                  };
+                  resolve(res.json({ success: true, updateData: fallbackUpdate }));
+                }
+              } catch (parseError) {
+                console.error('Failed to parse AI response:', parseError);
+                reject(new Error('Failed to identify task update'));
+              }
+            }
+          } catch (e) {
+            // Ignore malformed JSON lines
+          }
+        }
+      });
+
+      ollamaRes.data.on('error', (err) => {
+        if (!responseHandled) {
+          responseHandled = true;
+          clearTimeout(timeoutId);
+          console.error('AI service error:', err);
+          reject(new Error('AI service error'));
+        }
+      });
+    });
+
+  } catch (err) {
+    console.error('Task update identification error:', err);
+    return res.status(500).json({ error: 'Failed to identify task update' });
+  }
+});
+
 module.exports = router; 

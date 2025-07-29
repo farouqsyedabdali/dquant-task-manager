@@ -11,12 +11,15 @@ if (window.taskManagerExtensionLoaded) {
 
 // Floating button element
 let floatBtn = null;
+let floatMenu = null;
 let lastSelection = '';
 
 function createButton() {
   if (floatBtn) return floatBtn;
+  
+  // Create main button
   floatBtn = document.createElement('button');
-  floatBtn.textContent = 'AI Task';
+  floatBtn.textContent = 'AI Task ▼';
   floatBtn.style.position = 'absolute';
   floatBtn.style.zIndex = 99999;
   floatBtn.style.padding = '6px 14px';
@@ -29,7 +32,45 @@ function createButton() {
   floatBtn.style.fontSize = '14px';
   floatBtn.style.display = 'none';
   floatBtn.style.transition = 'opacity 0.2s';
+  floatBtn.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+  
+  // Create dropdown menu
+  floatMenu = document.createElement('div');
+  floatMenu.style.position = 'absolute';
+  floatMenu.style.zIndex = 100000;
+  floatMenu.style.background = '#fff';
+  floatMenu.style.border = '1px solid #ddd';
+  floatMenu.style.borderRadius = '6px';
+  floatMenu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+  floatMenu.style.display = 'none';
+  floatMenu.style.minWidth = '160px';
+  floatMenu.style.fontSize = '14px';
+  floatMenu.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+  
+  // Create menu items
+  const createItem = document.createElement('div');
+  createItem.textContent = '🆕 Create New Task';
+  createItem.style.padding = '10px 15px';
+  createItem.style.cursor = 'pointer';
+  createItem.style.borderBottom = '1px solid #eee';
+  createItem.style.color = '#333';
+  createItem.onmouseover = () => createItem.style.background = '#f5f5f5';
+  createItem.onmouseout = () => createItem.style.background = 'transparent';
+  
+  const updateItem = document.createElement('div');
+  updateItem.textContent = '📝 Update Existing Task';
+  updateItem.style.padding = '10px 15px';
+  updateItem.style.cursor = 'pointer';
+  updateItem.style.color = '#333';
+  updateItem.onmouseover = () => updateItem.style.background = '#f5f5f5';
+  updateItem.onmouseout = () => updateItem.style.background = 'transparent';
+  
+  floatMenu.appendChild(createItem);
+  floatMenu.appendChild(updateItem);
+  
   document.body.appendChild(floatBtn);
+  document.body.appendChild(floatMenu);
+  
   return floatBtn;
 }
 
@@ -44,6 +85,24 @@ function showButton(x, y) {
 function hideButton() {
   const btn = createButton();
   btn.style.display = 'none';
+  if (floatMenu) {
+    floatMenu.style.display = 'none';
+  }
+}
+
+function showMenu() {
+  if (!floatMenu || !floatBtn) return;
+  
+  const btnRect = floatBtn.getBoundingClientRect();
+  floatMenu.style.left = `${btnRect.left + window.scrollX}px`;
+  floatMenu.style.top = `${btnRect.bottom + window.scrollY + 5}px`;
+  floatMenu.style.display = 'block';
+}
+
+function hideMenu() {
+  if (floatMenu) {
+    floatMenu.style.display = 'none';
+  }
 }
 
 // Handle mouse events for text selection
@@ -60,17 +119,24 @@ function handleSelection() {
     const rect = range.getBoundingClientRect();
     showButton(rect.left + window.scrollX, rect.top + window.scrollY);
     
-    // Add click handler for the button
+    // Add click handler for the main button (shows menu)
     const btn = createButton();
     btn.onclick = () => {
-      // Trigger the context menu action programmatically
+      showMenu();
+    };
+    
+    // Add click handlers for menu items
+    const menuItems = floatMenu.children;
+    const createItem = menuItems[0];
+    const updateItem = menuItems[1];
+    
+    createItem.onclick = () => {
       chrome.runtime.sendMessage({
         type: 'TRIGGER_TASK_EXTRACTION',
         selectedText: selectedText
       }, (response) => {
         if (chrome.runtime.lastError) {
           console.error('Extension context error:', chrome.runtime.lastError);
-          // Try to refresh the token if there's a context error
           if (window.location.origin === 'http://localhost:5173') {
             sendTokenToBackground();
           }
@@ -78,15 +144,31 @@ function handleSelection() {
       });
       hideButton();
     };
+    
+    updateItem.onclick = () => {
+      chrome.runtime.sendMessage({
+        type: 'TRIGGER_TASK_UPDATE',
+        selectedText: selectedText
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Extension context error:', chrome.runtime.lastError);
+          if (window.location.origin === 'http://localhost:5173') {
+            sendTokenToBackground();
+          }
+        }
+      });
+      hideButton();
+    };
+    
   } else if (selectedText.length === 0) {
     hideButton();
     lastSelection = '';
   }
 }
 
-// Hide button when clicking elsewhere
+// Hide button and menu when clicking elsewhere
 document.addEventListener('click', (e) => {
-  if (e.target !== floatBtn) {
+  if (e.target !== floatBtn && !floatMenu?.contains(e.target)) {
     hideButton();
   }
 });
@@ -103,9 +185,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.type === 'CREATE_TASK_FROM_EXTENSION') {
     // Send message to the web app if we're on the task manager domain
     if (window.location.origin === 'http://localhost:5173') {
-      console.log('Forwarding message to web app window');
+      console.log('Forwarding create task message to web app window');
       
-      // We're on the task manager web app
       const messageData = {
         type: 'CREATE_TASK_FROM_EXTENSION',
         taskData: message.taskData,
@@ -118,6 +199,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       
       // Also trigger a custom event as fallback
       const customEvent = new CustomEvent('taskFromExtension', {
+        detail: messageData
+      });
+      window.dispatchEvent(customEvent);
+      
+      sendResponse({ success: true });
+    } else {
+      sendResponse({ success: false, error: 'Not on task manager domain' });
+    }
+    return true;
+    
+  } else if (message.type === 'UPDATE_TASK_FROM_EXTENSION') {
+    // Send update message to the web app if we're on the task manager domain
+    if (window.location.origin === 'http://localhost:5173') {
+      console.log('Forwarding update task message to web app window');
+      
+      const messageData = {
+        type: 'UPDATE_TASK_FROM_EXTENSION',
+        updateData: message.updateData,
+        originalText: message.originalText,
+        source: 'browser-extension'
+      };
+      
+      // Post message to window
+      window.postMessage(messageData, window.location.origin);
+      
+      // Also trigger a custom event as fallback
+      const customEvent = new CustomEvent('taskUpdateFromExtension', {
         detail: messageData
       });
       window.dispatchEvent(customEvent);

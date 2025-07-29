@@ -5,7 +5,7 @@ import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
 import CommentSection from '../comments/CommentSection';
 import AddSubtaskModal from './AddSubtaskModal';
 
-const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, onDelete }) => {
+const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, onDelete, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -222,7 +222,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
             {/* Comments */}
             <div>
               <h4 className="text-lg font-semibold text-white mb-3">Comments</h4>
-              <CommentSection taskId={task.id} />
+              <CommentSection taskId={task.id} extensionUpdateData={extensionUpdateData} />
             </div>
           </div>
 

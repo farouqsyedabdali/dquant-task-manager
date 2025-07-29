@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import CompanySignup from './pages/CompanySignup';
 import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
+import TaskPopup from './pages/TaskPopup';
 import AIModal from './components/tasks/AIModal';
 import { FaRobot } from 'react-icons/fa';
 import './App.css';
@@ -29,6 +30,9 @@ function App() {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<CompanySignup />} />
+          
+          {/* Popup Route (no header/layout) */}
+          <Route path="/popup" element={<TaskPopup />} />
           
           {/* Protected Routes */}
           <Route
@@ -84,8 +88,8 @@ function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
 
-        {/* Floating AI Button - Only show when authenticated */}
-        {isAuthenticated() && (
+        {/* Floating AI Button - Only show when authenticated and not on popup */}
+        {isAuthenticated() && window.location.pathname !== '/popup' && (
           <button
             className="fixed bottom-6 right-6 z-50 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-4 shadow-lg flex items-center justify-center"
             style={{ boxShadow: '0 4px 24px rgba(80, 80, 2)' }}

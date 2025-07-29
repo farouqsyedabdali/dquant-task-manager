@@ -6,18 +6,22 @@ import { STATUS_LABELS, PRIORITY_LABELS } from '../utils/constants';
 import TaskCard from '../components/tasks/TaskCard';
 import TaskList from '../components/tasks/TaskList';
 import AddTaskModal from '../components/tasks/AddTaskModal';
+import TaskModal from '../components/tasks/TaskModal';
 import TaskFilters from '../components/tasks/TaskFilters';
 import ViewSwitcher from '../components/tasks/ViewSwitcher';
 
 const Dashboard = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [currentTask, setCurrentTask] = useState(null);
   const [extensionTaskData, setExtensionTaskData] = useState(null);
+  const [extensionUpdateData, setExtensionUpdateData] = useState(null);
   const [viewMode, setViewMode] = useState(() => {
     // Get view mode from localStorage, default to 'cards'
     return localStorage.getItem('taskViewMode') || 'cards';
   });
   const [taskType, setTaskType] = useState('all');
-  const { tasks, fetchTasks, fetchTasksByType, deleteTask, updateTaskStatus, updateTaskPriority, filters, setFilters, clearFilters, getFilteredTasks } = useTaskStore();
+  const { tasks, fetchTasks, fetchTasksByType, fetchTask, deleteTask, updateTaskStatus, updateTaskPriority, filters, setFilters, clearFilters, getFilteredTasks } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -30,10 +34,11 @@ const Dashboard = () => {
     }
   }, [fetchTasks, fetchTasksByType, taskType]);
 
-  // Handle URL parameters for task data from browser extension
+  // Handle URL parameters for task data and updates from browser extension
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const taskDataParam = urlParams.get('createTask');
+    const updateDataParam = urlParams.get('updateTask');
     const originalTextParam = urlParams.get('originalText');
     
     if (taskDataParam) {
@@ -49,6 +54,19 @@ const Dashboard = () => {
         navigate('/dashboard', { replace: true });
       } catch (error) {
         console.error('Failed to parse task data from URL:', error);
+      }
+    } else if (updateDataParam) {
+      try {
+        const updateData = JSON.parse(decodeURIComponent(updateDataParam));
+        handleTaskUpdate({
+          ...updateData,
+          originalText: originalTextParam ? decodeURIComponent(originalTextParam) : null
+        });
+        
+        // Clean up URL parameters
+        navigate('/dashboard', { replace: true });
+      } catch (error) {
+        console.error('Failed to parse update data from URL:', error);
       }
     }
   }, [location, navigate]);
@@ -68,6 +86,12 @@ const Dashboard = () => {
           originalText: event.data.originalText
         });
         setIsAddModalOpen(true);
+      } else if (event.data.type === 'UPDATE_TASK_FROM_EXTENSION' && event.data.source === 'browser-extension') {
+        console.log('Processing task update from extension');
+        handleTaskUpdate({
+          ...event.data.updateData,
+          originalText: event.data.originalText
+        });
       }
     };
 
@@ -85,14 +109,52 @@ const Dashboard = () => {
       }
     };
 
+    // Handle task update custom events
+    const handleUpdateCustomEvent = (event) => {
+      console.log('Dashboard received update custom event:', event.detail);
+      
+      if (event.detail.type === 'UPDATE_TASK_FROM_EXTENSION' && event.detail.source === 'browser-extension') {
+        console.log('Processing task update from extension (custom event)');
+        handleTaskUpdate({
+          ...event.detail.updateData,
+          originalText: event.detail.originalText
+        });
+      }
+    };
+
     window.addEventListener('message', handleMessage);
     window.addEventListener('taskFromExtension', handleCustomEvent);
+    window.addEventListener('taskUpdateFromExtension', handleUpdateCustomEvent);
     
     return () => {
       window.removeEventListener('message', handleMessage);
       window.removeEventListener('taskFromExtension', handleCustomEvent);
+      window.removeEventListener('taskUpdateFromExtension', handleUpdateCustomEvent);
     };
   }, []);
+
+  // Function to handle task updates from extension
+  const handleTaskUpdate = async (updateData) => {
+    console.log('Processing task update:', updateData);
+    
+    if (updateData.taskFound && updateData.taskId) {
+      // Fetch the specific task to update
+      const result = await fetchTask(updateData.taskId);
+      if (result.success) {
+        setCurrentTask(result.data || tasks.find(t => t.id === updateData.taskId));
+        setExtensionUpdateData(updateData);
+        setIsTaskModalOpen(true);
+      } else {
+        console.error('Failed to fetch task for update');
+        // Show notification or error message
+      }
+    } else {
+      // No task found, show suggestions or create new task option
+      console.log('No matching task found, showing options');
+      // You could show a modal with suggestions here
+      alert(`No matching task found. Suggestions: ${updateData.suggestedActions?.join(', ') || 'Create new task'}`);
+    }
+  };
 
   // Calculate statistics
   const stats = {
@@ -141,9 +203,15 @@ const Dashboard = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleCloseModal = () => {
+  const handleCloseAddModal = () => {
     setIsAddModalOpen(false);
     setExtensionTaskData(null); // Clear extension data when modal closes
+  };
+
+  const handleCloseTaskModal = () => {
+    setIsTaskModalOpen(false);
+    setCurrentTask(null);
+    setExtensionUpdateData(null); // Clear extension update data when modal closes
   };
 
   const filteredTasks = getFilteredTasks();
@@ -272,8 +340,21 @@ const Dashboard = () => {
       {isAddModalOpen && (
         <AddTaskModal
           isOpen={isAddModalOpen}
-          onClose={handleCloseModal}
+          onClose={handleCloseAddModal}
           initialData={extensionTaskData}
+        />
+      )}
+
+      {/* Task Update Modal */}
+      {isTaskModalOpen && currentTask && (
+        <TaskModal
+          isOpen={isTaskModalOpen}
+          onClose={handleCloseTaskModal}
+          task={currentTask}
+          onStatusChange={handleStatusChange}
+          onPriorityChange={handlePriorityChange}
+          onDelete={handleDelete}
+          extensionUpdateData={extensionUpdateData}
         />
       )}
     </div>

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en" style="width: 256px; height: 256px; margin: 0; padding: 0;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=256, height=256, initial-scale=1.0">
+  <title>AI Task Assistant</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      width: 256px;
+      height: 256px;
+      background: #111827;
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      color: white;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 8px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    
+    .header h1 {
+      font-size: 12px;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 2px;
+    }
+    
+    .header .subtitle {
+      font-size: 10px;
+      color: #9CA3AF;
+    }
+    
+    .input-area {
+      flex: 1;
+      margin-bottom: 8px;
+    }
+    
+    .textarea {
+      width: 100%;
+      height: 100%;
+      background: #1F2937;
+      border: 1px solid #374151;
+      color: white;
+      font-size: 10px;
+      padding: 6px;
+      border-radius: 4px;
+      resize: none;
+      outline: none;
+    }
+    
+    .textarea:focus {
+      border-color: #6366F1;
+    }
+    
+    .textarea::placeholder {
+      color: #6B7280;
+    }
+    
+    .char-count {
+      font-size: 8px;
+      color: #6B7280;
+      text-align: right;
+      margin-top: 2px;
+    }
+    
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 6px 8px;
+      border: none;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .btn:disabled {
+      background: #374151 !important;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    
+    .btn-create {
+      background: #059669;
+      color: white;
+    }
+    
+    .btn-create:hover:not(:disabled) {
+      background: #047857;
+    }
+    
+    .btn-update {
+      background: #2563EB;
+      color: white;
+    }
+    
+    .btn-update:hover:not(:disabled) {
+      background: #1D4ED8;
+    }
+    
+    .btn-clear {
+      background: #4B5563;
+      color: white;
+      padding: 3px 8px;
+      font-size: 9px;
+    }
+    
+    .btn-clear:hover:not(:disabled) {
+      background: #374151;
+    }
+    
+    .status {
+      font-size: 9px;
+      padding: 4px 6px;
+      border-radius: 3px;
+      margin-bottom: 2px;
+    }
+    
+    .status.error {
+      background: rgba(153, 27, 27, 0.5);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #FCA5A5;
+    }
+    
+    .status.success {
+      background: rgba(5, 46, 22, 0.5);
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      color: #86EFAC;
+    }
+    
+    .login-prompt {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 16px;
+    }
+    
+    .login-prompt .warning {
+      color: #F87171;
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+    
+    .login-prompt .message {
+      color: #D1D5DB;
+      font-size: 9px;
+      margin-bottom: 8px;
+    }
+    
+    .login-prompt .btn-login {
+      background: #6366F1;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 9px;
+      cursor: pointer;
+    }
+    
+    .login-prompt .btn-login:hover {
+      background: #4F46E5;
+    }
+    
+    .processing {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loginPrompt" class="login-prompt" style="display: none;">
+      <div class="warning">⚠️ Not Logged In</div>
+      <div class="message">Please login to your task manager first</div>
+      <button class="btn-login" onclick="openLogin()">Open Login</button>
+    </div>
+
+    <div id="mainInterface">
+      <div class="header">
+        <h1>AI Task Assistant</h1>
+        <div class="subtitle" id="userGreeting">Loading...</div>
+      </div>
+
+      <div class="input-area">
+        <textarea 
+          id="inputText" 
+          class="textarea" 
+          placeholder="Paste text here or type task details..."
+          maxlength="500"
+        ></textarea>
+        <div class="char-count">
+          <span id="charCount">0</span>/500
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button id="createBtn" class="btn btn-create" onclick="handleCreateTask()">
+          🆕 Create New Task
+        </button>
+        <button id="updateBtn" class="btn btn-update" onclick="handleUpdateTask()">
+          📝 Update Existing Task
+        </button>
+        <button id="clearBtn" class="btn btn-clear" onclick="handleClear()">
+          Clear
+        </button>
+      </div>
+
+      <div id="statusMessage" class="status" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script>
+    let authToken = null;
+    let currentUser = null;
+    let isProcessing = false;
+
+    // Initialize
+    window.addEventListener('load', () => {
+      checkAuth();
+      setupInputHandlers();
+      autoFillClipboard();
+    });
+
+    function setupInputHandlers() {
+      const textarea = document.getElementById('inputText');
+      const charCount = document.getElementById('charCount');
+      
+      textarea.addEventListener('input', () => {
+        charCount.textContent = textarea.value.length;
+        updateButtonStates();
+      });
+    }
+
+    function updateButtonStates() {
+      const hasText = document.getElementById('inputText').value.trim().length > 0;
+      const createBtn = document.getElementById('createBtn');
+      const updateBtn = document.getElementById('updateBtn');
+      
+      createBtn.disabled = isProcessing || !hasText;
+      updateBtn.disabled = isProcessing || !hasText;
+    }
+
+    async function autoFillClipboard() {
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const clipboardText = await navigator.clipboard.readText();
+          if (clipboardText && clipboardText.trim().length > 0) {
+            document.getElementById('inputText').value = clipboardText.trim();
+            document.getElementById('charCount').textContent = clipboardText.trim().length;
+            updateButtonStates();
+          }
+        }
+      } catch (err) {
+        console.log('Clipboard access not available');
+      }
+    }
+
+    function checkAuth() {
+      // Get auth token from localStorage
+      try {
+        authToken = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          currentUser = JSON.parse(userStr);
+        }
+      } catch (err) {
+        console.error('Error reading auth data:', err);
+      }
+
+      if (authToken && currentUser) {
+        document.getElementById('loginPrompt').style.display = 'none';
+        document.getElementById('mainInterface').style.display = 'block';
+        document.getElementById('userGreeting').textContent = `Hi ${currentUser.name}! 👋`;
+      } else {
+        document.getElementById('loginPrompt').style.display = 'flex';
+        document.getElementById('mainInterface').style.display = 'none';
+      }
+    }
+
+    function openLogin() {
+      openTaskManager('http://localhost:5173/login');
+    }
+
+    // Smart tab management - reuse existing task manager tab or create new one
+    function openTaskManager(url) {
+      // Open in regular browser tab/window, reuse if exists
+      const taskManagerWindow = window.open(url, 'TaskManagerMain');
+      
+      // Focus the window in case it was already open
+      if (taskManagerWindow) {
+        taskManagerWindow.focus();
+      }
+    }
+
+    function showStatus(message, type = 'success') {
+      const statusEl = document.getElementById('statusMessage');
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`;
+      statusEl.style.display = 'block';
+      
+      setTimeout(() => {
+        statusEl.style.display = 'none';
+      }, 5000);
+    }
+
+    function setProcessing(processing) {
+      isProcessing = processing;
+      const createBtn = document.getElementById('createBtn');
+      const updateBtn = document.getElementById('updateBtn');
+      
+      createBtn.textContent = processing ? '🔄 Processing...' : '🆕 Create New Task';
+      updateBtn.textContent = processing ? '🔄 Processing...' : '📝 Update Existing Task';
+      updateButtonStates();
+    }
+
+    async function makeAPICall(endpoint, data) {
+      const response = await fetch(`http://localhost:3000/api/ai/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status}`);
+      }
+
+      return response.json();
+    }
+
+    async function handleCreateTask() {
+      const inputText = document.getElementById('inputText').value.trim();
+      
+      if (!inputText) {
+        showStatus('Please enter some text', 'error');
+        return;
+      }
+
+      if (!authToken) {
+        showStatus('Please login first', 'error');
+        return;
+      }
+
+      setProcessing(true);
+
+      try {
+        const response = await makeAPICall('extract-task', { text: inputText });
+        
+        if (response.success && response.taskData) {
+          const taskData = response.taskData;
+          const url = `http://localhost:5173/dashboard?createTask=${encodeURIComponent(JSON.stringify(taskData))}&originalText=${encodeURIComponent(inputText)}`;
+          
+          openTaskManager(url);
+          showStatus(`✅ Task created: "${taskData.title}"`, 'success');
+          handleClear();
+        } else {
+          throw new Error('Failed to extract task data');
+        }
+      } catch (err) {
+        console.error('Create task error:', err);
+        showStatus('Failed to create task. Please try again.', 'error');
+      } finally {
+        setProcessing(false);
+      }
+    }
+
+    async function handleUpdateTask() {
+      const inputText = document.getElementById('inputText').value.trim();
+      
+      if (!inputText) {
+        showStatus('Please enter some text', 'error');
+        return;
+      }
+
+      if (!authToken) {
+        showStatus('Please login first', 'error');
+        return;
+      }
+
+      setProcessing(true);
+
+      try {
+        const response = await makeAPICall('identify-task-update', { text: inputText });
+        
+        if (response.success && response.updateData) {
+          const updateData = response.updateData;
+          
+          if (updateData.taskFound) {
+            const url = `http://localhost:5173/dashboard?updateTask=${encodeURIComponent(JSON.stringify(updateData))}&originalText=${encodeURIComponent(inputText)}`;
+            
+            openTaskManager(url);
+            showStatus(`✅ Update sent for task #${updateData.taskId}`, 'success');
+            handleClear();
+          } else {
+            showStatus(`No matching task found. Try "Create Task" instead.`, 'error');
+          }
+        } else {
+          throw new Error('Failed to identify task update');
+        }
+      } catch (err) {
+        console.error('Update task error:', err);
+        showStatus('Failed to update task. Please try again.', 'error');
+      } finally {
+        setProcessing(false);
+      }
+    }
+
+    function handleClear() {
+      document.getElementById('inputText').value = '';
+      document.getElementById('charCount').textContent = '0';
+      document.getElementById('statusMessage').style.display = 'none';
+      updateButtonStates();
+    }
+
+    // Listen for storage changes (when user logs in/out in main app)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'token' || e.key === 'user') {
+        checkAuth();
+      }
+    });
+  </script>
+</body>
+</html> 
