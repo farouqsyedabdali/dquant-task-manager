@@ -5,11 +5,11 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
     onFilterChange({ [key]: value });
   };
 
-  const hasActiveFilters = filters.status || filters.priority || filters.search;
+  const hasActiveFilters = filters.status || filters.priority || filters.search || filters.dueDateFilter;
 
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {/* Search */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -62,6 +62,25 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           </select>
         </div>
 
+        {/* Due Date Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Due Date
+          </label>
+          <select
+            value={filters.dueDateFilter}
+            onChange={(e) => handleFilterChange('dueDateFilter', e.target.value)}
+            className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+          >
+            <option value="">All Due Dates</option>
+            <option value="overdue">Overdue</option>
+            <option value="due-today">Due Today</option>
+            <option value="due-this-week">Due This Week</option>
+            <option value="due-this-month">Due This Month</option>
+            <option value="no-due-date">No Due Date</option>
+          </select>
+        </div>
+
         {/* Clear Filters */}
         <div className="flex items-end">
           <button
@@ -105,6 +124,21 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
               <button
                 onClick={() => handleFilterChange('priority', '')}
                 className="btn btn-ghost btn-xs text-white hover:bg-orange-700"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          {filters.dueDateFilter && (
+            <div className="badge bg-purple-600 text-white gap-2 border-0">
+              Due Date: {filters.dueDateFilter === 'overdue' ? 'Overdue' : 
+                         filters.dueDateFilter === 'due-today' ? 'Due Today' :
+                         filters.dueDateFilter === 'due-this-week' ? 'Due This Week' :
+                         filters.dueDateFilter === 'due-this-month' ? 'Due This Month' :
+                         filters.dueDateFilter === 'no-due-date' ? 'No Due Date' : filters.dueDateFilter}
+              <button
+                onClick={() => handleFilterChange('dueDateFilter', '')}
+                className="btn btn-ghost btn-xs text-white hover:bg-purple-700"
               >
                 ✕
               </button>

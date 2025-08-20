@@ -1,13 +1,26 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../context/authStore';
+import CalendarIcon from '../icons/CalendarIcon';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const { user, logout, isAdmin, deleteCompany } = useAuthStore();
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
+  const { user, logout, isAdmin } = useAuthStore();
   const navigate = useNavigate();
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -17,26 +30,11 @@ const Header = () => {
   const handleNavigation = (path) => {
     navigate(path);
     setIsMenuOpen(false);
+    setIsProfileDropdownOpen(false);
   };
 
-  const handleDeleteCompany = async () => {
-    if (!window.confirm('Are you sure you want to delete your company? This action cannot be undone and will delete all data including tasks, employees, and projects.')) {
-      return;
-    }
-
-    setIsDeleting(true);
-    try {
-      const result = await deleteCompany();
-      if (result.success) {
-        logout();
-        navigate('/login');
-      }
-    } catch (error) {
-      console.error('Error deleting company:', error);
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteModal(false);
-    }
+  const toggleProfileDropdown = () => {
+    setIsProfileDropdownOpen(!isProfileDropdownOpen);
   };
 
   return (
@@ -59,6 +57,13 @@ const Header = () => {
               >
                 Dashboard
               </button>
+              <button
+                onClick={() => handleNavigation('/calendar')}
+                className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
+              >
+                <CalendarIcon className="w-4 h-4" />
+                <span>Calendar</span>
+              </button>
               {isAdmin() && (
                 <button
                   onClick={() => handleNavigation('/employees')}
@@ -72,17 +77,70 @@ const Header = () => {
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
-            {/* User Info */}
-            <div className="hidden md:flex items-center space-x-3">
-              <div className="text-right">
-                <p className="text-sm font-medium text-white">{user?.name}</p>
-                <p className="text-xs text-gray-400 capitalize">{user?.role?.toLowerCase()}</p>
-              </div>
-              <div className="avatar placeholder">
-                <div className="bg-indigo-600 text-white rounded-full w-8">
-                  <span className="text-xs">{user?.name?.charAt(0)}</span>
+            {/* Profile Dropdown */}
+            <div className="relative" ref={profileDropdownRef}>
+              <button
+                onClick={toggleProfileDropdown}
+                className="flex items-center space-x-3 text-white hover:text-gray-400 transition-colors duration-200"
+              >
+                <div className="text-right hidden md:block">
+                  <p className="text-sm font-medium">{user?.name}</p>
+                  <p className="text-xs text-gray-400 capitalize">{user?.role?.toLowerCase()}</p>
                 </div>
-              </div>
+                <div className="avatar placeholder">
+                  <div className="bg-indigo-600 text-white rounded-full w-10 hover:bg-indigo-500 transition-colors duration-200">
+                    <span className="text-sm font-medium">{user?.name?.charAt(0)}</span>
+                  </div>
+                </div>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Profile Dropdown Menu */}
+              {isProfileDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50">
+                  <div className="p-4 border-b border-gray-700">
+                    <div className="flex items-center space-x-3">
+                      <div className="avatar placeholder">
+                        <div className="bg-indigo-600 text-white rounded-full w-12">
+                          <span className="text-lg font-bold">{user?.name?.charAt(0)}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{user?.name}</p>
+                        <p className="text-gray-400 text-sm">{user?.email}</p>
+                        <p className="text-gray-500 text-xs capitalize">{user?.role?.toLowerCase()}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-2">
+                    <button
+                      onClick={() => handleNavigation('/settings')}
+                      className="w-full text-left px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md transition-colors duration-200 flex items-center space-x-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span>Settings</span>
+                    </button>
+                    
+                    <div className="border-t border-gray-700 my-2"></div>
+                    
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md transition-colors duration-200 flex items-center space-x-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Mobile menu button */}
@@ -96,24 +154,6 @@ const Header = () => {
                 </svg>
               </button>
             </div>
-
-            {/* Admin Actions */}
-            {isAdmin() && (
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="btn btn-error btn-sm bg-red-600 hover:bg-red-700 text-white border-0 mr-2"
-              >
-                Delete Company
-              </button>
-            )}
-
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="btn btn-primary btn-sm bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-            >
-              Logout
-            </button>
           </div>
         </div>
 
@@ -128,6 +168,13 @@ const Header = () => {
                   className="text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium"
                 >
                   Dashboard
+                </button>
+                <button
+                  onClick={() => handleNavigation('/calendar')}
+                  className="text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2"
+                >
+                  <CalendarIcon className="w-4 h-4" />
+                  <span>Calendar</span>
                 </button>
                 {isAdmin() && (
                   <button
@@ -151,58 +198,36 @@ const Header = () => {
                     <p className="text-xs text-gray-400 capitalize">{user?.role?.toLowerCase()}</p>
                   </div>
                 </div>
+                
+                <div className="border-t border-gray-700 mt-3 pt-3">
+                  <button
+                    onClick={() => handleNavigation('/settings')}
+                    className="w-full text-left px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md transition-colors duration-200 flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Settings</span>
+                  </button>
+                  
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-md transition-colors duration-200 flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span>Logout</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Delete Company Modal */}
-      {showDeleteModal && (
-        <div className="modal modal-open">
-          <div className="modal-box bg-gray-800 border border-gray-700">
-            <h3 className="font-bold text-lg text-white mb-4">
-              Delete Company
-            </h3>
-            <p className="text-gray-300 mb-6">
-              Are you sure you want to delete your company? This action will permanently delete:
-            </p>
-            <ul className="text-gray-300 mb-6 list-disc list-inside space-y-1">
-              <li>All tasks and projects</li>
-              <li>All employees and their data</li>
-              <li>All comments and activity</li>
-              <li>Company settings and configuration</li>
-            </ul>
-            <p className="text-red-400 font-semibold mb-6">
-              This action cannot be undone!
-            </p>
-            
-            <div className="modal-action">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="btn btn-ghost text-gray-300 hover:text-white"
-                disabled={isDeleting}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteCompany}
-                className="btn btn-error bg-red-600 hover:bg-red-700 text-white border-0"
-                disabled={isDeleting}
-              >
-                {isDeleting ? (
-                  <>
-                    <span className="loading loading-spinner loading-sm"></span>
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete Company'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      
     </header>
   );
 };

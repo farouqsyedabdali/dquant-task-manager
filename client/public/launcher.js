@@ -3,7 +3,7 @@
 /**
  * AI Task Assistant Desktop Launcher
  * 
- * This script opens a small popup window (256x256) with the AI Task Assistant.
+ * This script opens the AI Task Assistant popup directly, which auto-resizes to 320x400px.
  * 
  * Usage:
  *   node launcher.js
@@ -18,9 +18,9 @@ const path = require('path');
 const os = require('os');
 
 // Configuration
-const LAUNCHER_URL = 'http://localhost:5173/popup-launcher.html';
+const POPUP_URL = 'http://localhost:5173/popup.html?direct=true';
 
-// Open the launcher page in default browser
+// Open the popup directly in default browser
 function openPopup() {
   const platform = os.platform();
   let command, args;
@@ -28,17 +28,17 @@ function openPopup() {
   switch (platform) {
     case 'win32':
       command = 'cmd';
-      args = ['/c', 'start', '""', `"${LAUNCHER_URL}"`];
+      args = ['/c', 'start', '""', `"${POPUP_URL}"`];
       break;
 
     case 'darwin':
       command = 'open';
-      args = [LAUNCHER_URL];
+      args = [POPUP_URL];
       break;
 
     case 'linux':
       command = 'xdg-open';
-      args = [LAUNCHER_URL];
+      args = [POPUP_URL];
       break;
 
     default:
@@ -46,8 +46,8 @@ function openPopup() {
       process.exit(1);
   }
 
-  console.log('🚀 Opening AI Task Assistant Launcher...');
-  console.log(`🌐 URL: ${LAUNCHER_URL}`);
+  console.log('🚀 Opening AI Task Assistant Popup directly...');
+  console.log(`🌐 URL: ${POPUP_URL}`);
 
   const child = spawn(command, args, {
     detached: true,
@@ -57,15 +57,14 @@ function openPopup() {
   child.unref();
 
   setTimeout(() => {
-    console.log('✅ Launcher opened! Click "Launch AI Assistant" to open the popup.');
+    console.log('✅ AI Task Assistant popup opened!');
     console.log('');
     console.log('📝 How to use:');
-    console.log('   1. Click "Launch AI Assistant" on the launcher page');
-    console.log('   2. A 256x256 popup window will open');
-    console.log('   3. Copy text and use Create/Update Task buttons');
-    console.log('   4. Task manager will open in regular tabs');
+    console.log('   1. The popup window should auto-resize to 320x400px');
+    console.log('   2. Copy text and use Create/Update Task buttons');
+    console.log('   3. Task manager will open in regular tabs');
     console.log('');
-    console.log('💡 Tip: Bookmark the launcher for easy access!');
+    console.log('💡 Tip: The popup will auto-resize and center itself!');
   }, 1000);
 }
 
@@ -78,7 +77,7 @@ function checkServer() {
     const options = {
       hostname: 'localhost',
       port: 5173,
-      path: '/popup-launcher.html',
+      path: '/popup.html',
       timeout: 3000
     };
 

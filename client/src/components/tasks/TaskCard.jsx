@@ -59,7 +59,11 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
   return (
     <>
       <div 
-        className="task-card bg-gray-800 border border-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-900 transition-all duration-200"
+        className={`task-card bg-gray-800 border rounded-lg p-4 cursor-pointer hover:bg-gray-900 transition-all duration-200 ${
+          task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED'
+            ? 'border-red-500 border-2'
+            : 'border-gray-700'
+        }`}
         onClick={handleCardClick}
       >
         {/* Task Header */}
@@ -111,6 +115,27 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
               <span className="text-white text-sm">{task.subtasks.length}</span>
             </div>
           )}
+
+          {/* Due Date */}
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-400 text-sm">Due:</span>
+            {task.dueDate ? (
+              <div className="flex items-center space-x-2">
+                <span className={`text-sm ${
+                  new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED'
+                    ? 'text-red-400 font-medium'
+                    : 'text-white'
+                }`}>
+                  {new Date(task.dueDate).toLocaleDateString()}
+                </span>
+                {new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED' && (
+                  <span className="badge badge-error badge-sm">Overdue</span>
+                )}
+              </div>
+            ) : (
+              <span className="text-gray-500 text-sm">No due date</span>
+            )}
+          </div>
 
           {/* Last Update */}
           {lastUpdate ? (

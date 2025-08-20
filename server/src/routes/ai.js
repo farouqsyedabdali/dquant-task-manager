@@ -61,15 +61,16 @@ router.post('/chat', async (req, res) => {
       take: 10
     });
 
-    // System prompt for AI
+    // System prompt for AI (now includes due date awareness)
     const systemPrompt = `
 You are an AI assistant for a task management system.
 If the user asks you to create, delete, update, or list tasks, output a JSON command (or an array of commands) in this format (on a new line):
-{ "action": "create_task", "title": "...", "assignee": "...", "description": "...", "priority": "..." }
+{ "action": "create_task", "title": "...", "assignee": "...", "description": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
 { "action": "delete_task", "title": "..." }
-{ "action": "update_task", "title": "...", "status": "...", "priority": "..." }
+{ "action": "update_task", "title": "...", "status": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
 { "action": "list_tasks", "filter": { "status": "...", "priority": "...", "assignee": "..." } }
 - For multiple actions, output an array of JSON commands.
+- Parse natural language dates (e.g., "by Friday", "EOD tomorrow", "next Monday 3pm") and convert to ISO-like format (YYYY-MM-DD or YYYY-MM-DDTHH:mm) in the dueDate field when applicable.
 - For references like "last task you created" or "second task in my list", use the user's recent tasks (provided below) and include the resolved title in the command.
 - Otherwise, just answer normally.
 
@@ -177,6 +178,14 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
             priority = upper;
           }
         }
+        // Parse due date if provided
+        let dueDate = null;
+        if (command.dueDate && typeof command.dueDate === 'string') {
+          const parsed = new Date(command.dueDate);
+          if (!isNaN(parsed.getTime())) {
+            dueDate = parsed;
+          }
+        }
         // Create the task
         const newTask = await prisma.task.create({
           data: {
@@ -185,6 +194,7 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
             priority,
             assignerId: userId,
             assigneeId: assigneeId || userId,
+            dueDate,
             companyId
           }
         });
@@ -230,9 +240,13 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
             const priority = command.priority.trim().toUpperCase();
             if (allowedPriorities.includes(priority)) updateData.priority = priority;
           }
+          if (command.dueDate && typeof command.dueDate === 'string') {
+            const parsed = new Date(command.dueDate);
+            if (!isNaN(parsed.getTime())) updateData.dueDate = parsed;
+          }
           if (Object.keys(updateData).length > 0) {
             await prisma.task.update({ where: { id: task.id }, data: updateData });
-            return `✏️ Task "${task.title}" updated${updateData.status ? ` (status: ${updateData.status})` : ''}${updateData.priority ? ` (priority: ${updateData.priority})` : ''}.`;
+            return `✏️ Task "${task.title}" updated${updateData.status ? ` (status: ${updateData.status})` : ''}${updateData.priority ? ` (priority: ${updateData.priority})` : ''}${updateData.dueDate ? ' (due date updated)' : ''}.`;
           } else {
             return `⚠️ No valid fields to update for task "${task.title}".`;
           }

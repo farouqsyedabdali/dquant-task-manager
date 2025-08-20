@@ -11,7 +11,8 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
     description: '',
     status: 'TODO',
     priority: 'MEDIUM',
-    assigneeId: ''
+    assigneeId: '',
+    dueDate: ''
   });
   const [isEditing, setIsEditing] = useState(false);
   const [errors, setErrors] = useState({});
@@ -27,7 +28,8 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
         description: task.description || '',
         status: task.status || 'TODO',
         priority: task.priority || 'MEDIUM',
-        assigneeId: task.assigneeId?.toString() || ''
+        assigneeId: task.assigneeId?.toString() || '',
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : ''
       });
     }
   }, [task]);
@@ -83,7 +85,8 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
     // Prepare the data for update
     const updateData = {
       ...formData,
-      assigneeId: parseInt(formData.assigneeId)
+      assigneeId: parseInt(formData.assigneeId),
+      dueDate: formData.dueDate || null
     };
 
     const result = await updateTask(task.id, updateData);
@@ -270,6 +273,35 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(task.priority)}`}>
                     {PRIORITY_LABELS[task.priority]}
                   </span>
+                </div>
+              )}
+            </div>
+
+            {/* Due Date */}
+            <div>
+              <h4 className="text-lg font-semibold text-white mb-3">Due Date</h4>
+              {isEditing ? (
+                <input
+                  type="datetime-local"
+                  name="dueDate"
+                  value={formData.dueDate}
+                  onChange={handleChange}
+                  className="input bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+                />
+              ) : (
+                <div className="flex items-center space-x-2">
+                  {task.dueDate ? (
+                    <>
+                      <span className="text-white">
+                        {new Date(task.dueDate).toLocaleDateString()} at {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      {new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED' && (
+                        <span className="badge badge-error">Overdue</span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-gray-400">No due date</span>
+                  )}
                 </div>
               )}
             </div>

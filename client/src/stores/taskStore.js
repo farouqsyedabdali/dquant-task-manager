@@ -9,7 +9,8 @@ const useTaskStore = create((set, get) => ({
   filters: {
     status: '',
     priority: '',
-    search: ''
+    search: '',
+    dueDateFilter: ''
   },
 
   // Get all tasks
@@ -46,7 +47,7 @@ const useTaskStore = create((set, get) => ({
     try {
       const response = await tasksAPI.getById(id);
       set({ currentTask: response.data, isLoading: false });
-      return { success: true };
+      return { success: true, data: response.data };
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Failed to fetch task';
       set({ error: errorMessage, isLoading: false });
@@ -182,7 +183,7 @@ const useTaskStore = create((set, get) => ({
 
   // Clear filters
   clearFilters: () => {
-    set({ filters: { status: '', priority: '', search: '' } });
+    set({ filters: { status: '', priority: '', search: '', dueDateFilter: '' } });
   },
 
   // Clear current task
@@ -214,6 +215,41 @@ const useTaskStore = create((set, get) => ({
         task.title.toLowerCase().includes(searchLower) ||
         (task.description && task.description.toLowerCase().includes(searchLower))
       );
+    }
+
+    // Due date filtering
+    if (filters.dueDateFilter) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      switch (filters.dueDateFilter) {
+        case 'overdue':
+          filteredTasks = filteredTasks.filter(task => 
+            task.dueDate && new Date(task.dueDate) < today && task.status !== 'COMPLETED'
+          );
+          break;
+        case 'due-today':
+          const endOfDay = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+          filteredTasks = filteredTasks.filter(task => 
+            task.dueDate && new Date(task.dueDate) >= today && new Date(task.dueDate) < endOfDay
+          );
+          break;
+        case 'due-this-week':
+          const endOfWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+          filteredTasks = filteredTasks.filter(task => 
+            task.dueDate && new Date(task.dueDate) >= today && new Date(task.dueDate) < endOfWeek
+          );
+          break;
+        case 'due-this-month':
+          const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          filteredTasks = filteredTasks.filter(task => 
+            task.dueDate && new Date(task.dueDate) >= today && new Date(task.dueDate) <= endOfMonth
+          );
+          break;
+        case 'no-due-date':
+          filteredTasks = filteredTasks.filter(task => !task.dueDate);
+          break;
+      }
     }
 
     return filteredTasks;

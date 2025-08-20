@@ -4,7 +4,7 @@ const prisma = new PrismaClient()
 // Get tasks based on user role and assignments
 const getTasks = async (req, res) => {
   try {
-    const { status, priority, search, type = 'all' } = req.query;
+    const { status, priority, search, type = 'all', dueDateFilter } = req.query;
     const userId = req.user.id;
     const userRole = req.user.role;
     const companyId = req.user.companyId;
@@ -41,6 +41,44 @@ const getTasks = async (req, res) => {
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } }
       ];
+    }
+
+    // Add due date filtering
+    if (dueDateFilter) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      switch (dueDateFilter) {
+        case 'overdue':
+          whereClause.dueDate = {
+            lt: today,
+            not: null
+          };
+          break;
+        case 'due-today':
+          whereClause.dueDate = {
+            gte: today,
+            lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+          };
+          break;
+        case 'due-this-week':
+          const endOfWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+          whereClause.dueDate = {
+            gte: today,
+            lt: endOfWeek
+          };
+          break;
+        case 'due-this-month':
+          const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          whereClause.dueDate = {
+            gte: today,
+            lte: endOfMonth
+          };
+          break;
+        case 'no-due-date':
+          whereClause.dueDate = null;
+          break;
+      }
     }
 
     // Fetch all tasks user can see
@@ -246,7 +284,7 @@ const getTask = async (req, res) => {
 // Create task (anyone can create tasks)
 const createTask = async (req, res) => {
   try {
-    const { title, description, priority, assigneeId, parentTaskId } = req.body;
+    const { title, description, priority, assigneeId, parentTaskId, dueDate } = req.body;
     const assignerId = req.user.id;
     const companyId = req.user.companyId;
 
@@ -296,6 +334,7 @@ const createTask = async (req, res) => {
         assignerId,
         assigneeId: parseInt(assigneeId),
         parentTaskId: parentTaskId ? parseInt(parentTaskId) : null,
+        dueDate: dueDate ? new Date(dueDate) : null,
         companyId
       },
       include: {
@@ -398,7 +437,8 @@ const updateTask = async (req, res) => {
         description: updateData.description,
         priority: updateData.priority,
         status: updateData.status,
-        assigneeId: updateData.assigneeId
+        assigneeId: updateData.assigneeId,
+        dueDate: updateData.dueDate ? new Date(updateData.dueDate) : null
       };
     } else if (isAssignee) {
       // Assignee can only update status

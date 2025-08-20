@@ -8,6 +8,8 @@ import CompanySignup from './pages/CompanySignup';
 import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
 import TaskPopup from './pages/TaskPopup';
+import Settings from './pages/Settings';
+import Calendar from './pages/Calendar';
 import AIModal from './components/tasks/AIModal';
 import { FaRobot } from 'react-icons/fa';
 import './App.css';
@@ -66,6 +68,30 @@ function App() {
                 <div className="min-h-screen bg-gray-900">
                   <Header />
                   <Employees />
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen bg-gray-900">
+                  <Header />
+                  <Settings />
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/calendar"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen bg-gray-900">
+                  <Header />
+                  <Calendar />
                 </div>
               </ProtectedRoute>
             }

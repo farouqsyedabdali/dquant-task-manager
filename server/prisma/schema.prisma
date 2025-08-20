@@ -54,6 +54,7 @@ model Task {
   updatedAt    DateTime   @updatedAt
   status       TaskStatus @default(TODO)
   priority     Priority   @default(MEDIUM)
+  dueDate      DateTime?  // Optional due date for tasks
   companyId    Int
   
   // Relations

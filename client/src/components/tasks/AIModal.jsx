@@ -74,10 +74,17 @@ const AIModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-gray-900 rounded-lg shadow-lg w-full max-w-lg p-0 flex flex-col relative">
+    <div className="fixed inset-0 z-50">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200 opacity-100" />
+
+      {/* Animated container */}
+      <div className="absolute inset-0 flex items-end sm:items-center justify-center">
+        <div className="w-full h-[90vh] sm:h-[80vh] sm:max-w-3xl transform transition-all duration-300 ease-out animate-[aimodal-enter_300ms_ease-out]">
+          <style>{`@keyframes aimodal-enter{0%{opacity:0;transform:translateY(24px) scale(0.98)}100%{opacity:1;transform:translateY(0) scale(1)}}`}</style>
+          <div className="bg-gray-900 border border-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
           <div className="flex items-center space-x-2">
             <FaRobot className="text-indigo-400" size={22} />
             <div>
@@ -101,10 +108,10 @@ const AIModal = ({ isOpen, onClose }) => {
           </div>
         </div>
         {/* Conversation */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-gray-800" style={{ minHeight: 300, maxHeight: 400 }}>
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-gray-800/70" style={{ minHeight: 300 }}>
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`rounded-lg px-4 py-2 max-w-[80%] text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-100'}`}>
+              <div className={`rounded-xl px-4 py-2 max-w-[80%] text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-100'}`}>
                 {msg.content}
               </div>
             </div>
@@ -114,22 +121,22 @@ const AIModal = ({ isOpen, onClose }) => {
         {/* Error */}
         {error && <div className="text-red-400 text-sm px-6">{error}</div>}
         {/* Input */}
-        <form onSubmit={handleSend} className="flex items-center px-6 py-4 border-t border-gray-700 bg-gray-900">
+        <form onSubmit={handleSend} className="flex items-center px-6 py-4 border-t border-gray-800 bg-gray-900">
           <textarea
-            className="flex-1 resize-none rounded-lg bg-gray-800 text-white border border-gray-700 px-3 py-2 mr-2 focus:outline-none focus:border-indigo-500"
-            rows={1}
+            className="flex-1 resize-none rounded-lg bg-gray-800 text-white border border-gray-700 px-3 py-3 mr-2 focus:outline-none focus:border-indigo-500"
+            rows={2}
             value={input}
             onChange={e => setInput(e.target.value)}
             placeholder="Ask me anything..."
             disabled={loading}
             maxLength={500}
-            style={{ minHeight: 36 }}
+            style={{ minHeight: 40 }}
           />
           <button
             type="submit"
-            className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 flex items-center justify-center px-4 py-2"
+            className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 flex items-center justify-center px-5 py-2"
             disabled={loading || !input.trim()}
-            style={{ minHeight: 36 }}
+            style={{ minHeight: 40 }}
           >
             {loading ? (
               <span className="loading loading-spinner loading-xs"></span>
@@ -138,6 +145,8 @@ const AIModal = ({ isOpen, onClose }) => {
             )}
           </button>
         </form>
+          </div>
+        </div>
       </div>
     </div>
   );

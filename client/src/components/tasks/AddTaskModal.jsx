@@ -8,7 +8,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
     title: '',
     description: '',
     priority: 'MEDIUM',
-    assigneeId: ''
+    assigneeId: '',
+    dueDate: ''
   });
   const [errors, setErrors] = useState({});
   const [users, setUsers] = useState([]);
@@ -118,7 +119,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
     // Prepare the data for creation
     const createData = {
       ...formData,
-      assigneeId: parseInt(formData.assigneeId)
+      assigneeId: parseInt(formData.assigneeId),
+      dueDate: formData.dueDate || null
     };
 
     const result = await createTask(createData);
@@ -127,7 +129,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
         title: '',
         description: '',
         priority: 'MEDIUM',
-        assigneeId: ''
+        assigneeId: '',
+        dueDate: ''
       });
       setErrors({});
       onClose();
@@ -139,7 +142,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
       title: '',
       description: '',
       priority: 'MEDIUM',
-      assigneeId: ''
+      assigneeId: '',
+      dueDate: ''
     });
     setErrors({});
     onClose();
@@ -225,6 +229,20 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
+          </div>
+
+          {/* Due Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Due Date (Optional)
+            </label>
+            <input
+              type="datetime-local"
+              name="dueDate"
+              value={formData.dueDate}
+              onChange={handleChange}
+              className="input bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+            />
           </div>
 
           {/* Assign To */}

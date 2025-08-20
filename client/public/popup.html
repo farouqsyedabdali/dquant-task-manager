@@ -193,6 +193,30 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
     }
+    
+    /* Styles for direct open mode */
+    .direct-open {
+      min-width: 320px;
+      min-height: 400px;
+    }
+    
+    .direct-open .container {
+      min-height: 400px;
+      padding: 12px;
+    }
+    
+    .direct-open .header h1 {
+      font-size: 14px;
+    }
+    
+    .direct-open .header .subtitle {
+      font-size: 11px;
+    }
+    
+    .direct-open .textarea {
+      font-size: 11px;
+      padding: 8px;
+    }
   </style>
 </head>
 <body>
@@ -247,6 +271,7 @@
       checkAuth();
       setupInputHandlers();
       autoFillClipboard();
+      handleDirectOpen();
     });
 
     function setupInputHandlers() {
@@ -440,6 +465,62 @@
       document.getElementById('charCount').textContent = '0';
       document.getElementById('statusMessage').style.display = 'none';
       updateButtonStates();
+    }
+
+    function handleDirectOpen() {
+      // Check if opened directly via bat file
+      const urlParams = new URLSearchParams(window.location.search);
+      const isDirect = urlParams.get('direct') === 'true';
+      
+      if (isDirect) {
+        // Apply direct open styling
+        document.body.classList.add('direct-open');
+        document.documentElement.classList.add('direct-open');
+        
+        // Try to resize and center the browser window
+        const targetWidth = 320;
+        const targetHeight = 400;
+        
+        // Calculate center position
+        const screenWidth = window.screen.width;
+        const screenHeight = window.screen.height;
+        const left = (screenWidth - targetWidth) / 2;
+        const top = (screenHeight - targetHeight) / 2;
+        
+        // Try multiple approaches to resize the window
+        try {
+          // Method 1: Direct resize
+          window.resizeTo(targetWidth, targetHeight);
+          window.moveTo(left, top);
+          console.log('Window resized using direct method');
+        } catch (error) {
+          console.log('Direct resize failed:', error);
+          
+          try {
+            // Method 2: Using window.open to create a new window with specific size
+            const newWindow = window.open(window.location.href, '_self', 
+              `width=${targetWidth},height=${targetHeight},left=${left},top=${top},scrollbars=no,resizable=yes,toolbar=no,menubar=no,location=no,status=no`
+            );
+            if (newWindow) {
+              console.log('Window resized using window.open method');
+            }
+          } catch (error2) {
+            console.log('Window.open resize failed:', error2);
+            
+            // Method 3: Show manual resize instructions
+            setTimeout(() => {
+              showStatus('💡 For best experience, manually resize this window to ~320x400px', 'success');
+            }, 1000);
+          }
+        }
+        
+        // Set window properties
+        try {
+          window.resizable = true;
+        } catch (e) {
+          console.log('Could not set resizable property');
+        }
+      }
     }
 
     // Listen for storage changes (when user logs in/out in main app)

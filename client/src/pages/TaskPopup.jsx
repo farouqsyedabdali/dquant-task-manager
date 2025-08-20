@@ -146,10 +146,9 @@ const TaskPopup = () => {
 
   if (!isAuthenticated()) {
     return (
-      <div className="h-full bg-gray-900 flex flex-col items-center justify-center p-4 text-center">
-        <div className="text-red-400 text-xs mb-2">⚠️ Not Logged In</div>
-        <div className="text-gray-300 text-xs mb-3">
-          Please login to your task manager first
+      <div className="h-full bg-gray-900 flex flex-col items-center justify-center p-3 text-center">
+        <div className="alert alert-warning text-sm mb-3 py-2 px-3">
+          <span>⚠️ Not Logged In. Please login to your task manager first.</span>
         </div>
         <button
           onClick={() => {
@@ -158,7 +157,7 @@ const TaskPopup = () => {
               taskManagerWindow.focus();
             }
           }}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1 rounded"
+          className="btn btn-primary btn-md w-full"
         >
           Open Login
         </button>
@@ -169,24 +168,25 @@ const TaskPopup = () => {
   return (
     <div className="h-full bg-gray-900 flex flex-col p-3">
       {/* Header */}
-      <div className="text-center mb-3">
-        <h1 className="text-white text-sm font-bold">AI Task Assistant</h1>
-        <div className="text-gray-400 text-xs">
+      <div className="text-center mb-2">
+        <h1 className="text-white text-base font-bold leading-tight">AI Task Assistant</h1>
+        <div className="text-gray-400 text-sm leading-tight">
           Hi {user?.name || 'User'}! 👋
         </div>
       </div>
 
       {/* Text Input */}
-      <div className="flex-1 mb-3">
+      <div className="flex-1 mb-2">
         <textarea
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Paste text here or type task details..."
-          className="w-full h-full resize-none bg-gray-800 border border-gray-600 text-white text-xs placeholder-gray-400 rounded p-2 focus:border-indigo-500 focus:outline-none"
+          placeholder="Paste text or type task details..."
+          className="textarea textarea-bordered w-full h-full text-sm leading-snug bg-gray-800 border-gray-600 text-white placeholder-gray-400"
           maxLength={500}
         />
-        <div className="text-xs text-gray-500 text-right mt-1">
-          {inputText.length}/500
+        <div className="mt-1 flex justify-between items-center">
+          <span className="badge badge-ghost badge-sm text-[10px]">{inputText.length}/500</span>
+          <span className="text-[10px] text-gray-500">Enter = Create • Shift+Enter = Update</span>
         </div>
       </div>
 
@@ -195,23 +195,23 @@ const TaskPopup = () => {
         <button
           onClick={handleCreateTask}
           disabled={isProcessing || !inputText.trim()}
-          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-xs py-2 px-3 rounded font-medium transition-colors"
+          className="btn btn-success btn-md w-full"
         >
-          {isProcessing ? '🔄 Processing...' : '🆕 Create New Task'}
+          {isProcessing ? 'Processing…' : '🆕 Create Task'}
         </button>
-        
+
         <button
           onClick={handleUpdateTask}
           disabled={isProcessing || !inputText.trim()}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-xs py-2 px-3 rounded font-medium transition-colors"
+          className="btn btn-info btn-md w-full"
         >
-          {isProcessing ? '🔄 Processing...' : '📝 Update Existing Task'}
+          {isProcessing ? 'Processing…' : '📝 Update Task'}
         </button>
-        
+
         <button
           onClick={handleClear}
           disabled={isProcessing}
-          className="w-full bg-gray-600 hover:bg-gray-700 disabled:bg-gray-600 text-white text-xs py-1 px-3 rounded transition-colors"
+          className="btn btn-ghost btn-md w-full"
         >
           Clear
         </button>
@@ -219,21 +219,15 @@ const TaskPopup = () => {
 
       {/* Status Messages */}
       {error && (
-        <div className="bg-red-900/50 border border-red-500/50 text-red-300 text-xs p-2 rounded mb-2">
-          {error}
-        </div>
+        <div className="alert alert-error text-sm py-2">{error}</div>
       )}
-      
+
       {lastResult && (
-        <div className="bg-green-900/50 border border-green-500/50 text-green-300 text-xs p-2 rounded">
+        <div className="alert alert-success text-sm py-2">
           {lastResult.type === 'create' ? (
-            <div>
-              ✅ Task created: "{lastResult.title}"
-            </div>
+            <span>✅ Task created: "{lastResult.title}"</span>
           ) : (
-            <div>
-              ✅ Update sent for task #{lastResult.taskId}
-            </div>
+            <span>✅ Update sent for task #{lastResult.taskId}</span>
           )}
         </div>
       )}

@@ -73,7 +73,11 @@ const TaskList = ({ tasks, onStatusChange, onPriorityChange, onDelete }) => {
                   return (
                     <tr 
                       key={task.id} 
-                      className="border-b border-gray-700 hover:bg-gray-900 cursor-pointer transition-colors"
+                      className={`border-b hover:bg-gray-900 cursor-pointer transition-colors ${
+                        task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED'
+                          ? 'border-red-500 border-l-4'
+                          : 'border-gray-700'
+                      }`}
                       onClick={() => handleRowClick(task)}
                     >
                       {/* Task Title with Priority Bar */}
@@ -90,6 +94,27 @@ const TaskList = ({ tasks, onStatusChange, onPriorityChange, onDelete }) => {
                                 {task.description}
                               </p>
                             )}
+                            
+                            {/* Due Date */}
+                            <div className="flex items-center space-x-2 mt-2">
+                              <span className="text-gray-500 text-xs">Due:</span>
+                              {task.dueDate ? (
+                                <div className="flex items-center space-x-2">
+                                  <span className={`text-xs ${
+                                    new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED'
+                                      ? 'text-red-400 font-medium'
+                                      : 'text-gray-300'
+                                  }`}>
+                                    {new Date(task.dueDate).toLocaleDateString()}
+                                  </span>
+                                  {new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED' && (
+                                    <span className="badge badge-error badge-xs">Overdue</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-500 text-xs">No due date</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
