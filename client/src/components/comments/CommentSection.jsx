@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { commentsAPI } from '../../services/api';
 import useAuthStore from '../../context/authStore';
+import DeleteConfirmModal from '../common/DeleteConfirmModal';
 
 const CommentSection = ({ taskId, extensionUpdateData = null }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [deleteCommentId, setDeleteCommentId] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const { user, isAdmin } = useAuthStore();
 
@@ -73,14 +76,21 @@ const CommentSection = ({ taskId, extensionUpdateData = null }) => {
   const handleDeleteComment = async (commentId) => {
     if (!isAdmin()) return;
     
-    if (!window.confirm('Are you sure you want to delete this comment?')) return;
+    setDeleteCommentId(commentId);
+    setIsDeleteModalOpen(true);
+  };
 
-    try {
-      await commentsAPI.delete(commentId);
-      setComments(comments.filter(comment => comment.id !== commentId));
-    } catch (error) {
-      setError('Failed to delete comment');
-      console.error('Error deleting comment:', error);
+  const confirmDeleteComment = async () => {
+    if (deleteCommentId) {
+      try {
+        await commentsAPI.delete(deleteCommentId);
+        setComments(comments.filter(comment => comment.id !== deleteCommentId));
+        setIsDeleteModalOpen(false);
+        setDeleteCommentId(null);
+      } catch (error) {
+        setError('Failed to delete comment');
+        console.error('Error deleting comment:', error);
+      }
     }
   };
 
@@ -228,6 +238,20 @@ const CommentSection = ({ taskId, extensionUpdateData = null }) => {
           ))
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteCommentId && (
+        <DeleteConfirmModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setDeleteCommentId(null);
+          }}
+          onConfirm={confirmDeleteComment}
+          taskTitle={`Comment by ${comments.find(c => c.id === deleteCommentId)?.author.name || 'Unknown'}`}
+          isLoading={isLoading}
+        />
+      )}
     </div>
   );
 };

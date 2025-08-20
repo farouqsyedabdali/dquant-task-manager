@@ -4,12 +4,15 @@ import useAuthStore from '../../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS, STATUS_COLORS, PRIORITY_COLORS } from '../../utils/constants';
 import TaskModal from './TaskModal';
 import TaskFilters from './TaskFilters';
+import DeleteConfirmModal from '../common/DeleteConfirmModal';
 
 const TaskTable = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [sortField, setSortField] = useState('createdAt');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [deleteTaskId, setDeleteTaskId] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const { 
     tasks, 
@@ -49,8 +52,15 @@ const TaskTable = () => {
   };
 
   const handleDelete = async (taskId) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      await deleteTask(taskId);
+    setDeleteTaskId(taskId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteTaskId) {
+      await deleteTask(deleteTaskId);
+      setIsDeleteModalOpen(false);
+      setDeleteTaskId(null);
     }
   };
 
@@ -279,6 +289,20 @@ const TaskTable = () => {
           isOpen={isModalOpen}
           onClose={closeModal}
           isEdit={isAdmin()}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTaskId && (
+        <DeleteConfirmModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setDeleteTaskId(null);
+          }}
+          onConfirm={confirmDelete}
+          taskTitle={tasks.find(t => t.id === deleteTaskId)?.title || 'Unknown Task'}
+          isLoading={isLoading}
         />
       )}
     </div>

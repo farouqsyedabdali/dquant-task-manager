@@ -138,6 +138,114 @@ const TaskPopup = () => {
     }
   };
 
+  const handleCompleteTask = async () => {
+    if (!inputText.trim()) {
+      setError('Please enter some text');
+      return;
+    }
+
+    if (!isAuthenticated()) {
+      setError('Please login to your task manager first');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const response = await aiAPI.identifyTaskUpdate(inputText.trim());
+      
+      if (response.data.success && response.data.updateData) {
+        const updateData = response.data.updateData;
+        
+        if (updateData.taskFound) {
+          // Open the main app with complete task data
+          const url = `http://localhost:5173/dashboard?completeTask=${encodeURIComponent(JSON.stringify(updateData))}&originalText=${encodeURIComponent(inputText)}`;
+          
+          // Open in main window (reuse existing tab)
+          const taskManagerWindow = window.open(url, 'TaskManagerMain');
+          if (taskManagerWindow) {
+            taskManagerWindow.focus();
+          }
+          
+          setLastResult({
+            type: 'complete',
+            success: true,
+            taskId: updateData.taskId,
+            updateContent: updateData.updateContent,
+            confidence: updateData.confidence
+          });
+          
+          // Clear input after successful completion
+          setInputText('');
+        } else {
+          setError(`No matching task found. ${updateData.suggestedActions?.includes('create_new_task') ? 'Try "Create Task" instead.' : ''}`);
+        }
+      } else {
+        throw new Error('Failed to identify task for completion');
+      }
+    } catch (err) {
+      console.error('Complete task error:', err);
+      setError('Failed to complete task. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSummarizeTask = async () => {
+    if (!inputText.trim()) {
+      setError('Please enter some text');
+      return;
+    }
+
+    if (!isAuthenticated()) {
+      setError('Please login to your task manager first');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const response = await aiAPI.identifyTaskUpdate(inputText.trim());
+      
+      if (response.data.success && response.data.updateData) {
+        const updateData = response.data.updateData;
+        
+        if (updateData.taskFound) {
+          // Open the main app with summarize task data
+          const url = `http://localhost:5173/dashboard?summarizeTask=${encodeURIComponent(JSON.stringify(updateData))}&originalText=${encodeURIComponent(inputText)}`;
+          
+          // Open in main window (reuse existing tab)
+          const taskManagerWindow = window.open(url, 'TaskManagerMain');
+          if (taskManagerWindow) {
+            taskManagerWindow.focus();
+          }
+          
+          setLastResult({
+            type: 'summarize',
+            success: true,
+            taskId: updateData.taskId,
+            updateContent: updateData.updateContent,
+            confidence: updateData.confidence
+          });
+          
+          // Clear input after successful summarization
+          setInputText('');
+        } else {
+          setError(`No matching task found. ${updateData.suggestedActions?.includes('create_new_task') ? 'Try "Create Task" instead.' : ''}`);
+        }
+      } else {
+        throw new Error('Failed to identify task for summarization');
+      }
+    } catch (err) {
+      console.error('Summarize task error:', err);
+      setError('Failed to summarize task. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleClear = () => {
     setInputText('');
     setError(null);
@@ -209,6 +317,22 @@ const TaskPopup = () => {
         </button>
 
         <button
+          onClick={handleCompleteTask}
+          disabled={isProcessing || !inputText.trim()}
+          className="btn btn-accent btn-md w-full"
+        >
+          {isProcessing ? 'Processing…' : '✅ Complete Task'}
+        </button>
+
+        <button
+          onClick={handleSummarizeTask}
+          disabled={isProcessing || !inputText.trim()}
+          className="btn btn-warning btn-md w-full"
+        >
+          {isProcessing ? 'Processing…' : '📋 Summarize Task'}
+        </button>
+
+        <button
           onClick={handleClear}
           disabled={isProcessing}
           className="btn btn-ghost btn-md w-full"
@@ -224,11 +348,15 @@ const TaskPopup = () => {
 
       {lastResult && (
         <div className="alert alert-success text-sm py-2">
-          {lastResult.type === 'create' ? (
-            <span>✅ Task created: "{lastResult.title}"</span>
-          ) : (
-            <span>✅ Update sent for task #{lastResult.taskId}</span>
-          )}
+                  {lastResult.type === 'create' ? (
+          <span>✅ Task created: "{lastResult.title}"</span>
+        ) : lastResult.type === 'complete' ? (
+          <span>✅ Task #{lastResult.taskId} marked as completed!</span>
+        ) : lastResult.type === 'summarize' ? (
+          <span>📋 Task #{lastResult.taskId} summary opened in main app!</span>
+        ) : (
+          <span>✅ Update sent for task #{lastResult.taskId}</span>
+        )}
         </div>
       )}
     </div>

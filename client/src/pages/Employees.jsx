@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react';
 import useUserStore from '../stores/userStore';
 import useAuthStore from '../context/authStore';
 import AddEmployeeModal from '../components/employees/AddEmployeeModal';
+import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 
 const Employees = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [deleteUserId, setDeleteUserId] = useState(null);
+  const [deleteUserName, setDeleteUserName] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const { users, fetchUsers, deleteEmployee, isLoading, error } = useUserStore();
   const { user, isAdmin } = useAuthStore();
 
@@ -13,12 +17,21 @@ const Employees = () => {
   }, [fetchUsers]);
 
   const handleDelete = async (userId, userName) => {
-    if (window.confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
-      const result = await deleteEmployee(userId);
+    setDeleteUserId(userId);
+    setDeleteUserName(userName);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteUserId) {
+      const result = await deleteEmployee(deleteUserId);
       if (!result.success) {
         // Error is handled by the store
         console.error('Failed to delete employee:', result.error);
       }
+      setIsDeleteModalOpen(false);
+      setDeleteUserId(null);
+      setDeleteUserName('');
     }
   };
 
@@ -160,6 +173,21 @@ const Employees = () => {
         <AddEmployeeModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteUserId && (
+        <DeleteConfirmModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setDeleteUserId(null);
+            setDeleteUserName('');
+          }}
+          onConfirm={confirmDelete}
+          taskTitle={`Employee ${deleteUserName}`}
+          isLoading={isLoading}
         />
       )}
     </div>

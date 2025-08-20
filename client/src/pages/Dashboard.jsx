@@ -9,6 +9,7 @@ import AddTaskModal from '../components/tasks/AddTaskModal';
 import TaskModal from '../components/tasks/TaskModal';
 import TaskFilters from '../components/tasks/TaskFilters';
 import ViewSwitcher from '../components/tasks/ViewSwitcher';
+import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 
 const Dashboard = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -21,6 +22,10 @@ const Dashboard = () => {
     return localStorage.getItem('taskViewMode') || 'cards';
   });
   const [taskType, setTaskType] = useState('all');
+  const [deleteTaskId, setDeleteTaskId] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [summaryData, setSummaryData] = useState(null);
   const { tasks, fetchTasks, fetchTasksByType, fetchTask, deleteTask, updateTaskStatus, updateTaskPriority, filters, setFilters, clearFilters, getFilteredTasks } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
   const location = useLocation();
@@ -39,6 +44,8 @@ const Dashboard = () => {
     const urlParams = new URLSearchParams(location.search);
     const taskDataParam = urlParams.get('createTask');
     const updateDataParam = urlParams.get('updateTask');
+    const completeTaskParam = urlParams.get('completeTask');
+    const summarizeTaskParam = urlParams.get('summarizeTask');
     const originalTextParam = urlParams.get('originalText');
     
     if (taskDataParam) {
@@ -67,6 +74,32 @@ const Dashboard = () => {
         navigate('/dashboard', { replace: true });
       } catch (error) {
         console.error('Failed to parse update data from URL:', error);
+      }
+    } else if (completeTaskParam) {
+      try {
+        const completeData = JSON.parse(decodeURIComponent(completeTaskParam));
+        handleTaskCompletion({
+          ...completeData,
+          originalText: originalTextParam ? decodeURIComponent(originalTextParam) : null
+        });
+        
+        // Clean up URL parameters
+        navigate('/dashboard', { replace: true });
+      } catch (error) {
+        console.error('Failed to parse complete task data from URL:', error);
+      }
+    } else if (summarizeTaskParam) {
+      try {
+        const summarizeData = JSON.parse(decodeURIComponent(summarizeTaskParam));
+        handleTaskSummarization({
+          ...summarizeData,
+          originalText: originalTextParam ? decodeURIComponent(originalTextParam) : null
+        });
+        
+        // Clean up URL parameters
+        navigate('/dashboard', { replace: true });
+      } catch (error) {
+        console.error('Failed to parse summarize task data from URL:', error);
       }
     }
   }, [location, navigate]);
@@ -156,6 +189,145 @@ const Dashboard = () => {
     }
   };
 
+  // Function to handle task completion from extension
+  const handleTaskCompletion = async (completeData) => {
+    console.log('Processing task completion:', completeData);
+    
+    if (completeData.taskFound && completeData.taskId) {
+      try {
+        // Mark the task as completed
+        await updateTaskStatus(completeData.taskId, 'COMPLETED');
+        
+        // Show success message
+        alert(`Task "${completeData.updateContent || 'Task'}" marked as completed!`);
+        
+        // Refresh tasks to show updated status
+        if (taskType === 'all') {
+          fetchTasks();
+        } else {
+          fetchTasksByType(taskType);
+        }
+      } catch (error) {
+        console.error('Failed to complete task:', error);
+        alert('Failed to complete task. Please try again.');
+      }
+    } else {
+      // No task found, show suggestions
+      console.log('No matching task found for completion');
+      alert(`No matching task found. Suggestions: ${completeData.suggestedActions?.join(', ') || 'Create new task'}`);
+    }
+  };
+
+  // Function to handle task summarization from extension
+  const handleTaskSummarization = async (summarizeData) => {
+    console.log('Processing task summarization:', summarizeData);
+    
+    if (summarizeData.taskFound && summarizeData.taskId) {
+      try {
+        // Fetch the specific task to show summary
+        const result = await fetchTask(summarizeData.taskId);
+        if (result.success) {
+          const task = result.data || tasks.find(t => t.id === summarizeData.taskId);
+          if (task) {
+            // Create a comprehensive summary
+            const summary = await createTaskSummary(task);
+            
+            // Show summary in a modal
+            setSummaryData(summary);
+            setIsSummaryModalOpen(true);
+          } else {
+            alert('Task not found for summarization.');
+          }
+        } else {
+          console.error('Failed to fetch task for summarization');
+          alert('Failed to fetch task for summarization. Please try again.');
+        }
+      } catch (error) {
+        console.error('Failed to summarize task:', error);
+        alert('Failed to summarize task. Please try again.');
+      }
+    } else {
+      // No task found, show suggestions
+      console.log('No matching task found for summarization');
+      alert(`No matching task found. Suggestions: ${summarizeData.suggestedActions?.join(', ') || 'Create new task'}`);
+    }
+  };
+
+  // Helper function to create a comprehensive task summary
+  const createTaskSummary = async (task) => {
+    const formatDate = (dateString) => {
+      if (!dateString) return 'No due date set';
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = date.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) {
+        return `Overdue by ${Math.abs(diffDays)} day(s)`;
+      } else if (diffDays === 0) {
+        return 'Due today';
+      } else if (diffDays === 1) {
+        return 'Due tomorrow';
+      } else {
+        return `Due in ${diffDays} day(s)`;
+      }
+    };
+
+    const getStatusEmoji = (status) => {
+      switch (status) {
+        case 'TODO': return '⏳';
+        case 'IN_PROGRESS': return '🔄';
+        case 'COMPLETED': return '✅';
+        default: return '❓';
+      }
+    };
+
+    const getPriorityEmoji = (priority) => {
+      switch (priority) {
+        case 'URGENT': return '🚨';
+        case 'HIGH': return '🔴';
+        case 'MEDIUM': return '🟡';
+        case 'LOW': return '🟢';
+        default: return '⚪';
+      }
+    };
+
+    // Create text summary of title, description, and comments
+    let textSummary = `Task: ${task.title}`;
+    
+    if (task.description) {
+      textSummary += `\n\nDescription: ${task.description}`;
+    }
+    
+    if (task.comments && task.comments.length > 0) {
+      textSummary += `\n\nComments Summary:`;
+      task.comments.forEach((comment, index) => {
+        textSummary += `\n${index + 1}. ${comment.author.name}: ${comment.content}`;
+      });
+    }
+
+    return {
+      title: task.title,
+      description: task.description || 'No description provided',
+      textSummary: textSummary,
+      status: `${getStatusEmoji(task.status)} ${task.status.replace('_', ' ')}`,
+      priority: `${getPriorityEmoji(task.priority)} ${task.priority}`,
+      dueDate: formatDate(task.dueDate),
+      createdBy: task.assigner?.name || 'Unknown',
+      assignedTo: task.assignedTo?.name || 'Unassigned',
+      createdAt: new Date(task.createdAt).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      comments: task.comments?.length || 0,
+      subtasks: task.subtasks?.length || 0
+    };
+  };
+
+
+
   // Calculate statistics
   const stats = {
     total: tasks.length,
@@ -187,8 +359,15 @@ const Dashboard = () => {
   };
 
   const handleDelete = async (taskId) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      await deleteTask(taskId);
+    setDeleteTaskId(taskId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteTaskId) {
+      await deleteTask(deleteTaskId);
+      setIsDeleteModalOpen(false);
+      setDeleteTaskId(null);
     }
   };
 
@@ -353,9 +532,111 @@ const Dashboard = () => {
           task={currentTask}
           onStatusChange={handleStatusChange}
           onPriorityChange={handlePriorityChange}
-          onDelete={handleDelete}
+          onDelete={confirmDelete}
           extensionUpdateData={extensionUpdateData}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTaskId && (
+        <DeleteConfirmModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setDeleteTaskId(null);
+          }}
+          onConfirm={confirmDelete}
+          taskTitle={tasks.find(t => t.id === deleteTaskId)?.title || 'Unknown Task'}
+          isLoading={false}
+        />
+      )}
+
+      {/* Task Summary Modal */}
+      {isSummaryModalOpen && summaryData && (
+        <div className="modal modal-open">
+          <div className="modal-box max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border border-gray-700">
+            <div className="flex justify-between items-start mb-6">
+              <h3 className="text-2xl font-bold text-white">Task Summary</h3>
+              <button
+                onClick={() => {
+                  setIsSummaryModalOpen(false);
+                  setSummaryData(null);
+                }}
+                className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Text Summary Section */}
+              <div className="bg-gray-700 rounded-lg p-4">
+                <h4 className="text-lg font-semibold text-white mb-3">📋 Content Summary</h4>
+                <div className="bg-gray-800 rounded p-3 text-gray-200 whitespace-pre-line">
+                  {summaryData.textSummary}
+                </div>
+              </div>
+
+              {/* Task Details Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-3">📊 Task Details</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Status:</span>
+                        <span className="text-white">{summaryData.status}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Priority:</span>
+                        <span className="text-white">{summaryData.priority}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Due Date:</span>
+                        <span className="text-white">{summaryData.dueDate}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-3">👥 People</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Created by:</span>
+                        <span className="text-white">{summaryData.createdBy}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Assigned to:</span>
+                        <span className="text-white">{summaryData.assignedTo}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Created:</span>
+                        <span className="text-white">{summaryData.createdAt}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Info */}
+              <div className="bg-gray-700 rounded-lg p-4">
+                <h4 className="text-lg font-semibold text-white mb-3">📈 Additional Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-indigo-400">{summaryData.comments}</div>
+                    <div className="text-gray-400 text-sm">Comments</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-indigo-400">{summaryData.subtasks}</div>
+                    <div className="text-gray-400 text-sm">Subtasks</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

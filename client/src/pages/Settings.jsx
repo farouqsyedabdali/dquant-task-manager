@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useAuthStore from '../context/authStore';
+import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 
 const Settings = () => {
   const { user, isAdmin, deleteCompany } = useAuthStore();
@@ -7,10 +8,10 @@ const Settings = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteCompany = async () => {
-    if (!window.confirm('Are you sure you want to delete your company? This action cannot be undone and will delete all data including tasks, employees, and projects.')) {
-      return;
-    }
+    setShowDeleteModal(true);
+  };
 
+  const confirmDeleteCompany = async () => {
     setIsDeleting(true);
     try {
       const result = await deleteCompany();
@@ -172,7 +173,7 @@ const Settings = () => {
                 Cancel
               </button>
               <button
-                onClick={handleDeleteCompany}
+                onClick={confirmDeleteCompany}
                 className="btn btn-error bg-red-600 hover:bg-red-700 text-white border-0"
                 disabled={isDeleting}
               >

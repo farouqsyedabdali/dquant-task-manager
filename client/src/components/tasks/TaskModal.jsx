@@ -4,6 +4,7 @@ import useAuthStore from '../../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
 import CommentSection from '../comments/CommentSection';
 import AddSubtaskModal from './AddSubtaskModal';
+import DeleteConfirmModal from '../common/DeleteConfirmModal';
 
 const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, onDelete, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
@@ -17,6 +18,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
   const [isEditing, setIsEditing] = useState(false);
   const [errors, setErrors] = useState({});
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const { updateTask, isLoading } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
@@ -96,10 +98,15 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
   };
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (onDelete) {
       await onDelete(task.id);
-      onClose();
     }
+    setIsDeleteModalOpen(false);
+    onClose();
   };
 
   const getStatusColor = (status) => {
@@ -396,6 +403,15 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        taskTitle={task.title}
+        isLoading={isLoading}
+      />
     </div>
   );
 };

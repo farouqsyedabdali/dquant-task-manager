@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import useTaskStore from '../../stores/taskStore';
+import TaskCard from '../tasks/TaskCard';
+import TaskList from '../tasks/TaskList';
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [viewMode, setViewMode] = useState('cards');
   const { tasks } = useTaskStore();
 
   // Get current month's start and end dates
@@ -129,6 +132,24 @@ const Calendar = () => {
             className="btn btn-primary btn-sm"
           >
             Today
+          </button>
+        </div>
+      </div>
+
+      {/* View Mode Selector */}
+      <div className="flex items-center justify-center mb-4">
+        <div className="btn-group">
+          <button
+            onClick={() => setViewMode('cards')}
+            className={`btn btn-sm ${viewMode === 'cards' ? 'btn-active' : 'btn-ghost'}`}
+          >
+            Cards
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`btn btn-sm ${viewMode === 'list' ? 'btn-active' : 'btn-ghost'}`}
+          >
+            List
           </button>
         </div>
       </div>
@@ -259,41 +280,61 @@ const Calendar = () => {
               return (
                 <div>
                   <h5 className="text-red-400 font-medium mb-2">Overdue Tasks ({overdueTasks.length})</h5>
-                  <div className="space-y-2">
-                    {overdueTasks.map((task, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-red-900 rounded">
-                        <span className="text-red-200 text-sm">{task.title}</span>
-                        <span className="text-red-300 text-xs">
-                          Due: {new Date(task.dueDate).toLocaleDateString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  {viewMode === 'cards' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {overdueTasks.map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          onStatusChange={() => {}}
+                          onPriorityChange={() => {}}
+                          onDelete={() => {}}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <TaskList
+                      tasks={overdueTasks}
+                      onStatusChange={() => {}}
+                      onPriorityChange={() => {}}
+                      onDelete={() => {}}
+                    />
+                  )}
                 </div>
               );
             })()}
 
-            {/* Tasks Due Today */}
-            {(() => {
-              const tasksForDate = getTasksForDate(selectedDate);
-              if (tasksForDate.length === 0) return null;
-              
-              return (
-                <div>
-                  <h5 className="text-indigo-400 font-medium mb-2">Tasks Due ({tasksForDate.length})</h5>
-                  <div className="space-y-2">
-                    {tasksForDate.map((task, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-indigo-900 rounded">
-                        <span className="text-indigo-200 text-sm">{task.title}</span>
-                        <span className="text-indigo-300 text-xs">
-                          Due: {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
+                         {/* Tasks Due Today */}
+             {(() => {
+               const tasksForDate = getTasksForDate(selectedDate);
+               if (tasksForDate.length === 0) return null;
+               
+               return (
+                 <div>
+                   <h5 className="text-indigo-400 font-medium mb-2">Tasks Due ({tasksForDate.length})</h5>
+                   {viewMode === 'cards' ? (
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       {tasksForDate.map((task) => (
+                         <TaskCard
+                           key={task.id}
+                           task={task}
+                           onStatusChange={() => {}}
+                           onPriorityChange={() => {}}
+                           onDelete={() => {}}
+                         />
+                       ))}
+                     </div>
+                   ) : (
+                     <TaskList
+                       tasks={tasksForDate}
+                       onStatusChange={() => {}}
+                       onPriorityChange={() => {}}
+                       onDelete={() => {}}
+                     />
+                   )}
+                 </div>
+               );
+             })()}
 
             {/* No Tasks */}
             {(() => {
