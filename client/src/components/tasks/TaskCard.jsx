@@ -204,6 +204,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
           isOpen={isSubtaskModalOpen}
           onClose={() => setIsSubtaskModalOpen(false)}
           parentTask={task}
+          extensionUpdateData={null}
         />
       )}
     </>

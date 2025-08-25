@@ -3,7 +3,7 @@ import useTaskStore from '../../stores/taskStore';
 import { PRIORITY_OPTIONS } from '../../utils/constants';
 import { usersAPI } from '../../services/api';
 
-const AddSubtaskModal = ({ isOpen, onClose, parentTask }) => {
+const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -16,11 +16,57 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask }) => {
 
   const { createSubtask, isLoading } = useTaskStore();
 
+  // Fetch users only when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
     }
   }, [isOpen]);
+
+  // Prefill form when users are loaded and extensionUpdateData is present
+  useEffect(() => {
+    if (isOpen && users.length > 0 && extensionUpdateData) {
+      if (extensionUpdateData.subtaskData) {
+        const { title, description, priority, assignee } = extensionUpdateData.subtaskData;
+        let assigneeId = '';
+        if (assignee) {
+          const found = users.find(u => u.name.toLowerCase() === assignee.toLowerCase());
+          if (found) assigneeId = found.id.toString();
+        }
+        setFormData(prev => ({
+          ...prev,
+          title: title || '',
+          description: description || '',
+          priority: priority || 'MEDIUM',
+          assigneeId: assigneeId
+        }));
+      } else if (extensionUpdateData.originalText) {
+        const originalText = extensionUpdateData.originalText;
+        let title = '';
+        let description = originalText;
+        if (originalText.length <= 50) {
+          title = originalText;
+          description = '';
+        } else {
+          const firstSentence = originalText.split(/[.!?]/)[0].trim();
+          if (firstSentence.length <= 50) {
+            title = firstSentence;
+            description = originalText;
+          } else {
+            title = originalText.substring(0, 50);
+            description = originalText;
+          }
+        }
+        setFormData(prev => ({
+          ...prev,
+          title: title,
+          description: description.length > 300 ? description.substring(0, 300) : description,
+          priority: 'MEDIUM',
+          assigneeId: ''
+        }));
+      }
+    }
+  }, [isOpen, extensionUpdateData, users]);
 
   const fetchUsers = async () => {
     try {

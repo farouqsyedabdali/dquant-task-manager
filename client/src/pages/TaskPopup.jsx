@@ -27,7 +27,7 @@ const TaskPopup = () => {
             setInputText(clipboardText.trim());
           }
         }
-      } catch (err) {
+      } catch {
         // Clipboard access not available or denied
         console.log('Clipboard access not available');
       }
@@ -246,6 +246,75 @@ const TaskPopup = () => {
     }
   };
 
+  const handleAddSubtask = async () => {
+    if (!inputText.trim()) {
+      setError('Please enter some text');
+      return;
+    }
+
+    if (!isAuthenticated()) {
+      setError('Please login to your task manager first');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      // 1. Find the relevant parent task
+      const identifyRes = await aiAPI.identifyTaskUpdate(inputText.trim());
+      if (identifyRes.data.success && identifyRes.data.updateData) {
+        const updateData = identifyRes.data.updateData;
+        if (updateData.taskFound) {
+          // 2. Use AI to interpret the subtask details
+          const extractRes = await aiAPI.extractTask(inputText.trim());
+          let subtaskData = {};
+          if (extractRes.data.success && extractRes.data.taskData) {
+            subtaskData = extractRes.data.taskData;
+          } else {
+            // fallback: use plain text
+            subtaskData = {
+              title: inputText.trim().substring(0, 50),
+              description: inputText.trim().substring(0, 300),
+              priority: 'MEDIUM',
+              assignee: null
+            };
+          }
+
+          // 3. Open the main app with both parent task info and interpreted subtask info
+          const url = `http://localhost:5173/dashboard?addSubtask=${encodeURIComponent(JSON.stringify({
+            ...updateData,
+            subtaskData
+          }))}&originalText=${encodeURIComponent(inputText)}`;
+
+          const taskManagerWindow = window.open(url, 'TaskManagerMain');
+          if (taskManagerWindow) {
+            taskManagerWindow.focus();
+          }
+
+          setLastResult({
+            type: 'addSubtask',
+            success: true,
+            taskId: updateData.taskId,
+            updateContent: subtaskData.description,
+            confidence: updateData.confidence
+          });
+
+          setInputText('');
+        } else {
+          setError(`No matching task found. ${updateData.suggestedActions?.includes('create_new_task') ? 'Try "Create Task" instead.' : ''}`);
+        }
+      } else {
+        throw new Error('Failed to identify task for subtask addition');
+      }
+    } catch (err) {
+      console.error('Add subtask error:', err);
+      setError('Failed to add subtask. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleClear = () => {
     setInputText('');
     setError(null);
@@ -333,6 +402,14 @@ const TaskPopup = () => {
         </button>
 
         <button
+          onClick={handleAddSubtask}
+          disabled={isProcessing || !inputText.trim()}
+          className="btn btn-secondary btn-md w-full"
+        >
+          {isProcessing ? 'Processing…' : '➕ Add Subtask'}
+        </button>
+
+        <button
           onClick={handleClear}
           disabled={isProcessing}
           className="btn btn-ghost btn-md w-full"
@@ -354,6 +431,8 @@ const TaskPopup = () => {
           <span>✅ Task #{lastResult.taskId} marked as completed!</span>
         ) : lastResult.type === 'summarize' ? (
           <span>📋 Task #{lastResult.taskId} summary opened in main app!</span>
+        ) : lastResult.type === 'addSubtask' ? (
+          <span>➕ Subtask creation opened for task #{lastResult.taskId}!</span>
         ) : (
           <span>✅ Update sent for task #{lastResult.taskId}</span>
         )}

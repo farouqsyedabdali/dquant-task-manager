@@ -19,22 +19,48 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
   const [errors, setErrors] = useState({});
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
-  const { updateTask, isLoading } = useTaskStore();
+  const [viewedTask, setViewedTask] = useState(task); // local state for current viewed task
+  const { updateTask, isLoading, fetchTask } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
 
+  // When the modal opens or the task prop changes, update viewedTask
   useEffect(() => {
-    if (task) {
+    if (isOpen && task) {
+      setViewedTask(task);
+    }
+  }, [isOpen, task]);
+
+  useEffect(() => {
+    if (viewedTask) {
       setFormData({
-        title: task.title || '',
-        description: task.description || '',
-        status: task.status || 'TODO',
-        priority: task.priority || 'MEDIUM',
-        assigneeId: task.assigneeId?.toString() || '',
-        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : ''
+        title: viewedTask.title || '',
+        description: viewedTask.description || '',
+        status: viewedTask.status || 'TODO',
+        priority: viewedTask.priority || 'MEDIUM',
+        assigneeId: viewedTask.assigneeId?.toString() || '',
+        dueDate: viewedTask.dueDate ? new Date(viewedTask.dueDate).toISOString().slice(0, 16) : ''
       });
     }
-  }, [task]);
+  }, [viewedTask]);
+
+  // Handle extension data for automatic actions
+  useEffect(() => {
+    if (extensionUpdateData && extensionUpdateData.action === 'addSubtask') {
+      setIsAddSubtaskOpen(true);
+    }
+  }, [extensionUpdateData]);
+
+  // Click handler for parent/subtask
+  const handleTaskClick = async (taskId) => {
+    if (!taskId) return;
+    const result = await fetchTask(taskId);
+    if (result.success && result.data) {
+      setViewedTask(result.data);
+      setIsEditing(false);
+      setIsAddSubtaskOpen(false);
+      setIsDeleteModalOpen(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -91,7 +117,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
       dueDate: formData.dueDate || null
     };
 
-    const result = await updateTask(task.id, updateData);
+    const result = await updateTask(viewedTask.id, updateData);
     if (result.success) {
       setIsEditing(false);
     }
@@ -103,7 +129,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
 
   const confirmDelete = async () => {
     if (onDelete) {
-      await onDelete(task.id);
+      await onDelete(viewedTask.id);
     }
     setIsDeleteModalOpen(false);
     onClose();
@@ -137,7 +163,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
     }
   };
 
-  if (!isOpen || !task) return null;
+  if (!isOpen || !viewedTask) return null;
 
   return (
     <div className="modal modal-open">
@@ -162,18 +188,17 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
               </div>
             ) : (
               <h3 className="text-2xl font-bold text-white mb-2">
-                {task.title}
+                {viewedTask.title}
               </h3>
             )}
             <div className="flex items-center space-x-4 text-sm text-gray-400">
-              <span>Created by {task.assigner?.name}</span>
+              <span>Created by {viewedTask.assigner?.name}</span>
               <span>•</span>
-              <span>{new Date(task.createdAt).toLocaleDateString()}</span>
+              <span>{new Date(viewedTask.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            {/* Check permissions for editing */}
-            {(isAdmin() || task.assignerId === user?.id) && (
+            {(isAdmin() || viewedTask.assignerId === user?.id) && (
               <button
                 onClick={() => setIsEditing(!isEditing)}
                 className="btn btn-sm bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
@@ -181,8 +206,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                 {isEditing ? 'Cancel' : 'Edit'}
               </button>
             )}
-            {/* Check permissions for deleting */}
-            {(isAdmin() || task.assignerId === user?.id) && (
+            {(isAdmin() || viewedTask.assignerId === user?.id) && (
               <button
                 onClick={handleDelete}
                 className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-0"
@@ -223,7 +247,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
               ) : (
                 <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
                   <p className="text-gray-300">
-                    {task.description || 'No description provided'}
+                    {viewedTask.description || 'No description provided'}
                   </p>
                 </div>
               )}
@@ -232,7 +256,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
             {/* Comments */}
             <div>
               <h4 className="text-lg font-semibold text-white mb-3">Comments</h4>
-              <CommentSection taskId={task.id} extensionUpdateData={extensionUpdateData} />
+              <CommentSection taskId={viewedTask.id} extensionUpdateData={extensionUpdateData} />
             </div>
           </div>
 
@@ -254,8 +278,8 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                 </select>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(task.status)}`}>
-                    {STATUS_LABELS[task.status]}
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(viewedTask.status)}`}>
+                    {STATUS_LABELS[viewedTask.status]}
                   </span>
                 </div>
               )}
@@ -277,8 +301,8 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                 </select>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(task.priority)}`}>
-                    {PRIORITY_LABELS[task.priority]}
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(viewedTask.priority)}`}>
+                    {PRIORITY_LABELS[viewedTask.priority]}
                   </span>
                 </div>
               )}
@@ -297,12 +321,12 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                 />
               ) : (
                 <div className="flex items-center space-x-2">
-                  {task.dueDate ? (
+                  {viewedTask.dueDate ? (
                     <>
                       <span className="text-white">
-                        {new Date(task.dueDate).toLocaleDateString()} at {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(viewedTask.dueDate).toLocaleDateString()} at {new Date(viewedTask.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
-                      {new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED' && (
+                      {new Date(viewedTask.dueDate) < new Date() && viewedTask.status !== 'COMPLETED' && (
                         <span className="badge badge-error">Overdue</span>
                       )}
                     </>
@@ -317,14 +341,14 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
             <div>
               <h4 className="text-lg font-semibold text-white mb-3">Assigned To</h4>
               <div className="flex items-center space-x-3">
-                {task.assignee ? (
+                {viewedTask.assignee ? (
                   <>
                     <div className="avatar placeholder">
                       <div className="bg-indigo-600 text-white rounded-full w-8">
-                        <span className="text-xs">{task.assignee.name.charAt(0)}</span>
+                        <span className="text-xs">{viewedTask.assignee.name.charAt(0)}</span>
                       </div>
                     </div>
-                    <span className="text-white">{task.assignee.name}</span>
+                    <span className="text-white">{viewedTask.assignee.name}</span>
                   </>
                 ) : (
                   <span className="text-gray-400">Unassigned</span>
@@ -333,22 +357,31 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
             </div>
 
             {/* Parent Task */}
-            {task.parentTask && (
+            {viewedTask.parentTask && (
               <div>
                 <h4 className="text-lg font-semibold text-white mb-3">Parent Task</h4>
-                <div className="bg-gray-700 border border-gray-600 rounded-lg p-3">
-                  <span className="text-indigo-400">{task.parentTask.title}</span>
+                <div
+                  className="bg-gray-700 border border-gray-600 rounded-lg p-3 cursor-pointer hover:bg-gray-900 hover:text-white transition"
+                  onClick={() => handleTaskClick(viewedTask.parentTask.id)}
+                  title="Open parent task"
+                >
+                  <span className="text-white">{viewedTask.parentTask.title}</span>
                 </div>
               </div>
             )}
 
             {/* Subtasks */}
-            {task.subtasks && task.subtasks.length > 0 && (
+            {viewedTask.subtasks && viewedTask.subtasks.length > 0 && (
               <div>
-                <h4 className="text-lg font-semibold text-white mb-3">Subtasks ({task.subtasks.length})</h4>
+                <h4 className="text-lg font-semibold text-white mb-3">Subtasks ({viewedTask.subtasks.length})</h4>
                 <div className="space-y-2">
-                  {task.subtasks.map((subtask) => (
-                    <div key={subtask.id} className="bg-gray-700 border border-gray-600 rounded-lg p-3">
+                  {viewedTask.subtasks.map((subtask) => (
+                    <div
+                      key={subtask.id}
+                      className="bg-gray-700 border border-gray-600 rounded-lg p-3 cursor-pointer hover:bg-gray-900 hover:text-white transition"
+                      onClick={() => handleTaskClick(subtask.id)}
+                      title="Open subtask"
+                    >
                       <div className="flex items-center justify-between">
                         <span className="text-white">{subtask.title}</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(subtask.status)}`}>
@@ -363,8 +396,9 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                 </div>
               </div>
             )}
+
             {/* Add Subtask Button (assigner or assignee only) */}
-            {(task.assignerId === user?.id || task.assigneeId === user?.id) && (
+            {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
               <button
                 className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 w-full mt-4"
                 onClick={() => setIsAddSubtaskOpen(true)}
@@ -377,7 +411,8 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
               <AddSubtaskModal
                 isOpen={isAddSubtaskOpen}
                 onClose={() => setIsAddSubtaskOpen(false)}
-                parentTask={task}
+                parentTask={viewedTask}
+                extensionUpdateData={extensionUpdateData}
               />
             )}
 
@@ -409,7 +444,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
-        taskTitle={task.title}
+        taskTitle={viewedTask.title}
         isLoading={isLoading}
       />
     </div>

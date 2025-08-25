@@ -37,6 +37,13 @@ const Header = () => {
     setIsProfileDropdownOpen(!isProfileDropdownOpen);
   };
 
+  const handleOpenPopup = () => {
+    // Execute the VBS script to open the popup
+    // Since we can't directly execute VBS from the browser, we'll open the popup URL directly
+    // The VBS script is designed to open http://localhost:5173/popup in a popup window
+    window.open('/popup', '_blank', 'width=320,height=400,scrollbars=no,resizable=yes,status=no,location=no,toolbar=no,menubar=no');
+  };
+
   return (
     <header className="bg-gray-800 shadow-lg border-b border-gray-700">
       <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8">
@@ -77,6 +84,17 @@ const Header = () => {
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
+            {/* Open Popup Button */}
+            <button
+              onClick={handleOpenPopup}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+              </svg>
+              <span>Open Popup</span>
+            </button>
+
             {/* Profile Dropdown */}
             <div className="relative" ref={profileDropdownRef}>
               <button

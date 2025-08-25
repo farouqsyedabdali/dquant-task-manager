@@ -46,6 +46,7 @@ const Dashboard = () => {
     const updateDataParam = urlParams.get('updateTask');
     const completeTaskParam = urlParams.get('completeTask');
     const summarizeTaskParam = urlParams.get('summarizeTask');
+    const addSubtaskParam = urlParams.get('addSubtask');
     const originalTextParam = urlParams.get('originalText');
     
     if (taskDataParam) {
@@ -100,6 +101,19 @@ const Dashboard = () => {
         navigate('/dashboard', { replace: true });
       } catch (error) {
         console.error('Failed to parse summarize task data from URL:', error);
+      }
+    } else if (addSubtaskParam) {
+      try {
+        const addSubtaskData = JSON.parse(decodeURIComponent(addSubtaskParam));
+        handleAddSubtask({
+          ...addSubtaskData,
+          originalText: originalTextParam ? decodeURIComponent(originalTextParam) : null
+        });
+        
+        // Clean up URL parameters
+        navigate('/dashboard', { replace: true });
+      } catch (error) {
+        console.error('Failed to parse add subtask data from URL:', error);
       }
     }
   }, [location, navigate]);
@@ -215,6 +229,33 @@ const Dashboard = () => {
       // No task found, show suggestions
       console.log('No matching task found for completion');
       alert(`No matching task found. Suggestions: ${completeData.suggestedActions?.join(', ') || 'Create new task'}`);
+    }
+  };
+
+  // Function to handle adding subtask from extension
+  const handleAddSubtask = async (addSubtaskData) => {
+    console.log('Processing add subtask:', addSubtaskData);
+    
+    if (addSubtaskData.taskFound && addSubtaskData.taskId) {
+      // Fetch the specific task to add subtask to
+      const result = await fetchTask(addSubtaskData.taskId);
+      if (result.success) {
+        setCurrentTask(result.data || tasks.find(t => t.id === addSubtaskData.taskId));
+        // Set extension data to trigger subtask modal, including subtaskData if present
+        setExtensionUpdateData({
+          ...addSubtaskData,
+          action: 'addSubtask',
+          subtaskData: addSubtaskData.subtaskData || null
+        });
+        setIsTaskModalOpen(true);
+      } else {
+        console.error('Failed to fetch task for subtask addition');
+        alert('Failed to fetch task for subtask addition');
+      }
+    } else {
+      // No task found, show suggestions
+      console.log('No matching task found for subtask addition');
+      alert(`No matching task found. Suggestions: ${addSubtaskData.suggestedActions?.join(', ') || 'Create new task'}`);
     }
   };
 
