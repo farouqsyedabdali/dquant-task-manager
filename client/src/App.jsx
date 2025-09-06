@@ -5,6 +5,7 @@ import ProtectedRoute from './layouts/ProtectedRoute';
 import Header from './components/layout/Header';
 import Login from './pages/Login';
 import CompanySignup from './pages/CompanySignup';
+import SignupOptions from './pages/SignupOptions';
 import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
 import TaskPopup from './pages/TaskPopup';
@@ -31,7 +32,8 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<CompanySignup />} />
+          <Route path="/signup" element={<SignupOptions />} />
+          <Route path="/company-signup" element={<CompanySignup />} />
           
           {/* Popup Route (no header/layout) */}
           <Route path="/popup" element={<TaskPopup />} />
@@ -52,7 +54,7 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
                 <div className="min-h-screen bg-gray-900">
                   <Header />
                   <Dashboard />
@@ -64,7 +66,7 @@ function App() {
           <Route
             path="/employees"
             element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
                 <div className="min-h-screen bg-gray-900">
                   <Header />
                   <Employees />

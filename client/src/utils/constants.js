@@ -1,7 +1,9 @@
 export const TASK_STATUSES = {
   TODO: 'TODO',
   IN_PROGRESS: 'IN_PROGRESS',
-  COMPLETED: 'COMPLETED'
+  COMPLETED: 'COMPLETED',
+  ON_HOLD: 'ON_HOLD',
+  CANCELLED: 'CANCELLED'
 };
 
 export const TASK_PRIORITIES = {
@@ -19,7 +21,9 @@ export const USER_ROLES = {
 export const STATUS_LABELS = {
   [TASK_STATUSES.TODO]: 'To Do',
   [TASK_STATUSES.IN_PROGRESS]: 'In Progress',
-  [TASK_STATUSES.COMPLETED]: 'Completed'
+  [TASK_STATUSES.COMPLETED]: 'Completed',
+  [TASK_STATUSES.ON_HOLD]: 'On Hold',
+  [TASK_STATUSES.CANCELLED]: 'Cancelled'
 };
 
 export const PRIORITY_LABELS = {
@@ -32,7 +36,9 @@ export const PRIORITY_LABELS = {
 export const STATUS_COLORS = {
   [TASK_STATUSES.TODO]: 'badge-neutral',
   [TASK_STATUSES.IN_PROGRESS]: 'badge-info',
-  [TASK_STATUSES.COMPLETED]: 'badge-success'
+  [TASK_STATUSES.COMPLETED]: 'badge-success',
+  [TASK_STATUSES.ON_HOLD]: 'badge-warning',
+  [TASK_STATUSES.CANCELLED]: 'badge-error'
 };
 
 export const PRIORITY_COLORS = {

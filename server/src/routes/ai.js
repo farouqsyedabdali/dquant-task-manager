@@ -83,43 +83,61 @@ Recent Tasks (${userTasks.length}):
 ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task.priority} priority, assigned to ${task.assignee?.name || 'unassigned'})`).join('\n')}
 `;
 
-    // Stream from Ollama local server with context
-    const ollamaRes = await axios.post('http://localhost:11434/api/chat', {
-      model: 'gemma3',
+    // Stream from OpenRouter API with Gemma 3 27B
+    const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'google/gemma-3-27b-it:free',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: message }
-      ]
-    }, { responseType: 'stream' });
+      ],
+      stream: true,
+      max_tokens: 2000,
+      temperature: 0.7
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
+        'X-Title': process.env.SITE_NAME || 'DQuant Task Manager'
+      },
+      responseType: 'stream'
+    });
 
     let fullContent = '';
     let buffer = '';
-    ollamaRes.data.on('data', chunk => {
+    openrouterRes.data.on('data', chunk => {
       buffer += chunk.toString();
       let lines = buffer.split('\n');
       buffer = lines.pop();
+      
       for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const data = JSON.parse(line);
-          if (data.message && typeof data.message.content === 'string') {
-            fullContent += data.message.content;
-          }
-          if (data.done) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') {
             handleAIResponse(fullContent.trim());
+            return;
           }
-        } catch (e) {}
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.choices && parsed.choices[0]?.delta?.content) {
+              const content = parsed.choices[0].delta.content;
+              fullContent += content;
+            }
+          } catch (e) {
+            // Skip malformed JSON
+          }
+        }
       }
     });
-    ollamaRes.data.on('end', () => {
+    openrouterRes.data.on('end', () => {
       if (!responded) {
         handleAIResponse(fullContent.trim());
       }
     });
-    ollamaRes.data.on('error', err => {
+    openrouterRes.data.on('error', err => {
       if (!responded) {
         responded = true;
-        res.status(500).json({ error: 'AI service error' });
+        res.status(500).json({ error: 'OpenRouter API error' });
       }
     });
 
@@ -231,7 +249,7 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
         if (task) {
           const updateData = {};
           if (command.status) {
-            const allowedStatuses = ['TODO', 'IN_PROGRESS', 'COMPLETED'];
+            const allowedStatuses = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED'];
             const status = command.status.trim().toUpperCase();
             if (allowedStatuses.includes(status)) updateData.status = status;
           }
@@ -338,20 +356,31 @@ Input: "Remember to update the website homepage"
 Output: {"title": "Update website homepage", "description": "Update the website homepage", "priority": "MEDIUM", "dueDate": null, "assignee": null}
 `;
 
-    // Call Ollama for task extraction
-    const ollamaRes = await axios.post('http://localhost:11434/api/chat', {
-      model: 'gemma3',
+    // Call OpenRouter for task extraction
+    const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'google/gemma-3-27b-it:free',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Extract task information from this text: "${text}"` }
-      ]
-    }, { responseType: 'stream' });
+      ],
+      stream: true,
+      max_tokens: 1000,
+      temperature: 0.3
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
+        'X-Title': process.env.SITE_NAME || 'DQuant Task Manager'
+      },
+      responseType: 'stream'
+    });
 
     let fullContent = '';
     let buffer = '';
     let responseHandled = false; // Flag to ensure only one response is sent
     
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       // Timeout handler
       const timeoutId = setTimeout(() => {
         if (!responseHandled) {
@@ -360,20 +389,25 @@ Output: {"title": "Update website homepage", "description": "Update the website 
         }
       }, 30000);
 
-      ollamaRes.data.on('data', chunk => {
+      openrouterRes.data.on('data', chunk => {
         if (responseHandled) return; // Don't process if response already handled
         
         buffer += chunk.toString();
         let lines = buffer.split('\n');
         buffer = lines.pop();
+        
         for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const data = JSON.parse(line);
-            if (data.message && typeof data.message.content === 'string') {
-              fullContent += data.message.content;
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.choices && parsed.choices[0]?.delta?.content) {
+                fullContent += parsed.choices[0].delta.content;
+              }
+            } catch (e) {
+              // Skip malformed JSON
             }
-            if (data.done && !responseHandled) {
+            if (data === '[DONE]' && !responseHandled) {
               responseHandled = true;
               clearTimeout(timeoutId);
               
@@ -392,7 +426,8 @@ Output: {"title": "Update website homepage", "description": "Update the website 
                     assignee: taskData.assignee || null
                   };
                   
-                  resolve(res.json({ success: true, taskData: cleanedTask }));
+                  res.json({ success: true, taskData: cleanedTask });
+                  resolve();
                 } else {
                   // Fallback: create basic task from the text
                   const fallbackTask = {
@@ -402,20 +437,19 @@ Output: {"title": "Update website homepage", "description": "Update the website 
                     dueDate: null,
                     assignee: null
                   };
-                  resolve(res.json({ success: true, taskData: fallbackTask }));
+                  res.json({ success: true, taskData: fallbackTask });
+                  resolve();
                 }
               } catch (parseError) {
                 console.error('Failed to parse AI response:', parseError);
                 reject(new Error('Failed to extract task data'));
               }
             }
-          } catch (e) {
-            // Ignore malformed JSON lines
           }
         }
       });
 
-      ollamaRes.data.on('error', (err) => {
+      openrouterRes.data.on('error', (err) => {
         if (!responseHandled) {
           responseHandled = true;
           clearTimeout(timeoutId);
@@ -508,20 +542,31 @@ Input: "The server deployment failed due to configuration issues. Need to troubl
 Output: {"taskFound": true, "taskId": 456, "confidence": 0.85, "updateType": "issue", "updateContent": "Issue reported: Server deployment failed due to configuration issues. Troubleshooting required.", "suggestedActions": ["change_priority", "add_subtask"], "reasoning": "Matches server deployment task, indicates a blocking issue"}
 `;
 
-    // Call Ollama for task update identification
-    const ollamaRes = await axios.post('http://localhost:11434/api/chat', {
-      model: 'gemma3',
+    // Call OpenRouter for task update identification
+    const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'google/gemma-3-27b-it:free',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Analyze this text for task updates: "${text}"` }
-      ]
-    }, { responseType: 'stream' });
+      ],
+      stream: true,
+      max_tokens: 1000,
+      temperature: 0.3
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
+        'X-Title': process.env.SITE_NAME || 'DQuant Task Manager'
+      },
+      responseType: 'stream'
+    });
 
     let fullContent = '';
     let buffer = '';
     let responseHandled = false;
     
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         if (!responseHandled) {
           responseHandled = true;
@@ -529,20 +574,25 @@ Output: {"taskFound": true, "taskId": 456, "confidence": 0.85, "updateType": "is
         }
       }, 30000);
 
-      ollamaRes.data.on('data', chunk => {
+      openrouterRes.data.on('data', chunk => {
         if (responseHandled) return;
         
         buffer += chunk.toString();
         let lines = buffer.split('\n');
         buffer = lines.pop();
+        
         for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const data = JSON.parse(line);
-            if (data.message && typeof data.message.content === 'string') {
-              fullContent += data.message.content;
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.choices && parsed.choices[0]?.delta?.content) {
+                fullContent += parsed.choices[0].delta.content;
+              }
+            } catch (e) {
+              // Skip malformed JSON
             }
-            if (data.done && !responseHandled) {
+            if (data === '[DONE]' && !responseHandled) {
               responseHandled = true;
               clearTimeout(timeoutId);
               
@@ -574,7 +624,8 @@ Output: {"taskFound": true, "taskId": 456, "confidence": 0.85, "updateType": "is
                     }
                   }
                   
-                  resolve(res.json({ success: true, updateData: validatedUpdate }));
+                  res.json({ success: true, updateData: validatedUpdate });
+                  resolve();
                 } else {
                   // Fallback: no task found
                   const fallbackUpdate = {
@@ -587,20 +638,19 @@ Output: {"taskFound": true, "taskId": 456, "confidence": 0.85, "updateType": "is
                     reasoning: 'No matching task found for this update',
                     originalText: text
                   };
-                  resolve(res.json({ success: true, updateData: fallbackUpdate }));
+                  res.json({ success: true, updateData: fallbackUpdate });
+                  resolve();
                 }
               } catch (parseError) {
                 console.error('Failed to parse AI response:', parseError);
                 reject(new Error('Failed to identify task update'));
               }
             }
-          } catch (e) {
-            // Ignore malformed JSON lines
           }
         }
       });
 
-      ollamaRes.data.on('error', (err) => {
+      openrouterRes.data.on('error', (err) => {
         if (!responseHandled) {
           responseHandled = true;
           clearTimeout(timeoutId);

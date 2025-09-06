@@ -81,6 +81,16 @@ body {
   color: #6ee7b7;
 }
 
+.status-on-hold {
+  background-color: #d97706;
+  color: #fed7aa;
+}
+
+.status-cancelled {
+  background-color: #dc2626;
+  color: #fecaca;
+}
+
 /* Priority indicators */
 .priority-urgent {
   background-color: #dc2626;

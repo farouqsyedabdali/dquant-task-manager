@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import useTaskStore from '../../stores/taskStore';
+import useUserStore from '../../stores/userStore';
 import { PRIORITY_OPTIONS } from '../../utils/constants';
 import { usersAPI } from '../../services/api';
+import SearchableDropdown from '../common/SearchableDropdown';
 
 const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   const [formData, setFormData] = useState({
@@ -16,6 +18,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   const { createTask, isLoading } = useTaskStore();
+  const { recentEmployees, addToRecentEmployees } = useUserStore();
 
   useEffect(() => {
     if (isOpen) {
@@ -250,20 +253,22 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Assign To *
             </label>
-            <select
-              name="assigneeId"
+            <SearchableDropdown
+              options={users}
               value={formData.assigneeId}
-              onChange={handleChange}
-              className={`select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.assigneeId ? 'border-red-500' : ''}`}
+              onChange={(value) => {
+                setFormData(prev => ({ ...prev, assigneeId: value }));
+                // Track the selected employee as recent
+                const selectedEmployee = users.find(user => user.id.toString() === value);
+                if (selectedEmployee) {
+                  addToRecentEmployees(selectedEmployee);
+                }
+              }}
+              placeholder="Select an employee"
               disabled={isLoadingUsers}
-            >
-              <option value="">Select an employee</option>
-              {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} ({user.email})
-                  </option>
-              ))}
-            </select>
+              error={!!errors.assigneeId}
+              recentEmployees={recentEmployees}
+            />
             {errors.assigneeId && (
               <p className="text-red-400 text-sm mt-1">{errors.assigneeId}</p>
             )}

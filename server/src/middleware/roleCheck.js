@@ -12,11 +12,13 @@ const roleCheck = (allowedRoles) => {
   };
 };
 
-const adminOnly = roleCheck(['ADMIN']);
+const adminOnly = roleCheck(['ADMIN', 'SYSDMIN']);
+const sysAdminOnly = roleCheck(['SYSDMIN']);
 const employeeOnly = roleCheck(['EMPLOYEE']);
 
 module.exports = {
   roleCheck,
   adminOnly,
+  sysAdminOnly,
   employeeOnly
 }; 

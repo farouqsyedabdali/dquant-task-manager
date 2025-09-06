@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllUsers, getEmployeesForAssignment, getUserById, createEmployee, deleteEmployee } = require('../controllers/userController');
+const { getAllUsers, getEmployeesForAssignment, getUserById, createEmployee, updateUser, deleteEmployee, deleteCompany } = require('../controllers/userController');
 const auth = require('../middleware/auth');
 const { adminOnly } = require('../middleware/roleCheck');
 
@@ -21,7 +21,13 @@ router.get('/:id', getUserById);
 // Create new employee
 router.post('/', createEmployee);
 
+// Update employee
+router.put('/:id', updateUser);
+
 // Delete employee
 router.delete('/:id', deleteEmployee);
+
+// Delete company (only SYSDMIN)
+router.delete('/company', deleteCompany);
 
 module.exports = router; 

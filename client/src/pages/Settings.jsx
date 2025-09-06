@@ -3,7 +3,7 @@ import useAuthStore from '../context/authStore';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 
 const Settings = () => {
-  const { user, isAdmin, deleteCompany } = useAuthStore();
+  const { user, isAdmin, isSysAdmin, deleteCompany } = useAuthStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -14,12 +14,19 @@ const Settings = () => {
   const confirmDeleteCompany = async () => {
     setIsDeleting(true);
     try {
+      console.log('Attempting to delete company...');
       const result = await deleteCompany();
+      console.log('Delete company result:', result);
       if (result.success) {
         // Redirect will be handled by the auth store
+        console.log('Company deletion successful, redirecting...');
+      } else {
+        console.error('Company deletion failed:', result.error);
+        alert(`Failed to delete company: ${result.error}`);
       }
     } catch (error) {
       console.error('Error deleting company:', error);
+      alert(`Error deleting company: ${error.message}`);
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);
@@ -116,12 +123,12 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Admin Actions Section */}
-        {isAdmin() && (
+        {/* Company Management Section - Only for SYSDMIN */}
+        {isSysAdmin() && (
           <div className="lg:col-span-1">
             <div className="card bg-gray-800 border border-gray-700">
               <div className="card-body">
-                <h2 className="card-title text-xl text-white mb-6">Admin Actions</h2>
+                <h2 className="card-title text-xl text-white mb-6">Company Management</h2>
                 
                 <div className="space-y-4">
                   <div className="alert alert-warning">
@@ -142,6 +149,18 @@ const Settings = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Credits & Copyright Section */}
+      <div className="mt-12 pt-8 border-t border-gray-700">
+        <div className="text-center text-gray-500 text-sm">
+          <p className="mb-2">
+            <strong className="text-gray-400">Task Manager</strong> v0.0.1
+          </p>
+          <p className="mb-1">
+            © 2025 COMPANY NAME. All rights reserved.
+          </p>
+        </div>
       </div>
 
       {/* Delete Company Modal */}

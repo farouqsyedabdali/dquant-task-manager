@@ -190,18 +190,42 @@ const TaskTable = () => {
                       )}
                     </td>
                     <td>
-                      {task.assignedTo ? (
-                        <div className="flex items-center space-x-2">
-                          <div className="avatar placeholder">
-                            <div className="bg-primary text-primary-content rounded-full w-6">
-                              <span className="text-xs">{task.assignedTo.name.charAt(0)}</span>
+                      <div className="space-y-1">
+                        {/* Lead Assignee */}
+                        {task.assignedTo ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="avatar placeholder">
+                              <div className="bg-indigo-600 text-white rounded-full w-6">
+                                <span className="text-xs">{task.assignedTo.name.charAt(0)}</span>
+                              </div>
                             </div>
+                            <span className="text-sm text-indigo-400">{task.assignedTo.name}</span>
                           </div>
-                          <span className="text-sm">{task.assignedTo.name}</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 text-sm">Unassigned</span>
-                      )}
+                        ) : (
+                          <span className="text-gray-400 text-sm">Unassigned</span>
+                        )}
+                        
+                        {/* Co-Assignees */}
+                        {task.coAssignees && task.coAssignees.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {task.coAssignees.slice(0, 3).map((coAssignee) => (
+                              <div key={coAssignee.id} className="flex items-center space-x-1">
+                                <div className="avatar placeholder">
+                                  <div className="bg-green-600 text-white rounded-full w-5">
+                                    <span className="text-xs">{coAssignee.user.name.charAt(0)}</span>
+                                  </div>
+                                </div>
+                                <span className="text-xs text-green-400">{coAssignee.user.name}</span>
+                              </div>
+                            ))}
+                            {task.coAssignees.length > 3 && (
+                              <span className="text-xs text-gray-400">
+                                +{task.coAssignees.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td>
                       {isAdmin() ? (

@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { createNotification } = require('./notificationController');
 
 const prisma = new PrismaClient();
 
@@ -18,7 +19,8 @@ const getComments = async (req, res) => {
     if (userRole === 'EMPLOYEE') {
       whereClause.OR = [
         { assigneeId: userId },
-        { assignerId: userId }
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } }
       ];
     }
 
@@ -76,7 +78,8 @@ const createComment = async (req, res) => {
     if (userRole === 'EMPLOYEE') {
       whereClause.OR = [
         { assigneeId: authorId },
-        { assignerId: authorId }
+        { assignerId: authorId },
+        { coAssignees: { some: { userId: authorId } } }
       ];
     }
 
@@ -104,6 +107,26 @@ const createComment = async (req, res) => {
         }
       }
     });
+
+    // Create notification for task assignee and assigner (if different from comment author)
+    const notifyUsers = [];
+    if (task.assigneeId !== authorId) {
+      notifyUsers.push(task.assigneeId);
+    }
+    if (task.assignerId !== authorId && task.assignerId !== task.assigneeId) {
+      notifyUsers.push(task.assignerId);
+    }
+
+    for (const userId of notifyUsers) {
+      await createNotification(
+        'COMMENT_ADDED',
+        'New Comment Added',
+        `A new comment was added to task "${task.title}"`,
+        task.id,
+        userId,
+        companyId
+      );
+    }
 
     res.status(201).json(comment);
   } catch (error) {

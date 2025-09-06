@@ -43,6 +43,15 @@ const useAuthStore = create((set, get) => ({
     try {
       const response = await authAPI.deleteCompany();
       set({ isLoading: false });
+      
+      // Clear user data and redirect to login after successful deletion
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      set({ user: null, token: null, error: null });
+      
+      // Redirect to login page
+      window.location.href = '/login';
+      
       return { success: true, data: response.data };
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Company deletion failed';
@@ -94,7 +103,12 @@ const useAuthStore = create((set, get) => ({
 
   isAdmin: () => {
     const { user } = get();
-    return user?.role === 'ADMIN';
+    return user?.role === 'ADMIN' || user?.role === 'SYSDMIN';
+  },
+
+  isSysAdmin: () => {
+    const { user } = get();
+    return user?.role === 'SYSDMIN';
   },
 
   isEmployee: () => {

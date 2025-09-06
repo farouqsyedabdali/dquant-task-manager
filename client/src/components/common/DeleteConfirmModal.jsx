@@ -1,7 +1,30 @@
 import React from 'react';
 
-const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, taskTitle, isLoading = false }) => {
+const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, taskTitle, isLoading = false, deleteType = 'task' }) => {
   if (!isOpen) return null;
+
+  // Determine title and message based on delete type
+  const getTitle = () => {
+    switch (deleteType) {
+      case 'admin':
+        return 'Delete Admin User';
+      case 'employee':
+        return 'Delete Employee';
+      default:
+        return 'Delete Task';
+    }
+  };
+
+  const getMessage = () => {
+    switch (deleteType) {
+      case 'admin':
+        return `Are you sure you want to delete admin user <span className="font-medium text-white">"${taskTitle}"</span>? This will remove their admin privileges and all associated data. This action cannot be undone.`;
+      case 'employee':
+        return `Are you sure you want to delete employee <span className="font-medium text-white">"${taskTitle}"</span>? This will remove all their associated data. This action cannot be undone.`;
+      default:
+        return `Are you sure you want to delete <span className="font-medium text-white">"${taskTitle}"</span>? This action cannot be undone.`;
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -20,14 +43,11 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, taskTitle, isLoading =
           
           {/* Title */}
           <h3 className="text-lg font-medium text-white mb-2">
-            Delete Task
+            {getTitle()}
           </h3>
           
           {/* Message */}
-          <p className="text-gray-300 mb-6">
-            Are you sure you want to delete <span className="font-medium text-white">"{taskTitle}"</span>? 
-            This action cannot be undone.
-          </p>
+          <p className="text-gray-300 mb-6" dangerouslySetInnerHTML={{ __html: getMessage() }} />
           
           {/* Buttons */}
           <div className="flex space-x-3">

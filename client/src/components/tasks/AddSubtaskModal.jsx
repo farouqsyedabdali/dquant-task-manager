@@ -1,33 +1,61 @@
 import { useState, useEffect } from 'react';
 import useTaskStore from '../../stores/taskStore';
+import useUserStore from '../../stores/userStore';
 import { PRIORITY_OPTIONS } from '../../utils/constants';
-import { usersAPI } from '../../services/api';
+import { usersAPI, tasksAPI } from '../../services/api';
+import SearchableDropdown from '../common/SearchableDropdown';
 
 const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     priority: 'MEDIUM',
-    assigneeId: ''
+    assigneeId: '',
+    dueDate: ''
   });
   const [errors, setErrors] = useState({});
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [availableTasks, setAvailableTasks] = useState([]);
+  const [selectedParentId, setSelectedParentId] = useState(parentTask?.id || '');
 
   const { createSubtask, isLoading } = useTaskStore();
+  const { recentEmployees, addToRecentEmployees } = useUserStore();
 
-  // Fetch users only when modal opens
+  // Fetch users and available tasks when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
+      fetchAvailableTasks();
     }
   }, [isOpen]);
+
+  // Function to fetch available parent tasks
+  const fetchAvailableTasks = async () => {
+    try {
+      const response = await tasksAPI.getAll();
+      
+      // Show all visible tasks as potential parents
+      // (A subtask can also be a parent to other subtasks)
+      const parentTasks = response.data;
+      
+      setAvailableTasks(parentTasks);
+    } catch (error) {
+      console.error('Failed to fetch tasks:', error);
+      setAvailableTasks([]);
+    }
+  };
 
   // Prefill form when users are loaded and extensionUpdateData is present
   useEffect(() => {
     if (isOpen && users.length > 0 && extensionUpdateData) {
+      // Set the suggested parent task from AI
+      if (extensionUpdateData.taskId) {
+        setSelectedParentId(extensionUpdateData.taskId.toString());
+      }
+      
       if (extensionUpdateData.subtaskData) {
-        const { title, description, priority, assignee } = extensionUpdateData.subtaskData;
+        const { title, description, priority, assignee, dueDate } = extensionUpdateData.subtaskData;
         let assigneeId = '';
         if (assignee) {
           const found = users.find(u => u.name.toLowerCase() === assignee.toLowerCase());
@@ -38,7 +66,8 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
           title: title || '',
           description: description || '',
           priority: priority || 'MEDIUM',
-          assigneeId: assigneeId
+          assigneeId: assigneeId,
+          dueDate: dueDate ? new Date(dueDate).toISOString().slice(0, 16) : ''
         }));
       } else if (extensionUpdateData.originalText) {
         const originalText = extensionUpdateData.originalText;
@@ -132,21 +161,29 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
       return;
     }
 
+    if (!selectedParentId) {
+      setErrors({ parentTask: 'Please select a parent task' });
+      return;
+    }
+
     // Prepare the data for creation
     const createData = {
       ...formData,
-      assigneeId: parseInt(formData.assigneeId)
+      assigneeId: parseInt(formData.assigneeId),
+      dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : null
     };
 
-    const result = await createSubtask(parentTask.id, createData);
+    const result = await createSubtask(parseInt(selectedParentId), createData);
     if (result.success) {
       setFormData({
         title: '',
         description: '',
         priority: 'MEDIUM',
-        assigneeId: ''
+        assigneeId: '',
+        dueDate: ''
       });
       setErrors({});
+      setSelectedParentId(parentTask?.id || '');
       onClose();
     }
   };
@@ -156,16 +193,18 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
       title: '',
       description: '',
       priority: 'MEDIUM',
-      assigneeId: ''
+      assigneeId: '',
+      dueDate: ''
     });
     setErrors({});
+    setSelectedParentId(parentTask?.id || '');
     onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="modal modal-open">
+    <div className="modal modal-open" style={{ zIndex: 60 }}>
       <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
@@ -174,7 +213,9 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
               Create Subtask
             </h3>
             <p className="text-gray-400 text-sm mt-1">
-              Creating subtask for: <span className="text-white font-medium">{parentTask?.title}</span>
+              Creating subtask for: <span className="text-white font-medium">
+                {selectedParentId ? availableTasks.find(t => t.id == selectedParentId)?.title || 'Selected Task' : 'Choose parent task below'}
+              </span>
             </p>
           </div>
           <button
@@ -187,6 +228,28 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Parent Task Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Parent Task *
+            </label>
+            <select
+              value={selectedParentId}
+              onChange={(e) => setSelectedParentId(e.target.value)}
+              className={`select select-bordered w-full bg-gray-700 border-gray-600 text-white focus:border-indigo-500 focus:ring-indigo-500 ${errors.parentTask ? 'border-red-500' : ''}`}
+            >
+              <option value="">Select a parent task...</option>
+              {availableTasks.map(task => (
+                <option key={task.id} value={task.id}>
+                  {task.title} ({task.status})
+                </option>
+              ))}
+            </select>
+            {errors.parentTask && (
+              <p className="text-red-400 text-sm mt-1">{errors.parentTask}</p>
+            )}
+          </div>
+
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -247,25 +310,45 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Assign To *
             </label>
-            <select
-              name="assigneeId"
+            <SearchableDropdown
+              options={users}
               value={formData.assigneeId}
-              onChange={handleChange}
-              className={`select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.assigneeId ? 'border-red-500' : ''}`}
+              onChange={(value) => {
+                setFormData(prev => ({ ...prev, assigneeId: value }));
+                // Track the selected employee as recent
+                const selectedEmployee = users.find(user => user.id.toString() === value);
+                if (selectedEmployee) {
+                  addToRecentEmployees(selectedEmployee);
+                }
+              }}
+              placeholder="Select an employee"
               disabled={isLoadingUsers}
-            >
-              <option value="">Select an employee</option>
-              {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} ({user.email})
-                  </option>
-              ))}
-            </select>
+              error={!!errors.assigneeId}
+              recentEmployees={recentEmployees}
+            />
             {errors.assigneeId && (
               <p className="text-red-400 text-sm mt-1">{errors.assigneeId}</p>
             )}
             {isLoadingUsers && (
               <p className="text-sm text-gray-400 mt-1">Loading employees...</p>
+            )}
+          </div>
+
+          {/* Due Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Due Date
+            </label>
+            <input
+              type="datetime-local"
+              name="dueDate"
+              value={formData.dueDate}
+              onChange={handleChange}
+              className="input bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+              min={new Date().toISOString().slice(0, 16)}
+            />
+            {errors.dueDate && (
+              <p className="text-red-400 text-sm mt-1">{errors.dueDate}</p>
             )}
           </div>
 

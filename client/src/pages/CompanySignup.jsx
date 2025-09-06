@@ -108,7 +108,7 @@ const CompanySignup = () => {
         // Redirect to login with success message
         navigate('/login', { 
           state: { 
-            message: 'Company registered successfully! Please sign in with your admin credentials.' 
+            message: 'Company registered successfully! Please sign in with your System Administrator credentials.' 
           } 
         });
       }
@@ -129,7 +129,7 @@ const CompanySignup = () => {
               Create Your Company
             </h2>
             <p className="text-gray-400">
-              Set up your company workspace and get started
+              Set up your company workspace and create your System Administrator account
             </p>
           </div>
 
@@ -190,15 +190,15 @@ const CompanySignup = () => {
               </div>
             </div>
 
-            {/* Admin Information */}
+            {/* System Administrator Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white border-b border-gray-700 pb-2">
-                Admin Account
+                System Administrator Account
               </h3>
               
               <div>
                 <label htmlFor="adminName" className="block text-sm font-medium text-gray-300 mb-2">
-                  Admin Name *
+                  System Administrator Name *
                 </label>
                 <input
                   id="adminName"
@@ -217,7 +217,7 @@ const CompanySignup = () => {
 
               <div>
                 <label htmlFor="adminEmail" className="block text-sm font-medium text-gray-300 mb-2">
-                  Admin Email *
+                  System Administrator Email *
                 </label>
                 <input
                   id="adminEmail"

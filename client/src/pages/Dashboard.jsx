@@ -10,6 +10,7 @@ import TaskModal from '../components/tasks/TaskModal';
 import TaskFilters from '../components/tasks/TaskFilters';
 import ViewSwitcher from '../components/tasks/ViewSwitcher';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
+import NotificationBoard from '../components/notifications/NotificationBoard';
 
 const Dashboard = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -42,6 +43,68 @@ const Dashboard = () => {
   // Handle URL parameters for task data and updates from browser extension
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
+    const popupDataKey = urlParams.get('popupData');
+    
+    if (popupDataKey) {
+      console.log('Dashboard: Found popupDataKey in URL:', popupDataKey);
+      try {
+        // Get data from localStorage using the key
+        const popupData = localStorage.getItem(popupDataKey);
+        console.log('Dashboard: Retrieved popupData from localStorage:', popupData);
+        
+        if (popupData) {
+          const parsedData = JSON.parse(popupData);
+          console.log('Dashboard: Parsed popup data:', parsedData);
+          
+          // Process based on type
+          if (parsedData.type === 'create') {
+            console.log('Dashboard: Processing create task with data:', parsedData.taskData);
+            setExtensionTaskData({
+              ...parsedData.taskData,
+              originalText: parsedData.originalText
+            });
+            setIsAddModalOpen(true);
+            console.log('Dashboard: Set extensionTaskData and opened add modal');
+          } else if (parsedData.type === 'update') {
+            console.log('Dashboard: Processing update task with data:', parsedData.updateData);
+            handleTaskUpdate({
+              ...parsedData.updateData,
+              originalText: parsedData.originalText
+            });
+          } else if (parsedData.type === 'addSubtask') {
+            console.log('Dashboard: Processing add subtask with data:', parsedData.updateData);
+            handleAddSubtask({
+              ...parsedData.updateData,
+              originalText: parsedData.originalText
+            });
+          } else if (parsedData.type === 'complete') {
+            console.log('Dashboard: Processing complete task with data:', parsedData.updateData);
+            handleTaskCompletion({
+              ...parsedData.updateData,
+              originalText: parsedData.originalText
+            });
+          } else if (parsedData.type === 'summarize') {
+            console.log('Dashboard: Processing summarize task with data:', parsedData.updateData);
+            handleTaskSummarization({
+              ...parsedData.updateData,
+              originalText: parsedData.originalText
+            });
+          }
+          
+          // Clean up localStorage and URL parameters
+          localStorage.removeItem(popupDataKey);
+          navigate('/dashboard', { replace: true });
+        } else {
+          console.log('Dashboard: No popupData found in localStorage for key:', popupDataKey);
+        }
+      } catch (error) {
+        console.error('Failed to parse popup data from localStorage:', error);
+        // Clean up URL parameters on error
+        navigate('/dashboard', { replace: true });
+      }
+    }
+    
+    // Handle legacy URL parameters for backward compatibility
     const taskDataParam = urlParams.get('createTask');
     const updateDataParam = urlParams.get('updateTask');
     const completeTaskParam = urlParams.get('completeTask');
@@ -121,8 +184,16 @@ const Dashboard = () => {
   // Listen for messages from browser extension
   useEffect(() => {
     const handleMessage = (event) => {
-      // Verify origin for security
-      if (event.origin !== window.location.origin) return;
+      // Verify origin for security (allow localhost variations)
+      const allowedOrigins = [
+        window.location.origin,
+        'http://localhost:5173',
+        'http://127.0.0.1:5173'
+      ];
+      if (!allowedOrigins.includes(event.origin)) {
+        console.log('Dashboard: Rejected message from origin:', event.origin);
+        return;
+      }
       
       console.log('Dashboard received window message:', event.data);
       
@@ -139,6 +210,13 @@ const Dashboard = () => {
           ...event.data.updateData,
           originalText: event.data.originalText
         });
+      } else if (event.data.type === 'CREATE_TASK_FROM_POPUP' && event.data.source === 'task-popup') {
+        console.log('Processing task creation from popup (postMessage fallback)');
+        setExtensionTaskData({
+          ...event.data.taskData,
+          originalText: event.data.originalText
+        });
+        setIsAddModalOpen(true);
       }
     };
 
@@ -193,13 +271,22 @@ const Dashboard = () => {
         setIsTaskModalOpen(true);
       } else {
         console.error('Failed to fetch task for update');
-        // Show notification or error message
+        // Still open modal with the update data for manual handling
+        setExtensionUpdateData(updateData);
+        setIsTaskModalOpen(true);
       }
     } else {
-      // No task found, show suggestions or create new task option
-      console.log('No matching task found, showing options');
-      // You could show a modal with suggestions here
-      alert(`No matching task found. Suggestions: ${updateData.suggestedActions?.join(', ') || 'Create new task'}`);
+      // No task found, open AddTaskModal for manual task creation
+      console.log('No matching task found, opening AddTaskModal for manual task creation');
+      setExtensionTaskData({
+        title: updateData.updateContent?.substring(0, 50) || 'Manual Task',
+        description: updateData.updateContent || 'Task created from manual input',
+        priority: 'MEDIUM',
+        dueDate: null,
+        assignee: null,
+        originalText: updateData.originalText
+      });
+      setIsAddModalOpen(true);
     }
   };
 
@@ -223,12 +310,22 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error('Failed to complete task:', error);
-        alert('Failed to complete task. Please try again.');
+        // Still open modal for manual completion
+        setExtensionUpdateData(completeData);
+        setIsTaskModalOpen(true);
       }
     } else {
-      // No task found, show suggestions
-      console.log('No matching task found for completion');
-      alert(`No matching task found. Suggestions: ${completeData.suggestedActions?.join(', ') || 'Create new task'}`);
+      // No task found, open AddTaskModal for manual task creation
+      console.log('No matching task found for completion, opening AddTaskModal for manual task creation');
+      setExtensionTaskData({
+        title: completeData.updateContent?.substring(0, 50) || 'Manual Task',
+        description: completeData.updateContent || 'Task created from manual input',
+        priority: 'MEDIUM',
+        dueDate: null,
+        assignee: null,
+        originalText: completeData.originalText
+      });
+      setIsAddModalOpen(true);
     }
   };
 
@@ -250,12 +347,26 @@ const Dashboard = () => {
         setIsTaskModalOpen(true);
       } else {
         console.error('Failed to fetch task for subtask addition');
-        alert('Failed to fetch task for subtask addition');
+        // Still open modal for manual subtask addition
+        setExtensionUpdateData({
+          ...addSubtaskData,
+          action: 'addSubtask',
+          subtaskData: addSubtaskData.subtaskData || null
+        });
+        setIsTaskModalOpen(true);
       }
     } else {
-      // No task found, show suggestions
-      console.log('No matching task found for subtask addition');
-      alert(`No matching task found. Suggestions: ${addSubtaskData.suggestedActions?.join(', ') || 'Create new task'}`);
+      // No task found, open AddTaskModal for manual task creation (as parent for subtask)
+      console.log('No matching task found for subtask addition, opening AddTaskModal for manual task creation');
+      setExtensionTaskData({
+        title: addSubtaskData.subtaskData?.title || addSubtaskData.updateContent?.substring(0, 50) || 'Manual Task',
+        description: addSubtaskData.subtaskData?.description || addSubtaskData.updateContent || 'Task created from manual input',
+        priority: addSubtaskData.subtaskData?.priority || 'MEDIUM',
+        dueDate: addSubtaskData.subtaskData?.dueDate || null,
+        assignee: addSubtaskData.subtaskData?.assignee || null,
+        originalText: addSubtaskData.originalText
+      });
+      setIsAddModalOpen(true);
     }
   };
 
@@ -277,20 +388,56 @@ const Dashboard = () => {
             setSummaryData(summary);
             setIsSummaryModalOpen(true);
           } else {
-            alert('Task not found for summarization.');
+            // Task not found, open AddTaskModal for manual task creation
+            console.log('Task not found for summarization, opening AddTaskModal for manual task creation');
+            setExtensionTaskData({
+              title: summarizeData.updateContent?.substring(0, 50) || 'Manual Task',
+              description: summarizeData.updateContent || 'Task created from manual input',
+              priority: 'MEDIUM',
+              dueDate: null,
+              assignee: null,
+              originalText: summarizeData.originalText
+            });
+            setIsAddModalOpen(true);
           }
         } else {
           console.error('Failed to fetch task for summarization');
-          alert('Failed to fetch task for summarization. Please try again.');
+          // Open AddTaskModal for manual task creation
+          setExtensionTaskData({
+            title: summarizeData.updateContent?.substring(0, 50) || 'Manual Task',
+            description: summarizeData.updateContent || 'Task created from manual input',
+            priority: 'MEDIUM',
+            dueDate: null,
+            assignee: null,
+            originalText: summarizeData.originalText
+          });
+          setIsAddModalOpen(true);
         }
       } catch (error) {
         console.error('Failed to summarize task:', error);
-        alert('Failed to summarize task. Please try again.');
+        // Open AddTaskModal for manual task creation
+        setExtensionTaskData({
+          title: summarizeData.updateContent?.substring(0, 50) || 'Manual Task',
+          description: summarizeData.updateContent || 'Task created from manual input',
+          priority: 'MEDIUM',
+          dueDate: null,
+          assignee: null,
+          originalText: summarizeData.originalText
+        });
+        setIsAddModalOpen(true);
       }
     } else {
-      // No task found, show suggestions
-      console.log('No matching task found for summarization');
-      alert(`No matching task found. Suggestions: ${summarizeData.suggestedActions?.join(', ') || 'Create new task'}`);
+      // No task found, open AddTaskModal for manual task creation
+      console.log('No matching task found for summarization, opening AddTaskModal for manual task creation');
+      setExtensionTaskData({
+        title: summarizeData.updateContent?.substring(0, 50) || 'Manual Task',
+        description: summarizeData.updateContent || 'Task created from manual input',
+        priority: 'MEDIUM',
+        dueDate: null,
+        assignee: null,
+        originalText: summarizeData.originalText
+      });
+      setIsAddModalOpen(true);
     }
   };
 
@@ -319,6 +466,8 @@ const Dashboard = () => {
         case 'TODO': return '⏳';
         case 'IN_PROGRESS': return '🔄';
         case 'COMPLETED': return '✅';
+        case 'ON_HOLD': return '⏸️';
+        case 'CANCELLED': return '❌';
         default: return '❓';
       }
     };
@@ -375,6 +524,8 @@ const Dashboard = () => {
     todo: tasks.filter(task => task.status === 'TODO').length,
     inProgress: tasks.filter(task => task.status === 'IN_PROGRESS').length,
     completed: tasks.filter(task => task.status === 'COMPLETED').length,
+    onHold: tasks.filter(task => task.status === 'ON_HOLD').length,
+    cancelled: tasks.filter(task => task.status === 'CANCELLED').length,
     urgent: tasks.filter(task => task.priority === 'URGENT').length,
     high: tasks.filter(task => task.priority === 'HIGH').length
   };
@@ -470,6 +621,9 @@ const Dashboard = () => {
                 onViewChange={handleViewChange} 
               />
               
+              {/* Notification Board */}
+              <NotificationBoard />
+              
               <button
                 onClick={handleAddTask}
                 className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
@@ -484,7 +638,7 @@ const Dashboard = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
           <StatCard
             title="Total Tasks"
             value={stats.total}
@@ -504,6 +658,16 @@ const Dashboard = () => {
             title="Completed"
             value={stats.completed}
             icon="✅"
+          />
+          <StatCard
+            title="On Hold"
+            value={stats.onHold}
+            icon="⏸️"
+          />
+          <StatCard
+            title="Cancelled"
+            value={stats.cancelled}
+            icon="❌"
           />
         </div>
 

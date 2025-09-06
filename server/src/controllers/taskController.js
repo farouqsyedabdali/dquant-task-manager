@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
+const { createNotification } = require('./notificationController')
 
 // Get tasks based on user role and assignments
 const getTasks = async (req, res) => {
@@ -15,14 +16,19 @@ const getTasks = async (req, res) => {
 
     // Filter by task type
     if (type === 'assigned-to-me') {
-      whereClause.assigneeId = userId;
+      // Show tasks where user is lead assignee OR co-assignee
+      whereClause.OR = [
+        { assigneeId: userId },
+        { coAssignees: { some: { userId: userId } } }
+      ];
     } else if (type === 'created-by-me') {
       whereClause.assignerId = userId;
     } else if (userRole === 'EMPLOYEE') {
-      // Employees see tasks assigned to them and tasks they created
+      // Employees see tasks assigned to them, tasks they created, and tasks they're co-assigned to
       whereClause.OR = [
         { assigneeId: userId },
-        { assignerId: userId }
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } }
       ];
     }
     // Admins see all tasks (no additional filtering)
@@ -37,10 +43,24 @@ const getTasks = async (req, res) => {
     }
 
     if (search) {
-      whereClause.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
-      ];
+      // If OR clause already exists (for employee permissions), we need to combine it with search
+      if (whereClause.OR) {
+        whereClause.AND = [
+          { OR: whereClause.OR }, // Keep the employee permission filter
+          { 
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } }
+            ]
+          }
+        ];
+        delete whereClause.OR; // Remove the original OR since it's now in AND
+      } else {
+        whereClause.OR = [
+          { title: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } }
+        ];
+      }
     }
 
     // Add due date filtering
@@ -141,6 +161,17 @@ const getTasks = async (req, res) => {
           orderBy: {
             createdAt: 'desc'
           }
+        },
+        coAssignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
         }
       },
       orderBy: {
@@ -171,6 +202,51 @@ const getTasks = async (req, res) => {
   }
 };
 
+// Debug endpoint to check company data
+const debugCompanyTasks = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const companyId = req.user.companyId;
+
+    // Get basic stats
+    const allTasks = await prisma.task.findMany({
+      where: { companyId },
+      select: { id: true, title: true, assignerId: true, assigneeId: true, parentTaskId: true }
+    });
+
+    const userInvolvedTasks = await prisma.task.findMany({
+      where: {
+        companyId,
+        OR: [
+          { assigneeId: userId },
+          { assignerId: userId }
+        ]
+      },
+      select: { id: true, title: true, assignerId: true, assigneeId: true, parentTaskId: true }
+    });
+
+    const potentialParents = allTasks.filter(task => !task.parentTaskId);
+    const userVisibleParents = userInvolvedTasks.filter(task => !task.parentTaskId);
+
+    res.json({
+      debug: true,
+      user: { id: userId, role: userRole, companyId },
+      stats: {
+        totalTasks: allTasks.length,
+        userInvolvedTasks: userInvolvedTasks.length,
+        totalPotentialParents: potentialParents.length,
+        userVisibleParents: userVisibleParents.length
+      },
+      tasks: allTasks,
+      userTasks: userInvolvedTasks
+    });
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ error: 'Debug failed' });
+  }
+};
+
 // Get single task
 const getTask = async (req, res) => {
   try {
@@ -188,7 +264,8 @@ const getTask = async (req, res) => {
     if (userRole === 'EMPLOYEE') {
       whereClause.OR = [
         { assigneeId: userId },
-        { assignerId: userId }
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } }
       ];
     }
 
@@ -251,6 +328,17 @@ const getTask = async (req, res) => {
           },
           orderBy: {
             createdAt: 'desc'
+          }
+        },
+        coAssignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
           }
         }
       }
@@ -390,6 +478,18 @@ const createTask = async (req, res) => {
       }
     });
 
+    // Create notification for the assignee
+    if (task.assigneeId !== assignerId) {
+      await createNotification(
+        'TASK_CREATED',
+        'New Task Assigned',
+        `You have been assigned a new task: "${task.title}"`,
+        task.id,
+        task.assigneeId,
+        companyId
+      );
+    }
+
     res.status(201).json(task);
   } catch (error) {
     console.error('Create task error:', error);
@@ -509,6 +609,62 @@ const updateTask = async (req, res) => {
         }
       }
     });
+
+    // Create notifications for changes
+    const changes = [];
+    if (updateData.title && updateData.title !== task.title) {
+      changes.push('title');
+    }
+    if (updateData.description && updateData.description !== task.description) {
+      changes.push('description');
+    }
+    if (updateData.status && updateData.status !== task.status) {
+      changes.push('status');
+    }
+    if (updateData.priority && updateData.priority !== task.priority) {
+      changes.push('priority');
+    }
+    if (updateData.assigneeId && updateData.assigneeId !== task.assigneeId) {
+      changes.push('assignee');
+    }
+
+    // Create notifications for the assignee (if different from updater)
+    if (updatedTask.assigneeId !== userId) {
+      for (const change of changes) {
+        let notificationType, title, message;
+        
+        switch (change) {
+          case 'status':
+            notificationType = 'TASK_STATUS_CHANGED';
+            title = 'Task Status Updated';
+            message = `Task "${updatedTask.title}" status changed to ${updatedTask.status}`;
+            break;
+          case 'priority':
+            notificationType = 'TASK_PRIORITY_CHANGED';
+            title = 'Task Priority Updated';
+            message = `Task "${updatedTask.title}" priority changed to ${updatedTask.priority}`;
+            break;
+          case 'assignee':
+            notificationType = 'TASK_ASSIGNED';
+            title = 'Task Assigned';
+            message = `You have been assigned to task "${updatedTask.title}"`;
+            break;
+          default:
+            notificationType = 'TASK_UPDATED';
+            title = 'Task Updated';
+            message = `Task "${updatedTask.title}" has been updated`;
+        }
+        
+        await createNotification(
+          notificationType,
+          title,
+          message,
+          updatedTask.id,
+          updatedTask.assigneeId,
+          companyId
+        );
+      }
+    }
 
     res.json(updatedTask);
   } catch (error) {
@@ -858,6 +1014,167 @@ const createSubtask = async (req, res) => {
   }
 };
 
+// Add co-assignee to task
+const addCoAssignee = async (req, res) => {
+  try {
+    const { id: taskId } = req.params;
+    const { userId } = req.body;
+    const currentUserId = req.user.id;
+    const companyId = req.user.companyId;
+
+    console.log('Adding co-assignee for taskId:', taskId, 'userId:', userId, 'companyId:', companyId);
+
+    // Get the task to check permissions
+    const task = await prisma.task.findFirst({
+      where: {
+        id: parseInt(taskId),
+        companyId: companyId
+      },
+      include: {
+        assignee: true
+      }
+    });
+
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // Check if current user is the lead assignee
+    if (task.assigneeId !== currentUserId) {
+      return res.status(403).json({ error: 'Only the lead assignee can add co-assignees' });
+    }
+
+    // Check if user exists and is in the same company
+    const user = await prisma.user.findFirst({
+      where: {
+        id: parseInt(userId),
+        companyId: companyId
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if user is already a co-assignee
+    const existingCoAssignee = await prisma.taskCoAssignee.findFirst({
+      where: {
+        taskId: parseInt(taskId),
+        userId: parseInt(userId)
+      }
+    });
+
+    if (existingCoAssignee) {
+      return res.status(400).json({ error: 'User is already a co-assignee' });
+    }
+
+    // Add co-assignee
+    const coAssignee = await prisma.taskCoAssignee.create({
+      data: {
+        taskId: parseInt(taskId),
+        userId: parseInt(userId),
+        companyId: companyId
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    // Create notification for the co-assignee
+    await createNotification({
+      type: 'TASK_ASSIGNED',
+      title: 'Added as Co-Assignee',
+      message: `You have been added as a co-assignee to task: ${task.title}`,
+      taskId: parseInt(taskId),
+      userId: parseInt(userId),
+      companyId: companyId
+    });
+
+    res.status(201).json(coAssignee);
+  } catch (error) {
+    console.error('Add co-assignee error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Remove co-assignee from task
+const removeCoAssignee = async (req, res) => {
+  try {
+    const { id: taskId, userId } = req.params;
+    const currentUserId = req.user.id;
+    const companyId = req.user.companyId;
+
+    console.log('Removing co-assignee for taskId:', taskId, 'userId:', userId, 'companyId:', companyId);
+
+    // Get the task to check permissions
+    const task = await prisma.task.findFirst({
+      where: {
+        id: parseInt(taskId),
+        companyId: companyId
+      }
+    });
+
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // Check if current user is the lead assignee
+    if (task.assigneeId !== currentUserId) {
+      return res.status(403).json({ error: 'Only the lead assignee can remove co-assignees' });
+    }
+
+    // Remove co-assignee
+    await prisma.taskCoAssignee.deleteMany({
+      where: {
+        taskId: parseInt(taskId),
+        userId: parseInt(userId)
+      }
+    });
+
+    res.status(200).json({ message: 'Co-assignee removed successfully' });
+  } catch (error) {
+    console.error('Remove co-assignee error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Get co-assignees for a task
+const getCoAssignees = async (req, res) => {
+  try {
+    const { id: taskId } = req.params;
+    const companyId = req.user.companyId;
+
+    console.log('Getting co-assignees for taskId:', taskId, 'companyId:', companyId);
+
+    const coAssignees = await prisma.taskCoAssignee.findMany({
+      where: {
+        taskId: parseInt(taskId),
+        companyId: companyId
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    res.status(200).json(coAssignees);
+  } catch (error) {
+    console.error('Get co-assignees error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getTasks,
   getTask,
@@ -866,5 +1183,9 @@ module.exports = {
   updateTask,
   deleteTask,
   updateTaskStatus,
-  updateTaskPriority
+  updateTaskPriority,
+  debugCompanyTasks,
+  addCoAssignee,
+  removeCoAssignee,
+  getCoAssignees
 };

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { isAuthenticated, user, isAdmin, isEmployee } = useAuthStore();
+  const { isAuthenticated, user, isAdmin, isEmployee, isSysAdmin } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,6 +16,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     if (allowedRoles.length > 0) {
       const hasRequiredRole = allowedRoles.some(role => {
         if (role === 'ADMIN') return isAdmin();
+        if (role === 'SYSDMIN') return isSysAdmin();
         if (role === 'EMPLOYEE') return isEmployee();
         return false;
       });

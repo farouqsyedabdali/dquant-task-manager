@@ -3,6 +3,7 @@ import { usersAPI } from '../services/api';
 
 const useUserStore = create((set, get) => ({
   users: [],
+  recentEmployees: [], // Track 5 most recently selected employees
   isLoading: false,
   error: null,
 
@@ -38,7 +39,27 @@ const useUserStore = create((set, get) => ({
     }
   },
 
-  // Delete employee
+  // Update user
+  updateUser: async (id, userData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await usersAPI.updateUser(id, userData);
+      const updatedUser = response.data;
+      set(state => ({
+        users: state.users.map(user => 
+          user.id === id ? updatedUser : user
+        ),
+        isLoading: false
+      }));
+      return { success: true, data: updatedUser };
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Failed to update user';
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  // Delete user (employee or admin)
   deleteEmployee: async (id) => {
     set({ isLoading: true, error: null });
     try {
@@ -49,11 +70,40 @@ const useUserStore = create((set, get) => ({
       }));
       return { success: true };
     } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Failed to delete employee';
+      const errorMessage = error.response?.data?.error || 'Failed to delete user';
       set({ error: errorMessage, isLoading: false });
       return { success: false, error: errorMessage };
     }
   },
+
+  // Add employee to recent list
+  addToRecentEmployees: (employee) => {
+    set(state => {
+      const existingIndex = state.recentEmployees.findIndex(emp => emp.id === employee.id);
+      let newRecentEmployees;
+      
+      if (existingIndex !== -1) {
+        // Remove from current position and add to front
+        newRecentEmployees = [
+          employee,
+          ...state.recentEmployees.filter(emp => emp.id !== employee.id)
+        ];
+      } else {
+        // Add to front, keep only 5 most recent
+        newRecentEmployees = [employee, ...state.recentEmployees].slice(0, 5);
+      }
+      
+      return { recentEmployees: newRecentEmployees };
+    });
+  },
+
+  // Get recent employees (first 5)
+  getRecentEmployees: () => {
+    return get().recentEmployees.slice(0, 5);
+  },
+
+  // Clear recent employees
+  clearRecentEmployees: () => set({ recentEmployees: [] }),
 
   // Clear error
   clearError: () => set({ error: null }),

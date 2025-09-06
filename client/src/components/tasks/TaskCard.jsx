@@ -21,6 +21,10 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
         return 'status-in-progress';
       case 'COMPLETED':
         return 'status-completed';
+      case 'ON_HOLD':
+        return 'status-on-hold';
+      case 'CANCELLED':
+        return 'status-cancelled';
       default:
         return 'status-todo';
     }
@@ -84,19 +88,40 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
         {/* Task Details */}
         <div className="space-y-3">
           {/* Assigned To */}
-          <div className="flex items-center space-x-2">
-            <span className="text-gray-400 text-sm">Assigned to:</span>
-            {task.assignee ? (
-              <div className="flex items-center space-x-2">
-                <div className="avatar placeholder">
-                  <div className="bg-indigo-600 text-white rounded-full w-6">
-                    <span className="text-xs">{task.assignee.name.charAt(0)}</span>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-400 text-sm">Lead:</span>
+              {task.assignee ? (
+                <div className="flex items-center space-x-2">
+                  <div className="avatar placeholder">
+                    <div className="bg-indigo-600 text-white rounded-full w-6">
+                      <span className="text-xs">{task.assignee.name.charAt(0)}</span>
+                    </div>
                   </div>
+                  <span className="text-white text-sm">{task.assignee.name}</span>
                 </div>
-                <span className="text-white text-sm">{task.assignee.name}</span>
+              ) : (
+                <span className="text-gray-500 text-sm">Unassigned</span>
+              )}
+            </div>
+            
+            {/* Co-Assignees */}
+            {task.coAssignees && task.coAssignees.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <span className="text-gray-400 text-sm">Co-assignees:</span>
+                <div className="flex flex-wrap gap-1">
+                  {task.coAssignees.map((coAssignee) => (
+                    <div key={coAssignee.id} className="flex items-center space-x-1">
+                      <div className="avatar placeholder">
+                        <div className="bg-green-600 text-white rounded-full w-5">
+                          <span className="text-xs">{coAssignee.user.name.charAt(0)}</span>
+                        </div>
+                      </div>
+                      <span className="text-white text-xs">{coAssignee.user.name}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ) : (
-              <span className="text-gray-500 text-sm">Unassigned</span>
             )}
           </div>
 

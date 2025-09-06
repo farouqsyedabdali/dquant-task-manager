@@ -168,9 +168,9 @@ const deleteCompany = async (req, res) => {
       return res.status(400).json({ error: 'Company ID not found' });
     }
 
-    // Check if user is admin
-    if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ error: 'Only admins can delete companies' });
+    // Check if user is SYSDMIN
+    if (req.user.role !== 'SYSDMIN') {
+      return res.status(403).json({ error: 'Only System Administrators can delete companies' });
     }
 
     // Delete all data associated with the company
@@ -242,13 +242,13 @@ const registerCompany = async (req, res) => {
       }
     });
 
-    // Create admin user for the company
-    const adminUser = await prisma.user.create({
+    // Create system administrator user for the company
+    const sysAdminUser = await prisma.user.create({
       data: {
         name: adminName,
         email: adminEmail,
         password: hashedPassword,
-        role: 'ADMIN',
+        role: 'SYSDMIN',
         companyId: company.id
       },
       select: {
@@ -267,7 +267,7 @@ const registerCompany = async (req, res) => {
         name: company.name,
         email: company.email
       },
-      adminUser
+      sysAdminUser
     });
   } catch (error) {
     console.error('Company registration error:', error);

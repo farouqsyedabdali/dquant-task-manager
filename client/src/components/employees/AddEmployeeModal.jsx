@@ -6,7 +6,8 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    role: 'EMPLOYEE'
   });
   const [errors, setErrors] = useState({});
 
@@ -65,7 +66,8 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
     const result = await createEmployee({
       name: formData.name.trim(),
       email: formData.email.trim(),
-      password: formData.password
+      password: formData.password,
+      role: formData.role
     });
 
     if (result.success) {
@@ -73,7 +75,8 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
         name: '',
         email: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        role: 'EMPLOYEE'
       });
       setErrors({});
       onClose();
@@ -85,7 +88,8 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
       name: '',
       email: '',
       password: '',
-      confirmPassword: ''
+      confirmPassword: '',
+      role: 'EMPLOYEE'
     });
     setErrors({});
     onClose();
@@ -145,6 +149,25 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
             {errors.email && (
               <p className="text-red-400 text-sm mt-1">{errors.email}</p>
             )}
+          </div>
+
+          {/* Role Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Role *
+            </label>
+            <select
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="EMPLOYEE">Employee</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+            <p className="text-gray-500 text-xs mt-1">
+              Admins can manage employees and tasks
+            </p>
           </div>
 
           {/* Password */}

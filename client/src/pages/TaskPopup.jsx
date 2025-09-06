@@ -7,6 +7,7 @@ const TaskPopup = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastResult, setLastResult] = useState(null);
   const [error, setError] = useState(null);
+
   
   const { user, isAuthenticated, getMe } = useAuthStore();
 
@@ -34,7 +35,29 @@ const TaskPopup = () => {
     };
 
     autoFillFromClipboard();
+    
+    // Clean up old localStorage entries (older than 1 hour)
+    const cleanupOldEntries = () => {
+      const oneHourAgo = Date.now() - (60 * 60 * 1000);
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('taskPopup_')) {
+          try {
+            const data = JSON.parse(localStorage.getItem(key));
+            if (data.timestamp && data.timestamp < oneHourAgo) {
+              localStorage.removeItem(key);
+            }
+          } catch {
+            // Remove invalid entries
+            localStorage.removeItem(key);
+          }
+        }
+      });
+    };
+    
+    cleanupOldEntries();
   }, []);
+
+
 
   const handleCreateTask = async () => {
     if (!inputText.trim()) {
@@ -53,32 +76,112 @@ const TaskPopup = () => {
     try {
       const response = await aiAPI.extractTask(inputText.trim());
       
+      let taskData = null;
       if (response.data.success && response.data.taskData) {
-        // Open the main app with task data
-        const taskData = response.data.taskData;
-        const url = `http://localhost:5173/dashboard?createTask=${encodeURIComponent(JSON.stringify(taskData))}&originalText=${encodeURIComponent(inputText)}`;
-        
-        // Open in main window (reuse existing tab)
-        const taskManagerWindow = window.open(url, 'TaskManagerMain');
-        if (taskManagerWindow) {
-          taskManagerWindow.focus();
-        }
-        
-        setLastResult({
-          type: 'create',
-          success: true,
-          title: taskData.title,
-          description: taskData.description
-        });
-        
-        // Clear input after successful creation
-        setInputText('');
+        taskData = response.data.taskData;
+        console.log('TaskPopup: AI successfully extracted task data:', taskData);
       } else {
-        throw new Error('Failed to extract task data');
+        console.log('TaskPopup: AI failed to extract task data, using fallback');
+        taskData = {
+          title: inputText.trim().substring(0, 50),
+          description: inputText.trim().substring(0, 300),
+          priority: 'MEDIUM',
+          dueDate: null,
+          assignee: null
+        };
       }
+      
+      // Always store task data and open modal
+      const popupData = {
+        type: 'create',
+        taskData: taskData,
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      // Store in localStorage with a unique key
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      console.log('TaskPopup: Stored data in localStorage with key:', storageKey);
+      console.log('TaskPopup: Stored data:', popupData);
+      
+      // Open the main app with just the storage key
+      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      console.log('TaskPopup: Opening URL:', url);
+      
+      // Open in main window (reuse existing tab)
+      const taskManagerWindow = window.open(url, 'TaskManagerMain');
+      if (taskManagerWindow) {
+        taskManagerWindow.focus();
+      } else {
+        // Fallback: if popup blocked, try to use postMessage
+        console.log('TaskPopup: Popup blocked, trying postMessage fallback');
+        try {
+          // Try to communicate with existing window
+          const existingWindow = window.open('http://localhost:5173/dashboard', 'TaskManagerMain');
+          if (existingWindow) {
+            // Wait for window to load, then send message
+            setTimeout(() => {
+              existingWindow.postMessage({
+                type: 'CREATE_TASK_FROM_POPUP',
+                source: 'task-popup',
+                taskData: taskData,
+                originalText: inputText
+              }, 'http://localhost:5173');
+            }, 1000);
+          }
+        } catch (error) {
+          console.error('TaskPopup: Fallback also failed:', error);
+          setError('Failed to open task manager. Please try again.');
+        }
+      }
+      
+      setLastResult({
+        type: 'create',
+        success: true,
+        title: taskData.title,
+        description: taskData.description
+      });
+      
+      // Clear input after successful creation
+      setInputText('');
     } catch (err) {
       console.error('Create task error:', err);
-      setError('Failed to create task. Please try again.');
+      
+      // Even if AI completely fails, still open the modal with basic data
+      const fallbackTaskData = {
+        title: inputText.trim().substring(0, 50),
+        description: inputText.trim().substring(0, 300),
+        priority: 'MEDIUM',
+        dueDate: null,
+        assignee: null
+      };
+      
+      const popupData = {
+        type: 'create',
+        taskData: fallbackTaskData,
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const taskManagerWindow = window.open(url, 'TaskManagerMain');
+      if (taskManagerWindow) {
+        taskManagerWindow.focus();
+      }
+      
+      setLastResult({
+        type: 'create',
+        success: true,
+        title: fallbackTaskData.title,
+        description: fallbackTaskData.description
+      });
+      
+      setInputText('');
     } finally {
       setIsProcessing(false);
     }
@@ -101,38 +204,98 @@ const TaskPopup = () => {
     try {
       const response = await aiAPI.identifyTaskUpdate(inputText.trim());
       
+      let updateData = null;
       if (response.data.success && response.data.updateData) {
-        const updateData = response.data.updateData;
-        
-        if (updateData.taskFound) {
-          // Open the main app with update data
-          const url = `http://localhost:5173/dashboard?updateTask=${encodeURIComponent(JSON.stringify(updateData))}&originalText=${encodeURIComponent(inputText)}`;
-          
-          // Open in main window (reuse existing tab)
-          const taskManagerWindow = window.open(url, 'TaskManagerMain');
-          if (taskManagerWindow) {
-            taskManagerWindow.focus();
-          }
-          
-          setLastResult({
-            type: 'update',
-            success: true,
-            taskId: updateData.taskId,
-            updateContent: updateData.updateContent,
-            confidence: updateData.confidence
-          });
-          
-          // Clear input after successful update
-          setInputText('');
-        } else {
-          setError(`No matching task found. ${updateData.suggestedActions?.includes('create_new_task') ? 'Try "Create Task" instead.' : ''}`);
-        }
+        updateData = response.data.updateData;
+        console.log('TaskPopup: AI successfully identified task update:', updateData);
       } else {
-        throw new Error('Failed to identify task update');
+        console.log('TaskPopup: AI failed to identify task update, using fallback');
+        updateData = {
+          taskFound: false,
+          taskId: null,
+          confidence: 0,
+          updateType: 'manual_update',
+          updateContent: inputText.trim().substring(0, 500),
+          suggestedActions: ['manual_task_selection'],
+          reasoning: 'AI could not identify specific task - manual selection required',
+          originalText: inputText
+        };
       }
+      
+      // Always store update data and open modal (even if no task found)
+      const popupData = {
+        type: 'update',
+        updateData: updateData,
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      // Store in localStorage with a unique key
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      console.log('TaskPopup: Stored update data in localStorage with key:', storageKey);
+      
+      // Open the main app with just the storage key
+      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      console.log('TaskPopup: Opening update URL:', url);
+      
+      // Open in main window (reuse existing tab)
+      const taskManagerWindow = window.open(url, 'TaskManagerMain');
+      if (taskManagerWindow) {
+        taskManagerWindow.focus();
+      }
+      
+      setLastResult({
+        type: 'update',
+        success: true,
+        taskId: updateData.taskId || 'Manual Selection',
+        updateContent: updateData.updateContent,
+        confidence: updateData.confidence
+      });
+      
+      // Clear input after successful update
+      setInputText('');
     } catch (err) {
       console.error('Update task error:', err);
-      setError('Failed to update task. Please try again.');
+      
+      // Even if AI completely fails, still open the modal with basic data
+      const fallbackUpdateData = {
+        taskFound: false,
+        taskId: null,
+        confidence: 0,
+        updateType: 'manual_update',
+        updateContent: inputText.trim().substring(0, 500),
+        suggestedActions: ['manual_task_selection'],
+        reasoning: 'AI service error - manual selection required',
+        originalText: inputText
+      };
+      
+      const popupData = {
+        type: 'update',
+        updateData: fallbackUpdateData,
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const taskManagerWindow = window.open(url, 'TaskManagerMain');
+      if (taskManagerWindow) {
+        taskManagerWindow.focus();
+      }
+      
+      setLastResult({
+        type: 'update',
+        success: true,
+        taskId: 'Manual Selection',
+        updateContent: fallbackUpdateData.updateContent,
+        confidence: 0
+      });
+      
+      setInputText('');
     } finally {
       setIsProcessing(false);
     }
@@ -155,38 +318,98 @@ const TaskPopup = () => {
     try {
       const response = await aiAPI.identifyTaskUpdate(inputText.trim());
       
+      let updateData = null;
       if (response.data.success && response.data.updateData) {
-        const updateData = response.data.updateData;
-        
-        if (updateData.taskFound) {
-          // Open the main app with complete task data
-          const url = `http://localhost:5173/dashboard?completeTask=${encodeURIComponent(JSON.stringify(updateData))}&originalText=${encodeURIComponent(inputText)}`;
-          
-          // Open in main window (reuse existing tab)
-          const taskManagerWindow = window.open(url, 'TaskManagerMain');
-          if (taskManagerWindow) {
-            taskManagerWindow.focus();
-          }
-          
-          setLastResult({
-            type: 'complete',
-            success: true,
-            taskId: updateData.taskId,
-            updateContent: updateData.updateContent,
-            confidence: updateData.confidence
-          });
-          
-          // Clear input after successful completion
-          setInputText('');
-        } else {
-          setError(`No matching task found. ${updateData.suggestedActions?.includes('create_new_task') ? 'Try "Create Task" instead.' : ''}`);
-        }
+        updateData = response.data.updateData;
+        console.log('TaskPopup: AI successfully identified task for completion:', updateData);
       } else {
-        throw new Error('Failed to identify task for completion');
+        console.log('TaskPopup: AI failed to identify task for completion, using fallback');
+        updateData = {
+          taskFound: false,
+          taskId: null,
+          confidence: 0,
+          updateType: 'manual_completion',
+          updateContent: inputText.trim().substring(0, 500),
+          suggestedActions: ['manual_task_selection'],
+          reasoning: 'AI could not identify specific task - manual selection required',
+          originalText: inputText
+        };
       }
+      
+      // Always store complete task data and open modal (even if no task found)
+      const popupData = {
+        type: 'complete',
+        updateData: updateData,
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      // Store in localStorage with a unique key
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      console.log('TaskPopup: Stored complete task data in localStorage with key:', storageKey);
+      
+      // Open the main app with just the storage key
+      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      console.log('TaskPopup: Opening complete task URL:', url);
+      
+      // Open in main window (reuse existing tab)
+      const taskManagerWindow = window.open(url, 'TaskManagerMain');
+      if (taskManagerWindow) {
+        taskManagerWindow.focus();
+      }
+      
+      setLastResult({
+        type: 'complete',
+        success: true,
+        taskId: updateData.taskId || 'Manual Selection',
+        updateContent: updateData.updateContent,
+        confidence: updateData.confidence
+      });
+      
+      // Clear input after successful completion
+      setInputText('');
     } catch (err) {
       console.error('Complete task error:', err);
-      setError('Failed to complete task. Please try again.');
+      
+      // Even if AI completely fails, still open the modal with basic data
+      const fallbackUpdateData = {
+        taskFound: false,
+        taskId: null,
+        confidence: 0,
+        updateType: 'manual_completion',
+        updateContent: inputText.trim().substring(0, 500),
+        suggestedActions: ['manual_task_selection'],
+        reasoning: 'AI service error - manual selection required',
+        originalText: inputText
+      };
+      
+      const popupData = {
+        type: 'complete',
+        updateData: fallbackUpdateData,
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const taskManagerWindow = window.open(url, 'TaskManagerMain');
+      if (taskManagerWindow) {
+        taskManagerWindow.focus();
+      }
+      
+      setLastResult({
+        type: 'complete',
+        success: true,
+        taskId: 'Manual Selection',
+        updateContent: fallbackUpdateData.updateContent,
+        confidence: 0
+      });
+      
+      setInputText('');
     } finally {
       setIsProcessing(false);
     }
@@ -209,38 +432,98 @@ const TaskPopup = () => {
     try {
       const response = await aiAPI.identifyTaskUpdate(inputText.trim());
       
+      let updateData = null;
       if (response.data.success && response.data.updateData) {
-        const updateData = response.data.updateData;
-        
-        if (updateData.taskFound) {
-          // Open the main app with summarize task data
-          const url = `http://localhost:5173/dashboard?summarizeTask=${encodeURIComponent(JSON.stringify(updateData))}&originalText=${encodeURIComponent(inputText)}`;
-          
-          // Open in main window (reuse existing tab)
-          const taskManagerWindow = window.open(url, 'TaskManagerMain');
-          if (taskManagerWindow) {
-            taskManagerWindow.focus();
-          }
-          
-          setLastResult({
-            type: 'summarize',
-            success: true,
-            taskId: updateData.taskId,
-            updateContent: updateData.updateContent,
-            confidence: updateData.confidence
-          });
-          
-          // Clear input after successful summarization
-          setInputText('');
-        } else {
-          setError(`No matching task found. ${updateData.suggestedActions?.includes('create_new_task') ? 'Try "Create Task" instead.' : ''}`);
-        }
+        updateData = response.data.updateData;
+        console.log('TaskPopup: AI successfully identified task for summarization:', updateData);
       } else {
-        throw new Error('Failed to identify task for summarization');
+        console.log('TaskPopup: AI failed to identify task for summarization, using fallback');
+        updateData = {
+          taskFound: false,
+          taskId: null,
+          confidence: 0,
+          updateType: 'manual_summarization',
+          updateContent: inputText.trim().substring(0, 500),
+          suggestedActions: ['manual_task_selection'],
+          reasoning: 'AI could not identify specific task - manual selection required',
+          originalText: inputText
+        };
       }
+      
+      // Always store summarize task data and open modal (even if no task found)
+      const popupData = {
+        type: 'summarize',
+        updateData: updateData,
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      // Store in localStorage with a unique key
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      console.log('TaskPopup: Stored summarize task data in localStorage with key:', storageKey);
+      
+      // Open the main app with just the storage key
+      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      console.log('TaskPopup: Opening summarize task URL:', url);
+      
+      // Open in main window (reuse existing tab)
+      const taskManagerWindow = window.open(url, 'TaskManagerMain');
+      if (taskManagerWindow) {
+        taskManagerWindow.focus();
+      }
+      
+      setLastResult({
+        type: 'summarize',
+        success: true,
+        taskId: updateData.taskId || 'Manual Selection',
+        updateContent: updateData.updateContent,
+        confidence: updateData.confidence
+      });
+      
+      // Clear input after successful summarization
+      setInputText('');
     } catch (err) {
       console.error('Summarize task error:', err);
-      setError('Failed to summarize task. Please try again.');
+      
+      // Even if AI completely fails, still open the modal with basic data
+      const fallbackUpdateData = {
+        taskFound: false,
+        taskId: null,
+        confidence: 0,
+        updateType: 'manual_summarization',
+        updateContent: inputText.trim().substring(0, 500),
+        suggestedActions: ['manual_task_selection'],
+        reasoning: 'AI service error - manual selection required',
+        originalText: inputText
+      };
+      
+      const popupData = {
+        type: 'summarize',
+        updateData: fallbackUpdateData,
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const taskManagerWindow = window.open(url, 'TaskManagerMain');
+      if (taskManagerWindow) {
+        taskManagerWindow.focus();
+      }
+      
+      setLastResult({
+        type: 'summarize',
+        success: true,
+        taskId: 'Manual Selection',
+        updateContent: fallbackUpdateData.updateContent,
+        confidence: 0
+      });
+      
+      setInputText('');
     } finally {
       setIsProcessing(false);
     }
@@ -263,53 +546,139 @@ const TaskPopup = () => {
     try {
       // 1. Find the relevant parent task
       const identifyRes = await aiAPI.identifyTaskUpdate(inputText.trim());
+      let updateData = null;
+      let subtaskData = null;
+      
       if (identifyRes.data.success && identifyRes.data.updateData) {
-        const updateData = identifyRes.data.updateData;
-        if (updateData.taskFound) {
-          // 2. Use AI to interpret the subtask details
-          const extractRes = await aiAPI.extractTask(inputText.trim());
-          let subtaskData = {};
-          if (extractRes.data.success && extractRes.data.taskData) {
-            subtaskData = extractRes.data.taskData;
-          } else {
-            // fallback: use plain text
-            subtaskData = {
-              title: inputText.trim().substring(0, 50),
-              description: inputText.trim().substring(0, 300),
-              priority: 'MEDIUM',
-              assignee: null
-            };
-          }
-
-          // 3. Open the main app with both parent task info and interpreted subtask info
-          const url = `http://localhost:5173/dashboard?addSubtask=${encodeURIComponent(JSON.stringify({
-            ...updateData,
-            subtaskData
-          }))}&originalText=${encodeURIComponent(inputText)}`;
-
-          const taskManagerWindow = window.open(url, 'TaskManagerMain');
-          if (taskManagerWindow) {
-            taskManagerWindow.focus();
-          }
-
-          setLastResult({
-            type: 'addSubtask',
-            success: true,
-            taskId: updateData.taskId,
-            updateContent: subtaskData.description,
-            confidence: updateData.confidence
-          });
-
-          setInputText('');
-        } else {
-          setError(`No matching task found. ${updateData.suggestedActions?.includes('create_new_task') ? 'Try "Create Task" instead.' : ''}`);
-        }
+        updateData = identifyRes.data.updateData;
+        console.log('TaskPopup: AI successfully identified parent task for subtask:', updateData);
       } else {
-        throw new Error('Failed to identify task for subtask addition');
+        console.log('TaskPopup: AI failed to identify parent task, using fallback');
+        updateData = {
+          taskFound: false,
+          taskId: null,
+          confidence: 0,
+          updateType: 'manual_subtask',
+          updateContent: `Manual subtask creation`,
+          suggestedActions: ['manual_parent_selection'],
+          reasoning: 'AI could not identify parent task - manual selection required',
+          originalText: inputText
+        };
       }
+      
+      // 2. Use AI to interpret the subtask details
+      try {
+        const extractRes = await aiAPI.extractTask(inputText.trim());
+        if (extractRes.data.success && extractRes.data.taskData) {
+          subtaskData = extractRes.data.taskData;
+          console.log('TaskPopup: AI successfully extracted subtask data:', subtaskData);
+        } else {
+          throw new Error('AI extraction failed');
+        }
+      } catch (extractErr) {
+        console.log('TaskPopup: AI failed to extract subtask data, using fallback:', extractErr);
+        subtaskData = {
+          title: inputText.trim().substring(0, 50),
+          description: inputText.trim().substring(0, 300),
+          priority: 'MEDIUM',
+          dueDate: null,
+          assignee: null
+        };
+      }
+
+      // 3. Always store subtask data and open modal
+      const popupData = {
+        type: 'addSubtask',
+        updateData: {
+          ...updateData,
+          subtaskData
+        },
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      // Store in localStorage with a unique key
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      console.log('TaskPopup: Stored subtask data in localStorage with key:', storageKey);
+      
+      // Open the main app with just the storage key
+      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      console.log('TaskPopup: Opening subtask URL:', url);
+
+      const taskManagerWindow = window.open(url, 'TaskManagerMain');
+      if (taskManagerWindow) {
+        taskManagerWindow.focus();
+      }
+
+      setLastResult({
+        type: 'addSubtask',
+        success: true,
+        taskId: updateData.taskId || 'Manual Selection',
+        updateContent: subtaskData.description,
+        confidence: updateData.confidence
+      });
+
+      setInputText('');
     } catch (err) {
       console.error('Add subtask error:', err);
-      setError('Failed to add subtask. Please try again.');
+      
+      // Even if everything fails, still open the modal with basic data
+      const fallbackSubtaskData = {
+        title: inputText.trim().substring(0, 50),
+        description: inputText.trim().substring(0, 300),
+        priority: 'MEDIUM',
+        dueDate: null,
+        assignee: null
+      };
+
+      const fallbackUpdateData = {
+        taskFound: false,
+        taskId: null,
+        confidence: 0,
+        updateType: 'manual_subtask',
+        updateContent: `Manual subtask creation: ${fallbackSubtaskData.title}`,
+        suggestedActions: ['manual_parent_selection'],
+        reasoning: 'AI service error - manual selection required',
+        originalText: inputText
+      };
+
+      // Store fallback subtask data in localStorage
+      const popupData = {
+        type: 'addSubtask',
+        updateData: {
+          ...fallbackUpdateData,
+          subtaskData: fallbackSubtaskData
+        },
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      // Store in localStorage with a unique key
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      console.log('TaskPopup: Stored fallback subtask data in localStorage with key:', storageKey);
+      
+      // Open the main app with just the storage key
+      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      console.log('TaskPopup: Opening fallback subtask URL:', url);
+
+      const taskManagerWindow = window.open(url, 'TaskManagerMain');
+      if (taskManagerWindow) {
+        taskManagerWindow.focus();
+      }
+
+      setLastResult({
+        type: 'addSubtask',
+        success: true,
+        taskId: 'Manual Selection',
+        updateContent: `Opening subtask creation with manual parent selection`,
+        confidence: 0
+      });
+
+      setInputText('');
     } finally {
       setIsProcessing(false);
     }
@@ -359,10 +728,10 @@ const TaskPopup = () => {
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Paste text or type task details..."
           className="textarea textarea-bordered w-full h-full text-sm leading-snug bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-          maxLength={500}
+          maxLength={2000}
         />
         <div className="mt-1 flex justify-between items-center">
-          <span className="badge badge-ghost badge-sm text-[10px]">{inputText.length}/500</span>
+          <span className="badge badge-ghost badge-sm text-[10px]">{inputText.length}/2000</span>
           <span className="text-[10px] text-gray-500">Enter = Create • Shift+Enter = Update</span>
         </div>
       </div>
@@ -416,6 +785,8 @@ const TaskPopup = () => {
         >
           Clear
         </button>
+
+
       </div>
 
       {/* Status Messages */}
@@ -438,6 +809,8 @@ const TaskPopup = () => {
         )}
         </div>
       )}
+
+
     </div>
   );
 };

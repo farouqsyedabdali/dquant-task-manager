@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useTaskStore from '../../stores/taskStore';
 import useAuthStore from '../../context/authStore';
+import useUserStore from '../../stores/userStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
 import CommentSection from '../comments/CommentSection';
 import AddSubtaskModal from './AddSubtaskModal';
 import DeleteConfirmModal from '../common/DeleteConfirmModal';
+import SearchableDropdown from '../common/SearchableDropdown';
+import { usersAPI, tasksAPI } from '../../services/api';
 
 const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, onDelete, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
@@ -20,15 +23,89 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [viewedTask, setViewedTask] = useState(task); // local state for current viewed task
+  const [users, setUsers] = useState([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [coAssignees, setCoAssignees] = useState([]);
+  const [isLoadingCoAssignees, setIsLoadingCoAssignees] = useState(false);
+  const [isAddingCoAssignee, setIsAddingCoAssignee] = useState(false);
+  const [selectedCoAssigneeId, setSelectedCoAssigneeId] = useState('');
   const { updateTask, isLoading, fetchTask } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
+  const { recentEmployees, addToRecentEmployees } = useUserStore();
+
+  const fetchUsers = async () => {
+    try {
+      setIsLoadingUsers(true);
+      const response = await usersAPI.getEmployees();
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const fetchCoAssignees = useCallback(async (taskId) => {
+    if (!taskId) return;
+    
+    try {
+      setIsLoadingCoAssignees(true);
+      const response = await tasksAPI.getCoAssignees(taskId);
+      setCoAssignees(response.data);
+    } catch (error) {
+      console.error('Error fetching co-assignees:', error);
+    } finally {
+      setIsLoadingCoAssignees(false);
+    }
+  }, []);
 
   // When the modal opens or the task prop changes, update viewedTask
   useEffect(() => {
     if (isOpen && task) {
       setViewedTask(task);
+      if (isOpen) {
+        fetchUsers();
+        fetchCoAssignees(task.id);
+      }
     }
-  }, [isOpen, task]);
+  }, [isOpen, task, fetchCoAssignees]);
+
+  const handleAddCoAssignee = async () => {
+    if (!selectedCoAssigneeId || !viewedTask?.id) return;
+
+    try {
+      setIsAddingCoAssignee(true);
+      const response = await tasksAPI.addCoAssignee(viewedTask.id, selectedCoAssigneeId);
+      
+      // Add to co-assignees list
+      setCoAssignees(prev => [...prev, response.data]);
+      
+      // Track as recent employee
+      const selectedUser = users.find(u => u.id.toString() === selectedCoAssigneeId);
+      if (selectedUser) {
+        addToRecentEmployees(selectedUser);
+      }
+      
+      setSelectedCoAssigneeId('');
+    } catch (error) {
+      console.error('Error adding co-assignee:', error);
+      alert(error.response?.data?.error || 'Failed to add co-assignee');
+    } finally {
+      setIsAddingCoAssignee(false);
+    }
+  };
+
+  const handleRemoveCoAssignee = async (userId) => {
+    if (!viewedTask?.id) return;
+
+    try {
+      await tasksAPI.removeCoAssignee(viewedTask.id, userId);
+      setCoAssignees(prev => prev.filter(co => co.userId !== userId));
+    } catch (error) {
+      console.error('Error removing co-assignee:', error);
+      alert(error.response?.data?.error || 'Failed to remove co-assignee');
+    }
+  };
 
   useEffect(() => {
     if (viewedTask) {
@@ -166,7 +243,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
   if (!isOpen || !viewedTask) return null;
 
   return (
-    <div className="modal modal-open">
+    <div className="modal modal-open" style={{ zIndex: 50 }}>
       <div className="modal-box max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border border-gray-700">
         {/* Header */}
         <div className="flex justify-between items-start mb-6">
@@ -340,20 +417,136 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
             {/* Assigned To */}
             <div>
               <h4 className="text-lg font-semibold text-white mb-3">Assigned To</h4>
-              <div className="flex items-center space-x-3">
-                {viewedTask.assignee ? (
-                  <>
-                    <div className="avatar placeholder">
-                      <div className="bg-indigo-600 text-white rounded-full w-8">
-                        <span className="text-xs">{viewedTask.assignee.name.charAt(0)}</span>
+              {isEditing ? (
+                <SearchableDropdown
+                  options={users}
+                  value={formData.assigneeId}
+                  onChange={(value) => {
+                    setFormData(prev => ({ ...prev, assigneeId: value }));
+                    // Track the selected employee as recent
+                    const selectedEmployee = users.find(user => user.id.toString() === value);
+                    if (selectedEmployee) {
+                      addToRecentEmployees(selectedEmployee);
+                    }
+                  }}
+                  placeholder="Select an employee"
+                  disabled={isLoadingUsers}
+                  recentEmployees={recentEmployees}
+                />
+              ) : (
+                <div className="flex items-center space-x-3">
+                  {viewedTask.assignee ? (
+                    <>
+                      <div className="avatar placeholder">
+                        <div className="bg-indigo-600 text-white rounded-full w-8">
+                          <span className="text-xs">{viewedTask.assignee.name.charAt(0)}</span>
+                        </div>
                       </div>
+                      <span className="text-white">{viewedTask.assignee.name}</span>
+                    </>
+                  ) : (
+                    <span className="text-gray-400">Unassigned</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Co-Assignees */}
+            <div>
+              <h4 className="text-lg font-semibold text-white mb-3">Co-Assignees</h4>
+              
+              {/* Check if current user is the lead assignee */}
+              {viewedTask?.assigneeId === user?.id ? (
+                <div className="space-y-3">
+                  {/* Add Co-Assignee Section */}
+                  <div className="flex space-x-2">
+                    <div className="flex-1">
+                      <SearchableDropdown
+                        options={users.filter(u => 
+                          u.id !== viewedTask.assigneeId && 
+                          !coAssignees.some(co => co.userId === u.id)
+                        )}
+                        value={selectedCoAssigneeId}
+                        onChange={setSelectedCoAssigneeId}
+                        placeholder="Select co-assignee"
+                        disabled={isLoadingUsers}
+                        recentEmployees={recentEmployees}
+                      />
                     </div>
-                    <span className="text-white">{viewedTask.assignee.name}</span>
-                  </>
-                ) : (
-                  <span className="text-gray-400">Unassigned</span>
-                )}
-              </div>
+                    <button
+                      onClick={handleAddCoAssignee}
+                      disabled={!selectedCoAssigneeId || isAddingCoAssignee}
+                      className="btn btn-primary btn-sm"
+                    >
+                      {isAddingCoAssignee ? (
+                        <span className="loading loading-spinner loading-xs"></span>
+                      ) : (
+                        'Add'
+                      )}
+                    </button>
+                  </div>
+                  
+                  {/* Co-Assignees List */}
+                  {isLoadingCoAssignees ? (
+                    <div className="flex justify-center py-2">
+                      <span className="loading loading-spinner loading-sm"></span>
+                    </div>
+                  ) : coAssignees.length > 0 ? (
+                    <div className="space-y-2">
+                      {coAssignees.map((coAssignee) => (
+                        <div key={coAssignee.id} className="flex items-center justify-between bg-gray-700 rounded-lg p-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="avatar placeholder">
+                              <div className="bg-green-600 text-white rounded-full w-8">
+                                <span className="text-xs">{coAssignee.user.name.charAt(0)}</span>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-white">{coAssignee.user.name}</span>
+                              <p className="text-xs text-gray-400">{coAssignee.user.email}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveCoAssignee(coAssignee.userId)}
+                            className="btn btn-error btn-sm"
+                            title="Remove co-assignee"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No co-assignees added yet</p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {isLoadingCoAssignees ? (
+                    <div className="flex justify-center py-2">
+                      <span className="loading loading-spinner loading-sm"></span>
+                    </div>
+                  ) : coAssignees.length > 0 ? (
+                    <div className="space-y-2">
+                      {coAssignees.map((coAssignee) => (
+                        <div key={coAssignee.id} className="flex items-center space-x-3 bg-gray-700 rounded-lg p-3">
+                          <div className="avatar placeholder">
+                            <div className="bg-green-600 text-white rounded-full w-8">
+                              <span className="text-xs">{coAssignee.user.name.charAt(0)}</span>
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-white">{coAssignee.user.name}</span>
+                            <p className="text-xs text-gray-400">{coAssignee.user.email}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No co-assignees</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Parent Task */}

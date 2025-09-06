@@ -13,11 +13,14 @@ model Company {
   email            String    @unique
   passwordHash     String
   subscriptionPlan String    @default("free")
+  markedForDeletion Boolean  @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   users            User[]
   tasks            Task[]
   comments         Comment[]
+  notifications    Notification[]
+  coAssignees      TaskCoAssignee[]
 }
 
 model User {
@@ -31,6 +34,8 @@ model User {
   updatedAt     DateTime  @updatedAt
   company       Company   @relation(fields: [companyId], references: [id])
   comments      Comment[]
+  notifications Notification[]
+  coAssignedTasks TaskCoAssignee[] // Tasks where this user is a co-assignee
   
   // Task relationships
   assignedTasks Task[]    @relation("AssignedTasks")     // Tasks assigned to this user
@@ -46,7 +51,7 @@ model Task {
   
   // Task assignment and hierarchy
   assignerId   Int        // Who created/assigned the task
-  assigneeId   Int        // Who the task is assigned to
+  assigneeId   Int        // Who the task is assigned to (lead assignee)
   parentTaskId Int?       // For subtasks (optional)
   
   // Metadata
@@ -59,6 +64,8 @@ model Task {
   
   // Relations
   comments     Comment[]
+  notifications Notification[]
+  coAssignees  TaskCoAssignee[] // Co-assignees for this task
   assigner     User       @relation("CreatedTasks", fields: [assignerId], references: [id])
   assignee     User       @relation("AssignedTasks", fields: [assigneeId], references: [id])
   parentTask   Task?      @relation("SubTasks", fields: [parentTaskId], references: [id])
@@ -78,7 +85,25 @@ model Comment {
   company   Company  @relation(fields: [companyId], references: [id])
 }
 
+model Notification {
+  id          Int              @id @default(autoincrement())
+  type        NotificationType
+  title       String
+  message     String
+  isRead      Boolean          @default(false)
+  taskId      Int
+  userId      Int              // User who should receive this notification
+  companyId   Int
+  createdAt   DateTime         @default(now())
+  
+  // Relations
+  task        Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company     Company          @relation(fields: [companyId], references: [id])
+}
+
 enum Role {
+  SYSDMIN
   ADMIN
   EMPLOYEE
 }
@@ -87,6 +112,8 @@ enum TaskStatus {
   TODO
   IN_PROGRESS
   COMPLETED
+  ON_HOLD
+  CANCELLED
 }
 
 enum Priority {
@@ -94,4 +121,31 @@ enum Priority {
   MEDIUM
   HIGH
   URGENT
+}
+
+model TaskCoAssignee {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  userId    Int      // Co-assignee user
+  companyId Int
+  createdAt DateTime @default(now())
+  
+  // Relations
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company   Company  @relation(fields: [companyId], references: [id])
+  
+  @@unique([taskId, userId]) // Prevent duplicate co-assignees for same task
+}
+
+enum NotificationType {
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_STATUS_CHANGED
+  TASK_PRIORITY_CHANGED
+  TASK_ASSIGNED
+  TASK_DUE_SOON
+  COMMENT_ADDED
+  SUBTASK_ADDED
+  TASK_COMPLETED
 }

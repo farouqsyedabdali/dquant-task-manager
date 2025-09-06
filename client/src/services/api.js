@@ -55,6 +55,10 @@ export const tasksAPI = {
   delete: (id) => api.delete(`/tasks/${id}`),
   updateStatus: (id, status) => api.patch(`/tasks/${id}/status`, { status }),
   updatePriority: (id, priority) => api.patch(`/tasks/${id}/priority`, { priority }),
+  // Co-assignee API
+  getCoAssignees: (taskId) => api.get(`/tasks/${taskId}/co-assignees`),
+  addCoAssignee: (taskId, userId) => api.post(`/tasks/${taskId}/co-assignees`, { userId }),
+  removeCoAssignee: (taskId, userId) => api.delete(`/tasks/${taskId}/co-assignees/${userId}`),
 };
 
 // Comments API
@@ -71,6 +75,7 @@ export const usersAPI = {
   getEmployees: () => api.get('/users/employees'),
   getById: (id) => api.get(`/users/${id}`),
   createEmployee: (employeeData) => api.post('/users', employeeData),
+  updateUser: (id, userData) => api.put(`/users/${id}`, userData),
   deleteEmployee: (id) => api.delete(`/users/${id}`),
 };
 
@@ -79,6 +84,14 @@ export const aiAPI = {
   chat: (message) => api.post('/ai/chat', { message }),
   extractTask: (text) => api.post('/ai/extract-task', { text }),
   identifyTaskUpdate: (text) => api.post('/ai/identify-task-update', { text }),
+};
+
+// Notification API
+export const notificationAPI = {
+  getNotifications: () => api.get('/notifications'),
+  markAsRead: (notificationId) => api.patch(`/notifications/${notificationId}/read`),
+  markAllAsRead: () => api.patch('/notifications/mark-all-read'),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
 };
 
 export default api;

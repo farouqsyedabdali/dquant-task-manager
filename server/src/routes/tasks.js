@@ -7,7 +7,11 @@ const {
   updateTask,
   deleteTask,
   updateTaskStatus,
-  updateTaskPriority
+  updateTaskPriority,
+  debugCompanyTasks,
+  addCoAssignee,
+  removeCoAssignee,
+  getCoAssignees
 } = require('../controllers/taskController');
 const auth = require('../middleware/auth');
 const { adminOnly } = require('../middleware/roleCheck');
@@ -16,6 +20,9 @@ const router = express.Router();
 
 // All routes require authentication
 router.use(auth);
+
+// Debug endpoint to check company data
+router.get('/debug', debugCompanyTasks);
 
 // Get tasks (admin: all tasks, employee: assigned tasks)
 router.get('/', getTasks);
@@ -40,5 +47,15 @@ router.patch('/:id/status', updateTaskStatus);
 
 // Update task priority (admin or assigner can update)
 router.patch('/:id/priority', updateTaskPriority);
+
+// Co-assignee routes
+// Get co-assignees for a task
+router.get('/:id/co-assignees', getCoAssignees);
+
+// Add co-assignee to task (only lead assignee can do this)
+router.post('/:id/co-assignees', addCoAssignee);
+
+// Remove co-assignee from task (only lead assignee can do this)
+router.delete('/:id/co-assignees/:userId', removeCoAssignee);
 
 module.exports = router; 

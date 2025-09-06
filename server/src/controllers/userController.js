@@ -94,12 +94,23 @@ const getUserById = async (req, res) => {
 // Create new employee
 const createEmployee = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role = 'EMPLOYEE' } = req.body;
     const companyId = req.user.companyId;
+    const currentUserRole = req.user.role;
 
     // Validate required fields
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+
+    // Validate role
+    if (!['EMPLOYEE', 'ADMIN'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Must be EMPLOYEE or ADMIN' });
+    }
+
+    // Only SYSDMIN can create ADMIN users
+    if (role === 'ADMIN' && currentUserRole !== 'SYSDMIN') {
+      return res.status(403).json({ error: 'Only System Administrators can create Admin users' });
     }
 
     // Check if email already exists in the company
@@ -117,13 +128,13 @@ const createEmployee = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new employee
-    const newEmployee = await prisma.user.create({
+    // Create new user
+    const newUser = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        role: 'EMPLOYEE',
+        role: role,
         companyId
       },
       select: {
@@ -136,33 +147,104 @@ const createEmployee = async (req, res) => {
       }
     });
 
-    res.status(201).json(newEmployee);
+    res.status(201).json(newUser);
   } catch (error) {
-    console.error('Create employee error:', error);
+    console.error('Create user error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-// Delete employee
+// Update user (including role changes)
+const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, role } = req.body;
+    const companyId = req.user.companyId;
+    const currentUserRole = req.user.role;
+
+    // Check if user exists and belongs to the company
+    const userToUpdate = await prisma.user.findFirst({
+      where: {
+        id: parseInt(id),
+        companyId: companyId
+      }
+    });
+
+    if (!userToUpdate) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent updating SYSDMIN users (only SYSDMIN can update them)
+    if (userToUpdate.role === 'SYSDMIN' && currentUserRole !== 'SYSDMIN') {
+      return res.status(403).json({ error: 'Only System Administrators can update other System Administrators' });
+    }
+
+    // Validate role if provided
+    if (role && !['EMPLOYEE', 'ADMIN'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Must be EMPLOYEE or ADMIN' });
+    }
+
+    // Only SYSDMIN can change roles to ADMIN
+    if (role === 'ADMIN' && currentUserRole !== 'SYSDMIN') {
+      return res.status(403).json({ error: 'Only System Administrators can assign Admin roles' });
+    }
+
+    // Update user
+    const updatedUser = await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: {
+        ...(name && { name }),
+        ...(email && { email }),
+        ...(role && { role })
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Delete user (employee or admin, but not sysadmin)
 const deleteEmployee = async (req, res) => {
   try {
     const { id } = req.params;
     const companyId = req.user.companyId;
+    const currentUserId = req.user.id;
+    const currentUserRole = req.user.role;
+
+    // Prevent self-deletion
+    if (parseInt(id) === currentUserId) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
 
     // Check if user exists and belongs to the company
-    const employee = await prisma.user.findFirst({
+    const userToDelete = await prisma.user.findFirst({
       where: {
         id: parseInt(id),
-        companyId: companyId,
-        role: 'EMPLOYEE'
+        companyId: companyId
       }
     });
 
-    if (!employee) {
-      return res.status(404).json({ error: 'Employee not found' });
+    if (!userToDelete) {
+      return res.status(404).json({ error: 'User not found' });
     }
 
-    // Check if employee has any assigned tasks
+    // Prevent deletion of SYSDMIN users (only SYSDMIN can delete them)
+    if (userToDelete.role === 'SYSDMIN' && currentUserRole !== 'SYSDMIN') {
+      return res.status(403).json({ error: 'Only System Administrators can delete other System Administrators' });
+    }
+
+    // Check if user has any assigned tasks
     const assignedTasks = await prisma.task.findMany({
       where: {
         OR: [
@@ -174,20 +256,44 @@ const deleteEmployee = async (req, res) => {
 
     if (assignedTasks.length > 0) {
       return res.status(400).json({ 
-        error: 'Cannot delete employee with assigned tasks. Please reassign or complete all tasks first.' 
+        error: 'Cannot delete user with assigned tasks. Please reassign or complete all tasks first.' 
       });
     }
 
-    // Delete employee
+    // Delete user
     await prisma.user.delete({
       where: {
         id: parseInt(id)
       }
     });
 
-    res.json({ message: 'Employee deleted successfully' });
+    res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Delete employee error:', error);
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Delete company (only SYSDMIN can do this)
+const deleteCompany = async (req, res) => {
+  try {
+    const companyId = req.user.companyId;
+    const currentUserRole = req.user.role;
+
+    // Only SYSDMIN can delete the company
+    if (currentUserRole !== 'SYSDMIN') {
+      return res.status(403).json({ error: 'Only System Administrators can delete the company' });
+    }
+
+    // Mark company for deletion (soft delete)
+    await prisma.company.update({
+      where: { id: companyId },
+      data: { markedForDeletion: true }
+    });
+
+    res.json({ message: 'Company marked for deletion. All data will be permanently removed within 30 days.' });
+  } catch (error) {
+    console.error('Delete company error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -197,5 +303,7 @@ module.exports = {
   getEmployeesForAssignment,
   getUserById,
   createEmployee,
-  deleteEmployee
+  updateUser,
+  deleteEmployee,
+  deleteCompany
 }; 
