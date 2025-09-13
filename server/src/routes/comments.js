@@ -19,8 +19,8 @@ router.get('/task/:taskId', getComments);
 // Create comment
 router.post('/task/:taskId', createComment);
 
-// Update comment (admin only)
-router.put('/:id', adminOnly, updateComment);
+// Update comment (author or admin only)
+router.put('/:id', updateComment);
 
 // Delete comment (admin only)
 router.delete('/:id', adminOnly, deleteComment);

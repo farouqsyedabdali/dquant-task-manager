@@ -63,6 +63,17 @@ const SignupOptions = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+      {/* Company Branding */}
+      <div className="absolute top-6 left-6 flex items-center space-x-3">
+        <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+          <span className="text-white font-bold text-lg">DQ</span>
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-white">DQuant</h1>
+          <p className="text-gray-400 text-sm">Task Manager</p>
+        </div>
+      </div>
+
       <div className="max-w-6xl w-full">
         {/* Header */}
         <div className="text-center mb-12">

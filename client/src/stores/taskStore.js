@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { tasksAPI } from '../services/api';
+import useAuthStore from '../context/authStore';
 
 const useTaskStore = create((set, get) => ({
   tasks: [],
@@ -183,7 +184,7 @@ const useTaskStore = create((set, get) => ({
 
   // Clear filters
   clearFilters: () => {
-    set({ filters: { status: '', priority: '', search: '', dueDateFilter: '' } });
+    set({ filters: { status: '', priority: '', search: '', dueDateFilter: '', taskType: '' } });
   },
 
   // Clear current task
@@ -202,7 +203,8 @@ const useTaskStore = create((set, get) => ({
     let filteredTasks = [...tasks];
 
     if (filters.status) {
-      filteredTasks = filteredTasks.filter(task => task.status === filters.status);
+      const statusArray = filters.status.split(',').map(s => s.trim());
+      filteredTasks = filteredTasks.filter(task => statusArray.includes(task.status));
     }
 
     if (filters.priority) {
@@ -215,6 +217,31 @@ const useTaskStore = create((set, get) => ({
         task.title.toLowerCase().includes(searchLower) ||
         (task.description && task.description.toLowerCase().includes(searchLower))
       );
+    }
+
+    // Task type filtering
+    if (filters.taskType) {
+      const user = useAuthStore.getState().user;
+      if (user) {
+        switch (filters.taskType) {
+          case 'shared':
+            filteredTasks = filteredTasks.filter(task => 
+              task.sharedWith?.some(share => share.userId === user.id)
+            );
+            break;
+          case 'assigned':
+            filteredTasks = filteredTasks.filter(task => 
+              task.assigneeId === user.id || 
+              task.coAssignees?.some(co => co.userId === user.id)
+            );
+            break;
+          case 'created':
+            filteredTasks = filteredTasks.filter(task => 
+              task.assignerId === user.id
+            );
+            break;
+        }
+      }
     }
 
     // Due date filtering

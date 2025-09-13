@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import useAuthStore from '../context/authStore';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
+import AuditLogModal from '../components/audit/AuditLogModal';
 
 const Settings = () => {
   const { user, isAdmin, isSysAdmin, deleteCompany } = useAuthStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAuditLog, setShowAuditLog] = useState(false);
 
   const handleDeleteCompany = async () => {
     setShowDeleteModal(true);
@@ -123,6 +125,33 @@ const Settings = () => {
           </div>
         </div>
 
+        {/* Admin Tools Section - Only for ADMIN and SYSDMIN */}
+        {(isAdmin() || isSysAdmin()) && (
+          <div className="lg:col-span-1">
+            <div className="card bg-gray-800 border border-gray-700">
+              <div className="card-body">
+                <h2 className="card-title text-xl text-white mb-6">Admin Tools</h2>
+                
+                <div className="space-y-4">
+                  <button
+                    onClick={() => setShowAuditLog(true)}
+                    className="btn btn-primary w-full"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    View Audit Log
+                  </button>
+                  
+                  <div className="text-sm text-gray-400">
+                    Track all user actions and system changes
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Company Management Section - Only for SYSDMIN */}
         {isSysAdmin() && (
           <div className="lg:col-span-1">
@@ -155,7 +184,7 @@ const Settings = () => {
       <div className="mt-12 pt-8 border-t border-gray-700">
         <div className="text-center text-gray-500 text-sm">
           <p className="mb-2">
-            <strong className="text-gray-400">Task Manager</strong> v0.0.1
+            <strong className="text-gray-400">Task Manager</strong> v0.0.2
           </p>
           <p className="mb-1">
             © 2025 COMPANY NAME. All rights reserved.
@@ -209,6 +238,12 @@ const Settings = () => {
           </div>
         </div>
       )}
+
+      {/* Audit Log Modal */}
+      <AuditLogModal
+        isOpen={showAuditLog}
+        onClose={() => setShowAuditLog(false)}
+      />
     </div>
   );
 };

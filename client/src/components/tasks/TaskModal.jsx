@@ -6,10 +6,11 @@ import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
 import CommentSection from '../comments/CommentSection';
 import AddSubtaskModal from './AddSubtaskModal';
 import DeleteConfirmModal from '../common/DeleteConfirmModal';
+import TaskShareModal from './TaskShareModal';
 import SearchableDropdown from '../common/SearchableDropdown';
 import { usersAPI, tasksAPI } from '../../services/api';
 
-const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, onDelete, extensionUpdateData = null }) => {
+const TaskModal = ({ task, isOpen, onClose, onDelete, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -22,6 +23,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
   const [errors, setErrors] = useState({});
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [viewedTask, setViewedTask] = useState(task); // local state for current viewed task
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -32,6 +34,12 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
   const { updateTask, isLoading, fetchTask } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
+
+  // Check if current user is viewing a shared task (view-only access)
+  const isSharedTask = viewedTask?.sharedWith?.some(share => share.userId === user?.id);
+  
+  // Check if current user is the lead assignee (can share)
+  const canShare = viewedTask?.assigneeId === user?.id;
 
   const fetchUsers = async () => {
     try {
@@ -264,9 +272,16 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                 </div>
               </div>
             ) : (
-              <h3 className="text-2xl font-bold text-white mb-2">
-                {viewedTask.title}
-              </h3>
+              <div className="flex items-center space-x-2 mb-2">
+                <h3 className="text-2xl font-bold text-white">
+                  {viewedTask.title}
+                </h3>
+                {isSharedTask && (
+                  <div className="badge badge-info badge-sm">
+                    📤 Shared with you
+                  </div>
+                )}
+              </div>
             )}
             <div className="flex items-center space-x-4 text-sm text-gray-400">
               <span>Created by {viewedTask.assigner?.name}</span>
@@ -275,7 +290,16 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            {(isAdmin() || viewedTask.assignerId === user?.id) && (
+            {canShare && (
+              <button
+                onClick={() => setIsShareModalOpen(true)}
+                className="btn btn-sm bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
+                title="Share this task"
+              >
+                📤 Share
+              </button>
+            )}
+            {(isAdmin() || viewedTask.assignerId === user?.id) && !isSharedTask && (
               <button
                 onClick={() => setIsEditing(!isEditing)}
                 className="btn btn-sm bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
@@ -283,7 +307,7 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
                 {isEditing ? 'Cancel' : 'Edit'}
               </button>
             )}
-            {(isAdmin() || viewedTask.assignerId === user?.id) && (
+            {(isAdmin() || viewedTask.assignerId === user?.id) && !isSharedTask && (
               <button
                 onClick={handleDelete}
                 className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-0"
@@ -639,6 +663,19 @@ const TaskModal = ({ task, isOpen, onClose, onStatusChange, onPriorityChange, on
         onConfirm={confirmDelete}
         taskTitle={viewedTask.title}
         isLoading={isLoading}
+      />
+
+      {/* Task Share Modal */}
+      <TaskShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        task={viewedTask}
+        onShareUpdate={() => {
+          // Refresh the task data to show updated shared users
+          if (task) {
+            fetchTask(task.id);
+          }
+        }}
       />
     </div>
   );

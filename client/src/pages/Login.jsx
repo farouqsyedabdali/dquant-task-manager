@@ -5,8 +5,7 @@ import useAuthStore from '../context/authStore';
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    companyEmail: ''
+    password: ''
   });
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
@@ -79,7 +78,18 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8">
+      {/* Company Branding */}
+      <div className="absolute top-6 left-6 flex items-center space-x-3">
+        <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+          <span className="text-white font-bold text-lg">DQ</span>
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-white">DQuant</h1>
+          <p className="text-gray-400 text-sm">Task Manager</p>
+        </div>
+      </div>
+
+      <div className="max-w-lg w-full space-y-8">
         <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
@@ -113,23 +123,6 @@ const Login = () => {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="companyEmail" className="block text-sm font-medium text-gray-300 mb-2">
-                Company Email (Optional)
-              </label>
-              <input
-                id="companyEmail"
-                name="companyEmail"
-                type="email"
-                autoComplete="email"
-                value={formData.companyEmail}
-                onChange={handleChange}
-                className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500`}
-                placeholder="company@example.com (optional)"
-              />
-              <p className="text-gray-500 text-xs mt-1">Leave empty if you're not sure</p>
-            </div>
-
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
                 Your Email Address
@@ -185,15 +178,6 @@ const Login = () => {
               )}
             </button>
           </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-8 p-4 bg-gray-700 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-300 mb-2">Demo Credentials:</h3>
-            <div className="text-xs text-gray-400 space-y-1">
-              <p><strong>Admin:</strong> admin@dquant.com / admin123</p>
-              <p><strong>Employee:</strong> john@dquant.com / employee123</p>
-            </div>
-          </div>
 
           {/* Signup Link */}
           <div className="mt-6 text-center">

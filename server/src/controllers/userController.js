@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const { logAuditActionDirect } = require('../middleware/auditLogger');
 
 const prisma = new PrismaClient();
 
@@ -147,6 +148,17 @@ const createEmployee = async (req, res) => {
       }
     });
 
+    // Log audit action
+    await logAuditActionDirect(req, 'USER_CREATED', 'User', {
+      entityId: newUser.id,
+      newUserName: newUser.name,
+      metadata: {
+        userEmail: newUser.email,
+        userRole: newUser.role,
+        createdBy: req.user.name
+      }
+    });
+
     res.status(201).json(newUser);
   } catch (error) {
     console.error('Create user error:', error);
@@ -187,6 +199,39 @@ const updateUser = async (req, res) => {
     // Only SYSDMIN can change roles to ADMIN
     if (role === 'ADMIN' && currentUserRole !== 'SYSDMIN') {
       return res.status(403).json({ error: 'Only System Administrators can assign Admin roles' });
+    }
+
+    // Log audit action before update
+    const changes = [];
+    if (name && name !== userToUpdate.name) {
+      changes.push(`name from "${userToUpdate.name}" to "${name}"`);
+    }
+    if (email && email !== userToUpdate.email) {
+      changes.push(`email from "${userToUpdate.email}" to "${email}"`);
+    }
+    if (role && role !== userToUpdate.role) {
+      changes.push(`role from "${userToUpdate.role}" to "${role}"`);
+    }
+
+    if (changes.length > 0) {
+      await logAuditActionDirect(req, 'USER_UPDATED', 'User', {
+        entityId: userToUpdate.id,
+        userName: userToUpdate.name,
+        oldValues: {
+          name: userToUpdate.name,
+          email: userToUpdate.email,
+          role: userToUpdate.role
+        },
+        newValues: {
+          name: name || userToUpdate.name,
+          email: email || userToUpdate.email,
+          role: role || userToUpdate.role
+        },
+        metadata: {
+          changes: changes.join(', '),
+          updatedBy: req.user.name
+        }
+      });
     }
 
     // Update user
@@ -259,6 +304,21 @@ const deleteEmployee = async (req, res) => {
         error: 'Cannot delete user with assigned tasks. Please reassign or complete all tasks first.' 
       });
     }
+
+    // Log audit action before deletion
+    await logAuditActionDirect(req, 'USER_DELETED', 'User', {
+      entityId: userToDelete.id,
+      userName: userToDelete.name,
+      oldValues: {
+        name: userToDelete.name,
+        email: userToDelete.email,
+        role: userToDelete.role
+      },
+      metadata: {
+        deletedBy: req.user.name,
+        assignedTasksCount: assignedTasks.length
+      }
+    });
 
     // Delete user
     await prisma.user.delete({

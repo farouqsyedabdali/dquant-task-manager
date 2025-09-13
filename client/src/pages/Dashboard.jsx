@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import useTaskStore from '../stores/taskStore';
 import useAuthStore from '../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../utils/constants';
+import { commentsAPI } from '../services/api';
 import TaskCard from '../components/tasks/TaskCard';
 import TaskList from '../components/tasks/TaskList';
 import AddTaskModal from '../components/tasks/AddTaskModal';
@@ -295,24 +296,52 @@ const Dashboard = () => {
     console.log('Processing task completion:', completeData);
     
     if (completeData.taskFound && completeData.taskId) {
-      try {
-        // Mark the task as completed
-        await updateTaskStatus(completeData.taskId, 'COMPLETED');
-        
-        // Show success message
-        alert(`Task "${completeData.updateContent || 'Task'}" marked as completed!`);
-        
-        // Refresh tasks to show updated status
-        if (taskType === 'all') {
-          fetchTasks();
-        } else {
-          fetchTasksByType(taskType);
+      // Find the task to show its details
+      const task = tasks.find(t => t.id === completeData.taskId);
+      const taskTitle = task ? task.title : 'Unknown Task';
+      
+      // Show confirmation dialog with task details
+      const confirmed = window.confirm(
+        `Are you sure you want to complete this task?\n\n` +
+        `Task: "${taskTitle}"\n` +
+        `Completion Note: "${completeData.updateContent || 'No additional details provided'}"\n\n` +
+        `This will mark the task as COMPLETED and add a completion comment.`
+      );
+      
+      if (confirmed) {
+        try {
+          // Mark the task as completed
+          await updateTaskStatus(completeData.taskId, 'COMPLETED');
+          
+          // Add a completion comment
+          if (completeData.updateContent && completeData.updateContent.trim()) {
+            try {
+              await commentsAPI.create(completeData.taskId, `✅ Task completed: ${completeData.updateContent}`);
+            } catch (commentError) {
+              console.error('Failed to add completion comment:', commentError);
+              // Continue even if comment fails
+            }
+          }
+          
+          // Show success message
+          alert(`✅ Task "${taskTitle}" has been completed and marked as COMPLETED!`);
+          
+          // Refresh tasks to show updated status
+          if (taskType === 'all') {
+            fetchTasks();
+          } else {
+            fetchTasksByType(taskType);
+          }
+        } catch (error) {
+          console.error('Failed to complete task:', error);
+          alert('Failed to complete task. Please try again.');
+          // Still open modal for manual completion
+          setExtensionUpdateData(completeData);
+          setIsTaskModalOpen(true);
         }
-      } catch (error) {
-        console.error('Failed to complete task:', error);
-        // Still open modal for manual completion
-        setExtensionUpdateData(completeData);
-        setIsTaskModalOpen(true);
+      } else {
+        // User cancelled, show info message
+        console.log('Task completion cancelled by user');
       }
     } else {
       // No task found, open AddTaskModal for manual task creation
@@ -530,8 +559,16 @@ const Dashboard = () => {
     high: tasks.filter(task => task.priority === 'HIGH').length
   };
 
-  const StatCard = ({ title, value, icon }) => (
-    <div className={`bg-gray-800 border border-gray-700 rounded-lg p-4 text-white`}>
+  const StatCard = ({ title, value, icon, status, isActive, onClick }) => (
+    <div 
+      className={`bg-gray-800 border rounded-lg p-4 text-white cursor-pointer transition-all duration-200 hover:bg-gray-700 hover:scale-105 ${
+        isActive 
+          ? 'border-indigo-500 bg-indigo-900/20 shadow-lg shadow-indigo-500/20' 
+          : 'border-gray-700 hover:border-gray-600'
+      }`}
+      onClick={onClick}
+      title={`Click to ${status === 'total' ? 'show all tasks' : `toggle ${title.toLowerCase()} filter`}`}
+    >
       <div className="flex items-center justify-between">
         <div>
           <p className="text-gray-400 text-sm font-medium">{title}</p>
@@ -544,6 +581,28 @@ const Dashboard = () => {
 
   const handleStatusChange = async (taskId, newStatus) => {
     await updateTaskStatus(taskId, newStatus);
+  };
+
+  // Handle stat card click for multi-select filtering
+  const handleStatCardClick = (status) => {
+    if (status === 'total') {
+      // Clear all status filters to show all tasks
+      setFilters({ ...filters, status: '' });
+    } else {
+      // Toggle status in the filter
+      const currentStatus = filters.status || '';
+      const statusArray = currentStatus ? currentStatus.split(',') : [];
+      
+      if (statusArray.includes(status)) {
+        // Remove status from filter
+        const newStatusArray = statusArray.filter(s => s !== status);
+        setFilters({ ...filters, status: newStatusArray.join(',') });
+      } else {
+        // Add status to filter
+        const newStatusArray = [...statusArray, status];
+        setFilters({ ...filters, status: newStatusArray.join(',') });
+      }
+    }
   };
 
   const handlePriorityChange = async (taskId, newPriority) => {
@@ -638,36 +697,67 @@ const Dashboard = () => {
         </div>
 
         {/* Statistics Cards */}
+        <div className="mb-4">
+          {filters.status && (
+            <div className="text-sm text-gray-400 mb-2">
+              Showing tasks with status: {filters.status.split(',').map(s => s.trim()).join(', ')}
+              <button
+                onClick={() => setFilters({ ...filters, status: '' })}
+                className="ml-2 text-indigo-400 hover:text-indigo-300 underline"
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
           <StatCard
             title="Total Tasks"
             value={stats.total}
             icon="📋"
+            status="total"
+            isActive={!filters.status}
+            onClick={() => handleStatCardClick('total')}
           />
           <StatCard
             title="To Do"
             value={stats.todo}
             icon="⏳"
+            status="TODO"
+            isActive={filters.status && filters.status.split(',').includes('TODO')}
+            onClick={() => handleStatCardClick('TODO')}
           />
           <StatCard
             title="In Progress"
             value={stats.inProgress}
             icon="🔄"
+            status="IN_PROGRESS"
+            isActive={filters.status && filters.status.split(',').includes('IN_PROGRESS')}
+            onClick={() => handleStatCardClick('IN_PROGRESS')}
           />
           <StatCard
             title="Completed"
             value={stats.completed}
             icon="✅"
+            status="COMPLETED"
+            isActive={filters.status && filters.status.split(',').includes('COMPLETED')}
+            onClick={() => handleStatCardClick('COMPLETED')}
           />
           <StatCard
             title="On Hold"
             value={stats.onHold}
             icon="⏸️"
+            status="ON_HOLD"
+            isActive={filters.status && filters.status.split(',').includes('ON_HOLD')}
+            onClick={() => handleStatCardClick('ON_HOLD')}
           />
           <StatCard
             title="Cancelled"
             value={stats.cancelled}
             icon="❌"
+            status="CANCELLED"
+            isActive={filters.status && filters.status.split(',').includes('CANCELLED')}
+            onClick={() => handleStatCardClick('CANCELLED')}
           />
         </div>
 

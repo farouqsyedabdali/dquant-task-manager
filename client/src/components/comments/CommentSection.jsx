@@ -10,6 +10,8 @@ const CommentSection = ({ taskId, extensionUpdateData = null }) => {
   const [error, setError] = useState(null);
   const [deleteCommentId, setDeleteCommentId] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editContent, setEditContent] = useState('');
 
   const { user, isAdmin } = useAuthStore();
 
@@ -91,6 +93,35 @@ const CommentSection = ({ taskId, extensionUpdateData = null }) => {
         setError('Failed to delete comment');
         console.error('Error deleting comment:', error);
       }
+    }
+  };
+
+  const handleEditComment = (comment) => {
+    setEditingCommentId(comment.id);
+    setEditContent(comment.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditContent('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCommentId || !editContent.trim()) return;
+
+    try {
+      setIsLoading(true);
+      const response = await commentsAPI.update(editingCommentId, editContent);
+      setComments(comments.map(comment => 
+        comment.id === editingCommentId ? response.data : comment
+      ));
+      setEditingCommentId(null);
+      setEditContent('');
+    } catch (error) {
+      setError('Failed to update comment');
+      console.error('Error updating comment:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -213,22 +244,82 @@ const CommentSection = ({ taskId, extensionUpdateData = null }) => {
                     </p>
                     <p className="text-xs text-gray-400">
                       {formatDate(comment.createdAt)}
+                      {comment.editedAt && (
+                        <span className="text-gray-500 ml-1">(edited)</span>
+                      )}
                     </p>
                   </div>
                 </div>
-                {isAdmin() && (
-                  <button
-                    onClick={() => handleDeleteComment(comment.id)}
-                    className="btn btn-ghost btn-xs text-red-400 hover:text-red-300"
-                    title="Delete comment"
-                  >
-                    🗑️
-                  </button>
-                )}
+                <div className="flex space-x-1">
+                  {/* Edit button - only for comment author */}
+                  {comment.author.id === user?.id && (
+                    <button
+                      onClick={() => handleEditComment(comment)}
+                      className="btn btn-ghost btn-xs text-blue-400 hover:text-blue-300"
+                      title="Edit comment"
+                      disabled={editingCommentId === comment.id}
+                    >
+                      ✏️
+                    </button>
+                  )}
+                  {/* Delete button - only for admins */}
+                  {isAdmin() && (
+                    <button
+                      onClick={() => handleDeleteComment(comment.id)}
+                      className="btn btn-ghost btn-xs text-red-400 hover:text-red-300"
+                      title="Delete comment"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
               </div>
-              <p className="text-gray-300 whitespace-pre-wrap">
-                {comment.content}
-              </p>
+              
+              {/* Comment content or edit form */}
+              {editingCommentId === comment.id ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    rows={3}
+                    maxLength={200}
+                    className="textarea bg-gray-600 border-gray-500 text-white placeholder-gray-400 w-full focus:border-blue-500 focus:ring-blue-500 rounded-lg"
+                    disabled={isLoading}
+                  />
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs text-gray-400">
+                      {editContent.length}/200 characters
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleCancelEdit}
+                        className="btn btn-ghost btn-xs text-gray-400 hover:text-gray-300"
+                        disabled={isLoading}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveEdit}
+                        disabled={isLoading || !editContent.trim()}
+                        className="btn bg-blue-600 hover:bg-blue-700 text-white border-0 btn-xs"
+                      >
+                        {isLoading ? (
+                          <>
+                            <span className="loading loading-spinner loading-xs"></span>
+                            Saving...
+                          </>
+                        ) : (
+                          'Save'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-300 whitespace-pre-wrap">
+                  {comment.content}
+                </p>
+              )}
             </div>
           ))
         )}

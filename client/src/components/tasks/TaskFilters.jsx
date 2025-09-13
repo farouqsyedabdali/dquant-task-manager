@@ -5,11 +5,11 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
     onFilterChange({ [key]: value });
   };
 
-  const hasActiveFilters = filters.status || filters.priority || filters.search || filters.dueDateFilter;
+  const hasActiveFilters = filters.status || filters.priority || filters.search || filters.dueDateFilter || filters.taskType;
 
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6">
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         {/* Search */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -81,6 +81,23 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           </select>
         </div>
 
+        {/* Shared Tasks Filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Task Type
+          </label>
+          <select
+            value={filters.taskType || ''}
+            onChange={(e) => handleFilterChange('taskType', e.target.value)}
+            className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+          >
+            <option value="">All Tasks</option>
+            <option value="shared">Shared with me</option>
+            <option value="assigned">Assigned to me</option>
+            <option value="created">Created by me</option>
+          </select>
+        </div>
+
         {/* Clear Filters */}
         <div className="flex items-end">
           <button
@@ -139,6 +156,19 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
               <button
                 onClick={() => handleFilterChange('dueDateFilter', '')}
                 className="btn btn-ghost btn-xs text-white hover:bg-purple-700"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          {filters.taskType && (
+            <div className="badge bg-green-600 text-white gap-2 border-0">
+              Type: {filters.taskType === 'shared' ? 'Shared with me' :
+                     filters.taskType === 'assigned' ? 'Assigned to me' :
+                     filters.taskType === 'created' ? 'Created by me' : filters.taskType}
+              <button
+                onClick={() => handleFilterChange('taskType', '')}
+                className="btn btn-ghost btn-xs text-white hover:bg-green-700"
               >
                 ✕
               </button>

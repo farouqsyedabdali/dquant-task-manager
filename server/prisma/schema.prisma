@@ -21,6 +21,8 @@ model Company {
   comments         Comment[]
   notifications    Notification[]
   coAssignees      TaskCoAssignee[]
+  taskShares       TaskShare[]
+  auditLogs        AuditLog[]
 }
 
 model User {
@@ -36,10 +38,12 @@ model User {
   comments      Comment[]
   notifications Notification[]
   coAssignedTasks TaskCoAssignee[] // Tasks where this user is a co-assignee
+  auditLogs     AuditLog[] // Actions performed by this user
   
   // Task relationships
   assignedTasks Task[]    @relation("AssignedTasks")     // Tasks assigned to this user
   createdTasks  Task[]    @relation("CreatedTasks")      // Tasks created by this user
+  sharedTasks   TaskShare[] // Tasks shared with this user
   
   @@unique([email, companyId])
 }
@@ -62,10 +66,14 @@ model Task {
   dueDate      DateTime?  // Optional due date for tasks
   companyId    Int
   
+  // Auto-status management
+  statusManuallyChanged Boolean @default(false) // Track if status was manually changed by creator
+  
   // Relations
   comments     Comment[]
   notifications Notification[]
   coAssignees  TaskCoAssignee[] // Co-assignees for this task
+  sharedWith   TaskShare[] // Users this task is shared with
   assigner     User       @relation("CreatedTasks", fields: [assignerId], references: [id])
   assignee     User       @relation("AssignedTasks", fields: [assigneeId], references: [id])
   parentTask   Task?      @relation("SubTasks", fields: [parentTaskId], references: [id])
@@ -74,15 +82,16 @@ model Task {
 }
 
 model Comment {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   content   String
   taskId    Int
   authorId  Int
   companyId Int
-  createdAt DateTime @default(now())
-  author    User     @relation(fields: [authorId], references: [id])
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+  author    User      @relation(fields: [authorId], references: [id])
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  company   Company   @relation(fields: [companyId], references: [id])
 }
 
 model Notification {
@@ -129,13 +138,28 @@ model TaskCoAssignee {
   userId    Int      // Co-assignee user
   companyId Int
   createdAt DateTime @default(now())
-  
+
   // Relations
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   company   Company  @relation(fields: [companyId], references: [id])
-  
+
   @@unique([taskId, userId]) // Prevent duplicate co-assignees for same task
+}
+
+model TaskShare {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  userId    Int      // User the task is shared with
+  companyId Int
+  createdAt DateTime @default(now())
+
+  // Relations
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company   Company  @relation(fields: [companyId], references: [id])
+
+  @@unique([taskId, userId]) // Prevent duplicate shares for same task and user
 }
 
 enum NotificationType {
@@ -148,4 +172,71 @@ enum NotificationType {
   COMMENT_ADDED
   SUBTASK_ADDED
   TASK_COMPLETED
+  TASK_SHARED
+}
+
+model AuditLog {
+  id          Int         @id @default(autoincrement())
+  action      AuditAction
+  entityType  String      // e.g., "Task", "Comment", "User", "CoAssignee"
+  entityId    Int?        // ID of the affected entity (null for some actions)
+  description String      // Human-readable description of the action
+  oldValues   Json?       // Previous values (for updates)
+  newValues   Json?       // New values (for creates/updates)
+  metadata    Json?       // Additional context (e.g., task title, comment content)
+  
+  // Who performed the action
+  userId      Int
+  companyId   Int
+  createdAt   DateTime    @default(now())
+  
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@index([companyId, createdAt])
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+}
+
+enum AuditAction {
+  // Task actions
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_DELETED
+  TASK_STATUS_CHANGED
+  TASK_PRIORITY_CHANGED
+  TASK_ASSIGNED
+  TASK_UNASSIGNED
+  TASK_DUE_DATE_CHANGED
+  
+  // Comment actions
+  COMMENT_CREATED
+  COMMENT_UPDATED
+  COMMENT_DELETED
+  
+  // Co-assignee actions
+  CO_ASSIGNEE_ADDED
+  CO_ASSIGNEE_REMOVED
+  
+  // User actions
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  USER_ROLE_CHANGED
+  
+  // Company actions
+  COMPANY_UPDATED
+  COMPANY_DELETED
+  
+  // Authentication actions
+  USER_LOGIN
+  USER_LOGOUT
+  PASSWORD_CHANGED
+  
+  // System actions
+  SYSTEM_ACTION
+  // Task sharing actions
+  TASK_SHARED
+  TASK_UNSHARED
 }

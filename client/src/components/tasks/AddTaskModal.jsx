@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import useTaskStore from '../../stores/taskStore';
 import useUserStore from '../../stores/userStore';
-import { PRIORITY_OPTIONS } from '../../utils/constants';
+import useAuthStore from '../../context/authStore';
+import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
 import { usersAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
 
@@ -11,7 +12,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
     description: '',
     priority: 'MEDIUM',
     assigneeId: '',
-    dueDate: ''
+    dueDate: getDefaultDueDate()
   });
   const [errors, setErrors] = useState({});
   const [users, setUsers] = useState([]);
@@ -19,6 +20,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
   const { createTask, isLoading } = useTaskStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
+  const { user } = useAuthStore();
 
   useEffect(() => {
     if (isOpen) {
@@ -34,6 +36,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
         title: initialData.title || '',
         description: initialData.description || '',
         priority: initialData.priority || 'MEDIUM',
+        dueDate: initialData.dueDate ? new Date(initialData.dueDate).toISOString().slice(0, 16) : getDefaultDueDate(),
         // We'll handle assignee after users are loaded
       }));
     }
@@ -54,6 +57,19 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
       }
     }
   }, [initialData, users, isOpen]);
+
+  // Set default assignee to current user when users are loaded and no assignee is set
+  useEffect(() => {
+    if (users.length > 0 && user && isOpen && !formData.assigneeId) {
+      const currentUser = users.find(u => u.id === user.id);
+      if (currentUser) {
+        setFormData(prev => ({
+          ...prev,
+          assigneeId: currentUser.id.toString()
+        }));
+      }
+    }
+  }, [users, user, isOpen, formData.assigneeId]);
 
   const fetchUsers = async () => {
     try {
@@ -132,8 +148,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
         title: '',
         description: '',
         priority: 'MEDIUM',
-        assigneeId: '',
-        dueDate: ''
+        assigneeId: user ? user.id.toString() : '',
+        dueDate: getDefaultDueDate()
       });
       setErrors({});
       onClose();
@@ -145,8 +161,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
       title: '',
       description: '',
       priority: 'MEDIUM',
-      assigneeId: '',
-      dueDate: ''
+      assigneeId: user ? user.id.toString() : '',
+      dueDate: getDefaultDueDate()
     });
     setErrors({});
     onClose();

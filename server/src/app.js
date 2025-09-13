@@ -9,6 +9,8 @@ const commentRoutes = require('./routes/comments')
 const userRoutes = require('./routes/users')
 const aiRoutes = require('./routes/ai')
 const notificationRoutes = require('./routes/notifications')
+const auditRoutes = require('./routes/audit')
+const taskShareRoutes = require('./routes/taskShares')
 
 const app = express()
 
@@ -27,6 +29,8 @@ app.use('/api/comments', commentRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/notifications', notificationRoutes)
+app.use('/api/audit', auditRoutes)
+app.use('/api/task-shares', taskShareRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

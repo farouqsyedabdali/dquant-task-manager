@@ -1,6 +1,8 @@
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 const { createNotification } = require('./notificationController')
+const { logAuditActionDirect } = require('../middleware/auditLogger')
+const { autoChangeStatusToInProgress, markStatusAsManuallyChanged } = require('../utils/autoStatusManager')
 
 // Get tasks based on user role and assignments
 const getTasks = async (req, res) => {
@@ -16,19 +18,21 @@ const getTasks = async (req, res) => {
 
     // Filter by task type
     if (type === 'assigned-to-me') {
-      // Show tasks where user is lead assignee OR co-assignee
+      // Show tasks where user is lead assignee, co-assignee, or shared with them
       whereClause.OR = [
         { assigneeId: userId },
-        { coAssignees: { some: { userId: userId } } }
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } }
       ];
     } else if (type === 'created-by-me') {
       whereClause.assignerId = userId;
     } else if (userRole === 'EMPLOYEE') {
-      // Employees see tasks assigned to them, tasks they created, and tasks they're co-assigned to
+      // Employees see tasks assigned to them, tasks they created, tasks they're co-assigned to, and tasks shared with them
       whereClause.OR = [
         { assigneeId: userId },
         { assignerId: userId },
-        { coAssignees: { some: { userId: userId } } }
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } }
       ];
     }
     // Admins see all tasks (no additional filtering)
@@ -163,6 +167,17 @@ const getTasks = async (req, res) => {
           }
         },
         coAssignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        },
+        sharedWith: {
           include: {
             user: {
               select: {
@@ -490,6 +505,18 @@ const createTask = async (req, res) => {
       );
     }
 
+    // Log audit action
+    await logAuditActionDirect(req, 'TASK_CREATED', 'Task', {
+      entityId: task.id,
+      taskTitle: task.title,
+      assigneeName: task.assignee.name,
+      metadata: {
+        priority: task.priority,
+        dueDate: task.dueDate,
+        isSubtask: !!parentTaskId
+      }
+    });
+
     res.status(201).json(task);
   } catch (error) {
     console.error('Create task error:', error);
@@ -666,6 +693,52 @@ const updateTask = async (req, res) => {
       }
     }
 
+    // Log audit action for task update
+    const auditChanges = [];
+    if (updateData.title && updateData.title !== task.title) {
+      auditChanges.push(`title from "${task.title}" to "${updateData.title}"`);
+    }
+    if (updateData.description && updateData.description !== task.description) {
+      auditChanges.push(`description`);
+    }
+    if (updateData.priority && updateData.priority !== task.priority) {
+      auditChanges.push(`priority from "${task.priority}" to "${updateData.priority}"`);
+    }
+    if (updateData.status && updateData.status !== task.status) {
+      auditChanges.push(`status from "${task.status}" to "${updateData.status}"`);
+    }
+    if (updateData.assigneeId && updateData.assigneeId !== task.assigneeId) {
+      auditChanges.push(`assignee`);
+    }
+    if (updateData.dueDate !== undefined) {
+      auditChanges.push(`due date`);
+    }
+
+    // If status was changed and the user is the creator (assigner), mark as manually changed
+    if (updateData.status && updateData.status !== task.status && isAssigner) {
+      await markStatusAsManuallyChanged(parseInt(id), companyId);
+    }
+
+    if (auditChanges.length > 0) {
+      await logAuditActionDirect(req, 'TASK_UPDATED', 'Task', {
+        entityId: updatedTask.id,
+        taskTitle: updatedTask.title,
+        oldValues: {
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          status: task.status,
+          assigneeId: task.assigneeId,
+          dueDate: task.dueDate
+        },
+        newValues: allowedUpdates,
+        metadata: {
+          changes: auditChanges.join(', '),
+          updatedBy: isAdmin ? 'admin' : isAssigner ? 'assigner' : 'assignee'
+        }
+      });
+    }
+
     res.json(updatedTask);
   } catch (error) {
     console.error('Update task error:', error);
@@ -711,6 +784,25 @@ const deleteTask = async (req, res) => {
         error: 'Cannot delete task with incomplete subtasks. Please complete or delete all subtasks first.' 
       });
     }
+
+    // Log audit action before deletion
+    await logAuditActionDirect(req, 'TASK_DELETED', 'Task', {
+      entityId: task.id,
+      taskTitle: task.title,
+      oldValues: {
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        status: task.status,
+        assigneeId: task.assigneeId,
+        assignerId: task.assignerId,
+        dueDate: task.dueDate
+      },
+      metadata: {
+        deletedBy: isAdmin ? 'admin' : 'assigner',
+        subtasksCount: task.subtasks.length
+      }
+    });
 
     await prisma.task.delete({
       where: { id: parseInt(id) }
@@ -812,6 +904,11 @@ const updateTaskStatus = async (req, res) => {
         }
       }
     });
+
+    // If status was changed and the user is the creator (assigner), mark as manually changed
+    if (status !== task.status && isAssigner) {
+      await markStatusAsManuallyChanged(parseInt(id), companyId);
+    }
 
     res.json(updatedTask);
   } catch (error) {
@@ -1007,6 +1104,10 @@ const createSubtask = async (req, res) => {
       }
     });
 
+    // Auto-change parent task status from TODO to IN_PROGRESS if this is the first subtask
+    // and status hasn't been manually changed by the creator
+    await autoChangeStatusToInProgress(parseInt(id), companyId);
+
     res.status(201).json(subtask);
   } catch (error) {
     console.error('Create subtask error:', error);
@@ -1096,6 +1197,17 @@ const addCoAssignee = async (req, res) => {
       companyId: companyId
     });
 
+    // Log audit action
+    await logAuditActionDirect(req, 'CO_ASSIGNEE_ADDED', 'CoAssignee', {
+      entityId: coAssignee.id,
+      taskTitle: task.title,
+      coAssigneeName: user.name,
+      metadata: {
+        taskId: parseInt(taskId),
+        coAssigneeId: parseInt(userId)
+      }
+    });
+
     res.status(201).json(coAssignee);
   } catch (error) {
     console.error('Add co-assignee error:', error);
@@ -1127,6 +1239,27 @@ const removeCoAssignee = async (req, res) => {
     // Check if current user is the lead assignee
     if (task.assigneeId !== currentUserId) {
       return res.status(403).json({ error: 'Only the lead assignee can remove co-assignees' });
+    }
+
+    // Get user information for audit log
+    const user = await prisma.user.findFirst({
+      where: {
+        id: parseInt(userId),
+        companyId: companyId
+      }
+    });
+
+    // Log audit action before deletion
+    if (user) {
+      await logAuditActionDirect(req, 'CO_ASSIGNEE_REMOVED', 'CoAssignee', {
+        entityId: parseInt(userId),
+        taskTitle: task.title,
+        coAssigneeName: user.name,
+        metadata: {
+          taskId: parseInt(taskId),
+          coAssigneeId: parseInt(userId)
+        }
+      });
     }
 
     // Remove co-assignee

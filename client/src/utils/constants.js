@@ -56,4 +56,13 @@ export const STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(([value, label])
 export const PRIORITY_OPTIONS = Object.entries(PRIORITY_LABELS).map(([value, label]) => ({
   value,
   label
-})); 
+}));
+
+// Utility function to get default due date (7 days from now at 11:59 PM)
+export const getDefaultDueDate = () => {
+  const now = new Date();
+  const sevenDaysFromNow = new Date(now);
+  sevenDaysFromNow.setDate(now.getDate() + 7);
+  sevenDaysFromNow.setHours(23, 59, 0, 0); // Set to 11:59 PM
+  return sevenDaysFromNow.toISOString().slice(0, 16); // Format for datetime-local input
+}; 

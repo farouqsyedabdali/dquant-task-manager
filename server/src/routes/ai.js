@@ -44,10 +44,13 @@ router.post('/chat', async (req, res) => {
     const companyId = req.user.companyId;
     const userName = req.user.name;
 
-    // Fetch user's recent tasks for context
+    // Fetch user's recent tasks for context (only TODO and IN_PROGRESS for better AI focus)
     const userTasks = await prisma.task.findMany({
       where: {
         companyId: companyId,
+        status: {
+          in: ['TODO', 'IN_PROGRESS']
+        },
         OR: [
           { assigneeId: userId },
           { assignerId: userId }
@@ -61,7 +64,7 @@ router.post('/chat', async (req, res) => {
       take: 10
     });
 
-    // System prompt for AI (now includes due date awareness)
+    // System prompt for AI (now includes due date awareness and focuses on active tasks)
     const systemPrompt = `
 You are an AI assistant for a task management system.
 If the user asks you to create, delete, update, or list tasks, output a JSON command (or an array of commands) in this format (on a new line):
@@ -72,6 +75,7 @@ If the user asks you to create, delete, update, or list tasks, output a JSON com
 - For multiple actions, output an array of JSON commands.
 - Parse natural language dates (e.g., "by Friday", "EOD tomorrow", "next Monday 3pm") and convert to ISO-like format (YYYY-MM-DD or YYYY-MM-DDTHH:mm) in the dueDate field when applicable.
 - For references like "last task you created" or "second task in my list", use the user's recent tasks (provided below) and include the resolved title in the command.
+- IMPORTANT: You are only shown active tasks (TODO and IN_PROGRESS status) to help you focus on the most relevant work. This improves accuracy when there are many tasks.
 - Otherwise, just answer normally.
 
 Current User Context:
@@ -79,7 +83,7 @@ Current User Context:
 - Role: ${userRole}
 - Company: ${req.user.company?.name || 'Unknown Company'}
 
-Recent Tasks (${userTasks.length}):
+Active Tasks (${userTasks.length} - TODO and IN_PROGRESS only):
 ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task.priority} priority, assigned to ${task.assignee?.name || 'unassigned'})`).join('\n')}
 `;
 
@@ -290,11 +294,17 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
           });
           if (assignee) where.assigneeId = assignee.id;
         }
-        // Only show tasks user can see
+        // Only show tasks user can see and focus on active tasks (TODO and IN_PROGRESS)
         where.OR = [
           { assigneeId: userId },
           { assignerId: userId }
         ];
+        // If no specific status filter, default to active tasks only
+        if (!filter.status) {
+          where.status = {
+            in: ['TODO', 'IN_PROGRESS']
+          };
+        }
         const tasks = await prisma.task.findMany({
           where,
           orderBy: { updatedAt: 'desc' },
@@ -478,10 +488,13 @@ router.post('/identify-task-update', async (req, res) => {
     const companyId = req.user.companyId;
     const userName = req.user.name;
 
-    // Fetch user's recent tasks for context
+    // Fetch user's recent tasks for context (only TODO and IN_PROGRESS for better AI focus)
     const userTasks = await prisma.task.findMany({
       where: {
         companyId: companyId,
+        status: {
+          in: ['TODO', 'IN_PROGRESS']
+        },
         OR: [
           { assigneeId: userId },
           { assignerId: userId }
@@ -505,7 +518,9 @@ router.post('/identify-task-update', async (req, res) => {
 You are an AI assistant specialized in identifying task updates and matching them to existing tasks.
 Analyze the provided text and determine which existing task it relates to, then generate an appropriate update comment.
 
-Available Tasks:
+IMPORTANT: You are only shown active tasks (TODO and IN_PROGRESS status) to help you focus on the most relevant work. This improves accuracy when there are many tasks.
+
+Available Active Tasks:
 ${userTasks.map((task, idx) => `
 Task #${task.id}: "${task.title}"
 - Description: ${task.description || 'No description'}
@@ -533,6 +548,7 @@ Guidelines:
 - Identify the type of update (progress, completion, issue, etc.)
 - Suggest relevant actions based on the update content
 - Include specific details from the text in the update
+- For completion updates, be extra careful to match the right task and provide clear completion details
 
 Examples:
 Input: "Hi John, the marketing report is 80% complete. Should be done by Friday."
@@ -540,6 +556,9 @@ Output: {"taskFound": true, "taskId": 123, "confidence": 0.9, "updateType": "pro
 
 Input: "The server deployment failed due to configuration issues. Need to troubleshoot."
 Output: {"taskFound": true, "taskId": 456, "confidence": 0.85, "updateType": "issue", "updateContent": "Issue reported: Server deployment failed due to configuration issues. Troubleshooting required.", "suggestedActions": ["change_priority", "add_subtask"], "reasoning": "Matches server deployment task, indicates a blocking issue"}
+
+Input: "Finished the website redesign. All pages updated and tested successfully."
+Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "completion", "updateContent": "Task completed: Website redesign finished. All pages updated and tested successfully.", "suggestedActions": ["change_status"], "reasoning": "Matches website redesign task, indicates successful completion"}
 `;
 
     // Call OpenRouter for task update identification

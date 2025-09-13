@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import useTaskStore from '../../stores/taskStore';
 import useUserStore from '../../stores/userStore';
-import { PRIORITY_OPTIONS } from '../../utils/constants';
+import useAuthStore from '../../context/authStore';
+import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
 import { usersAPI, tasksAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
 
@@ -11,7 +12,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
     description: '',
     priority: 'MEDIUM',
     assigneeId: '',
-    dueDate: ''
+    dueDate: getDefaultDueDate()
   });
   const [errors, setErrors] = useState({});
   const [users, setUsers] = useState([]);
@@ -21,6 +22,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
   const { createSubtask, isLoading } = useTaskStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
+  const { user } = useAuthStore();
 
   // Fetch users and available tasks when modal opens
   useEffect(() => {
@@ -67,7 +69,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
           description: description || '',
           priority: priority || 'MEDIUM',
           assigneeId: assigneeId,
-          dueDate: dueDate ? new Date(dueDate).toISOString().slice(0, 16) : ''
+          dueDate: dueDate ? new Date(dueDate).toISOString().slice(0, 16) : getDefaultDueDate()
         }));
       } else if (extensionUpdateData.originalText) {
         const originalText = extensionUpdateData.originalText;
@@ -91,11 +93,25 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
           title: title,
           description: description.length > 300 ? description.substring(0, 300) : description,
           priority: 'MEDIUM',
-          assigneeId: ''
+          assigneeId: user ? user.id.toString() : '',
+          dueDate: getDefaultDueDate()
         }));
       }
     }
   }, [isOpen, extensionUpdateData, users]);
+
+  // Set default assignee to current user when users are loaded and no assignee is set
+  useEffect(() => {
+    if (users.length > 0 && user && isOpen && !formData.assigneeId) {
+      const currentUser = users.find(u => u.id === user.id);
+      if (currentUser) {
+        setFormData(prev => ({
+          ...prev,
+          assigneeId: currentUser.id.toString()
+        }));
+      }
+    }
+  }, [users, user, isOpen, formData.assigneeId]);
 
   const fetchUsers = async () => {
     try {
@@ -179,8 +195,8 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
         title: '',
         description: '',
         priority: 'MEDIUM',
-        assigneeId: '',
-        dueDate: ''
+        assigneeId: user ? user.id.toString() : '',
+        dueDate: getDefaultDueDate()
       });
       setErrors({});
       setSelectedParentId(parentTask?.id || '');
@@ -193,8 +209,8 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
       title: '',
       description: '',
       priority: 'MEDIUM',
-      assigneeId: '',
-      dueDate: ''
+      assigneeId: user ? user.id.toString() : '',
+      dueDate: getDefaultDueDate()
     });
     setErrors({});
     setSelectedParentId(parentTask?.id || '');

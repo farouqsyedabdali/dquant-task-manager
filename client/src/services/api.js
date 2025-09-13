@@ -86,12 +86,31 @@ export const aiAPI = {
   identifyTaskUpdate: (text) => api.post('/ai/identify-task-update', { text }),
 };
 
+// Task Share API
+export const taskShareAPI = {
+  shareTask: (taskId, userId) => api.post(`/task-shares/${taskId}/share`, { userId }),
+  unshareTask: (taskId, userId) => api.delete(`/task-shares/${taskId}/share/${userId}`),
+  getTaskShares: (taskId) => api.get(`/task-shares/${taskId}/shares`),
+  getSharedTasks: () => api.get('/task-shares/shared'),
+};
+
 // Notification API
 export const notificationAPI = {
   getNotifications: () => api.get('/notifications'),
   markAsRead: (notificationId) => api.patch(`/notifications/${notificationId}/read`),
   markAllAsRead: () => api.patch('/notifications/mark-all-read'),
   getUnreadCount: () => api.get('/notifications/unread-count'),
+};
+
+// Audit API
+export const auditAPI = {
+  getAuditLogs: (params = {}) => api.get('/audit', { params }),
+  getAuditLogById: (id) => api.get(`/audit/${id}`),
+  getAuditStats: (params = {}) => api.get('/audit/stats/summary', { params }),
+  exportAuditLogs: (params = {}) => api.get('/audit/export/csv', { 
+    params,
+    responseType: 'blob' // For file download
+  }),
 };
 
 export default api;

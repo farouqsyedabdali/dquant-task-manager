@@ -9,6 +9,9 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
   const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
   const { user, isAdmin } = useAuthStore();
 
+  // Check if current user is viewing a shared task
+  const isSharedTask = task?.sharedWith?.some(share => share.userId === user?.id);
+
   const handleCardClick = () => {
     setIsModalOpen(true);
   };
@@ -72,9 +75,16 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
       >
         {/* Task Header */}
         <div className="mb-3">
-          <h3 className="text-white font-medium text-lg mb-2 line-clamp-2">
-            {task.title}
-          </h3>
+          <div className="flex items-center space-x-2 mb-2">
+            <h3 className="text-white font-medium text-lg line-clamp-2 flex-1">
+              {task.title}
+            </h3>
+            {isSharedTask && (
+              <div className="badge badge-info badge-sm">
+                📤
+              </div>
+            )}
+          </div>
           <div className="flex items-center space-x-2">
             <span className={`status-badge ${getStatusColor(task.status)}`}>
               {STATUS_LABELS[task.status]}

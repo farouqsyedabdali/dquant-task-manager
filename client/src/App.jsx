@@ -11,6 +11,7 @@ import Employees from './pages/Employees';
 import TaskPopup from './pages/TaskPopup';
 import Settings from './pages/Settings';
 import Calendar from './pages/Calendar';
+import LandingPage from './pages/LandingPage';
 import AIModal from './components/tasks/AIModal';
 import { FaRobot } from 'react-icons/fa';
 import './App.css';
@@ -31,6 +32,8 @@ function App() {
       <div className="App bg-gray-900 min-h-screen">
         <Routes>
           {/* Public Routes */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignupOptions />} />
           <Route path="/company-signup" element={<CompanySignup />} />

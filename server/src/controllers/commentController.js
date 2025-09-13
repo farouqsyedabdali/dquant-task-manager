@@ -1,5 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const { createNotification } = require('./notificationController');
+const { logAuditActionDirect } = require('../middleware/auditLogger');
+const { autoChangeStatusToInProgress } = require('../utils/autoStatusManager');
 
 const prisma = new PrismaClient();
 
@@ -20,9 +22,10 @@ const getComments = async (req, res) => {
       whereClause.OR = [
         { assigneeId: userId },
         { assignerId: userId },
-        { coAssignees: { some: { userId: userId } } }
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } }
       ];
-    }
+    } // For ADMIN and SYSADMIN, no additional restriction (can see all tasks in company)
 
     const task = await prisma.task.findFirst({
       where: whereClause
@@ -128,6 +131,21 @@ const createComment = async (req, res) => {
       );
     }
 
+    // Auto-change status from TODO to IN_PROGRESS if this is the first comment
+    // and status hasn't been manually changed by the creator
+    await autoChangeStatusToInProgress(parseInt(taskId), companyId);
+
+    // Log audit action
+    await logAuditActionDirect(req, 'COMMENT_CREATED', 'Comment', {
+      entityId: comment.id,
+      taskTitle: task.title,
+      commentContent: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+      metadata: {
+        taskId: parseInt(taskId),
+        commentLength: content.length
+      }
+    });
+
     res.status(201).json(comment);
   } catch (error) {
     console.error('Create comment error:', error);
@@ -135,11 +153,13 @@ const createComment = async (req, res) => {
   }
 };
 
-// Update comment (admin only)
+// Update comment (author or admin only)
 const updateComment = async (req, res) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
+    const userId = req.user.id;
+    const userRole = req.user.role;
     const companyId = req.user.companyId;
 
     if (!content) {
@@ -150,6 +170,9 @@ const updateComment = async (req, res) => {
       where: { 
         id: parseInt(id),
         companyId: companyId
+      },
+      include: {
+        task: true
       }
     });
 
@@ -157,9 +180,63 @@ const updateComment = async (req, res) => {
       return res.status(404).json({ error: 'Comment not found' });
     }
 
+    // Check if user can edit this comment (author or admin)
+    if (userRole !== 'ADMIN' && userRole !== 'SYSDMIN' && comment.authorId !== userId) {
+      return res.status(403).json({ error: 'You can only edit your own comments' });
+    }
+
+    // Check if user has access to the task this comment belongs to
+    let taskWhereClause = { 
+      id: comment.taskId,
+      companyId: companyId
+    };
+    if (userRole === 'EMPLOYEE') {
+      taskWhereClause.OR = [
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } }
+      ];
+    }
+
+    console.log('Update comment debug:', {
+      userId,
+      userRole,
+      companyId,
+      commentId: comment.id,
+      taskId: comment.taskId,
+      authorId: comment.authorId,
+      taskWhereClause
+    });
+
+    const task = await prisma.task.findFirst({
+      where: taskWhereClause
+    });
+
+    console.log('Task found:', !!task);
+
+    if (!task) {
+      return res.status(403).json({ error: 'You do not have access to this task' });
+    }
+
+    // Log audit action before update
+    await logAuditActionDirect(req, 'COMMENT_UPDATED', 'Comment', {
+      entityId: comment.id,
+      taskTitle: task.title,
+      oldCommentContent: comment.content.substring(0, 100) + (comment.content.length > 100 ? '...' : ''),
+      newCommentContent: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+      metadata: {
+        taskId: comment.taskId,
+        oldLength: comment.content.length,
+        newLength: content.length
+      }
+    });
+
     const updatedComment = await prisma.comment.update({
       where: { id: parseInt(id) },
-      data: { content },
+      data: { 
+        content,
+        editedAt: new Date()
+      },
       include: {
         author: {
           select: {
@@ -187,12 +264,31 @@ const deleteComment = async (req, res) => {
       where: { 
         id: parseInt(id),
         companyId: companyId
+      },
+      include: {
+        task: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
       }
     });
 
     if (!comment) {
       return res.status(404).json({ error: 'Comment not found' });
     }
+
+    // Log audit action before deletion
+    await logAuditActionDirect(req, 'COMMENT_DELETED', 'Comment', {
+      entityId: comment.id,
+      taskTitle: comment.task.title,
+      commentContent: comment.content.substring(0, 100) + (comment.content.length > 100 ? '...' : ''),
+      metadata: {
+        taskId: comment.taskId,
+        commentLength: comment.content.length
+      }
+    });
 
     await prisma.comment.delete({
       where: { id: parseInt(id) }
