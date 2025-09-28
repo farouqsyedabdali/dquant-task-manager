@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import useAuthStore from './context/authStore';
+import './debug-env'; // Debug environment variables
 import ProtectedRoute from './layouts/ProtectedRoute';
 import FontSizeProvider from './components/FontSizeProvider';
 import Header from './components/layout/Header';
