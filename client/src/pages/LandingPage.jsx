@@ -7,9 +7,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:3000/api' : 'https://dquant-task-manager-production.up.railway.app/api');
 
 // Import OS icons
-import windowsIcon from '../assets/windows-11-icon.png';
-import macosIcon from '../assets/macos-icon.png';
-import linuxIcon from '../assets/linux-icon.png';
+import windowsIcon from '../../assets/windows-11-icon.png';
+import macosIcon from '../../assets/macos-icon.png';
+import linuxIcon from '../../assets/linux-icon.png';
 
 const LandingPage = () => {
   const navigate = useNavigate();
