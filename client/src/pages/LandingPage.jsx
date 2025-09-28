@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 import { motion } from 'framer-motion';
 
 const LandingPage = () => {
@@ -42,9 +43,9 @@ const LandingPage = () => {
               transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
               className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center"
             >
-              <span className="text-2xl font-bold text-white">DQ</span>
+              <span className="text-2xl font-bold text-white">CN</span>
             </motion.div>
-            <h1 className="text-2xl font-bold text-white mb-2">DQuant Task Manager</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">COMPANY NAME Task Manager</h1>
             <p className="text-white/70">Enter password to access the landing page</p>
           </div>
 
@@ -105,9 +106,9 @@ const LandingPage = () => {
               className="flex items-center space-x-2"
             >
               <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">DQ</span>
+                <span className="text-white font-bold text-sm">CN</span>
               </div>
-              <span className="text-white font-bold text-xl">DQuant</span>
+              <span className="text-white font-bold text-xl">COMPANY NAME</span>
             </motion.div>
             
             <motion.div
@@ -421,7 +422,7 @@ const LandingPage = () => {
               Ready to Get Started?
             </h2>
             <p className="text-xl text-white/70 mb-12">
-              Download DQuant Task Manager and transform your productivity today
+              Download COMPANY NAME Task Manager and transform your productivity today
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
@@ -429,21 +430,21 @@ const LandingPage = () => {
                 {
                   platform: "Windows",
                   icon: "🪟",
-                  version: "v1.0.0",
-                  size: "45.2 MB",
-                  url: "https://youtube.com"
+                  version: "v0.0.2",
+                  size: "Latest",
+                  url: `${API_BASE_URL}/downloads/windows/latest`
                 },
                 {
                   platform: "macOS",
                   icon: "🍎",
-                  version: "v1.0.0",
+                  version: "Coming soon",
                   size: "52.1 MB",
                   url: "https://youtube.com"
                 },
                 {
                   platform: "Linux",
                   icon: "🐧",
-                  version: "v1.0.0",
+                  version: "Coming soon",
                   size: "48.7 MB",
                   url: "https://youtube.com"
                 }
@@ -453,6 +454,7 @@ const LandingPage = () => {
                   href={download.url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  download={download.platform === 'Windows'}
                   whileHover={{ scale: 1.05, y: -5 }}
                   whileTap={{ scale: 0.95 }}
                   className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 group"
@@ -502,9 +504,9 @@ const LandingPage = () => {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">DQ</span>
+                  <span className="text-white font-bold text-sm">CN</span>
                 </div>
-                <span className="text-white font-bold text-xl">DQuant</span>
+                <span className="text-white font-bold text-xl">COMPANY NAME</span>
               </div>
               <p className="text-white/70">
                 Revolutionizing productivity with AI-powered task management.
@@ -543,7 +545,7 @@ const LandingPage = () => {
           </div>
           
           <div className="border-t border-white/10 mt-8 pt-8 text-center text-white/70">
-            <p>&copy; 2024 DQuant. All rights reserved. Made with ❤️ for productivity enthusiasts.</p>
+            <p>&copy; 2024 COMPANY NAME. All rights reserved. Made with ❤️ for productivity enthusiasts.</p>
           </div>
         </div>
       </footer>

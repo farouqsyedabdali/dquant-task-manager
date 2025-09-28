@@ -1,5 +1,21 @@
 import { openModalById } from "../utils/openModalById";
+import { PRIORITY_LABELS } from "../utils/constants";
 import TaskModal from "./TaskModal";
+
+const getPriorityColor = (priority) => {
+  switch (priority) {
+    case 'URGENT':
+      return 'priority-urgent';
+    case 'HIGH':
+      return 'priority-high';
+    case 'MEDIUM':
+      return 'priority-medium';
+    case 'LOW':
+      return 'priority-low';
+    default:
+      return 'priority-medium';
+  }
+};
 
 export default function TaskRow({ task, setTasks, isAdmin }) {
   const modalId = `task-modal-${task.id}`;
@@ -25,8 +41,8 @@ export default function TaskRow({ task, setTasks, isAdmin }) {
         </td>
         <td>{task.status}</td>
         <td>
-          <span className="badge badge-ghost badge-sm capitalize">
-            {task.priority}
+          <span className={`status-badge ${getPriorityColor(task.priority)}`}>
+            {PRIORITY_LABELS[task.priority]}
           </span>
         </td>
         <td>{task.assignedTo ? task.assignedTo.name : "Unassigned"}</td>

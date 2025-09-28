@@ -415,119 +415,6 @@ const TaskPopup = () => {
     }
   };
 
-  const handleSummarizeTask = async () => {
-    if (!inputText.trim()) {
-      setError('Please enter some text');
-      return;
-    }
-
-    if (!isAuthenticated()) {
-      setError('Please login to your task manager first');
-      return;
-    }
-
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const response = await aiAPI.identifyTaskUpdate(inputText.trim());
-      
-      let updateData = null;
-      if (response.data.success && response.data.updateData) {
-        updateData = response.data.updateData;
-        console.log('TaskPopup: AI successfully identified task for summarization:', updateData);
-      } else {
-        console.log('TaskPopup: AI failed to identify task for summarization, using fallback');
-        updateData = {
-          taskFound: false,
-          taskId: null,
-          confidence: 0,
-          updateType: 'manual_summarization',
-          updateContent: inputText.trim().substring(0, 500),
-          suggestedActions: ['manual_task_selection'],
-          reasoning: 'AI could not identify specific task - manual selection required',
-          originalText: inputText
-        };
-      }
-      
-      // Always store summarize task data and open modal (even if no task found)
-      const popupData = {
-        type: 'summarize',
-        updateData: updateData,
-        originalText: inputText,
-        timestamp: Date.now()
-      };
-      
-      // Store in localStorage with a unique key
-      const storageKey = `taskPopup_${Date.now()}`;
-      localStorage.setItem(storageKey, JSON.stringify(popupData));
-      
-      console.log('TaskPopup: Stored summarize task data in localStorage with key:', storageKey);
-      
-      // Open the main app with just the storage key
-      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
-      console.log('TaskPopup: Opening summarize task URL:', url);
-      
-      // Open in main window (reuse existing tab)
-      const taskManagerWindow = window.open(url, 'TaskManagerMain');
-      if (taskManagerWindow) {
-        taskManagerWindow.focus();
-      }
-      
-      setLastResult({
-        type: 'summarize',
-        success: true,
-        taskId: updateData.taskId || 'Manual Selection',
-        updateContent: updateData.updateContent,
-        confidence: updateData.confidence
-      });
-      
-      // Clear input after successful summarization
-      setInputText('');
-    } catch (err) {
-      console.error('Summarize task error:', err);
-      
-      // Even if AI completely fails, still open the modal with basic data
-      const fallbackUpdateData = {
-        taskFound: false,
-        taskId: null,
-        confidence: 0,
-        updateType: 'manual_summarization',
-        updateContent: inputText.trim().substring(0, 500),
-        suggestedActions: ['manual_task_selection'],
-        reasoning: 'AI service error - manual selection required',
-        originalText: inputText
-      };
-      
-      const popupData = {
-        type: 'summarize',
-        updateData: fallbackUpdateData,
-        originalText: inputText,
-        timestamp: Date.now()
-      };
-      
-      const storageKey = `taskPopup_${Date.now()}`;
-      localStorage.setItem(storageKey, JSON.stringify(popupData));
-      
-      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
-      const taskManagerWindow = window.open(url, 'TaskManagerMain');
-      if (taskManagerWindow) {
-        taskManagerWindow.focus();
-      }
-      
-      setLastResult({
-        type: 'summarize',
-        success: true,
-        taskId: 'Manual Selection',
-        updateContent: fallbackUpdateData.updateContent,
-        confidence: 0
-      });
-      
-      setInputText('');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleAddSubtask = async () => {
     if (!inputText.trim()) {
@@ -762,13 +649,6 @@ const TaskPopup = () => {
           {isProcessing ? 'Processing…' : '✅ Complete Task'}
         </button>
 
-        <button
-          onClick={handleSummarizeTask}
-          disabled={isProcessing || !inputText.trim()}
-          className="btn btn-warning btn-md w-full"
-        >
-          {isProcessing ? 'Processing…' : '📋 Summarize Task'}
-        </button>
 
         <button
           onClick={handleAddSubtask}
@@ -800,8 +680,6 @@ const TaskPopup = () => {
           <span>✅ Task created: "{lastResult.title}"</span>
         ) : lastResult.type === 'complete' ? (
           <span>✅ Task #{lastResult.taskId} marked as completed!</span>
-        ) : lastResult.type === 'summarize' ? (
-          <span>📋 Task #{lastResult.taskId} summary opened in main app!</span>
         ) : lastResult.type === 'addSubtask' ? (
           <span>➕ Subtask creation opened for task #{lastResult.taskId}!</span>
         ) : (

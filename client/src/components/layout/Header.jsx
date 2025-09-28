@@ -9,6 +9,9 @@ const Header = () => {
   const profileDropdownRef = useRef(null);
   const { user, logout, isAdmin, isSysAdmin } = useAuthStore();
   const navigate = useNavigate();
+  
+  // Check if this is a personal account
+  const isPersonalAccount = user?.isPersonal || false;
 
   // Close profile dropdown when clicking outside
   useEffect(() => {
@@ -52,7 +55,7 @@ const Header = () => {
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <h1 className="text-xl font-bold text-white">
-                {user?.companyName || 'DQuant Task Manager'}
+                {user?.companyName || 'COMPANY NAME Task Manager'}
               </h1>
             </div>
             
@@ -71,7 +74,7 @@ const Header = () => {
                 <CalendarIcon className="w-4 h-4" />
                 <span>Calendar</span>
               </button>
-              {isAdmin() && (
+              {isAdmin() && !isPersonalAccount && (
                 <button
                   onClick={() => handleNavigation('/employees')}
                   className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
@@ -103,9 +106,11 @@ const Header = () => {
               >
                 <div className="text-right hidden md:block">
                   <p className="text-sm font-medium">{user?.name}</p>
-                  <p className="text-xs text-gray-400">
-                    {user?.role === 'SYSDMIN' ? 'System Administrator' : user?.role?.toLowerCase()}
-                  </p>
+                  {!isPersonalAccount && (
+                    <p className="text-xs text-gray-400">
+                      {user?.role === 'SYSDMIN' ? 'System Administrator' : user?.role?.toLowerCase()}
+                    </p>
+                  )}
                 </div>
                 <div className="avatar placeholder">
                   <div className="bg-indigo-600 text-white rounded-full w-10 hover:bg-indigo-500 transition-colors duration-200">
@@ -130,9 +135,11 @@ const Header = () => {
                       <div>
                         <p className="text-white font-medium">{user?.name}</p>
                         <p className="text-gray-400 text-sm">{user?.email}</p>
-                        <p className="text-gray-500 text-xs">
-                          {user?.role === 'SYSDMIN' ? 'System Administrator' : user?.role?.toLowerCase()}
-                        </p>
+                        {!isPersonalAccount && (
+                          <p className="text-gray-500 text-xs">
+                            {user?.role === 'SYSDMIN' ? 'System Administrator' : user?.role?.toLowerCase()}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -198,7 +205,7 @@ const Header = () => {
                   <CalendarIcon className="w-4 h-4" />
                   <span>Calendar</span>
                 </button>
-                {isAdmin() && (
+                {isAdmin() && !isPersonalAccount && (
                   <button
                     onClick={() => handleNavigation('/employees')}
                     className="text-gray-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium"
@@ -217,7 +224,9 @@ const Header = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">{user?.name}</p>
-                    <p className="text-xs text-gray-400 capitalize">{user?.role?.toLowerCase()}</p>
+                    {!isPersonalAccount && (
+                      <p className="text-xs text-gray-400 capitalize">{user?.role?.toLowerCase()}</p>
+                    )}
                   </div>
                 </div>
                 

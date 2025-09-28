@@ -58,6 +58,18 @@ export const PRIORITY_OPTIONS = Object.entries(PRIORITY_LABELS).map(([value, lab
   label
 }));
 
+export const SORT_OPTIONS = [
+  { value: 'urgency', label: 'Urgency (Priority + Due Date)' },
+  { value: 'created-desc', label: 'Date Created (Newest First)' },
+  { value: 'created-asc', label: 'Date Created (Oldest First)' },
+  { value: 'due-desc', label: 'Due Date (Latest First)' },
+  { value: 'due-asc', label: 'Due Date (Earliest First)' },
+  { value: 'priority-desc', label: 'Priority (High to Low)' },
+  { value: 'priority-asc', label: 'Priority (Low to High)' },
+  { value: 'status', label: 'Status (A-Z)' },
+  { value: 'title', label: 'Title (A-Z)' }
+];
+
 // Utility function to get default due date (7 days from now at 11:59 PM)
 export const getDefaultDueDate = () => {
   const now = new Date();

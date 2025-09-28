@@ -11,9 +11,10 @@ model Company {
   id               Int       @id @default(autoincrement())
   name             String
   email            String    @unique
-  passwordHash     String
+  passwordHash     String?
   subscriptionPlan String    @default("free")
   markedForDeletion Boolean  @default(false)
+  isPersonal       Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   users            User[]
@@ -68,6 +69,9 @@ model Task {
   
   // Auto-status management
   statusManuallyChanged Boolean @default(false) // Track if status was manually changed by creator
+  
+  // Archive management
+  archived Boolean @default(false) // Whether task is archived
   
   // Relations
   comments     Comment[]
@@ -173,6 +177,8 @@ enum NotificationType {
   SUBTASK_ADDED
   TASK_COMPLETED
   TASK_SHARED
+  TASK_ARCHIVED
+  TASK_UNARCHIVED
 }
 
 model AuditLog {
@@ -239,4 +245,7 @@ enum AuditAction {
   // Task sharing actions
   TASK_SHARED
   TASK_UNSHARED
+  // Task archive actions
+  TASK_ARCHIVED
+  TASK_UNARCHIVED
 }

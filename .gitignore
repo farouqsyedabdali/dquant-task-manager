@@ -1,0 +1,28 @@
+# Desktop build artifacts
+desktop/dist/win-unpacked/
+desktop/dist/*.exe
+desktop/dist/*.blockmap
+desktop/dist/*.yml
+desktop/dist/builder-*.yml
+
+# Node modules
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/

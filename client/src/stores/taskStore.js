@@ -11,7 +11,9 @@ const useTaskStore = create((set, get) => ({
     status: '',
     priority: '',
     search: '',
-    dueDateFilter: ''
+    dueDateFilter: '',
+    taskType: '',
+    sortBy: 'urgency'
   },
 
   // Get all tasks
@@ -184,7 +186,7 @@ const useTaskStore = create((set, get) => ({
 
   // Clear filters
   clearFilters: () => {
-    set({ filters: { status: '', priority: '', search: '', dueDateFilter: '', taskType: '' } });
+    set({ filters: { status: '', priority: '', search: '', dueDateFilter: '', taskType: '', sortBy: 'urgency' } });
   },
 
   // Clear current task
@@ -278,6 +280,87 @@ const useTaskStore = create((set, get) => ({
           break;
       }
     }
+
+    // Sort tasks based on sortBy filter
+    const sortBy = filters.sortBy || 'urgency';
+    filteredTasks.sort((a, b) => {
+      switch (sortBy) {
+        case 'urgency':
+          // Priority order: URGENT > HIGH > MEDIUM > LOW
+          const priorityOrder = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+          const aPriority = priorityOrder[a.priority] || 0;
+          const bPriority = priorityOrder[b.priority] || 0;
+          
+          if (aPriority !== bPriority) {
+            return bPriority - aPriority; // Higher priority first
+          }
+          
+          // If same priority, sort by due date (earliest first, nulls last)
+          if (a.dueDate && b.dueDate) {
+            return new Date(a.dueDate) - new Date(b.dueDate);
+          }
+          if (a.dueDate && !b.dueDate) return -1;
+          if (!a.dueDate && b.dueDate) return 1;
+          
+          // If no due date or same due date, sort by creation date (newest first)
+          return new Date(b.createdAt) - new Date(a.createdAt);
+          
+        case 'created-desc':
+          return new Date(b.createdAt) - new Date(a.createdAt);
+          
+        case 'created-asc':
+          return new Date(a.createdAt) - new Date(b.createdAt);
+          
+        case 'due-desc':
+          if (a.dueDate && b.dueDate) {
+            return new Date(b.dueDate) - new Date(a.dueDate);
+          }
+          if (a.dueDate && !b.dueDate) return -1;
+          if (!a.dueDate && b.dueDate) return 1;
+          return new Date(b.createdAt) - new Date(a.createdAt);
+          
+        case 'due-asc':
+          if (a.dueDate && b.dueDate) {
+            return new Date(a.dueDate) - new Date(b.dueDate);
+          }
+          if (a.dueDate && !b.dueDate) return -1;
+          if (!a.dueDate && b.dueDate) return 1;
+          return new Date(b.createdAt) - new Date(a.createdAt);
+          
+        case 'priority-desc':
+          const priorityOrderDesc = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+          const aPriorityDesc = priorityOrderDesc[a.priority] || 0;
+          const bPriorityDesc = priorityOrderDesc[b.priority] || 0;
+          if (aPriorityDesc !== bPriorityDesc) {
+            return bPriorityDesc - aPriorityDesc;
+          }
+          return new Date(b.createdAt) - new Date(a.createdAt);
+          
+        case 'priority-asc':
+          const priorityOrderAsc = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+          const aPriorityAsc = priorityOrderAsc[a.priority] || 0;
+          const bPriorityAsc = priorityOrderAsc[b.priority] || 0;
+          if (aPriorityAsc !== bPriorityAsc) {
+            return aPriorityAsc - bPriorityAsc;
+          }
+          return new Date(b.createdAt) - new Date(a.createdAt);
+          
+        case 'status':
+          const statusOrder = { TODO: 1, IN_PROGRESS: 2, ON_HOLD: 3, COMPLETED: 4, CANCELLED: 5 };
+          const aStatus = statusOrder[a.status] || 0;
+          const bStatus = statusOrder[b.status] || 0;
+          if (aStatus !== bStatus) {
+            return aStatus - bStatus;
+          }
+          return new Date(b.createdAt) - new Date(a.createdAt);
+          
+        case 'title':
+          return a.title.localeCompare(b.title);
+          
+        default:
+          return new Date(b.createdAt) - new Date(a.createdAt);
+      }
+    });
 
     return filteredTasks;
   }

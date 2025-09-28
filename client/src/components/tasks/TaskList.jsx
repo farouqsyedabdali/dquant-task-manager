@@ -3,7 +3,7 @@ import useAuthStore from '../../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
 import TaskModal from './TaskModal';
 
-const TaskList = ({ tasks, onStatusChange, onPriorityChange, onDelete }) => {
+const TaskList = ({ tasks, onStatusChange, onPriorityChange, onDelete, onArchive, onUnarchive }) => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isAdmin } = useAuthStore();
@@ -108,7 +108,7 @@ const TaskList = ({ tasks, onStatusChange, onPriorityChange, onDelete }) => {
                                     {new Date(task.dueDate).toLocaleDateString()}
                                   </span>
                                   {new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED' && (
-                                    <span className="badge badge-error badge-xs">Overdue</span>
+                                    <span className="status-badge-sm priority-urgent">Overdue</span>
                                   )}
                                 </div>
                               ) : (
@@ -173,6 +173,8 @@ const TaskList = ({ tasks, onStatusChange, onPriorityChange, onDelete }) => {
           onStatusChange={onStatusChange}
           onPriorityChange={onPriorityChange}
           onDelete={onDelete}
+          onArchive={onArchive}
+          onUnarchive={onUnarchive}
         />
       )}
     </>

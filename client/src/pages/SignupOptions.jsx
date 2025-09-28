@@ -22,9 +22,9 @@ const SignupOptions = () => {
         'No team features',
         'No advanced analytics'
       ],
-      buttonText: 'Coming Soon',
-      buttonVariant: 'btn-outline',
-      disabled: true
+      buttonText: 'Get Started',
+      buttonVariant: 'btn-primary',
+      disabled: false
     },
     {
       id: 'business',
@@ -54,10 +54,6 @@ const SignupOptions = () => {
   ];
 
   const handlePlanSelect = (planId) => {
-    if (planId === 'personal') {
-      alert('Personal plans are not available yet. We\'re working on making this available soon!');
-      return;
-    }
     setSelectedPlan(planId);
   };
 
@@ -66,10 +62,10 @@ const SignupOptions = () => {
       {/* Company Branding */}
       <div className="absolute top-6 left-6 flex items-center space-x-3">
         <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold text-lg">DQ</span>
+          <span className="text-white font-bold text-lg">CN</span>
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">DQuant</h1>
+          <h1 className="text-2xl font-bold text-white">COMPANY NAME</h1>
           <p className="text-gray-400 text-sm">Task Manager</p>
         </div>
       </div>
@@ -154,6 +150,13 @@ const SignupOptions = () => {
                   >
                     {plan.buttonText}
                   </Link>
+                ) : plan.id === 'personal' ? (
+                  <Link
+                    to="/personal-signup"
+                    className={`btn ${plan.buttonVariant} w-full text-lg py-4`}
+                  >
+                    {plan.buttonText}
+                  </Link>
                 ) : (
                   <button
                     onClick={() => handlePlanSelect(plan.id)}
@@ -167,14 +170,6 @@ const SignupOptions = () => {
                 )}
               </div>
 
-              {/* Coming Soon Badge for Personal */}
-              {plan.id === 'personal' && (
-                <div className="absolute top-4 right-4">
-                  <span className="bg-yellow-600 text-white px-3 py-1 rounded-full text-xs font-medium">
-                    Coming Soon
-                  </span>
-                </div>
-              )}
             </div>
           ))}
         </div>

@@ -1,5 +1,5 @@
 {
-  "name": "dquant-task-manager",
+  "name": "company-name-task-manager",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -7,15 +7,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/farouqsyedabdali/dquant-task-manager.git"
+    "url": "git+https://github.com/farouqsyedabdali/company-name-task-manager.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/farouqsyedabdali/dquant-task-manager/issues"
+    "url": "https://github.com/farouqsyedabdali/company-name-task-manager/issues"
   },
-  "homepage": "https://github.com/farouqsyedabdali/dquant-task-manager#readme",
+  "homepage": "https://github.com/farouqsyedabdali/company-name-task-manager#readme",
   "description": "",
   "dependencies": {
     "date-fns": "^4.1.0"

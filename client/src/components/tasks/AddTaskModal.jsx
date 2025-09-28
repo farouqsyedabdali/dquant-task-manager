@@ -21,12 +21,22 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   const { createTask, isLoading } = useTaskStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
   const { user } = useAuthStore();
+  
+  // Check if this is a personal account
+  const isPersonalAccount = user?.isPersonal || false;
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isPersonalAccount) {
       fetchUsers();
+    } else if (isOpen && isPersonalAccount) {
+      // For personal accounts, set the current user as the only option
+      setUsers([user]);
+      setFormData(prev => ({
+        ...prev,
+        assigneeId: user?.id?.toString() || ''
+      }));
     }
-  }, [isOpen]);
+  }, [isOpen, isPersonalAccount, user]);
 
   // Handle initial data from browser extension
   useEffect(() => {
@@ -116,7 +126,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
       newErrors.title = 'Title must be 50 characters or less';
     }
     
-    if (!formData.assigneeId) {
+    if (!isPersonalAccount && !formData.assigneeId) {
       newErrors.assigneeId = 'Assignee is required';
     }
     
@@ -138,7 +148,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
     // Prepare the data for creation
     const createData = {
       ...formData,
-      assigneeId: parseInt(formData.assigneeId),
+      assigneeId: isPersonalAccount ? user.id : parseInt(formData.assigneeId),
       dueDate: formData.dueDate || null
     };
 
@@ -171,7 +181,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal modal-open">
+    <div className="modal modal-open backdrop-blur-sm">
       <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
@@ -264,34 +274,36 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
             />
           </div>
 
-          {/* Assign To */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Assign To *
-            </label>
-            <SearchableDropdown
-              options={users}
-              value={formData.assigneeId}
-              onChange={(value) => {
-                setFormData(prev => ({ ...prev, assigneeId: value }));
-                // Track the selected employee as recent
-                const selectedEmployee = users.find(user => user.id.toString() === value);
-                if (selectedEmployee) {
-                  addToRecentEmployees(selectedEmployee);
-                }
-              }}
-              placeholder="Select an employee"
-              disabled={isLoadingUsers}
-              error={!!errors.assigneeId}
-              recentEmployees={recentEmployees}
-            />
-            {errors.assigneeId && (
-              <p className="text-red-400 text-sm mt-1">{errors.assigneeId}</p>
-            )}
-            {isLoadingUsers && (
-              <p className="text-sm text-gray-400 mt-1">Loading employees...</p>
-            )}
-          </div>
+          {/* Assign To - Only show for company accounts */}
+          {!isPersonalAccount && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Assign To *
+              </label>
+              <SearchableDropdown
+                options={users}
+                value={formData.assigneeId}
+                onChange={(value) => {
+                  setFormData(prev => ({ ...prev, assigneeId: value }));
+                  // Track the selected employee as recent
+                  const selectedEmployee = users.find(user => user.id.toString() === value);
+                  if (selectedEmployee) {
+                    addToRecentEmployees(selectedEmployee);
+                  }
+                }}
+                placeholder="Select an employee"
+                disabled={isLoadingUsers}
+                error={!!errors.assigneeId}
+                recentEmployees={recentEmployees}
+              />
+              {errors.assigneeId && (
+                <p className="text-red-400 text-sm mt-1">{errors.assigneeId}</p>
+              )}
+              {isLoadingUsers && (
+                <p className="text-sm text-gray-400 mt-1">Loading employees...</p>
+              )}
+            </div>
+          )}
 
           {/* Submit Buttons */}
           <div className="flex justify-end space-x-3 pt-4">

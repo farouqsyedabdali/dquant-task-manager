@@ -145,7 +145,7 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
   if (!isOpen || !employee) return null;
 
   return (
-    <div className="modal modal-open">
+    <div className="modal modal-open backdrop-blur-sm">
       <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">

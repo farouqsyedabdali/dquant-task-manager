@@ -2,11 +2,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useEffect, useState } from 'react';
 import useAuthStore from './context/authStore';
 import ProtectedRoute from './layouts/ProtectedRoute';
+import FontSizeProvider from './components/FontSizeProvider';
 import Header from './components/layout/Header';
 import Login from './pages/Login';
 import CompanySignup from './pages/CompanySignup';
+import PersonalSignup from './pages/PersonalSignup';
 import SignupOptions from './pages/SignupOptions';
 import Dashboard from './pages/Dashboard';
+import PersonalDashboard from './pages/PersonalDashboard';
 import Employees from './pages/Employees';
 import TaskPopup from './pages/TaskPopup';
 import Settings from './pages/Settings';
@@ -28,8 +31,9 @@ function App() {
   }, [getMe, isAuthenticated]);
 
   return (
-    <Router>
-      <div className="App bg-gray-900 min-h-screen">
+    <FontSizeProvider>
+      <Router>
+        <div className="App bg-gray-900 min-h-screen">
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Navigate to="/login" replace />} />
@@ -37,6 +41,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignupOptions />} />
           <Route path="/company-signup" element={<CompanySignup />} />
+          <Route path="/personal-signup" element={<PersonalSignup />} />
           
           {/* Popup Route (no header/layout) */}
           <Route path="/popup" element={<TaskPopup />} />
@@ -50,6 +55,15 @@ function App() {
                   <Header />
                   <Dashboard />
                 </div>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/personal-dashboard"
+            element={
+              <ProtectedRoute>
+                <PersonalDashboard />
               </ProtectedRoute>
             }
           />
@@ -137,6 +151,7 @@ function App() {
         )}
       </div>
     </Router>
+    </FontSizeProvider>
   );
 }
 

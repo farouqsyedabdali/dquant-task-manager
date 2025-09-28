@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import useTaskStore from '../../stores/taskStore';
 import useUserStore from '../../stores/userStore';
 import useAuthStore from '../../context/authStore';
@@ -219,9 +220,10 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
   if (!isOpen) return null;
 
-  return (
-    <div className="modal modal-open" style={{ zIndex: 60 }}>
-      <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700">
+  // Render above TaskModal using a portal attached to document.body with higher z-index
+  return createPortal(
+    <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }}>
+      <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -394,7 +396,8 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

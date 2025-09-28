@@ -6,6 +6,27 @@
   --text-primary: #ffffff;
   --text-secondary: #a1a1aa;
   --border: #3f3f46;
+  
+  /* Font size variables */
+  --font-size-base: 16px;
+  --font-size-sm: 14px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 26px;
+  
+  /* Spacing variables */
+  --spacing-1: 0.375rem;
+  --spacing-2: 0.625rem;
+  --spacing-3: 0.875rem;
+  --spacing-4: 1.125rem;
+  --spacing-5: 1.375rem;
+  --spacing-6: 1.625rem;
+  
+  /* Component sizes */
+  --btn-height: 2.5rem;
+  --input-height: 2.5rem;
+  --card-padding: 1.5rem;
 }
 
 body {
@@ -16,7 +37,169 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: var(--font-size-base);
 }
+
+/* Font size utility classes */
+.font-small {
+  font-size: var(--font-size-base) !important;
+}
+
+.font-medium {
+  font-size: var(--font-size-base) !important;
+}
+
+.font-large {
+  font-size: var(--font-size-base) !important;
+}
+
+/* Global font size overrides - more aggressive approach */
+.font-small,
+.font-small * {
+  font-size: var(--font-size-base) !important;
+}
+
+.font-medium,
+.font-medium * {
+  font-size: var(--font-size-base) !important;
+}
+
+.font-large,
+.font-large * {
+  font-size: var(--font-size-base) !important;
+}
+
+/* Override specific text size classes */
+.font-small .text-xs { font-size: 10px !important; }
+.font-small .text-sm { font-size: var(--font-size-sm) !important; }
+.font-small .text-base { font-size: var(--font-size-base) !important; }
+.font-small .text-lg { font-size: var(--font-size-lg) !important; }
+.font-small .text-xl { font-size: var(--font-size-xl) !important; }
+.font-small .text-2xl { font-size: var(--font-size-2xl) !important; }
+.font-small .text-3xl { font-size: var(--font-size-3xl) !important; }
+.font-small .text-4xl { font-size: var(--font-size-4xl) !important; }
+.font-small .text-5xl { font-size: var(--font-size-5xl) !important; }
+
+.font-medium .text-xs { font-size: 12px !important; }
+.font-medium .text-sm { font-size: var(--font-size-sm) !important; }
+.font-medium .text-base { font-size: var(--font-size-base) !important; }
+.font-medium .text-lg { font-size: var(--font-size-lg) !important; }
+.font-medium .text-xl { font-size: var(--font-size-xl) !important; }
+.font-medium .text-2xl { font-size: var(--font-size-2xl) !important; }
+.font-medium .text-3xl { font-size: var(--font-size-3xl) !important; }
+.font-medium .text-4xl { font-size: var(--font-size-4xl) !important; }
+.font-medium .text-5xl { font-size: var(--font-size-5xl) !important; }
+
+.font-large .text-xs { font-size: 14px !important; }
+.font-large .text-sm { font-size: var(--font-size-sm) !important; }
+.font-large .text-base { font-size: var(--font-size-base) !important; }
+.font-large .text-lg { font-size: var(--font-size-lg) !important; }
+.font-large .text-xl { font-size: var(--font-size-xl) !important; }
+.font-large .text-2xl { font-size: var(--font-size-2xl) !important; }
+.font-large .text-3xl { font-size: var(--font-size-3xl) !important; }
+.font-large .text-4xl { font-size: var(--font-size-4xl) !important; }
+.font-large .text-5xl { font-size: var(--font-size-5xl) !important; }
+
+
+/* Button and input sizing */
+.font-small .btn { 
+  height: var(--btn-height) !important;
+  padding: var(--spacing-2) var(--spacing-4) !important;
+  font-size: var(--font-size-base) !important;
+}
+
+.font-small .btn-sm { 
+  height: var(--btn-height-sm) !important;
+  padding: var(--spacing-1) var(--spacing-3) !important;
+  font-size: var(--font-size-sm) !important;
+}
+
+.font-small .btn-lg { 
+  height: var(--btn-height-lg) !important;
+  padding: var(--spacing-3) var(--spacing-5) !important;
+  font-size: var(--font-size-lg) !important;
+}
+
+.font-small .input { 
+  height: var(--input-height) !important;
+  padding: var(--spacing-2) var(--spacing-4) !important;
+  font-size: var(--font-size-base) !important;
+}
+
+.font-medium .btn { 
+  height: var(--btn-height) !important;
+  padding: var(--spacing-2) var(--spacing-4) !important;
+  font-size: var(--font-size-base) !important;
+}
+
+.font-medium .btn-sm { 
+  height: var(--btn-height-sm) !important;
+  padding: var(--spacing-1) var(--spacing-3) !important;
+  font-size: var(--font-size-sm) !important;
+}
+
+.font-medium .btn-lg { 
+  height: var(--btn-height-lg) !important;
+  padding: var(--spacing-3) var(--spacing-5) !important;
+  font-size: var(--font-size-lg) !important;
+}
+
+.font-medium .input { 
+  height: var(--input-height) !important;
+  padding: var(--spacing-2) var(--spacing-4) !important;
+  font-size: var(--font-size-base) !important;
+}
+
+.font-large .btn { 
+  height: var(--btn-height) !important;
+  padding: var(--spacing-2) var(--spacing-4) !important;
+  font-size: var(--font-size-base) !important;
+}
+
+.font-large .btn-sm { 
+  height: var(--btn-height-sm) !important;
+  padding: var(--spacing-1) var(--spacing-3) !important;
+  font-size: var(--font-size-sm) !important;
+}
+
+.font-large .btn-lg { 
+  height: var(--btn-height-lg) !important;
+  padding: var(--spacing-3) var(--spacing-5) !important;
+  font-size: var(--font-size-lg) !important;
+}
+
+.font-large .input { 
+  height: var(--input-height) !important;
+  padding: var(--spacing-2) var(--spacing-4) !important;
+  font-size: var(--font-size-base) !important;
+}
+
+/* Card padding */
+.font-small .card-body { padding: var(--card-padding) !important; }
+.font-medium .card-body { padding: var(--card-padding) !important; }
+.font-large .card-body { padding: var(--card-padding) !important; }
+
+/* Spacing utilities */
+.font-small .p-2 { padding: var(--spacing-2) !important; }
+.font-small .p-4 { padding: var(--spacing-4) !important; }
+.font-small .p-6 { padding: var(--spacing-6) !important; }
+.font-small .m-2 { margin: var(--spacing-2) !important; }
+.font-small .m-4 { margin: var(--spacing-4) !important; }
+.font-small .m-6 { margin: var(--spacing-6) !important; }
+
+.font-medium .p-2 { padding: var(--spacing-2) !important; }
+.font-medium .p-4 { padding: var(--spacing-4) !important; }
+.font-medium .p-6 { padding: var(--spacing-6) !important; }
+.font-medium .m-2 { margin: var(--spacing-2) !important; }
+.font-medium .m-4 { margin: var(--spacing-4) !important; }
+.font-medium .m-6 { margin: var(--spacing-6) !important; }
+
+.font-large .p-2 { padding: var(--spacing-2) !important; }
+.font-large .p-4 { padding: var(--spacing-4) !important; }
+.font-large .p-6 { padding: var(--spacing-6) !important; }
+.font-large .m-2 { margin: var(--spacing-2) !important; }
+.font-large .m-4 { margin: var(--spacing-4) !important; }
+.font-large .m-6 { margin: var(--spacing-6) !important; }
 
 .App {
   background-color: var(--background);
@@ -61,6 +244,15 @@ body {
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
   font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge-sm {
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -111,3 +303,4 @@ body {
   background-color: #059669;
   color: #6ee7b7;
 }
+

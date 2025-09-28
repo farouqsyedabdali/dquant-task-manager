@@ -6,6 +6,38 @@ import TaskModal from './TaskModal';
 import TaskFilters from './TaskFilters';
 import DeleteConfirmModal from '../common/DeleteConfirmModal';
 
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'TODO':
+      return 'status-todo';
+    case 'IN_PROGRESS':
+      return 'status-in-progress';
+    case 'COMPLETED':
+      return 'status-completed';
+    case 'ON_HOLD':
+      return 'status-on-hold';
+    case 'CANCELLED':
+      return 'status-cancelled';
+    default:
+      return 'status-todo';
+  }
+};
+
+const getPriorityColor = (priority) => {
+  switch (priority) {
+    case 'URGENT':
+      return 'priority-urgent';
+    case 'HIGH':
+      return 'priority-high';
+    case 'MEDIUM':
+      return 'priority-medium';
+    case 'LOW':
+      return 'priority-low';
+    default:
+      return 'priority-medium';
+  }
+};
+
 const TaskTable = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -239,7 +271,7 @@ const TaskTable = () => {
                           ))}
                         </select>
                       ) : (
-                        <span className={`badge ${STATUS_COLORS[task.status]}`}>
+                        <span className={`status-badge ${getStatusColor(task.status)}`}>
                           {STATUS_LABELS[task.status]}
                         </span>
                       )}
@@ -256,7 +288,7 @@ const TaskTable = () => {
                           ))}
                         </select>
                       ) : (
-                        <span className={`badge ${PRIORITY_COLORS[task.priority]}`}>
+                        <span className={`status-badge ${getPriorityColor(task.priority)}`}>
                           {PRIORITY_LABELS[task.priority]}
                         </span>
                       )}

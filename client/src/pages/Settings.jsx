@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import useAuthStore from '../context/authStore';
+import useFontSizeStore from '../context/fontSizeStore';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import AuditLogModal from '../components/audit/AuditLogModal';
 
 const Settings = () => {
   const { user, isAdmin, isSysAdmin, deleteCompany } = useAuthStore();
+  const { fontSize, setFontSize } = useFontSizeStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAuditLog, setShowAuditLog] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'preferences' | 'about'
+  
+  // Check if this is a personal account
+  const isPersonalAccount = user?.isPersonal || false;
 
-  const handleDeleteCompany = async () => {
-    setShowDeleteModal(true);
-  };
 
   const confirmDeleteCompany = async () => {
     setIsDeleting(true);
@@ -36,160 +39,222 @@ const Settings = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-        <p className="text-gray-400">Manage your account and company settings</p>
+        <p className="text-gray-400">
+          {isPersonalAccount ? 'Manage your personal account settings' : 'Manage your account and company settings'}
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Profile Section */}
-        <div className="lg:col-span-2">
-          <div className="card bg-gray-800 border border-gray-700">
-            <div className="card-body">
-              <h2 className="card-title text-xl text-white mb-6">Profile Information</h2>
-              
-              <div className="space-y-6">
-                {/* Profile Picture */}
-                <div className="flex items-center space-x-4">
-                  <div className="avatar placeholder">
-                    <div className="bg-indigo-600 text-white rounded-full w-20">
-                      <span className="text-2xl font-bold">{user?.name?.charAt(0)}</span>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        {/* Sidebar */}
+        <aside className="md:col-span-1">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 sticky top-6">
+            <nav className="flex md:block space-x-2 md:space-x-0 md:space-y-2">
+              {[
+                { id: 'account', label: 'Account' },
+                { id: 'preferences', label: 'Preferences' },
+                { id: 'about', label: 'About' }
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setSelectedCategory(item.id)}
+                  className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    selectedCategory === item.id
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </aside>
+
+        {/* Content */}
+        <section className="md:col-span-3 space-y-8">
+          {selectedCategory === 'account' && (
+            <div className="space-y-8">
+              {/* Profile Information */}
+              <div className="card bg-gray-800 border border-gray-700">
+                <div className="card-body">
+                  <h2 className="card-title text-xl text-white mb-6">Profile Information</h2>
+                  <div className="space-y-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="avatar placeholder">
+                        <div className="bg-indigo-600 text-white rounded-full w-20">
+                          <span className="text-2xl font-bold">{user?.name?.charAt(0)}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">{user?.name}</h3>
+                        {!isPersonalAccount && (
+                          <p className="text-gray-400 capitalize">{user?.role?.toLowerCase()}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="label">
+                          <span className="label-text text-gray-300">Full Name</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={user?.name || ''}
+                          disabled
+                          className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="label">
+                          <span className="label-text text-gray-300">Email</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={user?.email || ''}
+                          disabled
+                          className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                        />
+                      </div>
+                      {!isPersonalAccount && (
+                        <>
+                          <div>
+                            <label className="label">
+                              <span className="label-text text-gray-300">Role</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={user?.role || ''}
+                              disabled
+                              className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="label">
+                              <span className="label-text text-gray-300">Company</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={user?.companyName || ''}
+                              disabled
+                              className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">{user?.name}</h3>
-                    <p className="text-gray-400 capitalize">{user?.role?.toLowerCase()}</p>
-                  </div>
-                </div>
-
-                {/* User Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">
-                      <span className="label-text text-gray-300">Full Name</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={user?.name || ''}
-                      disabled
-                      className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="label">
-                      <span className="label-text text-gray-300">Email</span>
-                    </label>
-                    <input
-                      type="email"
-                      value={user?.email || ''}
-                      disabled
-                      className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="label">
-                      <span className="label-text text-gray-300">Role</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={user?.role || ''}
-                      disabled
-                      className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="label">
-                      <span className="label-text text-gray-300">Company</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={user?.companyName || ''}
-                      disabled
-                      className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Future Settings Placeholder */}
-                <div className="pt-4 border-t border-gray-700">
-                  <p className="text-gray-400 text-sm">
-                    More profile settings coming soon...
-                  </p>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Admin Tools Section - Only for ADMIN and SYSDMIN */}
-        {(isAdmin() || isSysAdmin()) && (
-          <div className="lg:col-span-1">
-            <div className="card bg-gray-800 border border-gray-700">
-              <div className="card-body">
-                <h2 className="card-title text-xl text-white mb-6">Admin Tools</h2>
-                
-                <div className="space-y-4">
-                  <button
-                    onClick={() => setShowAuditLog(true)}
-                    className="btn btn-primary w-full"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    View Audit Log
-                  </button>
-                  
-                  <div className="text-sm text-gray-400">
-                    Track all user actions and system changes
+              {/* Admin Tools */}
+              {(isAdmin() || isSysAdmin()) && (
+                <div className="card bg-gray-800 border border-gray-700">
+                  <div className="card-body">
+                    <h2 className="card-title text-xl text-white mb-6">Admin Tools</h2>
+                    <div className="space-y-4">
+                      <button
+                        onClick={() => setShowAuditLog(true)}
+                        className="btn btn-primary w-full"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        View Audit Log
+                      </button>
+                      <div className="text-sm text-gray-400">
+                        Track all user actions and system changes
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Account/Company Management */}
+              {isSysAdmin() && (
+                <div className="card bg-gray-800 border border-gray-700">
+                  <div className="card-body">
+                    <h2 className="card-title text-xl text-white mb-6">
+                      {isPersonalAccount ? 'Account Management' : 'Company Management'}
+                    </h2>
+                    <div className="space-y-4">
+                      <div className="alert alert-warning">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <span className="text-sm">Danger Zone</span>
+                      </div>
+                      <button
+                        onClick={() => setShowDeleteModal(true)}
+                        className="btn btn-error btn-outline w-full"
+                      >
+                        {isPersonalAccount ? 'Delete Account' : 'Delete Company'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {selectedCategory === 'preferences' && (
+            <div className="space-y-8">
+              <div className="card bg-gray-800 border border-gray-700">
+                <div className="card-body">
+                  <h2 className="card-title text-xl text-white mb-6">UI Preferences</h2>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="label">
+                        <span className="label-text text-gray-300">Font Size</span>
+                      </label>
+                      <div className="flex space-x-2">
+                        {['small', 'medium', 'large'].map((size) => (
+                          <button
+                            key={size}
+                            onClick={() => setFontSize(size)}
+                            className={`btn btn-sm capitalize ${
+                              fontSize === size ? 'btn-primary' : 'btn-outline btn-outline-primary'
+                            }`}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-gray-700">
+                      <p className="text-gray-400 text-sm">
+                        Font size changes will be applied across the entire application.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Company Management Section - Only for SYSDMIN */}
-        {isSysAdmin() && (
-          <div className="lg:col-span-1">
-            <div className="card bg-gray-800 border border-gray-700">
-              <div className="card-body">
-                <h2 className="card-title text-xl text-white mb-6">Company Management</h2>
-                
-                <div className="space-y-4">
-                  <div className="alert alert-warning">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                    <span className="text-sm">Danger Zone</span>
+          {selectedCategory === 'about' && (
+            <div className="space-y-8">
+              <div className="card bg-gray-800 border border-gray-700">
+                <div className="card-body">
+                  <h2 className="card-title text-xl text-white mb-6">About</h2>
+                  <div className="space-y-4 text-gray-300">
+                    <div>
+                      <p className="text-sm">
+                        <strong className="text-gray-200">Task Manager</strong> v0.0.2
+                      </p>
+                      <p className="text-sm">© 2025 COMPANY NAME. All rights reserved.</p>
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      Built with React, Vite, Express, and Prisma.
+                    </div>
                   </div>
-                  
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    className="btn btn-error btn-outline w-full"
-                  >
-                    Delete Company
-                  </button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Credits & Copyright Section */}
-      <div className="mt-12 pt-8 border-t border-gray-700">
-        <div className="text-center text-gray-500 text-sm">
-          <p className="mb-2">
-            <strong className="text-gray-400">Task Manager</strong> v0.0.2
-          </p>
-          <p className="mb-1">
-            © 2025 COMPANY NAME. All rights reserved.
-          </p>
-        </div>
+          )}
+        </section>
       </div>
 
       {/* Delete Company Modal */}
@@ -197,16 +262,19 @@ const Settings = () => {
         <div className="modal modal-open">
           <div className="modal-box bg-gray-800 border border-gray-700">
             <h3 className="font-bold text-lg text-white mb-4">
-              Delete Company
+              {isPersonalAccount ? 'Delete Account' : 'Delete Company'}
             </h3>
             <p className="text-gray-300 mb-6">
-              Are you sure you want to delete your company? This action will permanently delete:
+              {isPersonalAccount 
+                ? 'Are you sure you want to delete your personal account? This action will permanently delete:'
+                : 'Are you sure you want to delete your company? This action will permanently delete:'
+              }
             </p>
             <ul className="text-gray-300 mb-6 list-disc list-inside space-y-1">
               <li>All tasks and projects</li>
-              <li>All employees and their data</li>
+              {!isPersonalAccount && <li>All employees and their data</li>}
               <li>All comments and activity</li>
-              <li>Company settings and configuration</li>
+              <li>{isPersonalAccount ? 'Account settings and configuration' : 'Company settings and configuration'}</li>
             </ul>
             <p className="text-red-400 font-semibold mb-6">
               This action cannot be undone!

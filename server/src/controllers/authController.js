@@ -85,7 +85,8 @@ const login = async (req, res) => {
         email: user.email,
         role: user.role,
         companyId: user.companyId,
-        companyName: userCompany.name
+        companyName: userCompany.name,
+        isPersonal: userCompany.isPersonal
       }
     });
   } catch (error) {
@@ -151,7 +152,8 @@ const getMe = async (req, res) => {
   try {
     const userWithCompany = {
       ...req.user,
-      companyName: req.user.company?.name
+      companyName: req.user.company?.name,
+      isPersonal: req.user.company?.isPersonal || false
     };
     res.json({ user: userWithCompany });
   } catch (error) {
@@ -275,10 +277,100 @@ const registerCompany = async (req, res) => {
   }
 };
 
+const registerPersonal = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    // Validate input
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+
+    // Check if email already exists
+    const existingUser = await prisma.user.findFirst({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create personal company and user
+    const result = await prisma.$transaction(async (tx) => {
+      // Create a personal company
+      const company = await tx.company.create({
+        data: {
+          name: `${name}'s Personal Tasks`,
+          email: email.toLowerCase(),
+          passwordHash: '', // Personal companies don't need a password
+          isPersonal: true
+        }
+      });
+
+      // Create the user as SYSDMIN
+      const user = await tx.user.create({
+        data: {
+          name: name.trim(),
+          email: email.toLowerCase(),
+          password: hashedPassword,
+          role: 'SYSDMIN',
+          companyId: company.id
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          companyId: true,
+          company: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              isPersonal: true
+            }
+          }
+        }
+      });
+
+      return { user, company };
+    });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: result.user.id, 
+        companyId: result.user.companyId,
+        role: result.user.role 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      message: 'Personal account created successfully',
+      data: {
+        token,
+        user: {
+          ...result.user,
+          isPersonal: result.user.company.isPersonal
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Personal registration error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   login,
   register,
   registerCompany,
+  registerPersonal,
   deleteCompany,
   getMe
 }; 

@@ -1,4 +1,4 @@
-# DQuant Task Manager
+# COMPANY NAME Task Manager
 
 A modern, Jira-like task management system built with React, Node.js, and PostgreSQL. Features role-based access control with admin and employee user types.
 
@@ -56,13 +56,13 @@ A modern, Jira-like task management system built with React, Node.js, and Postgr
 ### 1. Clone the repository
 ```bash
 git clone <repository-url>
-cd dquant-task-manager
+cd company-name-task-manager
 ```
 
 ### 2. Set up the database
 ```bash
 # Create a PostgreSQL database
-createdb dquant_task_manager
+createdb company_name_task_manager
 ```
 
 ### 3. Configure environment variables
@@ -70,7 +70,7 @@ createdb dquant_task_manager
 Create a `.env` file in the `server` directory:
 ```env
 # Database
-DATABASE_URL="postgresql://username:password@localhost:5432/dquant_task_manager"
+DATABASE_URL="postgresql://username:password@localhost:5432/company_name_task_manager"
 
 # JWT Secret
 JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
@@ -132,13 +132,13 @@ The application will be available at:
 After running the seed script, you can use these credentials:
 
 ### Admin User
-- **Email**: admin@dquant.com
+- **Email**: admin@companyname.com
 - **Password**: admin123
 
 ### Employee Users
-- **Email**: john@dquant.com
+- **Email**: john@companyname.com
 - **Password**: employee123
-- **Email**: jane@dquant.com
+- **Email**: jane@companyname.com
 - **Password**: employee123
 
 ## API Endpoints
@@ -166,7 +166,7 @@ After running the seed script, you can use these credentials:
 ## Project Structure
 
 ```
-dquant-task-manager/
+company-name-task-manager/
 ├── client/                          # React Frontend
 │   ├── src/
 │   │   ├── components/
@@ -234,4 +234,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Support
 
-For support, email support@dquant.com or create an issue in the repository. 
+For support, email support@companyname.com or create an issue in the repository. 

@@ -10,7 +10,7 @@ import TaskShareModal from './TaskShareModal';
 import SearchableDropdown from '../common/SearchableDropdown';
 import { usersAPI, tasksAPI } from '../../services/api';
 
-const TaskModal = ({ task, isOpen, onClose, onDelete, extensionUpdateData = null }) => {
+const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -34,12 +34,22 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, extensionUpdateData = null
   const { updateTask, isLoading, fetchTask } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
+  
+  // Check if this is a personal account
+  const isPersonalAccount = user?.isPersonal || false;
 
   // Check if current user is viewing a shared task (view-only access)
   const isSharedTask = viewedTask?.sharedWith?.some(share => share.userId === user?.id);
   
   // Check if current user is the lead assignee (can share)
   const canShare = viewedTask?.assigneeId === user?.id;
+  
+  // Check if user can archive/unarchive this task
+  const canArchive = !isSharedTask && (
+    isAdmin || 
+    user?.role === 'SYSDMIN' || 
+    viewedTask?.assignerId === user?.id
+  );
 
   const fetchUsers = async () => {
     try {
@@ -251,7 +261,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, extensionUpdateData = null
   if (!isOpen || !viewedTask) return null;
 
   return (
-    <div className="modal modal-open" style={{ zIndex: 50 }}>
+    <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 50 }}>
       <div className="modal-box max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border border-gray-700">
         {/* Header */}
         <div className="flex justify-between items-start mb-6">
@@ -277,26 +287,45 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, extensionUpdateData = null
                   {viewedTask.title}
                 </h3>
                 {isSharedTask && (
-                  <div className="badge badge-info badge-sm">
+                  <div className="status-badge bg-blue-600 text-blue-100 capitalize">
                     📤 Shared with you
                   </div>
                 )}
               </div>
             )}
             <div className="flex items-center space-x-4 text-sm text-gray-400">
-              <span>Created by {viewedTask.assigner?.name}</span>
-              <span>•</span>
+              {!isPersonalAccount && <span>Created by {viewedTask.assigner?.name}</span>}
+              {!isPersonalAccount && <span>•</span>}
               <span>{new Date(viewedTask.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            {canShare && (
+            {canShare && !isPersonalAccount && (
               <button
                 onClick={() => setIsShareModalOpen(true)}
                 className="btn btn-sm bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
                 title="Share this task"
               >
                 📤 Share
+              </button>
+            )}
+            {canArchive && (
+              <button
+                onClick={() => {
+                  if (viewedTask.archived) {
+                    onUnarchive?.(viewedTask.id);
+                  } else {
+                    onArchive?.(viewedTask.id);
+                  }
+                }}
+                className={`btn btn-sm ${
+                  viewedTask.archived 
+                    ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
+                    : 'bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-600'
+                }`}
+                title={viewedTask.archived ? 'Unarchive this task' : 'Archive this task'}
+              >
+                {viewedTask.archived ? '📂 Unarchive' : '📁 Archive'}
               </button>
             )}
             {(isAdmin() || viewedTask.assignerId === user?.id) && !isSharedTask && (
@@ -379,7 +408,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, extensionUpdateData = null
                 </select>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(viewedTask.status)}`}>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium capitalize ${getStatusColor(viewedTask.status)}`}>
                     {STATUS_LABELS[viewedTask.status]}
                   </span>
                 </div>
@@ -402,7 +431,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, extensionUpdateData = null
                 </select>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(viewedTask.priority)}`}>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium capitalize ${getPriorityColor(viewedTask.priority)}`}>
                     {PRIORITY_LABELS[viewedTask.priority]}
                   </span>
                 </div>
@@ -428,7 +457,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, extensionUpdateData = null
                         {new Date(viewedTask.dueDate).toLocaleDateString()} at {new Date(viewedTask.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       {new Date(viewedTask.dueDate) < new Date() && viewedTask.status !== 'COMPLETED' && (
-                        <span className="badge badge-error">Overdue</span>
+                        <span className="status-badge-sm priority-urgent capitalize">Overdue</span>
                       )}
                     </>
                   ) : (
@@ -438,46 +467,49 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, extensionUpdateData = null
               )}
             </div>
 
-            {/* Assigned To */}
-            <div>
-              <h4 className="text-lg font-semibold text-white mb-3">Assigned To</h4>
-              {isEditing ? (
-                <SearchableDropdown
-                  options={users}
-                  value={formData.assigneeId}
-                  onChange={(value) => {
-                    setFormData(prev => ({ ...prev, assigneeId: value }));
-                    // Track the selected employee as recent
-                    const selectedEmployee = users.find(user => user.id.toString() === value);
-                    if (selectedEmployee) {
-                      addToRecentEmployees(selectedEmployee);
-                    }
-                  }}
-                  placeholder="Select an employee"
-                  disabled={isLoadingUsers}
-                  recentEmployees={recentEmployees}
-                />
-              ) : (
-                <div className="flex items-center space-x-3">
-                  {viewedTask.assignee ? (
-                    <>
-                      <div className="avatar placeholder">
-                        <div className="bg-indigo-600 text-white rounded-full w-8">
-                          <span className="text-xs">{viewedTask.assignee.name.charAt(0)}</span>
+            {/* Assigned To - Only show for company accounts */}
+            {!isPersonalAccount && (
+              <div>
+                <h4 className="text-lg font-semibold text-white mb-3">Assigned To</h4>
+                {isEditing ? (
+                  <SearchableDropdown
+                    options={users}
+                    value={formData.assigneeId}
+                    onChange={(value) => {
+                      setFormData(prev => ({ ...prev, assigneeId: value }));
+                      // Track the selected employee as recent
+                      const selectedEmployee = users.find(user => user.id.toString() === value);
+                      if (selectedEmployee) {
+                        addToRecentEmployees(selectedEmployee);
+                      }
+                    }}
+                    placeholder="Select an employee"
+                    disabled={isLoadingUsers}
+                    recentEmployees={recentEmployees}
+                  />
+                ) : (
+                  <div className="flex items-center space-x-3">
+                    {viewedTask.assignee ? (
+                      <>
+                        <div className="avatar placeholder">
+                          <div className="bg-indigo-600 text-white rounded-full w-8">
+                            <span className="text-xs">{viewedTask.assignee.name.charAt(0)}</span>
+                          </div>
                         </div>
-                      </div>
-                      <span className="text-white">{viewedTask.assignee.name}</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-400">Unassigned</span>
-                  )}
-                </div>
-              )}
-            </div>
+                        <span className="text-white">{viewedTask.assignee.name}</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-400">Unassigned</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
-            {/* Co-Assignees */}
-            <div>
-              <h4 className="text-lg font-semibold text-white mb-3">Co-Assignees</h4>
+            {/* Co-Assignees - Only show for company accounts */}
+            {!isPersonalAccount && (
+              <div>
+                <h4 className="text-lg font-semibold text-white mb-3">Co-Assignees</h4>
               
               {/* Check if current user is the lead assignee */}
               {viewedTask?.assigneeId === user?.id ? (
@@ -571,7 +603,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, extensionUpdateData = null
                   )}
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
             {/* Parent Task */}
             {viewedTask.parentTask && (
@@ -601,7 +634,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, extensionUpdateData = null
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-white">{subtask.title}</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(subtask.status)}`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(subtask.status)}`}>
                           {STATUS_LABELS[subtask.status]}
                         </span>
                       </div>

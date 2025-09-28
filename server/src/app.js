@@ -11,6 +11,8 @@ const aiRoutes = require('./routes/ai')
 const notificationRoutes = require('./routes/notifications')
 const auditRoutes = require('./routes/audit')
 const taskShareRoutes = require('./routes/taskShares')
+const taskArchiveRoutes = require('./routes/taskArchive')
+const downloadsRoutes = require('./routes/downloads')
 
 const app = express()
 
@@ -31,6 +33,8 @@ app.use('/api/ai', aiRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/audit', auditRoutes)
 app.use('/api/task-shares', taskShareRoutes)
+app.use('/api/task-archive', taskArchiveRoutes)
+app.use('/api/downloads', downloadsRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

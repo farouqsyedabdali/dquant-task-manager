@@ -8,14 +8,14 @@
 ## Step 1: Database Setup
 1. Create a PostgreSQL database:
 ```bash
-createdb dquant_task_manager
+createdb company_name_task_manager
 ```
 
 ## Step 2: Environment Configuration
 1. Create a `.env` file in the `server` directory with the following content:
 ```env
 # Database
-DATABASE_URL="postgresql://username:password@localhost:5432/dquant_task_manager"
+DATABASE_URL="postgresql://username:password@localhost:5432/company_name_task_manager"
 
 # JWT Secret
 JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
@@ -79,13 +79,13 @@ npm run dev
 After seeding the database, you can use these credentials:
 
 ### Admin User
-- **Email**: admin@dquant.com
+- **Email**: admin@companyname.com
 - **Password**: admin123
 
 ### Employee Users
-- **Email**: john@dquant.com
+- **Email**: john@companyname.com
 - **Password**: employee123
-- **Email**: jane@dquant.com
+- **Email**: jane@companyname.com
 - **Password**: employee123
 
 ## Troubleshooting
@@ -93,7 +93,7 @@ After seeding the database, you can use these credentials:
 ### Database Connection Issues
 - Ensure PostgreSQL is running
 - Check your database credentials in the `.env` file
-- Verify the database `dquant_task_manager` exists
+- Verify the database `company_name_task_manager` exists
 
 ### Port Conflicts
 - If port 3000 is in use, change the PORT in the `.env` file

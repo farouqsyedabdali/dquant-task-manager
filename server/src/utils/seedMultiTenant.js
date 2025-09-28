@@ -49,7 +49,7 @@ async function main() {
     const sampleTasks = await Promise.all([
       prisma.task.create({
         data: {
-          title: 'Welcome to DQuant Task Manager',
+          title: 'Welcome to COMPANY NAME Task Manager',
           description: 'This is your first task. You can edit, delete, or mark it as complete.',
           status: 'TODO',
           priority: 'MEDIUM',

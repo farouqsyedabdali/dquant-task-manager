@@ -41,6 +41,7 @@ export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
   registerCompany: (companyData) => api.post('/auth/register-company', companyData),
+  registerPersonal: (personalData) => api.post('/auth/register-personal', personalData),
   deleteCompany: () => api.delete('/auth/company'),
   getMe: () => api.get('/auth/me'),
 };
@@ -100,6 +101,13 @@ export const notificationAPI = {
   markAsRead: (notificationId) => api.patch(`/notifications/${notificationId}/read`),
   markAllAsRead: () => api.patch('/notifications/mark-all-read'),
   getUnreadCount: () => api.get('/notifications/unread-count'),
+};
+
+// Task Archive API
+export const taskArchiveAPI = {
+  archiveTask: (taskId) => api.post(`/task-archive/${taskId}/archive`),
+  unarchiveTask: (taskId) => api.post(`/task-archive/${taskId}/unarchive`),
+  getArchivedTasks: () => api.get('/task-archive/archived'),
 };
 
 // Audit API

@@ -1,5 +1,5 @@
 const express = require('express');
-const { login, register, registerCompany, deleteCompany, getMe } = require('../controllers/authController');
+const { login, register, registerCompany, registerPersonal, deleteCompany, getMe } = require('../controllers/authController');
 const auth = require('../middleware/auth');
 const { adminOnly, sysAdminOnly } = require('../middleware/roleCheck');
 
@@ -8,6 +8,7 @@ const router = express.Router();
 // Public routes
 router.post('/login', login);
 router.post('/register-company', registerCompany); // Company registration
+router.post('/register-personal', registerPersonal); // Personal registration
 router.post('/register', auth, adminOnly, register); // Only admins can register new users
 
 // Protected routes

@@ -1,15 +1,20 @@
-import { STATUS_OPTIONS, PRIORITY_OPTIONS } from '../../utils/constants';
+import { STATUS_OPTIONS, PRIORITY_OPTIONS, SORT_OPTIONS } from '../../utils/constants';
+import useAuthStore from '../../context/authStore';
 
 const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
+  const { user } = useAuthStore();
+  
+  // Check if this is a personal account
+  const isPersonalAccount = user?.isPersonal || false;
   const handleFilterChange = (key, value) => {
     onFilterChange({ [key]: value });
   };
 
-  const hasActiveFilters = filters.status || filters.priority || filters.search || filters.dueDateFilter || filters.taskType;
+  const hasActiveFilters = filters.status || filters.priority || filters.search || filters.dueDateFilter || filters.taskType || filters.sortBy;
 
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6">
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+      <div className={`grid grid-cols-1 gap-4 ${isPersonalAccount ? 'md:grid-cols-6' : 'md:grid-cols-7'}`}>
         {/* Search */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -20,7 +25,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
             placeholder="Search tasks..."
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500"
+            className="input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
           />
         </div>
 
@@ -32,9 +37,10 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           <select
             value={filters.status}
             onChange={(e) => handleFilterChange('status', e.target.value)}
-            className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+            className="select bg-gray-700 border-gray-600 text-white w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
           >
             <option value="">All Statuses</option>
+            <option value="TODO,IN_PROGRESS">Active Tasks (To Do + In Progress)</option>
             {STATUS_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>
                 {label}
@@ -51,7 +57,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           <select
             value={filters.priority}
             onChange={(e) => handleFilterChange('priority', e.target.value)}
-            className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+            className="select bg-gray-700 border-gray-600 text-white w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
           >
             <option value="">All Priorities</option>
             {PRIORITY_OPTIONS.map(({ value, label }) => (
@@ -70,7 +76,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           <select
             value={filters.dueDateFilter}
             onChange={(e) => handleFilterChange('dueDateFilter', e.target.value)}
-            className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+            className="select bg-gray-700 border-gray-600 text-white w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
           >
             <option value="">All Due Dates</option>
             <option value="overdue">Overdue</option>
@@ -81,20 +87,40 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           </select>
         </div>
 
-        {/* Shared Tasks Filter */}
+        {/* Task Type Filter - Only show for company accounts */}
+        {!isPersonalAccount && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Task Type
+            </label>
+            <select
+              value={filters.taskType || ''}
+              onChange={(e) => handleFilterChange('taskType', e.target.value)}
+              className="select bg-gray-700 border-gray-600 text-white w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="">All Tasks</option>
+              <option value="shared">Shared with me</option>
+              <option value="assigned">Assigned to me</option>
+              <option value="created">Created by me</option>
+            </select>
+          </div>
+        )}
+
+        {/* Sort By Filter */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            Task Type
+            Sort By
           </label>
           <select
-            value={filters.taskType || ''}
-            onChange={(e) => handleFilterChange('taskType', e.target.value)}
-            className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+            value={filters.sortBy || 'urgency'}
+            onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+            className="select bg-gray-700 border-gray-600 text-white w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
           >
-            <option value="">All Tasks</option>
-            <option value="shared">Shared with me</option>
-            <option value="assigned">Assigned to me</option>
-            <option value="created">Created by me</option>
+            {SORT_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -103,7 +129,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           <button
             onClick={onClearFilters}
             disabled={!hasActiveFilters}
-            className="btn bg-gray-700 hover:bg-gray-600 text-white border-gray-600 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn bg-gray-700 hover:bg-gray-600 text-white border-gray-600 w-full h-10 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Clear Filters
           </button>
@@ -114,40 +140,42 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
       {hasActiveFilters && (
         <div className="mt-4 flex flex-wrap gap-2">
           {filters.search && (
-            <div className="badge bg-indigo-600 text-white gap-2 border-0">
+            <div className="status-badge bg-indigo-600 text-white gap-2 border-0 flex items-center">
               Search: {filters.search}
               <button
                 onClick={() => handleFilterChange('search', '')}
-                className="btn btn-ghost btn-xs text-white hover:bg-indigo-700"
+                className="btn btn-ghost btn-xs text-white hover:bg-indigo-700 ml-1"
               >
                 ✕
               </button>
             </div>
           )}
           {filters.status && (
-            <div className="badge bg-blue-600 text-white gap-2 border-0">
-              Status: {STATUS_OPTIONS.find(opt => opt.value === filters.status)?.label}
+            <div className="status-badge bg-blue-600 text-white gap-2 border-0 flex items-center">
+              Status: {filters.status.includes(',') 
+                ? filters.status.split(',').map(s => STATUS_OPTIONS.find(opt => opt.value === s.trim())?.label).join(', ')
+                : STATUS_OPTIONS.find(opt => opt.value === filters.status)?.label}
               <button
                 onClick={() => handleFilterChange('status', '')}
-                className="btn btn-ghost btn-xs text-white hover:bg-blue-700"
+                className="btn btn-ghost btn-xs text-white hover:bg-blue-700 ml-1"
               >
                 ✕
               </button>
             </div>
           )}
           {filters.priority && (
-            <div className="badge bg-orange-600 text-white gap-2 border-0">
+            <div className="status-badge bg-orange-600 text-white gap-2 border-0 flex items-center">
               Priority: {PRIORITY_OPTIONS.find(opt => opt.value === filters.priority)?.label}
               <button
                 onClick={() => handleFilterChange('priority', '')}
-                className="btn btn-ghost btn-xs text-white hover:bg-orange-700"
+                className="btn btn-ghost btn-xs text-white hover:bg-orange-700 ml-1"
               >
                 ✕
               </button>
             </div>
           )}
           {filters.dueDateFilter && (
-            <div className="badge bg-purple-600 text-white gap-2 border-0">
+            <div className="status-badge bg-purple-600 text-white gap-2 border-0 flex items-center">
               Due Date: {filters.dueDateFilter === 'overdue' ? 'Overdue' : 
                          filters.dueDateFilter === 'due-today' ? 'Due Today' :
                          filters.dueDateFilter === 'due-this-week' ? 'Due This Week' :
@@ -155,20 +183,31 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
                          filters.dueDateFilter === 'no-due-date' ? 'No Due Date' : filters.dueDateFilter}
               <button
                 onClick={() => handleFilterChange('dueDateFilter', '')}
-                className="btn btn-ghost btn-xs text-white hover:bg-purple-700"
+                className="btn btn-ghost btn-xs text-white hover:bg-purple-700 ml-1"
               >
                 ✕
               </button>
             </div>
           )}
           {filters.taskType && (
-            <div className="badge bg-green-600 text-white gap-2 border-0">
+            <div className="status-badge bg-green-600 text-white gap-2 border-0 flex items-center">
               Type: {filters.taskType === 'shared' ? 'Shared with me' :
                      filters.taskType === 'assigned' ? 'Assigned to me' :
                      filters.taskType === 'created' ? 'Created by me' : filters.taskType}
               <button
                 onClick={() => handleFilterChange('taskType', '')}
-                className="btn btn-ghost btn-xs text-white hover:bg-green-700"
+                className="btn btn-ghost btn-xs text-white hover:bg-green-700 ml-1"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          {filters.sortBy && filters.sortBy !== 'urgency' && (
+            <div className="status-badge bg-yellow-600 text-white gap-2 border-0 flex items-center">
+              Sort: {SORT_OPTIONS.find(opt => opt.value === filters.sortBy)?.label}
+              <button
+                onClick={() => handleFilterChange('sortBy', 'urgency')}
+                className="btn btn-ghost btn-xs text-white hover:bg-yellow-700 ml-1"
               >
                 ✕
               </button>

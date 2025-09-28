@@ -13,7 +13,8 @@ const getTasks = async (req, res) => {
     const companyId = req.user.companyId;
 
     let whereClause = {
-      companyId: companyId // Always filter by company
+      companyId: companyId, // Always filter by company
+      archived: false // Exclude archived tasks from main dashboard
     };
 
     // Filter by task type
@@ -189,9 +190,32 @@ const getTasks = async (req, res) => {
           }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
+      orderBy: [
+        { priority: 'desc' },
+        { dueDate: 'asc' },
+        { createdAt: 'desc' }
+      ]
+    });
+
+    // Sort by urgency (priority and due date)
+    const priorityOrder = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+    tasks.sort((a, b) => {
+      const aPriority = priorityOrder[a.priority] || 0;
+      const bPriority = priorityOrder[b.priority] || 0;
+      
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority; // Higher priority first
       }
+      
+      // If same priority, sort by due date (earliest first, nulls last)
+      if (a.dueDate && b.dueDate) {
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      }
+      if (a.dueDate && !b.dueDate) return -1;
+      if (!a.dueDate && b.dueDate) return 1;
+      
+      // If no due date or same due date, sort by creation date (newest first)
+      return new Date(b.createdAt) - new Date(a.createdAt);
     });
 
     // Remove parentTask info if user is not assigner/assignee of parent

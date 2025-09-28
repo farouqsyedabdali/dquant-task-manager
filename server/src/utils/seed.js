@@ -10,11 +10,11 @@ async function seed() {
     // Create admin user
     const adminPassword = await bcrypt.hash('admin123', 10);
     const admin = await prisma.user.upsert({
-      where: { email: 'admin@dquant.com' },
+      where: { email: 'admin@companyname.com' },
       update: {},
       create: {
         name: 'Admin User',
-        email: 'admin@dquant.com',
+        email: 'admin@companyname.com',
         password: adminPassword,
         role: 'ADMIN'
       }
@@ -23,11 +23,11 @@ async function seed() {
     // Create employee users
     const employee1Password = await bcrypt.hash('employee123', 10);
     const employee1 = await prisma.user.upsert({
-      where: { email: 'john@dquant.com' },
+      where: { email: 'john@companyname.com' },
       update: {},
       create: {
         name: 'John Doe',
-        email: 'john@dquant.com',
+        email: 'john@companyname.com',
         password: employee1Password,
         role: 'EMPLOYEE'
       }
@@ -35,11 +35,11 @@ async function seed() {
 
     const employee2Password = await bcrypt.hash('employee123', 10);
     const employee2 = await prisma.user.upsert({
-      where: { email: 'jane@dquant.com' },
+      where: { email: 'jane@companyname.com' },
       update: {},
       create: {
         name: 'Jane Smith',
-        email: 'jane@dquant.com',
+        email: 'jane@companyname.com',
         password: employee2Password,
         role: 'EMPLOYEE'
       }
@@ -106,9 +106,9 @@ async function seed() {
 
     console.log('✅ Database seeded successfully!');
     console.log('\n📋 Sample Users:');
-    console.log('Admin: admin@dquant.com / admin123');
-    console.log('Employee 1: john@dquant.com / employee123');
-    console.log('Employee 2: jane@dquant.com / employee123');
+    console.log('Admin: admin@companyname.com / admin123');
+    console.log('Employee 1: john@companyname.com / employee123');
+    console.log('Employee 2: jane@companyname.com / employee123');
 
   } catch (error) {
     console.error('❌ Error seeding database:', error);

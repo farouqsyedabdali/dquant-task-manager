@@ -3,13 +3,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import useTaskStore from '../stores/taskStore';
 import useAuthStore from '../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../utils/constants';
-import { commentsAPI } from '../services/api';
+import { commentsAPI, taskArchiveAPI } from '../services/api';
 import TaskCard from '../components/tasks/TaskCard';
 import TaskList from '../components/tasks/TaskList';
 import AddTaskModal from '../components/tasks/AddTaskModal';
 import TaskModal from '../components/tasks/TaskModal';
 import TaskFilters from '../components/tasks/TaskFilters';
 import ViewSwitcher from '../components/tasks/ViewSwitcher';
+import ArchiveSwitcher from '../components/tasks/ArchiveSwitcher';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import NotificationBoard from '../components/notifications/NotificationBoard';
 
@@ -24,6 +25,9 @@ const Dashboard = () => {
     return localStorage.getItem('taskViewMode') || 'cards';
   });
   const [taskType, setTaskType] = useState('all');
+  const [archiveView, setArchiveView] = useState('active'); // 'active' or 'archived'
+  const [archivedTasks, setArchivedTasks] = useState([]);
+  const [isLoadingArchived, setIsLoadingArchived] = useState(false);
   const [deleteTaskId, setDeleteTaskId] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
@@ -33,13 +37,38 @@ const Dashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Set default filters to show TODO and IN_PROGRESS tasks only on first load
   useEffect(() => {
-    if (taskType === 'all') {
-      fetchTasks();
-    } else {
-      fetchTasksByType(taskType);
+    // Only set default filter if no status filter is currently applied and this is the initial load
+    if (!filters.status) {
+      setFilters({ status: 'TODO,IN_PROGRESS' });
     }
-  }, [fetchTasks, fetchTasksByType, taskType]);
+  }, []); // Empty dependency array - only run once on mount
+
+  // Fetch archived tasks
+  const fetchArchivedTasks = async () => {
+    setIsLoadingArchived(true);
+    try {
+      const response = await taskArchiveAPI.getArchivedTasks();
+      setArchivedTasks(response.data);
+    } catch (error) {
+      console.error('Error fetching archived tasks:', error);
+    } finally {
+      setIsLoadingArchived(false);
+    }
+  };
+
+  useEffect(() => {
+    if (archiveView === 'archived') {
+      fetchArchivedTasks();
+    } else {
+      if (taskType === 'all') {
+        fetchTasks();
+      } else {
+        fetchTasksByType(taskType);
+      }
+    }
+  }, [fetchTasks, fetchTasksByType, taskType, archiveView]);
 
   // Handle URL parameters for task data and updates from browser extension
   useEffect(() => {
@@ -591,7 +620,7 @@ const Dashboard = () => {
     } else {
       // Toggle status in the filter
       const currentStatus = filters.status || '';
-      const statusArray = currentStatus ? currentStatus.split(',') : [];
+      const statusArray = currentStatus ? currentStatus.split(',').map(s => s.trim()) : [];
       
       if (statusArray.includes(status)) {
         // Remove status from filter
@@ -644,7 +673,60 @@ const Dashboard = () => {
     setExtensionUpdateData(null); // Clear extension update data when modal closes
   };
 
-  const filteredTasks = getFilteredTasks();
+  // Handle archive/unarchive actions
+  const handleArchiveTask = async (taskId) => {
+    try {
+      await taskArchiveAPI.archiveTask(taskId);
+      // Refresh the appropriate task list
+      if (archiveView === 'archived') {
+        fetchArchivedTasks();
+      } else {
+        if (taskType === 'all') {
+          fetchTasks();
+        } else {
+          fetchTasksByType(taskType);
+        }
+      }
+    } catch (error) {
+      console.error('Error archiving task:', error);
+    }
+  };
+
+  const handleUnarchiveTask = async (taskId) => {
+    try {
+      await taskArchiveAPI.unarchiveTask(taskId);
+      // Refresh archived tasks
+      fetchArchivedTasks();
+    } catch (error) {
+      console.error('Error unarchiving task:', error);
+    }
+  };
+
+  // Get the appropriate task list based on archive view
+  const currentTasks = archiveView === 'archived' ? archivedTasks : tasks;
+  
+  // Filter and sort tasks
+  const getFilteredAndSortedTasks = () => {
+    let filtered = archiveView === 'archived' ? 
+      currentTasks.filter(task => {
+        // Apply basic filters to archived tasks
+        if (filters.status && task.status !== filters.status) return false;
+        if (filters.priority && task.priority !== filters.priority) return false;
+        if (filters.search) {
+          const searchLower = filters.search.toLowerCase();
+          return task.title.toLowerCase().includes(searchLower) ||
+                 task.description?.toLowerCase().includes(searchLower) ||
+                 task.assignee?.name.toLowerCase().includes(searchLower);
+        }
+        return true;
+      }) : 
+      getFilteredTasks();
+    
+    // Sorting is now handled in the taskStore
+    return filtered;
+  };
+  
+  const filteredTasks = getFilteredAndSortedTasks();
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -657,7 +739,12 @@ const Dashboard = () => {
                 Welcome back, {user?.name}!
               </h1>
               <p className="text-gray-400 mt-2">
-                {isAdmin() ? 'Manage all tasks and team assignments' : 'View and update your assigned tasks'}
+                {user?.isPersonal 
+                  ? 'Manage your personal tasks and stay organized'
+                  : isAdmin() 
+                    ? 'Manage all tasks and team assignments' 
+                    : 'View and update your assigned tasks'
+                }
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -698,17 +785,6 @@ const Dashboard = () => {
 
         {/* Statistics Cards */}
         <div className="mb-4">
-          {filters.status && (
-            <div className="text-sm text-gray-400 mb-2">
-              Showing tasks with status: {filters.status.split(',').map(s => s.trim()).join(', ')}
-              <button
-                onClick={() => setFilters({ ...filters, status: '' })}
-                className="ml-2 text-indigo-400 hover:text-indigo-300 underline"
-              >
-                Clear filters
-              </button>
-            </div>
-          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
           <StatCard
@@ -716,7 +792,7 @@ const Dashboard = () => {
             value={stats.total}
             icon="📋"
             status="total"
-            isActive={!filters.status}
+            isActive={!filters.status || filters.status === ''}
             onClick={() => handleStatCardClick('total')}
           />
           <StatCard
@@ -776,10 +852,15 @@ const Dashboard = () => {
         <div className="bg-gray-800 rounded-lg shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-white">
-              {taskType === 'all' ? 'All Tasks' : 
+              {archiveView === 'archived' ? 'Archived Tasks' :
+               taskType === 'all' ? 'All Tasks' : 
                taskType === 'assigned-to-me' ? 'Tasks Assigned to Me' : 
                'Tasks Created by Me'} ({filteredTasks.length})
             </h2>
+            <ArchiveSwitcher 
+              currentView={archiveView} 
+              onViewChange={setArchiveView} 
+            />
           </div>
           
           {filteredTasks.length === 0 ? (
@@ -796,6 +877,8 @@ const Dashboard = () => {
                   onStatusChange={handleStatusChange}
                   onPriorityChange={handlePriorityChange}
                   onDelete={handleDelete}
+                  onArchive={handleArchiveTask}
+                  onUnarchive={handleUnarchiveTask}
                 />
               ))}
             </div>
@@ -805,6 +888,8 @@ const Dashboard = () => {
               onStatusChange={handleStatusChange}
               onPriorityChange={handlePriorityChange}
               onDelete={handleDelete}
+              onArchive={handleArchiveTask}
+              onUnarchive={handleUnarchiveTask}
             />
           )}
         </div>
@@ -828,6 +913,8 @@ const Dashboard = () => {
           onStatusChange={handleStatusChange}
           onPriorityChange={handlePriorityChange}
           onDelete={confirmDelete}
+          onArchive={handleArchiveTask}
+          onUnarchive={handleUnarchiveTask}
           extensionUpdateData={extensionUpdateData}
         />
       )}

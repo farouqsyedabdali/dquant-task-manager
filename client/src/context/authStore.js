@@ -38,6 +38,24 @@ const useAuthStore = create((set, get) => ({
     }
   },
 
+  registerPersonal: async (personalData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authAPI.registerPersonal(personalData);
+      const { token, user } = response.data;
+      
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      set({ user, token, isLoading: false });
+      return { success: true, data: response.data };
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Personal registration failed';
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage };
+    }
+  },
+
   deleteCompany: async () => {
     set({ isLoading: true, error: null });
     try {

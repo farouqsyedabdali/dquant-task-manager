@@ -4,10 +4,14 @@ import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
 import TaskModal from './TaskModal';
 import AddSubtaskModal from './AddSubtaskModal';
 
-const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
+const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive, onUnarchive }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
+  const [showAllCoAssignees, setShowAllCoAssignees] = useState(false);
   const { user, isAdmin } = useAuthStore();
+
+  // Check if this is a personal account
+  const isPersonalAccount = user?.isPersonal || false;
 
   // Check if current user is viewing a shared task
   const isSharedTask = task?.sharedWith?.some(share => share.userId === user?.id);
@@ -80,16 +84,16 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
               {task.title}
             </h3>
             {isSharedTask && (
-              <div className="badge badge-info badge-sm">
+              <div className="status-badge bg-blue-600 text-blue-100 uppercase">
                 📤
               </div>
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <span className={`status-badge ${getStatusColor(task.status)}`}>
+            <span className={`status-badge uppercase ${getStatusColor(task.status)}`}>
               {STATUS_LABELS[task.status]}
             </span>
-            <span className={`status-badge ${getPriorityColor(task.priority)}`}>
+            <span className={`status-badge uppercase ${getPriorityColor(task.priority)}`}>
               {PRIORITY_LABELS[task.priority]}
             </span>
           </div>
@@ -97,43 +101,53 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
 
         {/* Task Details */}
         <div className="space-y-3">
-          {/* Assigned To */}
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <span className="text-gray-400 text-sm">Lead:</span>
-              {task.assignee ? (
-                <div className="flex items-center space-x-2">
-                  <div className="avatar placeholder">
-                    <div className="bg-indigo-600 text-white rounded-full w-6">
-                      <span className="text-xs">{task.assignee.name.charAt(0)}</span>
+          {/* Assigned To - Only show for company accounts */}
+          {!isPersonalAccount && (
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <span className="text-gray-400 text-sm">Lead:</span>
+                {task.assignee ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="avatar placeholder">
+                      <div className="bg-indigo-600 text-white rounded-full w-6">
+                        <span className="text-xs">{task.assignee.name.charAt(0)}</span>
+                      </div>
                     </div>
+                    <span className="text-white text-sm">{task.assignee.name}</span>
                   </div>
-                  <span className="text-white text-sm">{task.assignee.name}</span>
+                ) : (
+                  <span className="text-gray-500 text-sm">Unassigned</span>
+                )}
+              </div>
+              
+              {/* Co-Assignees */}
+              {task.coAssignees && task.coAssignees.length > 0 && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-gray-400 text-sm">Co-assignees:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {(showAllCoAssignees ? task.coAssignees : task.coAssignees.slice(0, 5)).map((coAssignee) => (
+                      <div key={coAssignee.id} className="flex items-center space-x-1">
+                        <div className="avatar placeholder">
+                          <div className="bg-green-600 text-white rounded-full w-5">
+                            <span className="text-xs">{coAssignee.user.name.charAt(0)}</span>
+                          </div>
+                        </div>
+                        <span className="text-white text-xs">{coAssignee.user.name}</span>
+                      </div>
+                    ))}
+                    {task.coAssignees.length > 5 && (
+                      <button
+                        onClick={() => setShowAllCoAssignees(!showAllCoAssignees)}
+                        className="text-gray-400 hover:text-white text-xs underline"
+                      >
+                        {showAllCoAssignees ? 'Show Less' : `+${task.coAssignees.length - 5} more`}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <span className="text-gray-500 text-sm">Unassigned</span>
               )}
             </div>
-            
-            {/* Co-Assignees */}
-            {task.coAssignees && task.coAssignees.length > 0 && (
-              <div className="flex items-center space-x-2">
-                <span className="text-gray-400 text-sm">Co-assignees:</span>
-                <div className="flex flex-wrap gap-1">
-                  {task.coAssignees.map((coAssignee) => (
-                    <div key={coAssignee.id} className="flex items-center space-x-1">
-                      <div className="avatar placeholder">
-                        <div className="bg-green-600 text-white rounded-full w-5">
-                          <span className="text-xs">{coAssignee.user.name.charAt(0)}</span>
-                        </div>
-                      </div>
-                      <span className="text-white text-xs">{coAssignee.user.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Parent Task Info */}
           {task.parentTask && (
@@ -164,7 +178,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
                   {new Date(task.dueDate).toLocaleDateString()}
                 </span>
                 {new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED' && (
-                  <span className="badge badge-error badge-sm">Overdue</span>
+                  <span className="status-badge-sm priority-urgent">Overdue</span>
                 )}
               </div>
             ) : (
@@ -206,9 +220,11 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
         {/* Quick Actions */}
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-700">
           <div className="flex items-center space-x-2">
-            <span className="text-gray-400 text-xs">
-              Created by {task.assigner.name}
-            </span>
+            {!isPersonalAccount && (
+              <span className="text-gray-400 text-xs">
+                Created by {task.assigner.name}
+              </span>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             {task.comments && task.comments.length > 0 && (
@@ -230,6 +246,8 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete }) => {
           onStatusChange={onStatusChange}
           onPriorityChange={onPriorityChange}
           onDelete={onDelete}
+          onArchive={onArchive}
+          onUnarchive={onUnarchive}
         />
       )}
 
