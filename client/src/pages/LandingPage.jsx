@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dquant-task-manager-production.up.railway.app/api';
+// Use localhost for development, Railway for production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.DEV ? 'http://localhost:3000/api' : 'https://dquant-task-manager-production.up.railway.app/api');
 import { motion } from 'framer-motion';
 
 const LandingPage = () => {
