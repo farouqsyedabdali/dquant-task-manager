@@ -8,7 +8,7 @@ import AddSubtaskModal from './AddSubtaskModal';
 import DeleteConfirmModal from '../common/DeleteConfirmModal';
 import TaskShareModal from './TaskShareModal';
 import SearchableDropdown from '../common/SearchableDropdown';
-import { usersAPI, tasksAPI } from '../../services/api';
+import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
 
 const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
@@ -31,6 +31,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [isLoadingCoAssignees, setIsLoadingCoAssignees] = useState(false);
   const [isAddingCoAssignee, setIsAddingCoAssignee] = useState(false);
   const [selectedCoAssigneeId, setSelectedCoAssigneeId] = useState('');
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [summaryData, setSummaryData] = useState(null);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const { updateTask, isLoading, fetchTask } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
@@ -230,6 +233,211 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     onClose();
   };
 
+  // Handle task summarization
+  const handleSummarizeTask = async () => {
+    if (!viewedTask) return;
+    
+    setIsLoadingSummary(true);
+    try {
+      const summary = await createTaskSummary(viewedTask);
+      setSummaryData(summary);
+      setIsSummaryModalOpen(true);
+    } catch (error) {
+      console.error('Failed to create task summary:', error);
+      alert('Failed to create task summary');
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  };
+
+  // Create a comprehensive task summary
+  const createTaskSummary = async (task) => {
+    const formatDate = (dateString) => {
+      if (!dateString) return 'No due date set';
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = date.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) {
+        return `Overdue by ${Math.abs(diffDays)} day(s)`;
+      } else if (diffDays === 0) {
+        return 'Due today';
+      } else if (diffDays === 1) {
+        return 'Due tomorrow';
+      } else {
+        return `Due in ${diffDays} day(s)`;
+      }
+    };
+
+    const getStatusEmoji = (status) => {
+      switch (status) {
+        case 'TODO': return '⏳';
+        case 'IN_PROGRESS': return '🔄';
+        case 'COMPLETED': return '✅';
+        case 'ON_HOLD': return '⏸️';
+        case 'CANCELLED': return '❌';
+        default: return '❓';
+      }
+    };
+
+    const getPriorityEmoji = (priority) => {
+      switch (priority) {
+        case 'URGENT': return '🚨';
+        case 'HIGH': return '🔴';
+        case 'MEDIUM': return '🟡';
+        case 'LOW': return '🟢';
+        default: return '⚪';
+      }
+    };
+
+    // Fetch comments for the task
+    let comments = [];
+    try {
+      const response = await commentsAPI.getByTaskId(task.id);
+      comments = response.data || [];
+    } catch (error) {
+      console.error('Failed to fetch comments for summary:', error);
+    }
+
+    // Create AI-style intelligent summary
+    const generateIntelligentSummary = () => {
+      let summary = '';
+      
+      // Analyze task status and urgency
+      const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED';
+      const isUrgent = task.priority === 'URGENT' || task.priority === 'HIGH';
+      const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+      const hasParent = task.parentTask;
+      const hasComments = comments.length > 0;
+      
+      // Start with task overview
+      if (task.status === 'COMPLETED') {
+        summary += `✅ This task "${task.title}" has been completed`;
+      } else if (task.status === 'IN_PROGRESS') {
+        summary += `🔄 "${task.title}" is currently in progress`;
+      } else if (task.status === 'TODO') {
+        summary += `⏳ "${task.title}" is pending and ready to start`;
+      } else {
+        summary += `📋 "${task.title}" is currently ${task.status.toLowerCase().replace('_', ' ')}`;
+      }
+      
+      // Add urgency context
+      if (isOverdue) {
+        summary += ' and is OVERDUE';
+      } else if (isUrgent && task.status !== 'COMPLETED') {
+        summary += ` with ${task.priority.toLowerCase()} priority`;
+      }
+      
+      summary += '.';
+      
+      // Add assignment context
+      if (task.assignee && task.assigner) {
+        if (task.assignee.id === task.assigner.id) {
+          summary += ` ${task.assignee.name} created this task for themselves`;
+        } else {
+          summary += ` Assigned by ${task.assigner.name} to ${task.assignee.name}`;
+        }
+      } else if (task.assignee) {
+        summary += ` Currently assigned to ${task.assignee.name}`;
+      } else if (task.assigner) {
+        summary += ` Created by ${task.assigner.name} but unassigned`;
+      }
+      
+      // Add due date context
+      if (task.dueDate) {
+        const dueDate = new Date(task.dueDate);
+        const now = new Date();
+        const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 0) {
+          summary += ` and was due ${Math.abs(diffDays)} day(s) ago`;
+        } else if (diffDays === 0) {
+          summary += ' and is due today';
+        } else if (diffDays === 1) {
+          summary += ' and is due tomorrow';
+        } else if (diffDays <= 7) {
+          summary += ` and is due in ${diffDays} day(s)`;
+        } else {
+          summary += ` with a due date of ${dueDate.toLocaleDateString()}`;
+        }
+      }
+      
+      summary += '.';
+      
+      // Add description context if available
+      if (task.description && task.description.trim()) {
+        const descLength = task.description.length;
+        if (descLength > 100) {
+          summary += ` The task includes detailed requirements and specifications.`;
+        } else {
+          summary += ` Additional context: "${task.description.substring(0, 80)}${descLength > 80 ? '...' : ''}"`;
+        }
+      }
+      
+      // Add hierarchy context
+      if (hasParent && hasSubtasks) {
+        summary += ` This is a mid-level task with ${task.subtasks.length} subtask(s) and is part of "${task.parentTask.title}".`;
+      } else if (hasParent) {
+        summary += ` This task is a subtask of "${task.parentTask.title}".`;
+      } else if (hasSubtasks) {
+        summary += ` This is a parent task managing ${task.subtasks.length} subtask(s).`;
+      }
+      
+      // Add collaboration context
+      if (hasComments) {
+        const recentComments = comments.slice(0, 3);
+        const uniqueCommenters = [...new Set(recentComments.map(c => c.author?.name).filter(Boolean))];
+        
+        if (uniqueCommenters.length > 1) {
+          summary += ` Active collaboration with ${comments.length} comment(s) from ${uniqueCommenters.length} team member(s).`;
+        } else if (comments.length > 1) {
+          summary += ` Includes ${comments.length} comment(s) with ongoing discussion.`;
+        } else {
+          summary += ` Has ${comments.length} comment for additional context.`;
+        }
+      }
+      
+      // Add actionable insight
+      if (task.status !== 'COMPLETED') {
+        if (isOverdue && isUrgent) {
+          summary += ' ⚠️ IMMEDIATE ATTENTION REQUIRED - This high-priority task is overdue.';
+        } else if (isOverdue) {
+          summary += ' ⏰ This task requires attention as it has passed its due date.';
+        } else if (isUrgent && task.status === 'TODO') {
+          summary += ' 🚨 High priority task ready to begin.';
+        } else if (task.status === 'IN_PROGRESS') {
+          summary += ' 👍 Task is actively being worked on.';
+        }
+      } else {
+        summary += ' ✨ Task successfully completed.';
+      }
+      
+      return summary;
+    };
+
+    const textSummary = generateIntelligentSummary();
+
+    return {
+      title: task.title,
+      description: task.description || 'No description provided',
+      textSummary: textSummary,
+      status: `${getStatusEmoji(task.status)} ${task.status.replace('_', ' ')}`,
+      priority: `${getPriorityEmoji(task.priority)} ${task.priority}`,
+      dueDate: formatDate(task.dueDate),
+      createdBy: task.assigner?.name || 'Unknown',
+      assignedTo: task.assignee?.name || 'Unassigned',
+      createdAt: new Date(task.createdAt).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      comments: comments.length,
+      subtasks: task.subtasks?.length || 0
+    };
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'TODO':
@@ -300,6 +508,18 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            <button
+              onClick={handleSummarizeTask}
+              disabled={isLoadingSummary}
+              className="btn btn-sm bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
+              title="Summarize this task"
+            >
+              {isLoadingSummary ? (
+                <span className="loading loading-spinner loading-xs"></span>
+              ) : (
+                '📋 Summarize'
+              )}
+            </button>
             {canShare && !isPersonalAccount && (
               <button
                 onClick={() => setIsShareModalOpen(true)}
@@ -710,6 +930,92 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           }
         }}
       />
+
+      {/* Task Summary Modal */}
+      {isSummaryModalOpen && summaryData && (
+        <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 60 }}>
+          <div className="modal-box max-w-6xl max-h-[95vh] overflow-y-auto bg-gray-800 border border-gray-700">
+            <div className="flex justify-between items-start mb-6">
+              <h3 className="text-2xl font-bold text-white">Task Summary</h3>
+              <button
+                onClick={() => {
+                  setIsSummaryModalOpen(false);
+                  setSummaryData(null);
+                }}
+                className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* AI Analysis Section */}
+              <div className="bg-gray-700 rounded-lg p-4">
+                <h4 className="text-lg font-semibold text-white mb-3">Content Summary</h4>
+                <div className="bg-gray-800 rounded p-3 text-gray-200 leading-relaxed">
+                  {summaryData.textSummary}
+                </div>
+              </div>
+
+              {/* Task Details Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Status & Priority */}
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-white mb-3">📊 Status & Priority</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Status:</span>
+                      <span className="text-white">{summaryData.status}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Priority:</span>
+                      <span className="text-white">{summaryData.priority}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Due Date:</span>
+                      <span className="text-white">{summaryData.dueDate}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Assignment */}
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-white mb-3">👥 Assignment</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Created By:</span>
+                      <span className="text-white">{summaryData.createdBy}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Assigned To:</span>
+                      <span className="text-white">{summaryData.assignedTo}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Created:</span>
+                      <span className="text-white">{summaryData.createdAt}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Activity */}
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-white mb-3">📈 Activity</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Comments:</span>
+                      <span className="text-white">{summaryData.comments}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Subtasks:</span>
+                      <span className="text-white">{summaryData.subtasks}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

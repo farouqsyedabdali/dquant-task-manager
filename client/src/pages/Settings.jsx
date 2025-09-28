@@ -242,12 +242,9 @@ const Settings = () => {
                   <div className="space-y-4 text-gray-300">
                     <div>
                       <p className="text-sm">
-                        <strong className="text-gray-200">Task Manager</strong> v0.0.2
+                        <strong className="text-gray-200">Task Manager</strong> v0.0.3
                       </p>
                       <p className="text-sm">© 2025 COMPANY NAME. All rights reserved.</p>
-                    </div>
-                    <div className="text-sm text-gray-400">
-                      Built with React, Vite, Express, and Prisma.
                     </div>
                   </div>
                 </div>
