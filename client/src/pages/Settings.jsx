@@ -10,6 +10,7 @@ const Settings = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAuditLog, setShowAuditLog] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'preferences' | 'about'
   
   // Check if this is a personal account
@@ -240,7 +241,16 @@ const Settings = () => {
                 <div className="card-body">
                   <h2 className="card-title text-xl text-white mb-6">About</h2>
                   <div className="space-y-4 text-gray-300">
-                    <div>
+                    <button
+                      onClick={() => setShowChangelog(true)}
+                      className="btn btn-primary w-full md:w-auto"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      View Changelog
+                    </button>
+                    <div className="pt-4">
                       <p className="text-sm">
                         <strong className="text-gray-200">Task Manager</strong> v0.0.3
                       </p>
@@ -309,6 +319,113 @@ const Settings = () => {
         isOpen={showAuditLog}
         onClose={() => setShowAuditLog(false)}
       />
+
+      {/* Changelog Modal */}
+      {showChangelog && (
+        <div className="modal modal-open">
+          <div className="modal-box max-w-3xl bg-gray-800 border border-gray-700 max-h-[80vh]">
+            <h3 className="font-bold text-2xl text-white mb-6">Changelog</h3>
+            
+            <div className="space-y-6 overflow-y-auto pr-2" style={{ maxHeight: 'calc(80vh - 150px)' }}>
+              {/* Version 0.0.3 */}
+              <div className="border-l-4 border-indigo-600 pl-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-lg font-semibold text-white">v0.0.3</h4>
+                  <span className="text-sm text-gray-400">October 2, 2025</span>
+                </div>
+                <div className="space-y-2 text-gray-300 text-sm">
+                  <div>
+                    <p className="font-semibold text-green-400">✨ New Features</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Enhanced landing page with advanced animations</li>
+                      <li>Improved calendar layout with side-by-side view</li>
+                      <li>Added changelog to settings</li>
+                      <li>Better UI/UX for calendar page</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-blue-400">🔧 Improvements</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Optimized calendar sizing and proportions</li>
+                      <li>Removed redundant UI elements</li>
+                      <li>Enhanced animation smoothness</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Version 0.0.2 */}
+              <div className="border-l-4 border-gray-600 pl-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-lg font-semibold text-white">v0.0.2</h4>
+                  <span className="text-sm text-gray-400">September 2025</span>
+                </div>
+                <div className="space-y-2 text-gray-300 text-sm">
+                  <div>
+                    <p className="font-semibold text-green-400">✨ New Features</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Desktop app with auto-update functionality</li>
+                      <li>Browser extension for quick task capture</li>
+                      <li>AI-powered task assistant</li>
+                      <li>Task sharing between users</li>
+                      <li>Audit log for admin users</li>
+                      <li>Notification system</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-blue-400">🔧 Improvements</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Enhanced task filtering and sorting</li>
+                      <li>Improved calendar view</li>
+                      <li>Better mobile responsiveness</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-red-400">🐛 Bug Fixes</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Fixed task assignment issues</li>
+                      <li>Resolved date picker bugs</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Version 0.0.1 */}
+              <div className="border-l-4 border-gray-600 pl-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-lg font-semibold text-white">v0.0.1</h4>
+                  <span className="text-sm text-gray-400">August 2025</span>
+                </div>
+                <div className="space-y-2 text-gray-300 text-sm">
+                  <div>
+                    <p className="font-semibold text-green-400">✨ Initial Release</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>User authentication and authorization</li>
+                      <li>Company and personal account types</li>
+                      <li>Task creation, editing, and deletion</li>
+                      <li>Task assignment and priority management</li>
+                      <li>Comment system</li>
+                      <li>Calendar view</li>
+                      <li>Employee management (for company accounts)</li>
+                      <li>Role-based access control</li>
+                      <li>Dashboard with task overview</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-action">
+              <button
+                onClick={() => setShowChangelog(false)}
+                className="btn btn-ghost text-gray-300 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

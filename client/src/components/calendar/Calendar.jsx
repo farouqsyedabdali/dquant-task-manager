@@ -100,70 +100,56 @@ const Calendar = () => {
   const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6">
-      {/* Calendar Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-white">Calendar</h2>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={goToPreviousMonth}
-            className="btn btn-ghost btn-sm text-gray-300 hover:text-white"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          
-          <h3 className="text-xl font-semibold text-white min-w-[200px] text-center">
-            {monthName}
-          </h3>
-          
-          <button
-            onClick={goToNextMonth}
-            className="btn btn-ghost btn-sm text-gray-300 hover:text-white"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          
-          <button
-            onClick={goToToday}
-            className="btn btn-primary btn-sm"
-          >
-            Today
-          </button>
-        </div>
-      </div>
-
-      {/* View Mode Selector */}
-      <div className="flex items-center justify-center mb-4">
-        <div className="btn-group">
-          <button
-            onClick={() => setViewMode('cards')}
-            className={`btn btn-sm ${viewMode === 'cards' ? 'btn-active' : 'btn-ghost'}`}
-          >
-            Cards
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`btn btn-sm ${viewMode === 'list' ? 'btn-active' : 'btn-ghost'}`}
-          >
-            List
-          </button>
-        </div>
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {/* Day Headers */}
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="p-3 text-center">
-            <div className="text-sm font-medium text-gray-400 uppercase tracking-wide">
-              {day}
-            </div>
+    <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-8">
+      {/* Two Column Layout: Calendar Left (60%), Tasks Right (40%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 min-h-[800px]">
+        {/* Left Column - Calendar (3/5 = 60%) */}
+        <div className="flex flex-col lg:col-span-3">
+          {/* Calendar Header */}
+          <div className="flex items-center justify-end mb-6">
+            <button
+              onClick={goToToday}
+              className="btn btn-primary btn-sm"
+            >
+              Today
+            </button>
           </div>
-        ))}
+
+          {/* Month Navigation */}
+          <div className="flex items-center justify-center space-x-3 mb-4">
+            <button
+              onClick={goToPreviousMonth}
+              className="btn btn-ghost btn-sm text-gray-300 hover:text-white"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            
+            <h3 className="text-xl font-semibold text-white min-w-[200px] text-center">
+              {monthName}
+            </h3>
+            
+            <button
+              onClick={goToNextMonth}
+              className="btn btn-ghost btn-sm text-gray-300 hover:text-white"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+           {/* Calendar Grid */}
+           <div className="grid grid-cols-7 gap-2">
+         {/* Day Headers */}
+         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+           <div key={day} className="p-4 text-center">
+             <div className="text-base font-semibold text-gray-400 uppercase tracking-wide">
+               {day}
+             </div>
+           </div>
+         ))}
 
         {/* Calendar Days */}
                  {calendarDays.map((date, index) => {
@@ -172,38 +158,38 @@ const Calendar = () => {
            const tasksForDate = getTasksForDate(date);
            const overdueTasks = getOverdueTasksForDate(date);
            
-           return (
-             <div
-               key={index}
-               className={`min-h-[80px] p-2 border border-gray-700 hover:bg-gray-700 transition-colors cursor-pointer ${
-                 !isCurrentMonthDate ? 'bg-gray-900 text-gray-600' : 'bg-gray-800'
-               } ${
-                 selectedDate && date.toDateString() === selectedDate.toDateString()
-                   ? 'ring-2 ring-indigo-500'
-                   : ''
-               }`}
-               onClick={() => setSelectedDate(date)}
-             >
-               {/* Date Number */}
-               <div className="flex items-center justify-between mb-1">
-                 <span className={`text-sm font-medium ${
-                   isTodayDate 
-                     ? 'bg-indigo-600 text-white rounded-full w-6 h-6 flex items-center justify-center'
-                     : isCurrentMonthDate 
-                       ? 'text-white' 
-                       : 'text-gray-600'
-                 }`}>
-                   {date.getDate()}
-                 </span>
+            return (
+              <div
+                key={index}
+                className={`min-h-[110px] p-3 border border-gray-700 hover:bg-gray-700 transition-colors cursor-pointer rounded ${
+                  !isCurrentMonthDate ? 'bg-gray-900 text-gray-600' : 'bg-gray-800'
+                } ${
+                  selectedDate && date.toDateString() === selectedDate.toDateString()
+                    ? 'ring-2 ring-indigo-500'
+                    : ''
+                }`}
+                onClick={() => setSelectedDate(date)}
+              >
+                {/* Date Number */}
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-base font-semibold ${
+                    isTodayDate 
+                      ? 'bg-indigo-600 text-white rounded-full w-7 h-7 flex items-center justify-center'
+                      : isCurrentMonthDate 
+                        ? 'text-white' 
+                        : 'text-gray-600'
+                  }`}>
+                    {date.getDate()}
+                  </span>
                  
                  {/* Task Indicators */}
                  {(overdueTasks.length > 0 || tasksForDate.length > 0) && (
                    <div className="flex items-center space-x-1">
                      {overdueTasks.length > 0 && (
-                       <div className="w-2 h-2 bg-red-500 rounded-full" title={`${overdueTasks.length} overdue task(s)`}></div>
+                       <div className="w-3 h-3 bg-red-500 rounded-full" title={`${overdueTasks.length} overdue task(s)`}></div>
                      )}
                      {overdueTasks.length === 0 && tasksForDate.length > 0 && (
-                       <div className="w-2 h-2 bg-indigo-500 rounded-full" title={`${tasksForDate.length} task(s) due`}></div>
+                       <div className="w-3 h-3 bg-indigo-500 rounded-full" title={`${tasksForDate.length} task(s) due`}></div>
                      )}
                    </div>
                  )}
@@ -211,24 +197,24 @@ const Calendar = () => {
 
                {/* Task Preview */}
                {isCurrentMonthDate && (tasksForDate.length > 0 || overdueTasks.length > 0) && (
-                 <div className="space-y-1">
+                 <div className="space-y-1.5">
                    {/* Overdue Tasks */}
                    {overdueTasks.slice(0, 2).map((task, taskIndex) => (
-                     <div key={`overdue-${taskIndex}`} className="text-xs bg-red-900 text-red-200 px-1 py-0.5 rounded truncate">
+                     <div key={`overdue-${taskIndex}`} className="text-xs bg-red-900 text-red-200 px-2 py-1 rounded truncate">
                        {task.title}
                      </div>
                    ))}
                    
                    {/* Due Today Tasks (only show if no overdue tasks, to avoid duplication) */}
                    {overdueTasks.length === 0 && tasksForDate.slice(0, 2).map((task, taskIndex) => (
-                     <div key={`due-${taskIndex}`} className="text-xs bg-indigo-900 text-indigo-200 px-1 py-0.5 rounded truncate">
+                     <div key={`due-${taskIndex}`} className="text-xs bg-indigo-900 text-indigo-200 px-2 py-1 rounded truncate">
                        {task.title}
                      </div>
                    ))}
                    
                    {/* Show count if more tasks */}
                    {(overdueTasks.length + tasksForDate.length) > 4 && (
-                     <div className="text-xs text-gray-400 text-center">
+                     <div className="text-xs text-gray-400 text-center mt-1">
                        +{(overdueTasks.length + tasksForDate.length) - 4} more
                      </div>
                    )}
@@ -237,31 +223,53 @@ const Calendar = () => {
              </div>
            );
          })}
-      </div>
+          </div>
 
-      {/* Legend */}
-      <div className="mt-6 pt-4 border-t border-gray-700">
-        <div className="flex items-center justify-center space-x-6 text-sm">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
-            <span className="text-gray-300">Tasks Due</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-            <span className="text-gray-300">Overdue</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-medium">
-              {new Date().getDate()}
-            </div>
-            <span className="text-gray-300">Today</span>
-          </div>
+           {/* Legend */}
+           <div className="mt-8 pt-6 border-t border-gray-700">
+             <div className="flex flex-col space-y-4 text-base">
+               <div className="flex items-center space-x-3">
+                 <div className="w-4 h-4 bg-indigo-500 rounded-full"></div>
+                 <span className="text-gray-300">Tasks Due</span>
+               </div>
+               <div className="flex items-center space-x-3">
+                 <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                 <span className="text-gray-300">Overdue</span>
+               </div>
+               <div className="flex items-center space-x-3">
+                 <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                   {new Date().getDate()}
+                 </div>
+                 <span className="text-gray-300">Today</span>
+               </div>
+             </div>
+           </div>
         </div>
-      </div>
 
-      {/* Selected Date Info */}
-      {selectedDate && (
-        <div className="mt-6 p-4 bg-gray-700 rounded-lg border border-gray-600">
+        {/* Right Column - Task Cards (2/5 = 40%) */}
+        <div className="flex flex-col lg:col-span-2">
+          {/* View Mode Selector */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-white">Tasks</h2>
+            <div className="btn-group">
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`btn btn-sm ${viewMode === 'cards' ? 'btn-active' : 'btn-ghost'}`}
+              >
+                Cards
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`btn btn-sm ${viewMode === 'list' ? 'btn-active' : 'btn-ghost'}`}
+              >
+                List
+              </button>
+            </div>
+          </div>
+
+          {/* Selected Date Info */}
+          {selectedDate ? (
+            <div className="p-4 bg-gray-700 rounded-lg border border-gray-600 overflow-y-auto max-h-[calc(100vh-16rem)]">
           <h4 className="text-lg font-semibold text-white mb-3">
             {selectedDate.toLocaleDateString('en-US', { 
               weekday: 'long', 
@@ -281,7 +289,7 @@ const Calendar = () => {
                 <div>
                   <h5 className="text-red-400 font-medium mb-2">Overdue Tasks ({overdueTasks.length})</h5>
                   {viewMode === 'cards' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
                       {overdueTasks.map((task) => (
                         <TaskCard
                           key={task.id}
@@ -313,7 +321,7 @@ const Calendar = () => {
                  <div>
                    <h5 className="text-indigo-400 font-medium mb-2">Tasks Due ({tasksForDate.length})</h5>
                    {viewMode === 'cards' ? (
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="space-y-4">
                        {tasksForDate.map((task) => (
                          <TaskCard
                            key={task.id}
@@ -350,9 +358,21 @@ const Calendar = () => {
               }
               return null;
             })()}
-          </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 bg-gray-700 rounded-lg border border-gray-600 h-full flex items-center justify-center">
+              <div className="text-center">
+                <svg className="w-16 h-16 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-gray-400 text-lg">Select a date to view tasks</p>
+                <p className="text-gray-500 text-sm mt-2">Click on any date in the calendar</p>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
