@@ -13,6 +13,8 @@ const auditRoutes = require('./routes/audit')
 const taskShareRoutes = require('./routes/taskShares')
 const taskArchiveRoutes = require('./routes/taskArchive')
 const downloadsRoutes = require('./routes/downloads')
+const taskInvitationRoutes = require('./routes/taskInvitations')
+const feedbackRoutes = require('./routes/feedback')
 
 const app = express()
 
@@ -35,6 +37,8 @@ app.use('/api/audit', auditRoutes)
 app.use('/api/task-shares', taskShareRoutes)
 app.use('/api/task-archive', taskArchiveRoutes)
 app.use('/api/downloads', downloadsRoutes)
+app.use('/api/task-invitations', taskInvitationRoutes)
+app.use('/api/feedback', feedbackRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

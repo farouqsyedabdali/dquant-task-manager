@@ -62,6 +62,8 @@ export const tasksAPI = {
   getCoAssignees: (taskId) => api.get(`/tasks/${taskId}/co-assignees`),
   addCoAssignee: (taskId, userId) => api.post(`/tasks/${taskId}/co-assignees`, { userId }),
   removeCoAssignee: (taskId, userId) => api.delete(`/tasks/${taskId}/co-assignees/${userId}`),
+  // Task Invitation API
+  sendInvitation: (taskId, invitationData) => api.post(`/tasks/${taskId}/send-invitation`, invitationData),
 };
 
 // Comments API
@@ -121,6 +123,28 @@ export const auditAPI = {
     params,
     responseType: 'blob' // For file download
   }),
+};
+
+// Task Invitation API (for invitation pages)
+export const taskInvitationAPI = {
+  // Public endpoint - no auth required
+  getByToken: (token) => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return axios.get(`${API_URL}/api/task-invitations/${token}`);
+  },
+  // Auth required endpoints
+  acceptInvitation: (token) => api.post(`/task-invitations/${token}/accept`),
+  declineInvitation: (token) => api.post(`/task-invitations/${token}/decline`),
+  getReceived: () => api.get('/task-invitations/user/received'),
+  getSent: () => api.get('/task-invitations/user/sent'),
+};
+
+// Feedback API (no auth required)
+export const feedbackAPI = {
+  submitFeedback: (feedbackData) => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    return axios.post(`${API_URL}/api/feedback`, feedbackData);
+  },
 };
 
 export default api;

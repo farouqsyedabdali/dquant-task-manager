@@ -3,6 +3,7 @@ import useAuthStore from '../context/authStore';
 import useFontSizeStore from '../context/fontSizeStore';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import AuditLogModal from '../components/audit/AuditLogModal';
+import { feedbackAPI } from '../services/api';
 
 const Settings = () => {
   const { user, isAdmin, isSysAdmin, deleteCompany } = useAuthStore();
@@ -11,7 +12,17 @@ const Settings = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'preferences' | 'about'
+  const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'preferences' | 'about' | 'feedback'
+  
+  // Feedback form state
+  const [feedbackForm, setFeedbackForm] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    feedback: ''
+  });
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
   
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
@@ -39,6 +50,39 @@ const Settings = () => {
     }
   };
 
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    setFeedbackError('');
+    setFeedbackSuccess(false);
+    setIsSubmittingFeedback(true);
+
+    try {
+      const response = await feedbackAPI.submitFeedback(feedbackForm);
+      
+      if (response.data.success) {
+        setFeedbackSuccess(true);
+        setFeedbackForm({
+          name: user?.name || '',
+          email: user?.email || '',
+          feedback: ''
+        });
+        
+        // Hide success message after 5 seconds
+        setTimeout(() => {
+          setFeedbackSuccess(false);
+        }, 5000);
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      setFeedbackError(
+        error.response?.data?.error || 
+        'Failed to submit feedback. Please try again.'
+      );
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
@@ -56,6 +100,7 @@ const Settings = () => {
               {[
                 { id: 'account', label: 'Account' },
                 { id: 'preferences', label: 'Preferences' },
+                { id: 'feedback', label: 'Feedback' },
                 { id: 'about', label: 'About' }
               ].map((item) => (
                 <button
@@ -235,6 +280,126 @@ const Settings = () => {
             </div>
           )}
 
+          {selectedCategory === 'feedback' && (
+            <div className="space-y-8">
+              <div className="card bg-gray-800 border border-gray-700">
+                <div className="card-body">
+                  <h2 className="card-title text-xl text-white mb-6">💬 Send Us Feedback</h2>
+                  
+                  <p className="text-gray-400 mb-6">
+                    We'd love to hear from you! Share your thoughts, suggestions, or report any issues you've encountered.
+                  </p>
+
+                  {feedbackSuccess && (
+                    <div className="alert alert-success mb-6">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Thank you! Your feedback has been sent successfully.</span>
+                    </div>
+                  )}
+
+                  {feedbackError && (
+                    <div className="alert alert-error mb-6">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>{feedbackError}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text text-gray-300">Your Name *</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={feedbackForm.name}
+                          onChange={(e) => setFeedbackForm({ ...feedbackForm, name: e.target.value })}
+                          className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                          placeholder="John Doe"
+                          required
+                          disabled={isSubmittingFeedback}
+                        />
+                      </div>
+
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text text-gray-300">Your Email *</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={feedbackForm.email}
+                          onChange={(e) => setFeedbackForm({ ...feedbackForm, email: e.target.value })}
+                          className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                          placeholder="john@example.com"
+                          required
+                          disabled={isSubmittingFeedback}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text text-gray-300">Your Feedback *</span>
+                      </label>
+                      <textarea
+                        value={feedbackForm.feedback}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, feedback: e.target.value })}
+                        className="textarea textarea-bordered w-full bg-gray-700 border-gray-600 text-white h-40"
+                        placeholder="Tell us what you think, what features you'd like, or any issues you've encountered..."
+                        required
+                        minLength={10}
+                        maxLength={2000}
+                        disabled={isSubmittingFeedback}
+                      />
+                      <label className="label">
+                        <span className="label-text-alt text-gray-400">
+                          {feedbackForm.feedback.length}/2000 characters (min: 10)
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={isSubmittingFeedback || feedbackForm.feedback.length < 10}
+                      >
+                        {isSubmittingFeedback ? (
+                          <>
+                            <span className="loading loading-spinner loading-sm"></span>
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Send Feedback
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+
+                  <div className="mt-6 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+                    <div className="flex">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-sm text-gray-300">
+                        Your feedback will be sent directly to our team. We read every message and use your input to improve the app!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {selectedCategory === 'about' && (
             <div className="space-y-8">
               <div className="card bg-gray-800 border border-gray-700">
@@ -252,7 +417,7 @@ const Settings = () => {
                     </button>
                     <div className="pt-4">
                       <p className="text-sm">
-                        <strong className="text-gray-200">Task Manager</strong> v0.0.3
+                        <strong className="text-gray-200">Task Manager</strong> v0.0.4
                       </p>
                       <p className="text-sm">© 2025 COMPANY NAME. All rights reserved.</p>
                     </div>
@@ -327,8 +492,48 @@ const Settings = () => {
             <h3 className="font-bold text-2xl text-white mb-6">Changelog</h3>
             
             <div className="space-y-6 overflow-y-auto pr-2" style={{ maxHeight: 'calc(80vh - 150px)' }}>
-              {/* Version 0.0.3 */}
+              {/* Version 0.0.4 */}
               <div className="border-l-4 border-indigo-600 pl-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-lg font-semibold text-white">v0.0.4</h4>
+                  <span className="text-sm text-gray-400">October 9, 2025</span>
+                </div>
+                <div className="space-y-2 text-gray-300 text-sm">
+                  <div>
+                    <p className="font-semibold text-green-400">✨ New Features</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Email task invitations - Send tasks to anyone via email</li>
+                      <li>Task invitation accept/decline workflow</li>
+                      <li>User feedback form in Settings</li>
+                      <li>Beautiful HTML email templates for invitations</li>
+                      <li>Automatic task copying when invitations are accepted</li>
+                      <li>Email notifications for invitation responses</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-blue-400">🔧 Improvements</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Redesigned task modal with better button layout</li>
+                      <li>Widened task modal for better readability (max-w-6xl)</li>
+                      <li>Responsive button design (icons on mobile, text on desktop)</li>
+                      <li>Improved header organization in task modal</li>
+                      <li>Added "📧 Email" button for task creators</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-purple-400">🔒 Security</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Rate limiting on task invitations (10 per day)</li>
+                      <li>Token-based invitation system with 7-day expiration</li>
+                      <li>Email validation and verification</li>
+                      <li>Duplicate invitation prevention</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Version 0.0.3 */}
+              <div className="border-l-4 border-gray-600 pl-4">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-lg font-semibold text-white">v0.0.3</h4>
                   <span className="text-sm text-gray-400">October 2, 2025</span>

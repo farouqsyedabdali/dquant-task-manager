@@ -7,6 +7,7 @@ import CommentSection from '../comments/CommentSection';
 import AddSubtaskModal from './AddSubtaskModal';
 import DeleteConfirmModal from '../common/DeleteConfirmModal';
 import TaskShareModal from './TaskShareModal';
+import SendTaskEmailModal from './SendTaskEmailModal';
 import SearchableDropdown from '../common/SearchableDropdown';
 import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
 
@@ -24,6 +25,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
   const [viewedTask, setViewedTask] = useState(task); // local state for current viewed task
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -470,44 +472,55 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   return (
     <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 50 }}>
-      <div className="modal-box max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border border-gray-700">
+      <div className="modal-box max-w-6xl max-h-[90vh] overflow-y-auto bg-gray-800 border border-gray-700">
         {/* Header */}
-        <div className="flex justify-between items-start mb-6">
-          <div className="flex-1">
-            {isEditing ? (
-              <div>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  maxLength={50}
-                  className="text-2xl font-bold text-white bg-gray-700 border border-gray-600 rounded px-3 py-2 w-full focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="Enter task title"
-                />
-                <div className="text-xs text-gray-400 mt-1">
-                  {formData.title.length}/50 characters
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2 mb-2">
-                <h3 className="text-2xl font-bold text-white">
-                  {viewedTask.title}
-                </h3>
-                {isSharedTask && (
-                  <div className="status-badge bg-blue-600 text-blue-100 capitalize">
-                    📤 Shared with you
+        <div className="mb-6">
+          {/* Title Section */}
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex-1 pr-4">
+              {isEditing ? (
+                <div>
+                  <input
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    maxLength={50}
+                    className="text-2xl font-bold text-white bg-gray-700 border border-gray-600 rounded px-3 py-2 w-full focus:border-indigo-500 focus:ring-indigo-500"
+                    placeholder="Enter task title"
+                  />
+                  <div className="text-xs text-gray-400 mt-1">
+                    {formData.title.length}/50 characters
                   </div>
-                )}
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2 mb-2">
+                  <h3 className="text-2xl font-bold text-white">
+                    {viewedTask.title}
+                  </h3>
+                  {isSharedTask && (
+                    <div className="status-badge bg-blue-600 text-blue-100 capitalize">
+                      📤 Shared with you
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center space-x-4 text-sm text-gray-400">
+                {!isPersonalAccount && <span>Created by {viewedTask.assigner?.name}</span>}
+                {!isPersonalAccount && <span>•</span>}
+                <span>{new Date(viewedTask.createdAt).toLocaleDateString()}</span>
               </div>
-            )}
-            <div className="flex items-center space-x-4 text-sm text-gray-400">
-              {!isPersonalAccount && <span>Created by {viewedTask.assigner?.name}</span>}
-              {!isPersonalAccount && <span>•</span>}
-              <span>{new Date(viewedTask.createdAt).toLocaleDateString()}</span>
             </div>
+            <button
+              onClick={onClose}
+              className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white flex-shrink-0"
+            >
+              ✕
+            </button>
           </div>
-          <div className="flex items-center space-x-2">
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={handleSummarizeTask}
               disabled={isLoadingSummary}
@@ -517,18 +530,35 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
               {isLoadingSummary ? (
                 <span className="loading loading-spinner loading-xs"></span>
               ) : (
-                '📋 Summarize'
+                <>
+                  <span className="text-base">📋</span>
+                  <span className="hidden sm:inline ml-1">Summarize</span>
+                </>
               )}
             </button>
+            
             {canShare && !isPersonalAccount && (
               <button
                 onClick={() => setIsShareModalOpen(true)}
                 className="btn btn-sm bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
                 title="Share this task"
               >
-                📤 Share
+                <span className="text-base">📤</span>
+                <span className="hidden sm:inline ml-1">Share</span>
               </button>
             )}
+            
+            {(viewedTask?.assignerId === user?.id) && (
+              <button
+                onClick={() => setIsSendEmailModalOpen(true)}
+                className="btn btn-sm bg-green-600 hover:bg-green-700 text-white border-green-600"
+                title="Send task via email"
+              >
+                <span className="text-base">📧</span>
+                <span className="hidden sm:inline ml-1">Email</span>
+              </button>
+            )}
+            
             {canArchive && (
               <button
                 onClick={() => {
@@ -545,31 +575,30 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                 }`}
                 title={viewedTask.archived ? 'Unarchive this task' : 'Archive this task'}
               >
-                {viewedTask.archived ? '📂 Unarchive' : '📁 Archive'}
+                <span className="text-base">{viewedTask.archived ? '📂' : '📁'}</span>
+                <span className="hidden sm:inline ml-1">{viewedTask.archived ? 'Unarchive' : 'Archive'}</span>
               </button>
             )}
+            
             {(isAdmin() || viewedTask.assignerId === user?.id) && !isSharedTask && (
               <button
                 onClick={() => setIsEditing(!isEditing)}
                 className="btn btn-sm bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
               >
-                {isEditing ? 'Cancel' : 'Edit'}
+                <span className="text-base">✏️</span>
+                <span className="hidden sm:inline ml-1">{isEditing ? 'Cancel' : 'Edit'}</span>
               </button>
             )}
+            
             {(isAdmin() || viewedTask.assignerId === user?.id) && !isSharedTask && (
               <button
                 onClick={handleDelete}
                 className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-0"
               >
-                Delete
+                <span className="text-base">🗑️</span>
+                <span className="hidden sm:inline ml-1">Delete</span>
               </button>
             )}
-            <button
-              onClick={onClose}
-              className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
-            >
-              ✕
-            </button>
           </div>
         </div>
 
@@ -929,6 +958,13 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             fetchTask(task.id);
           }
         }}
+      />
+
+      {/* Send Task Email Modal */}
+      <SendTaskEmailModal
+        isOpen={isSendEmailModalOpen}
+        onClose={() => setIsSendEmailModalOpen(false)}
+        task={viewedTask}
       />
 
       {/* Task Summary Modal */}

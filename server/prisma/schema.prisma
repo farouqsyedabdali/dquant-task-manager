@@ -46,6 +46,10 @@ model User {
   createdTasks  Task[]    @relation("CreatedTasks")      // Tasks created by this user
   sharedTasks   TaskShare[] // Tasks shared with this user
   
+  // Task invitation relationships
+  sentTaskInvitations     TaskInvitation[] @relation("SentInvitations")
+  receivedTaskInvitations TaskInvitation[] @relation("ReceivedInvitations")
+  
   @@unique([email, companyId])
 }
 
@@ -78,6 +82,7 @@ model Task {
   notifications Notification[]
   coAssignees  TaskCoAssignee[] // Co-assignees for this task
   sharedWith   TaskShare[] // Users this task is shared with
+  invitations  TaskInvitation[] // Email invitations for this task
   assigner     User       @relation("CreatedTasks", fields: [assignerId], references: [id])
   assignee     User       @relation("AssignedTasks", fields: [assigneeId], references: [id])
   parentTask   Task?      @relation("SubTasks", fields: [parentTaskId], references: [id])
@@ -166,6 +171,43 @@ model TaskShare {
   @@unique([taskId, userId]) // Prevent duplicate shares for same task and user
 }
 
+model TaskInvitation {
+  id              String           @id @default(cuid())
+  token           String           @unique @default(uuid())
+  
+  // Task being shared
+  taskId          Int
+  task            Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  // Sender info
+  senderId        Int
+  sender          User             @relation("SentInvitations", fields: [senderId], references: [id])
+  
+  // Recipient info
+  recipientEmail  String
+  recipientUserId Int?
+  recipient       User?            @relation("ReceivedInvitations", fields: [recipientUserId], references: [id])
+  
+  // Status and metadata
+  status          InvitationStatus @default(PENDING)
+  message         String?          // Optional personal message from sender
+  
+  // Timestamps
+  createdAt       DateTime         @default(now())
+  expiresAt       DateTime?        // Optional expiration (e.g., 7 days)
+  respondedAt     DateTime?
+  
+  @@index([token])
+  @@index([recipientEmail])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
 enum NotificationType {
   TASK_CREATED
   TASK_UPDATED
@@ -179,6 +221,9 @@ enum NotificationType {
   TASK_SHARED
   TASK_ARCHIVED
   TASK_UNARCHIVED
+  TASK_INVITATION_RECEIVED
+  TASK_INVITATION_ACCEPTED
+  TASK_INVITATION_DECLINED
 }
 
 model AuditLog {
