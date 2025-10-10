@@ -448,7 +448,7 @@ const LandingPage = () => {
                               <div 
                                 className="h-full bg-white/90"
                                 style={{ animation: 'ai-type-line-4 6s ease-out infinite', width: '0%' }}
-                              ></div>
+                        ></div>
                             </div>
                           </div>
                         </div>
@@ -489,7 +489,7 @@ const LandingPage = () => {
                                   }}
                                 >
                                   I'll prioritize by urgency...
-                                </div>
+                          </div>
                               </div>
                             </div>
                           </div>
@@ -585,12 +585,12 @@ const LandingPage = () => {
                           {/* Chart bars */}
                           <div className="relative h-full flex items-end justify-around">
                             {[45, 75, 35, 85, 55, 95, 65, 80].map((height, i) => (
-                              <div
-                                key={i}
+                            <div
+                              key={i}
                                 className="bg-gradient-to-t from-blue-500/80 to-purple-500/80 w-8 rounded-t shadow-lg"
                                 style={{ height: `${height}%`, animation: `bar-grow 3s ease-in-out infinite ${i * 0.2}s` }}
-                              ></div>
-                            ))}
+                            ></div>
+                          ))}
                           </div>
                         </div>
                         
