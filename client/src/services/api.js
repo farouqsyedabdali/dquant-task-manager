@@ -127,11 +127,8 @@ export const auditAPI = {
 
 // Task Invitation API (for invitation pages)
 export const taskInvitationAPI = {
-  // Public endpoint - no auth required
-  getByToken: (token) => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return axios.get(`${API_URL}/api/task-invitations/${token}`);
-  },
+  // Public endpoint - no auth required (but uses api client for correct baseURL)
+  getByToken: (token) => api.get(`/task-invitations/${token}`),
   // Auth required endpoints
   acceptInvitation: (token) => api.post(`/task-invitations/${token}/accept`),
   declineInvitation: (token) => api.post(`/task-invitations/${token}/decline`),
@@ -141,10 +138,7 @@ export const taskInvitationAPI = {
 
 // Feedback API (no auth required)
 export const feedbackAPI = {
-  submitFeedback: (feedbackData) => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return axios.post(`${API_URL}/api/feedback`, feedbackData);
-  },
+  submitFeedback: (feedbackData) => api.post('/feedback', feedbackData),
 };
 
 export default api;
