@@ -14,7 +14,7 @@ const emailService = {
    * @param {string} params.message - Optional personal message
    */
   async sendTaskInvitation({ recipientEmail, recipientName, senderName, task, token, message }) {
-    const invitationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/task-invitation/${token}`;
+    const invitationLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/task-invitation/${token}`;
     
     const { taskInvitationTemplate } = require('../templates/taskInvitationEmail');
     const html = taskInvitationTemplate({

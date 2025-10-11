@@ -109,9 +109,10 @@
       `.replace(/\s/g, '');
       
       try {
-        // Open the popup window
+        // Open the popup window (use same origin for deployment)
+        const baseURL = window.location.origin;
         popupWindow = window.open(
-          'http://localhost:5173/popup.html',
+          `${baseURL}/popup.html`,
           'AITaskAssistant',
           features
         );
@@ -134,17 +135,23 @@
       }
     }
     
-    // Check if development server is running
+    // Check if server is running
     window.addEventListener('load', () => {
-      fetch('http://localhost:5173/popup.html')
+      const baseURL = window.location.origin;
+      fetch(`${baseURL}/popup.html`)
         .then(response => {
           if (!response.ok) {
             throw new Error('Server not running');
           }
-          showStatus('✅ Development server is running', 'success');
+          const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+          if (isDev) {
+            showStatus('✅ Development server is running', 'success');
+          } else {
+            showStatus('✅ Task Manager is ready', 'success');
+          }
         })
         .catch(() => {
-          showStatus('❌ Development server not running. Please start with: npm run dev', 'error');
+          showStatus('❌ Unable to connect. Please refresh the page.', 'error');
         });
     });
   </script>

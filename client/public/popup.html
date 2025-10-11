@@ -331,7 +331,8 @@
     }
 
     function openLogin() {
-      openTaskManager('http://localhost:5173/login');
+      const baseURL = window.location.origin;
+      openTaskManager(`${baseURL}/login`);
     }
 
     // Smart tab management - reuse existing task manager tab or create new one
@@ -367,7 +368,13 @@
     }
 
     async function makeAPICall(endpoint, data) {
-      const response = await fetch(`http://localhost:3000/api/ai/${endpoint}`, {
+      // Determine API URL based on environment
+      const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const apiURL = isDev 
+        ? 'http://localhost:3000/api' 
+        : 'https://dquant-task-manager-production.up.railway.app/api';
+      
+      const response = await fetch(`${apiURL}/ai/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -403,7 +410,8 @@
         
         if (response.success && response.taskData) {
           const taskData = response.taskData;
-          const url = `http://localhost:5173/dashboard?createTask=${encodeURIComponent(JSON.stringify(taskData))}&originalText=${encodeURIComponent(inputText)}`;
+          const baseURL = window.location.origin;
+          const url = `${baseURL}/dashboard?createTask=${encodeURIComponent(JSON.stringify(taskData))}&originalText=${encodeURIComponent(inputText)}`;
           
           openTaskManager(url);
           showStatus(`✅ Task created: "${taskData.title}"`, 'success');
@@ -441,7 +449,8 @@
           const updateData = response.updateData;
           
           if (updateData.taskFound) {
-            const url = `http://localhost:5173/dashboard?updateTask=${encodeURIComponent(JSON.stringify(updateData))}&originalText=${encodeURIComponent(inputText)}`;
+            const baseURL = window.location.origin;
+            const url = `${baseURL}/dashboard?updateTask=${encodeURIComponent(JSON.stringify(updateData))}&originalText=${encodeURIComponent(inputText)}`;
             
             openTaskManager(url);
             showStatus(`✅ Update sent for task #${updateData.taskId}`, 'success');
