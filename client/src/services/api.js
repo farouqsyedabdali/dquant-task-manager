@@ -1,7 +1,17 @@
 import axios from 'axios';
 
-// Use VITE_API_URL environment variable, fallback to localhost in dev
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Use VITE_API_URL environment variable, or detect environment
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.MODE === 'production' 
+    ? 'https://dquant-task-manager-production.up.railway.app/api' 
+    : 'http://localhost:3000/api');
+
+// Debug log
+console.log('🔌 API Configuration:', {
+  VITE_API_URL: import.meta.env.VITE_API_URL,
+  MODE: import.meta.env.MODE,
+  API_BASE_URL
+});
 
 const api = axios.create({
   baseURL: API_BASE_URL,
