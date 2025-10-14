@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
-// Use localhost for development, Railway for production
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.DEV ? 'http://localhost:3000/api' : 'https://dquant-task-manager-production.up.railway.app/api');
+// Use VITE_API_URL environment variable, fallback to localhost in dev
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 // Import OS icons
 import windowsIcon from '../../assets/windows-11-icon.png';

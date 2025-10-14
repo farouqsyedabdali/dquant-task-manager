@@ -107,7 +107,8 @@ const TaskPopup = () => {
       console.log('TaskPopup: Stored data:', popupData);
       
       // Open the main app with just the storage key
-      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const baseURL = window.location.origin;
+      const url = `${baseURL}/dashboard?popupData=${storageKey}`;
       console.log('TaskPopup: Opening URL:', url);
       
       // Open in main window (reuse existing tab)
@@ -119,7 +120,8 @@ const TaskPopup = () => {
         console.log('TaskPopup: Popup blocked, trying postMessage fallback');
         try {
           // Try to communicate with existing window
-          const existingWindow = window.open('http://localhost:5173/dashboard', 'TaskManagerMain');
+          const baseURL = window.location.origin;
+          const existingWindow = window.open(`${baseURL}/dashboard`, 'TaskManagerMain');
           if (existingWindow) {
             // Wait for window to load, then send message
             setTimeout(() => {
@@ -128,7 +130,7 @@ const TaskPopup = () => {
                 source: 'task-popup',
                 taskData: taskData,
                 originalText: inputText
-              }, 'http://localhost:5173');
+              }, window.location.origin);
             }, 1000);
           }
         } catch (error) {
@@ -168,7 +170,8 @@ const TaskPopup = () => {
       const storageKey = `taskPopup_${Date.now()}`;
       localStorage.setItem(storageKey, JSON.stringify(popupData));
       
-      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const baseURL = window.location.origin;
+      const url = `${baseURL}/dashboard?popupData=${storageKey}`;
       const taskManagerWindow = window.open(url, 'TaskManagerMain');
       if (taskManagerWindow) {
         taskManagerWindow.focus();
@@ -237,7 +240,8 @@ const TaskPopup = () => {
       console.log('TaskPopup: Stored update data in localStorage with key:', storageKey);
       
       // Open the main app with just the storage key
-      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const baseURL = window.location.origin;
+      const url = `${baseURL}/dashboard?popupData=${storageKey}`;
       console.log('TaskPopup: Opening update URL:', url);
       
       // Open in main window (reuse existing tab)
@@ -281,7 +285,8 @@ const TaskPopup = () => {
       const storageKey = `taskPopup_${Date.now()}`;
       localStorage.setItem(storageKey, JSON.stringify(popupData));
       
-      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const baseURL = window.location.origin;
+      const url = `${baseURL}/dashboard?popupData=${storageKey}`;
       const taskManagerWindow = window.open(url, 'TaskManagerMain');
       if (taskManagerWindow) {
         taskManagerWindow.focus();
@@ -351,7 +356,8 @@ const TaskPopup = () => {
       console.log('TaskPopup: Stored complete task data in localStorage with key:', storageKey);
       
       // Open the main app with just the storage key
-      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const baseURL = window.location.origin;
+      const url = `${baseURL}/dashboard?popupData=${storageKey}`;
       console.log('TaskPopup: Opening complete task URL:', url);
       
       // Open in main window (reuse existing tab)
@@ -395,7 +401,8 @@ const TaskPopup = () => {
       const storageKey = `taskPopup_${Date.now()}`;
       localStorage.setItem(storageKey, JSON.stringify(popupData));
       
-      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const baseURL = window.location.origin;
+      const url = `${baseURL}/dashboard?popupData=${storageKey}`;
       const taskManagerWindow = window.open(url, 'TaskManagerMain');
       if (taskManagerWindow) {
         taskManagerWindow.focus();
@@ -491,7 +498,8 @@ const TaskPopup = () => {
       console.log('TaskPopup: Stored subtask data in localStorage with key:', storageKey);
       
       // Open the main app with just the storage key
-      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const baseURL = window.location.origin;
+      const url = `${baseURL}/dashboard?popupData=${storageKey}`;
       console.log('TaskPopup: Opening subtask URL:', url);
 
       const taskManagerWindow = window.open(url, 'TaskManagerMain');
@@ -549,7 +557,8 @@ const TaskPopup = () => {
       console.log('TaskPopup: Stored fallback subtask data in localStorage with key:', storageKey);
       
       // Open the main app with just the storage key
-      const url = `http://localhost:5173/dashboard?popupData=${storageKey}`;
+      const baseURL = window.location.origin;
+      const url = `${baseURL}/dashboard?popupData=${storageKey}`;
       console.log('TaskPopup: Opening fallback subtask URL:', url);
 
       const taskManagerWindow = window.open(url, 'TaskManagerMain');
@@ -585,7 +594,8 @@ const TaskPopup = () => {
         </div>
         <button
           onClick={() => {
-            const taskManagerWindow = window.open('http://localhost:5173/login', 'TaskManagerMain');
+            const baseURL = window.location.origin;
+            const taskManagerWindow = window.open(`${baseURL}/login`, 'TaskManagerMain');
             if (taskManagerWindow) {
               taskManagerWindow.focus();
             }

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=256, height=256, initial-scale=1.0">
+  <meta name="api-url" content="">
   <title>AI Task Assistant</title>
   <style>
     * {
@@ -368,11 +369,11 @@
     }
 
     async function makeAPICall(endpoint, data) {
-      // Determine API URL based on environment
+      // Detect environment and use appropriate API URL
       const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const apiURL = isDev 
-        ? 'http://localhost:3000/api' 
-        : 'https://dquant-task-manager-production.up.railway.app/api';
+        ? 'http://localhost:3000/api'
+        : (import.meta?.env?.VITE_API_URL || window.VITE_API_URL || 'https://dquant-task-manager-production.up.railway.app/api');
       
       const response = await fetch(`${apiURL}/ai/${endpoint}`, {
         method: 'POST',

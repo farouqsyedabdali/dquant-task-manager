@@ -3,7 +3,7 @@ const path = require('path');
 const { autoUpdater } = require('electron-updater');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const APP_URL = process.env.APP_URL || 'https://dquant-task-manager.vercel.app/';
+const APP_URL = process.env.APP_URL || 'http://localhost:5173/';
 
 let mainWindow;
 
