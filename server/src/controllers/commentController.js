@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-const { createNotification } = require('./notificationController');
+const { createNotification, notifyTaskUsers } = require('./notificationController');
 const { logAuditActionDirect } = require('../middleware/auditLogger');
 const { autoChangeStatusToInProgress } = require('../utils/autoStatusManager');
 
@@ -111,25 +111,17 @@ const createComment = async (req, res) => {
       }
     });
 
-    // Create notification for task assignee and assigner (if different from comment author)
-    const notifyUsers = [];
-    if (task.assigneeId !== authorId) {
-      notifyUsers.push(task.assigneeId);
-    }
-    if (task.assignerId !== authorId && task.assignerId !== task.assigneeId) {
-      notifyUsers.push(task.assignerId);
-    }
-
-    for (const userId of notifyUsers) {
-      await createNotification(
-        'COMMENT_ADDED',
-        'New Comment Added',
-        `A new comment was added to task "${task.title}"`,
-        task.id,
-        userId,
-        companyId
-      );
-    }
+    // Notify creator, lead assignee, and all co-assignees
+    // Special case: Don't notify creator if this is a comment on a subtask
+    await notifyTaskUsers(
+      'COMMENT_ADDED',
+      'New Comment Added',
+      `A new comment was added to task "${task.title}"`,
+      task.id,
+      authorId, // Don't notify the comment author
+      companyId,
+      { excludeCreatorForSubtaskComments: true } // Don't notify parent task creator for subtask comments
+    );
 
     // Auto-change status from TODO to IN_PROGRESS if this is the first comment
     // and status hasn't been manually changed by the creator

@@ -1,6 +1,6 @@
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
-const { createNotification } = require('./notificationController')
+const { createNotification, notifyTaskUsers } = require('./notificationController')
 const { logAuditActionDirect } = require('../middleware/auditLogger')
 const { autoChangeStatusToInProgress, markStatusAsManuallyChanged } = require('../utils/autoStatusManager')
 
@@ -529,6 +529,18 @@ const createTask = async (req, res) => {
       );
     }
 
+    // If this is a subtask, notify the parent task's creator and co-assignees
+    if (parentTaskId) {
+      await notifyTaskUsers(
+        'SUBTASK_CREATED',
+        'New Subtask Created',
+        `A new subtask "${task.title}" was created for one of your tasks`,
+        parseInt(parentTaskId),
+        assignerId, // Don't notify the subtask creator
+        companyId
+      );
+    }
+
     // Log audit action
     await logAuditActionDirect(req, 'TASK_CREATED', 'Task', {
       entityId: task.id,
@@ -678,43 +690,54 @@ const updateTask = async (req, res) => {
     if (updateData.assigneeId && updateData.assigneeId !== task.assigneeId) {
       changes.push('assignee');
     }
-
-    // Create notifications for the assignee (if different from updater)
-    if (updatedTask.assigneeId !== userId) {
-      for (const change of changes) {
-        let notificationType, title, message;
-        
-        switch (change) {
-          case 'status':
-            notificationType = 'TASK_STATUS_CHANGED';
-            title = 'Task Status Updated';
-            message = `Task "${updatedTask.title}" status changed to ${updatedTask.status}`;
-            break;
-          case 'priority':
-            notificationType = 'TASK_PRIORITY_CHANGED';
-            title = 'Task Priority Updated';
-            message = `Task "${updatedTask.title}" priority changed to ${updatedTask.priority}`;
-            break;
-          case 'assignee':
-            notificationType = 'TASK_ASSIGNED';
-            title = 'Task Assigned';
-            message = `You have been assigned to task "${updatedTask.title}"`;
-            break;
-          default:
-            notificationType = 'TASK_UPDATED';
-            title = 'Task Updated';
-            message = `Task "${updatedTask.title}" has been updated`;
-        }
-        
-        await createNotification(
-          notificationType,
-          title,
-          message,
-          updatedTask.id,
-          updatedTask.assigneeId,
-          companyId
-        );
+    if (updateData.dueDate) {
+      const oldDate = task.dueDate ? new Date(task.dueDate).getTime() : null;
+      const newDate = new Date(updateData.dueDate).getTime();
+      if (oldDate !== newDate) {
+        changes.push('dueDate');
       }
+    }
+
+    // Create notifications for all relevant users (creator, assignee, co-assignees)
+    for (const change of changes) {
+      let notificationType, title, message;
+      
+      switch (change) {
+        case 'status':
+          notificationType = 'TASK_STATUS_CHANGED';
+          title = 'Task Status Updated';
+          message = `Task "${updatedTask.title}" status changed to ${updatedTask.status}`;
+          break;
+        case 'priority':
+          notificationType = 'TASK_PRIORITY_CHANGED';
+          title = 'Task Priority Updated';
+          message = `Task "${updatedTask.title}" priority changed to ${updatedTask.priority}`;
+          break;
+        case 'assignee':
+          notificationType = 'TASK_ASSIGNED';
+          title = 'Task Assigned';
+          message = `You have been assigned to task "${updatedTask.title}"`;
+          break;
+        case 'dueDate':
+          notificationType = 'TASK_UPDATED';
+          title = 'Task Due Date Changed';
+          message = `Task "${updatedTask.title}" due date has been updated`;
+          break;
+        default:
+          notificationType = 'TASK_UPDATED';
+          title = 'Task Updated';
+          message = `Task "${updatedTask.title}" has been updated`;
+      }
+      
+      // Notify creator, lead assignee, and all co-assignees
+      await notifyTaskUsers(
+        notificationType,
+        title,
+        message,
+        updatedTask.id,
+        userId,
+        companyId
+      );
     }
 
     // Log audit action for task update
@@ -808,6 +831,16 @@ const deleteTask = async (req, res) => {
         error: 'Cannot delete task with incomplete subtasks. Please complete or delete all subtasks first.' 
       });
     }
+
+    // Notify all relevant users before deletion
+    await notifyTaskUsers(
+      'TASK_DELETED',
+      'Task Deleted',
+      `Task "${task.title}" has been deleted`,
+      task.id,
+      userId, // Don't notify the person who deleted it
+      companyId
+    );
 
     // Log audit action before deletion
     await logAuditActionDirect(req, 'TASK_DELETED', 'Task', {
@@ -1211,15 +1244,26 @@ const addCoAssignee = async (req, res) => {
       }
     });
 
-    // Create notification for the co-assignee
-    await createNotification({
-      type: 'TASK_ASSIGNED',
-      title: 'Added as Co-Assignee',
-      message: `You have been added as a co-assignee to task: ${task.title}`,
-      taskId: parseInt(taskId),
-      userId: parseInt(userId),
-      companyId: companyId
-    });
+    // Notify the new co-assignee
+    await createNotification(
+      'TASK_ASSIGNED',
+      'Added as Co-Assignee',
+      `You have been added as a co-assignee to task: ${task.title}`,
+      parseInt(taskId),
+      parseInt(userId),
+      companyId
+    );
+    
+    // Also notify creator, lead assignee, and other co-assignees
+    await notifyTaskUsers(
+      'CO_ASSIGNEE_ADDED',
+      'Co-Assignee Added',
+      `A new co-assignee was added to task: ${task.title}`,
+      parseInt(taskId),
+      req.user.id, // Actor (person who added the co-assignee)
+      companyId,
+      { includeCoAssignees: true } // Notify other co-assignees too
+    );
 
     // Log audit action
     await logAuditActionDirect(req, 'CO_ASSIGNEE_ADDED', 'CoAssignee', {
@@ -1285,6 +1329,27 @@ const removeCoAssignee = async (req, res) => {
         }
       });
     }
+
+    // Notify the removed co-assignee
+    await createNotification(
+      'CO_ASSIGNEE_REMOVED',
+      'Removed as Co-Assignee',
+      `You have been removed as a co-assignee from task: ${task.title}`,
+      parseInt(taskId),
+      parseInt(userId),
+      companyId
+    );
+
+    // Notify creator, lead assignee, and other co-assignees
+    await notifyTaskUsers(
+      'CO_ASSIGNEE_REMOVED',
+      'Co-Assignee Removed',
+      `A co-assignee was removed from task: ${task.title}`,
+      parseInt(taskId),
+      currentUserId, // Actor (person who removed the co-assignee)
+      companyId,
+      { includeCoAssignees: true } // Notify remaining co-assignees
+    );
 
     // Remove co-assignee
     await prisma.taskCoAssignee.deleteMany({
