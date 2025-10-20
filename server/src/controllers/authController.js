@@ -1,6 +1,9 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
+const emailService = require('../services/emailService');
+const emailVerificationEmail = require('../templates/emailVerificationEmail');
 
 const prisma = new PrismaClient();
 
@@ -62,6 +65,9 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Email verification check removed for backward compatibility with production database
+    // TODO: Re-enable after database migration is applied to production
+
     // Get company info
     const userCompany = await prisma.company.findUnique({
       where: { id: user.companyId }
@@ -86,7 +92,8 @@ const login = async (req, res) => {
         role: user.role,
         companyId: user.companyId,
         companyName: userCompany.name,
-        isPersonal: userCompany.isPersonal
+        isPersonal: userCompany.isPersonal,
+        isEmailVerified: user.isEmailVerified
       }
     });
   } catch (error) {
@@ -244,6 +251,9 @@ const registerCompany = async (req, res) => {
       }
     });
 
+    // Email verification removed for backward compatibility
+    // TODO: Re-enable after database migration is applied to production
+
     // Create system administrator user for the company
     const sysAdminUser = await prisma.user.create({
       data: {
@@ -251,7 +261,9 @@ const registerCompany = async (req, res) => {
         email: adminEmail,
         password: hashedPassword,
         role: 'SYSDMIN',
-        companyId: company.id
+        companyId: company.id,
+        // Email verification fields removed for backward compatibility
+        // TODO: Re-enable after database migration is applied to production
       },
       select: {
         id: true,
@@ -262,14 +274,20 @@ const registerCompany = async (req, res) => {
       }
     });
 
+    // Email verification removed for backward compatibility
+    // TODO: Re-enable after database migration is applied to production
+
     res.status(201).json({ 
-      message: 'Company registered successfully', 
+      message: 'Company registered successfully.', 
       company: {
         id: company.id,
         name: company.name,
         email: company.email
       },
-      sysAdminUser
+      sysAdminUser: {
+        ...sysAdminUser
+        // isEmailVerified removed for backward compatibility
+      }
     });
   } catch (error) {
     console.error('Company registration error:', error);
@@ -298,6 +316,9 @@ const registerPersonal = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Email verification removed for backward compatibility
+    // TODO: Re-enable after database migration is applied to production
+
     // Create personal company and user
     const result = await prisma.$transaction(async (tx) => {
       // Create a personal company
@@ -317,7 +338,9 @@ const registerPersonal = async (req, res) => {
           email: email.toLowerCase(),
           password: hashedPassword,
           role: 'SYSDMIN',
-          companyId: company.id
+          companyId: company.id,
+        // Email verification fields removed for backward compatibility
+        // TODO: Re-enable after database migration is applied to production
         },
         select: {
           id: true,
@@ -339,6 +362,9 @@ const registerPersonal = async (req, res) => {
       return { user, company };
     });
 
+    // Email verification removed for backward compatibility
+    // TODO: Re-enable after database migration is applied to production
+
     // Generate JWT token
     const token = jwt.sign(
       { 
@@ -351,12 +377,13 @@ const registerPersonal = async (req, res) => {
     );
 
     res.status(201).json({
-      message: 'Personal account created successfully',
+      message: 'Personal account created successfully.',
       data: {
         token,
         user: {
           ...result.user,
           isPersonal: result.user.company.isPersonal
+          // isEmailVerified removed for backward compatibility
         }
       }
     });
