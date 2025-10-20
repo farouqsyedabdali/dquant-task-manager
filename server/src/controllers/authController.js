@@ -38,7 +38,8 @@ const login = async (req, res) => {
           email: true,
           password: true,
           role: true,
-          companyId: true
+          companyId: true,
+          isEmailVerified: true
         }
       });
     } else {
@@ -51,7 +52,8 @@ const login = async (req, res) => {
           email: true,
           password: true,
           role: true,
-          companyId: true
+          companyId: true,
+          isEmailVerified: true
         }
       });
     }
@@ -65,8 +67,16 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Email verification check removed for backward compatibility with production database
-    // TODO: Re-enable after database migration is applied to production
+    // Check if email is verified (only for accounts created after verification feature was added)
+    // If emailVerificationCode exists, it means the account was created with verification enabled
+    // Old accounts won't have this code, so they can log in without verification
+    if (user.isEmailVerified === false && user.emailVerificationCode) {
+      return res.status(403).json({ 
+        error: 'Please verify your email address before logging in. Check your inbox for a verification email.',
+        requiresVerification: true,
+        email: user.email
+      });
+    }
 
     // Get company info
     const userCompany = await prisma.company.findUnique({
@@ -251,8 +261,9 @@ const registerCompany = async (req, res) => {
       }
     });
 
-    // Email verification removed for backward compatibility
-    // TODO: Re-enable after database migration is applied to production
+    // Generate email verification code (6 digits)
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Create system administrator user for the company
     const sysAdminUser = await prisma.user.create({
@@ -262,8 +273,9 @@ const registerCompany = async (req, res) => {
         password: hashedPassword,
         role: 'SYSDMIN',
         companyId: company.id,
-        // Email verification fields removed for backward compatibility
-        // TODO: Re-enable after database migration is applied to production
+        isEmailVerified: false,
+        emailVerificationCode: verificationCode,
+        emailVerificationExpires: verificationExpires
       },
       select: {
         id: true,
@@ -274,19 +286,36 @@ const registerCompany = async (req, res) => {
       }
     });
 
-    // Email verification removed for backward compatibility
-    // TODO: Re-enable after database migration is applied to production
+    // Send verification email (only if email sending is enabled)
+    if (process.env.ENABLE_EMAIL_VERIFICATION !== 'false') {
+      try {
+        const emailData = emailVerificationEmail(sysAdminUser.name, verificationCode);
+        
+        await emailService.sendEmail({
+          to: sysAdminUser.email,
+          subject: emailData.subject,
+          html: emailData.html,
+          text: emailData.text
+        });
+        console.log('✅ Verification email sent to:', sysAdminUser.email);
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+        // Don't fail registration if email sending fails
+      }
+    } else {
+      console.log('⚠️  Email verification disabled in development mode');
+    }
 
     res.status(201).json({ 
-      message: 'Company registered successfully.', 
+      message: 'Company registered successfully. Please check your email to verify your account.', 
       company: {
         id: company.id,
         name: company.name,
         email: company.email
       },
       sysAdminUser: {
-        ...sysAdminUser
-        // isEmailVerified removed for backward compatibility
+        ...sysAdminUser,
+        isEmailVerified: false
       }
     });
   } catch (error) {
@@ -316,8 +345,9 @@ const registerPersonal = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Email verification removed for backward compatibility
-    // TODO: Re-enable after database migration is applied to production
+    // Generate email verification code (6 digits)
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Create personal company and user
     const result = await prisma.$transaction(async (tx) => {
@@ -339,8 +369,9 @@ const registerPersonal = async (req, res) => {
           password: hashedPassword,
           role: 'SYSDMIN',
           companyId: company.id,
-        // Email verification fields removed for backward compatibility
-        // TODO: Re-enable after database migration is applied to production
+          isEmailVerified: false,
+          emailVerificationCode: verificationCode,
+          emailVerificationExpires: verificationExpires
         },
         select: {
           id: true,
@@ -362,8 +393,25 @@ const registerPersonal = async (req, res) => {
       return { user, company };
     });
 
-    // Email verification removed for backward compatibility
-    // TODO: Re-enable after database migration is applied to production
+    // Send verification email (only if email sending is enabled)
+    if (process.env.ENABLE_EMAIL_VERIFICATION !== 'false') {
+      try {
+        const emailData = emailVerificationEmail(result.user.name, verificationCode);
+        
+        await emailService.sendEmail({
+          to: result.user.email,
+          subject: emailData.subject,
+          html: emailData.html,
+          text: emailData.text
+        });
+        console.log('✅ Verification email sent to:', result.user.email);
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+        // Don't fail registration if email sending fails
+      }
+    } else {
+      console.log('⚠️  Email verification disabled in development mode');
+    }
 
     // Generate JWT token
     const token = jwt.sign(
@@ -377,13 +425,13 @@ const registerPersonal = async (req, res) => {
     );
 
     res.status(201).json({
-      message: 'Personal account created successfully.',
+      message: 'Personal account created successfully. Please check your email to verify your account.',
       data: {
         token,
         user: {
           ...result.user,
-          isPersonal: result.user.company.isPersonal
-          // isEmailVerified removed for backward compatibility
+          isPersonal: result.user.company.isPersonal,
+          isEmailVerified: false
         }
       }
     });

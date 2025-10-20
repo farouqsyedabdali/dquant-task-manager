@@ -5,7 +5,8 @@ import useAuthStore from '../context/authStore';
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    rememberMe: false
   });
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
@@ -29,10 +30,10 @@ const Login = () => {
   }, [isAuthenticated, navigate, clearError, location]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
     
     // Clear field error when user starts typing
@@ -73,6 +74,9 @@ const Login = () => {
     const result = await login(formData);
     if (result.success) {
       navigate('/dashboard');
+    } else if (result.requiresVerification) {
+      // Redirect to email verification page with email parameter
+      navigate(`/verify-email?email=${encodeURIComponent(result.email)}&resend=true`);
     }
   };
 
@@ -161,6 +165,22 @@ const Login = () => {
               {errors.password && (
                 <p className="text-red-400 text-sm mt-1">{errors.password}</p>
               )}
+            </div>
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="rememberMe"
+                  checked={formData.rememberMe}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-300">
+                  Remember me for 30 days
+                </span>
+              </label>
             </div>
 
             <button

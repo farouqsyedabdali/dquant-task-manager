@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
+import PasswordStrengthIndicator from '../components/common/PasswordStrengthIndicator';
+import { validatePassword } from '../utils/passwordValidation';
 
 const PersonalSignup = () => {
   const [formData, setFormData] = useState({
@@ -56,11 +58,14 @@ const PersonalSignup = () => {
       newErrors.email = 'Please enter a valid email address';
     }
     
-    // Password validation
+    // Password validation with enhanced requirements
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else {
+      const passwordValidation = validatePassword(formData.password);
+      if (!passwordValidation.isValid) {
+        newErrors.password = passwordValidation.errors[0]; // Show first error
+      }
     }
     
     // Confirm password validation
@@ -96,8 +101,8 @@ const PersonalSignup = () => {
       });
 
       if (result.success) {
-        // Redirect to personal dashboard
-        navigate('/personal-dashboard');
+        // Redirect to email verification page
+        navigate(`/verify-email?email=${encodeURIComponent(formData.email.trim().toLowerCase())}`);
       } else {
         setErrors({ submit: result.error || 'Registration failed' });
       }
@@ -121,7 +126,7 @@ const PersonalSignup = () => {
         </div>
       </div>
 
-      <div className="max-w-md w-full">
+      <div className="max-w-2xl w-full">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">
@@ -177,9 +182,16 @@ const PersonalSignup = () => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Password *
-              </label>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium text-gray-300">
+                  Password *
+                </label>
+                <div className="tooltip tooltip-right" data-tip="Password Requirements:&#10;• At least 6 characters&#10;• One uppercase letter (A-Z)&#10;• One lowercase letter (a-z)&#10;• One number (0-9)&#10;• One special character (!@#$%^&*)">
+                  <svg className="w-4 h-4 text-gray-400 hover:text-gray-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
               <input
                 type="password"
                 name="password"
@@ -193,6 +205,9 @@ const PersonalSignup = () => {
               {errors.password && (
                 <p className="text-red-400 text-sm mt-1">{errors.password}</p>
               )}
+              
+              {/* Password Strength Indicator */}
+              <PasswordStrengthIndicator password={formData.password} showRequirements={false} />
             </div>
 
             {/* Confirm Password */}
@@ -223,7 +238,7 @@ const PersonalSignup = () => {
                   name="acceptTerms"
                   checked={formData.acceptTerms}
                   onChange={handleChange}
-                  className={`checkbox checkbox-primary mt-1 ${
+                  className={`checkbox mt-1 bg-gray-700 border-gray-600 checked:bg-indigo-600 checked:border-indigo-600 ${
                     errors.acceptTerms ? 'checkbox-error' : ''
                   }`}
                 />

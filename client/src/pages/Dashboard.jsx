@@ -24,7 +24,6 @@ const Dashboard = () => {
     // Get view mode from localStorage, default to 'cards'
     return localStorage.getItem('taskViewMode') || 'cards';
   });
-  const [taskType, setTaskType] = useState('all');
   const [archiveView, setArchiveView] = useState('active'); // 'active' or 'archived'
   const [archivedTasks, setArchivedTasks] = useState([]);
   const [isLoadingArchived, setIsLoadingArchived] = useState(false);
@@ -62,13 +61,9 @@ const Dashboard = () => {
     if (archiveView === 'archived') {
       fetchArchivedTasks();
     } else {
-      if (taskType === 'all') {
-        fetchTasks();
-      } else {
-        fetchTasksByType(taskType);
-      }
+      fetchTasks();
     }
-  }, [fetchTasks, fetchTasksByType, taskType, archiveView]);
+  }, [fetchTasks, archiveView]);
 
   // Handle URL parameters for task data and updates from browser extension
   useEffect(() => {
@@ -356,11 +351,7 @@ const Dashboard = () => {
           alert(`✅ Task "${taskTitle}" has been completed and marked as COMPLETED!`);
           
           // Refresh tasks to show updated status
-          if (taskType === 'all') {
-            fetchTasks();
-          } else {
-            fetchTasksByType(taskType);
-          }
+          fetchTasks();
         } catch (error) {
           console.error('Failed to complete task:', error);
           alert('Failed to complete task. Please try again.');
@@ -681,11 +672,7 @@ const Dashboard = () => {
       if (archiveView === 'archived') {
         fetchArchivedTasks();
       } else {
-        if (taskType === 'all') {
-          fetchTasks();
-        } else {
-          fetchTasksByType(taskType);
-        }
+        fetchTasks();
       }
     } catch (error) {
       console.error('Error archiving task:', error);
@@ -748,20 +735,6 @@ const Dashboard = () => {
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              {/* Task Type Selector */}
-              <div className="flex items-center space-x-2">
-                <label className="text-gray-300 text-sm">View:</label>
-                <select
-                  value={taskType}
-                  onChange={(e) => setTaskType(e.target.value)}
-                  className="select select-sm bg-gray-700 border-gray-600 text-white"
-                >
-                  <option value="all">All Tasks</option>
-                  <option value="assigned-to-me">Assigned to Me</option>
-                  <option value="created-by-me">Created by Me</option>
-                </select>
-              </div>
-              
               <ViewSwitcher 
                 currentView={viewMode} 
                 onViewChange={handleViewChange} 
@@ -852,10 +825,7 @@ const Dashboard = () => {
         <div className="bg-gray-800 rounded-lg shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-white">
-              {archiveView === 'archived' ? 'Archived Tasks' :
-               taskType === 'all' ? 'All Tasks' : 
-               taskType === 'assigned-to-me' ? 'Tasks Assigned to Me' : 
-               'Tasks Created by Me'} ({filteredTasks.length})
+              {archiveView === 'archived' ? 'Archived Tasks' : 'All Tasks'} ({filteredTasks.length})
             </h2>
             <ArchiveSwitcher 
               currentView={archiveView} 

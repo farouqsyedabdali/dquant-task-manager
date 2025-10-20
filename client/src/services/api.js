@@ -55,6 +55,9 @@ export const authAPI = {
   registerPersonal: (personalData) => api.post('/auth/register-personal', personalData),
   deleteCompany: () => api.delete('/auth/company'),
   getMe: () => api.get('/auth/me'),
+  sendVerificationEmail: (email) => api.post('/email-verification/send', email),
+  verifyEmail: (token) => api.post('/email-verification/verify', token),
+  checkVerificationStatus: (email) => api.get(`/email-verification/status?email=${email}`),
 };
 
 // Tasks API

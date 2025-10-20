@@ -17,6 +17,7 @@ import Settings from './pages/Settings';
 import Calendar from './pages/Calendar';
 import LandingPage from './pages/LandingPage';
 import TaskInvitation from './pages/TaskInvitation';
+import EmailVerification from './pages/EmailVerification';
 import AIModal from './components/tasks/AIModal';
 import { FaRobot } from 'react-icons/fa';
 import './App.css';
@@ -45,6 +46,7 @@ function App() {
           <Route path="/company-signup" element={<CompanySignup />} />
           <Route path="/personal-signup" element={<PersonalSignup />} />
           <Route path="/task-invitation/:token" element={<TaskInvitation />} />
+          <Route path="/verify-email" element={<EmailVerification />} />
           
           {/* Popup Route (no header/layout) */}
           <Route path="/popup" element={<TaskPopup />} />

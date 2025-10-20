@@ -15,6 +15,7 @@ const taskArchiveRoutes = require('./routes/taskArchive')
 const downloadsRoutes = require('./routes/downloads')
 const taskInvitationRoutes = require('./routes/taskInvitations')
 const feedbackRoutes = require('./routes/feedback')
+const emailVerificationRoutes = require('./routes/emailVerification')
 
 const app = express()
 
@@ -39,6 +40,7 @@ app.use('/api/task-archive', taskArchiveRoutes)
 app.use('/api/downloads', downloadsRoutes)
 app.use('/api/task-invitations', taskInvitationRoutes)
 app.use('/api/feedback', feedbackRoutes)
+app.use('/api/email-verification', emailVerificationRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

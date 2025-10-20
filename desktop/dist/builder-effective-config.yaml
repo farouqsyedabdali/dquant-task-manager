@@ -16,6 +16,9 @@ win:
       arch:
         - x64
   icon: main/icon.ico
+  sign: false
+  certificateFile: null
+  certificatePassword: <stripped sensitive data>
 nsis:
   oneClick: true
   perMachine: false

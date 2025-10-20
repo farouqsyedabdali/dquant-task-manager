@@ -1,8 +1,26 @@
 import { create } from 'zustand';
 import { authAPI } from '../services/api';
 
+// Safely read and parse a JSON value from localStorage
+function getSafeParsedLocalStorage(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    // Guard against the literal string "undefined" or invalid JSON
+    if (raw === 'undefined') {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return JSON.parse(raw);
+  } catch (_err) {
+    // If parsing fails, clean up the bad value and return null
+    localStorage.removeItem(key);
+    return null;
+  }
+}
+
 const useAuthStore = create((set, get) => ({
-  user: JSON.parse(localStorage.getItem('user')) || null,
+  user: getSafeParsedLocalStorage('user'),
   token: localStorage.getItem('token') || null,
   isLoading: false,
   error: null,
@@ -13,15 +31,36 @@ const useAuthStore = create((set, get) => ({
       const response = await authAPI.login(credentials);
       const { token, user } = response.data;
       
+      // Store authentication data
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      
+      // Handle remember me functionality
+      if (credentials.rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
+        // Set a longer expiry for remember me (30 days)
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        localStorage.setItem('tokenExpiry', expiryDate.toISOString());
+      } else {
+        localStorage.removeItem('rememberMe');
+        localStorage.removeItem('tokenExpiry');
+      }
       
       set({ user, token, isLoading: false });
       return { success: true };
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Login failed';
+      const requiresVerification = error.response?.data?.requiresVerification || false;
+      const email = error.response?.data?.email || null;
+      
       set({ error: errorMessage, isLoading: false });
-      return { success: false, error: errorMessage };
+      return { 
+        success: false, 
+        error: errorMessage, 
+        requiresVerification,
+        email 
+      };
     }
   },
 
@@ -81,6 +120,8 @@ const useAuthStore = create((set, get) => ({
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('rememberMe');
+    localStorage.removeItem('tokenExpiry');
     set({ user: null, token: null, error: null });
   },
 
@@ -116,7 +157,24 @@ const useAuthStore = create((set, get) => ({
 
   isAuthenticated: () => {
     const { token, user } = get();
-    return !!(token && user);
+    
+    if (!token || !user) return false;
+    
+    // Check if remember me is enabled and token hasn't expired
+    const rememberMe = localStorage.getItem('rememberMe');
+    const tokenExpiry = localStorage.getItem('tokenExpiry');
+    
+    if (rememberMe === 'true' && tokenExpiry) {
+      const now = new Date();
+      const expiry = new Date(tokenExpiry);
+      if (now > expiry) {
+        // Token expired, clear everything
+        get().logout();
+        return false;
+      }
+    }
+    
+    return true;
   },
 
   isAdmin: () => {

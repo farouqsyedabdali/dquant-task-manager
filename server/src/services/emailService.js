@@ -4,6 +4,50 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const emailService = {
   /**
+   * Generic email sender used by various features
+   * @param {Object} params
+   * @param {string|string[]} params.to
+   * @param {string} params.subject
+   * @param {string} [params.html]
+   * @param {string} [params.text]
+   */
+  async sendEmail({ to, subject, html, text }) {
+    try {
+      console.log('📧 Attempting to send email...');
+      console.log('To:', to);
+      console.log('Subject:', subject);
+      console.log('From:', process.env.EMAIL_FROM || 'onboarding@resend.dev');
+      console.log('Has HTML:', !!html);
+      console.log('Has Text:', !!text);
+      
+      // Check if using test API key
+      if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.startsWith('re_')) {
+        console.log('⚠️  Using Resend API key');
+      } else {
+        console.log('⚠️  WARNING: RESEND_API_KEY not configured or invalid!');
+      }
+      
+      const result = await resend.emails.send({
+        from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+        to,
+        subject,
+        html,
+        text
+      });
+      
+      console.log('✅ Email sent successfully:', result);
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('❌ Error sending email:', error);
+      console.error('Error details:', {
+        message: error.message,
+        statusCode: error.statusCode,
+        name: error.name
+      });
+      return { success: false, error: error.message };
+    }
+  },
+  /**
    * Send a task invitation email
    * @param {Object} params - Email parameters
    * @param {string} params.recipientEmail - Recipient's email
@@ -106,6 +150,11 @@ const emailService = {
     });
 
     try {
+      console.log('📧 Sending feedback email...');
+      console.log('From:', process.env.EMAIL_FROM || 'onboarding@resend.dev');
+      console.log('To:', 'farouqsyedabdali@gmail.com');
+      console.log('Subject:', `💬 New Feedback from ${name}`);
+      
       const result = await resend.emails.send({
         from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
         to: 'farouqsyedabdali@gmail.com', // Your feedback email
@@ -114,10 +163,22 @@ const emailService = {
         replyTo: email, // Allow you to reply directly to the user
       });
 
-      console.log('Feedback email sent successfully:', result);
+      console.log('✅ Feedback email sent successfully:', JSON.stringify(result, null, 2));
+      
+      // Check for error in response
+      if (result.error) {
+        console.error('❌ Resend returned an error:', result.error);
+        return { success: false, error: result.error.message };
+      }
+      
       return { success: true, data: result };
     } catch (error) {
-      console.error('Error sending feedback email:', error);
+      console.error('❌ Error sending feedback email:', error);
+      console.error('Error details:', {
+        message: error.message,
+        statusCode: error.statusCode,
+        name: error.name
+      });
       return { success: false, error: error.message };
     }
   }
