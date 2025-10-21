@@ -124,6 +124,7 @@ model Notification {
 }
 
 enum Role {
+  SUPER_ADMIN
   SYSDMIN
   ADMIN
   EMPLOYEE

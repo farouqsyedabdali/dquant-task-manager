@@ -59,6 +59,20 @@ const useUserStore = create((set, get) => ({
     }
   },
 
+  // Reset user password
+  resetUserPassword: async (id, newPassword) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await usersAPI.resetUserPassword(id, newPassword);
+      set({ isLoading: false });
+      return { success: true, data: response.data };
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Failed to reset password';
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage };
+    }
+  },
+
   // Delete user (employee or admin)
   deleteEmployee: async (id) => {
     set({ isLoading: true, error: null });

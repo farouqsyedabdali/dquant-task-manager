@@ -3,6 +3,7 @@ import useUserStore from '../stores/userStore';
 import useAuthStore from '../context/authStore';
 import AddEmployeeModal from '../components/employees/AddEmployeeModal';
 import EmployeeDetailsModal from '../components/employees/EmployeeDetailsModal';
+import ResetPasswordModal from '../components/employees/ResetPasswordModal';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 
 const Employees = () => {
@@ -16,6 +17,8 @@ const Employees = () => {
   const [isCsvImportModalOpen, setIsCsvImportModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [resetPasswordEmployee, setResetPasswordEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
       const { users, fetchUsers, deleteEmployee, createEmployee, isLoading, error } = useUserStore();
     const { user, isAdmin, isSysAdmin } = useAuthStore();
@@ -259,6 +262,12 @@ const Employees = () => {
     setIsEmployeeModalOpen(true);
   };
 
+  // Handle password reset
+  const handleResetPassword = (employee) => {
+    setResetPasswordEmployee(employee);
+    setIsResetPasswordModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-900">
       <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -390,23 +399,41 @@ const Employees = () => {
                         {new Date(employee.createdAt).toLocaleDateString()}
                       </td>
                       <td className="py-4">
-                        {/* Show delete button for employees and other admins (but not for current user) */}
-                        {employee.id !== user?.id && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(employee.id, employee.name, employee.role);
-                            }}
-                            className={`btn btn-sm text-white border-0 ${
-                              employee.role === 'ADMIN' 
-                                ? 'bg-purple-600 hover:bg-purple-700' 
-                                : 'bg-red-600 hover:bg-red-700'
-                            }`}
-                            title={employee.role === 'ADMIN' ? 'Delete Admin' : 'Delete Employee'}
-                          >
-                            {employee.role === 'ADMIN' ? 'Delete Admin' : 'Delete'}
-                          </button>
-                        )}
+                        <div className="flex space-x-2">
+                          {/* Show password reset button for all users except current user */}
+                          {employee.id !== user?.id && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleResetPassword(employee);
+                              }}
+                              className="btn btn-sm bg-yellow-600 hover:bg-yellow-700 text-white border-0"
+                              title="Reset Password"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                              </svg>
+                            </button>
+                          )}
+                          
+                          {/* Show delete button for employees and other admins (but not for current user) */}
+                          {employee.id !== user?.id && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(employee.id, employee.name, employee.role);
+                              }}
+                              className={`btn btn-sm text-white border-0 ${
+                                employee.role === 'ADMIN' 
+                                  ? 'bg-purple-600 hover:bg-purple-700' 
+                                  : 'bg-red-600 hover:bg-red-700'
+                              }`}
+                              title={employee.role === 'ADMIN' ? 'Delete Admin' : 'Delete Employee'}
+                            >
+                              {employee.role === 'ADMIN' ? 'Delete Admin' : 'Delete'}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -524,6 +551,18 @@ const Employees = () => {
       )}
 
 
+
+      {/* Reset Password Modal */}
+      {isResetPasswordModalOpen && resetPasswordEmployee && (
+        <ResetPasswordModal
+          isOpen={isResetPasswordModalOpen}
+          onClose={() => {
+            setIsResetPasswordModalOpen(false);
+            setResetPasswordEmployee(null);
+          }}
+          employee={resetPasswordEmployee}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteUserId && (

@@ -1,5 +1,5 @@
 const express = require('express');
-const { login, register, registerCompany, registerPersonal, deleteCompany, getMe } = require('../controllers/authController');
+const { login, register, registerCompany, registerPersonal, deleteCompany, getMe, forgotPassword, verifyPasswordResetCode, resetPasswordWithCode } = require('../controllers/authController');
 const auth = require('../middleware/auth');
 const { adminOnly, sysAdminOnly } = require('../middleware/roleCheck');
 
@@ -10,6 +10,11 @@ router.post('/login', login);
 router.post('/register-company', registerCompany); // Company registration
 router.post('/register-personal', registerPersonal); // Personal registration
 router.post('/register', auth, adminOnly, register); // Only admins can register new users
+
+// Forgot password routes (public)
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-password-reset-code', verifyPasswordResetCode);
+router.post('/reset-password-with-code', resetPasswordWithCode);
 
 // Protected routes
 router.get('/me', auth, getMe);

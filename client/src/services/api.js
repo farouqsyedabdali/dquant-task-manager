@@ -58,6 +58,11 @@ export const authAPI = {
   sendVerificationEmail: (email) => api.post('/email-verification/send', email),
   verifyEmail: (token) => api.post('/email-verification/verify', token),
   checkVerificationStatus: (email) => api.get(`/email-verification/status?email=${email}`),
+  
+  // Forgot password API
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  verifyPasswordResetCode: (email, code) => api.post('/auth/verify-password-reset-code', { email, code }),
+  resetPasswordWithCode: (email, code, newPassword) => api.post('/auth/reset-password-with-code', { email, code, newPassword }),
 };
 
 // Tasks API
@@ -93,6 +98,7 @@ export const usersAPI = {
   getById: (id) => api.get(`/users/${id}`),
   createEmployee: (employeeData) => api.post('/users', employeeData),
   updateUser: (id, userData) => api.put(`/users/${id}`, userData),
+  resetUserPassword: (id, newPassword) => api.put(`/users/${id}/reset-password`, { newPassword }),
   deleteEmployee: (id) => api.delete(`/users/${id}`),
 };
 
@@ -151,6 +157,34 @@ export const taskInvitationAPI = {
 // Feedback API (no auth required)
 export const feedbackAPI = {
   submitFeedback: (feedbackData) => api.post('/feedback', feedbackData),
+};
+
+// Super Admin API (SUPER_ADMIN role required)
+export const superAdminAPI = {
+  // Company management
+  getAllCompanies: (params) => api.get('/super-admin/companies', { params }),
+  getCompanyById: (id) => api.get(`/super-admin/companies/${id}`),
+  toggleCompanyStatus: (companyId, action) => api.put(`/super-admin/companies/${companyId}/status`, { action }),
+  
+  // User management
+  searchUsersGlobally: (params) => api.get('/super-admin/users/search', { params }),
+  resetUserPassword: (userId, newPassword) => api.put(`/super-admin/users/${userId}/reset-password`, { newPassword }),
+  
+  // System monitoring
+  getSystemHealth: (params) => api.get('/super-admin/system/health', { params }),
+};
+
+// Security API (SUPER_ADMIN role required)
+export const securityAPI = {
+  // Security monitoring
+  getFailedLogins: (params) => api.get('/security/failed-logins', { params }),
+  getSuspiciousActivity: (params) => api.get('/security/suspicious-activity', { params }),
+  generateSecurityReport: (params) => api.get('/security/security-report', { params }),
+  getUserSessions: (params) => api.get('/security/user-sessions', { params }),
+  
+  // Security actions
+  resetAllPasswords: (data) => api.post('/security/reset-all-passwords', data),
+  lockSuspiciousAccounts: (params) => api.post('/security/lock-suspicious-accounts', params),
 };
 
 export default api;

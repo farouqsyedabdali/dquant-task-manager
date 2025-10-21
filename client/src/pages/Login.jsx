@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
+import ForgotPasswordModal from '../components/modals/ForgotPasswordModal';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ const Login = () => {
   });
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
   
   const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
@@ -77,6 +79,9 @@ const Login = () => {
     } else if (result.requiresVerification) {
       // Redirect to email verification page with email parameter
       navigate(`/verify-email?email=${encodeURIComponent(result.email)}&resend=true`);
+    } else if (result.companySuspended) {
+      // Company is suspended - show error message (already handled by error display)
+      // The error message will be displayed in the UI
     }
   };
 
@@ -167,7 +172,7 @@ const Login = () => {
               )}
             </div>
 
-            {/* Remember Me Checkbox */}
+            {/* Remember Me Checkbox and Forgot Password */}
             <div className="flex items-center justify-between">
               <label className="flex items-center">
                 <input
@@ -181,6 +186,13 @@ const Login = () => {
                   Remember me for 30 days
                 </span>
               </label>
+              <button
+                type="button"
+                onClick={() => setIsForgotPasswordModalOpen(true)}
+                className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+              >
+                Forgot password?
+              </button>
             </div>
 
             <button
@@ -210,6 +222,12 @@ const Login = () => {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={isForgotPasswordModalOpen}
+        onClose={() => setIsForgotPasswordModalOpen(false)}
+      />
     </div>
   );
 };

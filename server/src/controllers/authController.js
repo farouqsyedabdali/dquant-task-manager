@@ -10,6 +10,7 @@ const prisma = new PrismaClient();
 const login = async (req, res) => {
   try {
     const { email, password, companyEmail } = req.body;
+    console.log('🔐 LOGIN ATTEMPT:', { email, companyEmail, timestamp: new Date().toISOString() });
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -59,11 +60,22 @@ const login = async (req, res) => {
     }
 
     if (!user) {
+      console.log('❌ USER NOT FOUND:', email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    console.log('👤 USER FOUND:', { 
+      id: user.id, 
+      name: user.name, 
+      email: user.email, 
+      role: user.role,
+      companyId: user.companyId,
+      isEmailVerified: user.isEmailVerified
+    });
+
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      console.log('❌ INVALID PASSWORD for user:', user.email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -83,6 +95,28 @@ const login = async (req, res) => {
       where: { id: user.companyId }
     });
 
+    // Check if company is suspended
+    if (userCompany.markedForDeletion) {
+      console.log('🚫 COMPANY SUSPENDED:', {
+        companyId: userCompany.id,
+        companyName: userCompany.name,
+        userEmail: user.email,
+        isPersonal: userCompany.isPersonal
+      });
+      
+      // Different messages for personal vs company accounts
+      const errorMessage = userCompany.isPersonal 
+        ? `Your account has been suspended. Please contact support to restore access.`
+        : `Your company's account has been suspended. Please contact support to restore access.`;
+      
+      return res.status(403).json({ 
+        error: errorMessage,
+        companySuspended: true,
+        companyName: userCompany.name,
+        isPersonal: userCompany.isPersonal
+      });
+    }
+
     const token = jwt.sign(
       { 
         userId: user.id,
@@ -92,6 +126,14 @@ const login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
+
+    console.log('✅ LOGIN SUCCESS:', { 
+      userId: user.id, 
+      email: user.email, 
+      role: user.role,
+      companyId: user.companyId,
+      companyName: userCompany.name
+    });
 
     res.json({
       token,
@@ -441,11 +483,176 @@ const registerPersonal = async (req, res) => {
   }
 };
 
+// Forgot password - send verification code
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Find user by email
+    const user = await prisma.user.findFirst({
+      where: { email },
+      include: {
+        company: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      return res.json({ 
+        success: true, 
+        message: 'If an account with that email exists, a password reset code has been sent.' 
+      });
+    }
+
+    // Generate verification code
+    const verificationCode = crypto.randomInt(100000, 999999).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Update user with verification code
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationCode: verificationCode,
+        emailVerificationExpires: expiresAt
+      }
+    });
+
+    // Send email with verification code
+    try {
+      await emailService.sendEmail({
+        to: user.email,
+        subject: 'Password Reset Code',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #4F46E5;">Password Reset Code</h2>
+            <p>Hello ${user.name},</p>
+            <p>You requested a password reset for your account. Use the following code to reset your password:</p>
+            <div style="background-color: #F3F4F6; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+              <h1 style="color: #4F46E5; margin: 0; font-size: 32px; letter-spacing: 4px;">${verificationCode}</h1>
+            </div>
+            <p>This code will expire in 15 minutes.</p>
+            <p>If you didn't request this password reset, please ignore this email.</p>
+            <p>Best regards,<br>${user.company.name} Team</p>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Email sending error:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'If an account with that email exists, a password reset code has been sent.' 
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Verify password reset code
+const verifyPasswordResetCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email and code are required' });
+    }
+
+    // Find user and verify code
+    const user = await prisma.user.findFirst({
+      where: { 
+        email,
+        emailVerificationCode: code,
+        emailVerificationExpires: {
+          gt: new Date()
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired verification code' });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Verification code is valid' 
+    });
+  } catch (error) {
+    console.error('Verify password reset code error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Reset password with verification code
+const resetPasswordWithCode = async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: 'Email, code, and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    }
+
+    // Find user and verify code
+    const user = await prisma.user.findFirst({
+      where: { 
+        email,
+        emailVerificationCode: code,
+        emailVerificationExpires: {
+          gt: new Date()
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired verification code' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password and clear verification code
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        emailVerificationCode: null,
+        emailVerificationExpires: null
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Password has been reset successfully' 
+    });
+  } catch (error) {
+    console.error('Reset password with code error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   login,
   register,
   registerCompany,
   registerPersonal,
   deleteCompany,
-  getMe
+  getMe,
+  forgotPassword,
+  verifyPasswordResetCode,
+  resetPasswordWithCode
 }; 

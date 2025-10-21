@@ -52,14 +52,18 @@ const useAuthStore = create((set, get) => ({
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Login failed';
       const requiresVerification = error.response?.data?.requiresVerification || false;
+      const companySuspended = error.response?.data?.companySuspended || false;
       const email = error.response?.data?.email || null;
+      const companyName = error.response?.data?.companyName || null;
       
       set({ error: errorMessage, isLoading: false });
       return { 
         success: false, 
         error: errorMessage, 
         requiresVerification,
-        email 
+        companySuspended,
+        email,
+        companyName
       };
     }
   },
@@ -177,14 +181,25 @@ const useAuthStore = create((set, get) => ({
     return true;
   },
 
+  isSuperAdmin: () => {
+    const { user } = get();
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+    console.log('🔍 isSuperAdmin check:', { 
+      userRole: user?.role, 
+      isSuperAdmin,
+      userEmail: user?.email 
+    });
+    return isSuperAdmin;
+  },
+
   isAdmin: () => {
     const { user } = get();
-    return user?.role === 'ADMIN' || user?.role === 'SYSDMIN';
+    return user?.role === 'ADMIN' || user?.role === 'SYSDMIN' || user?.role === 'SUPER_ADMIN';
   },
 
   isSysAdmin: () => {
     const { user } = get();
-    return user?.role === 'SYSDMIN';
+    return user?.role === 'SYSDMIN' || user?.role === 'SUPER_ADMIN';
   },
 
   isEmployee: () => {

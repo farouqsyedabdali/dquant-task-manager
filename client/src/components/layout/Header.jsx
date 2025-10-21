@@ -7,7 +7,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef(null);
-  const { user, logout, isAdmin, isSysAdmin } = useAuthStore();
+  const { user, logout, isAdmin, isSysAdmin, isSuperAdmin } = useAuthStore();
   const navigate = useNavigate();
   
   // Check if this is a personal account
@@ -80,6 +80,15 @@ const Header = () => {
                   className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                 >
                   Employees
+                </button>
+              )}
+              {isSuperAdmin() && (
+                <button
+                  onClick={() => handleNavigation('/super-admin')}
+                  className="text-red-400 hover:text-red-300 px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
+                >
+                  <span>🔴</span>
+                  <span>Super Admin</span>
                 </button>
               )}
             </nav>

@@ -334,6 +334,80 @@ const deleteEmployee = async (req, res) => {
   }
 };
 
+// Reset user password (admin/sysadmin can reset passwords for their company users)
+const resetUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+    const companyId = req.user.companyId;
+    const currentUserRole = req.user.role;
+
+    // Validate new password
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password is required and must be at least 6 characters long' });
+    }
+
+    // Check if user exists and belongs to the company
+    const userToReset = await prisma.user.findFirst({
+      where: {
+        id: parseInt(id),
+        companyId: companyId
+      }
+    });
+
+    if (!userToReset) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent resetting SYSDMIN passwords (only SYSDMIN can reset other SYSDMIN passwords)
+    if (userToReset.role === 'SYSDMIN' && currentUserRole !== 'SYSDMIN') {
+      return res.status(403).json({ error: 'Only System Administrators can reset other System Administrators\' passwords' });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    const updatedUser = await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: { password: hashedPassword },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        updatedAt: true
+      }
+    });
+
+    // Log audit action
+    await logAuditActionDirect(req, 'PASSWORD_CHANGED', 'User', {
+      entityId: updatedUser.id,
+      userName: updatedUser.name,
+      metadata: {
+        userEmail: updatedUser.email,
+        userRole: updatedUser.role,
+        resetBy: req.user.name,
+        resetByRole: req.user.role
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully',
+      data: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role
+      }
+    });
+  } catch (error) {
+    console.error('Reset user password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // Delete company (only SYSDMIN can do this)
 const deleteCompany = async (req, res) => {
   try {
@@ -365,5 +439,6 @@ module.exports = {
   createEmployee,
   updateUser,
   deleteEmployee,
+  resetUserPassword,
   deleteCompany
 }; 

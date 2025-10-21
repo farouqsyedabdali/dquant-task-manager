@@ -18,6 +18,7 @@ import Calendar from './pages/Calendar';
 import LandingPage from './pages/LandingPage';
 import TaskInvitation from './pages/TaskInvitation';
 import EmailVerification from './pages/EmailVerification';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import AIModal from './components/tasks/AIModal';
 import { FaRobot } from 'react-icons/fa';
 import './App.css';
@@ -93,6 +94,15 @@ function App() {
                   <Header />
                   <Employees />
                 </div>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/super-admin"
+            element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <SuperAdminDashboard />
               </ProtectedRoute>
             }
           />
