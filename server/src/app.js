@@ -51,6 +51,46 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Task Manager API is running' })
 })
 
+// Database test endpoint
+app.get('/api/test-db', async (req, res) => {
+  const { PrismaClient } = require('@prisma/client')
+  const prisma = new PrismaClient()
+  
+  try {
+    console.log('🔍 Testing database connection...')
+    
+    // Test basic connection
+    await prisma.$connect()
+    console.log('✅ Prisma connected successfully')
+    
+    // Test a simple query
+    const userCount = await prisma.user.count()
+    const companyCount = await prisma.company.count()
+    const taskCount = await prisma.task.count()
+    
+    res.json({
+      status: 'OK',
+      message: 'Database connection successful',
+      data: {
+        users: userCount,
+        companies: companyCount,
+        tasks: taskCount
+      }
+    })
+    
+  } catch (error) {
+    console.error('❌ Database test failed:', error)
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Database connection failed',
+      error: error.message,
+      code: error.code
+    })
+  } finally {
+    await prisma.$disconnect()
+  }
+})
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack)
