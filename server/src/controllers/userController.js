@@ -1,8 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 const { logAuditActionDirect } = require('../middleware/auditLogger');
-
-const prisma = new PrismaClient();
 
 // Get all users (admin only)
 const getAllUsers = async (req, res) => {

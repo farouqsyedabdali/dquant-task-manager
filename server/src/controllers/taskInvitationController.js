@@ -1,6 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const emailService = require('../services/emailService');
-const prisma = new PrismaClient();
+
 
 // Helper function to check if invitation is expired
 const isExpired = (invitation) => {

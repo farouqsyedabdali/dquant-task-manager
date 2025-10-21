@@ -1,7 +1,7 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { logAuditActionDirect } = require('../middleware/auditLogger');
 
-const prisma = new PrismaClient();
+
 
 /**
  * Get failed login attempts (Super Admin only)

@@ -1,7 +1,7 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { createNotification } = require('./notificationController');
 
-const prisma = new PrismaClient();
+
 
 // Archive a task
 const archiveTask = async (req, res) => {

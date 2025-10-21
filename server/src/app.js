@@ -53,8 +53,7 @@ app.get('/api/health', (req, res) => {
 
 // Database test endpoint
 app.get('/api/test-db', async (req, res) => {
-  const { PrismaClient } = require('@prisma/client')
-  const prisma = new PrismaClient()
+  const prisma = require('./lib/prisma')
   
   try {
     console.log('🔍 Testing database connection...')

@@ -1,7 +1,7 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 
-const prisma = new PrismaClient();
+
 
 /**
  * Get all companies with health metrics (Super Admin only)

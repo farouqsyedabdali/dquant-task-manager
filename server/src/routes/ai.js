@@ -1,8 +1,8 @@
 const express = require('express');
 const axios = require('axios');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
-const prisma = new PrismaClient();
+
 const router = express.Router();
 
 // Apply authentication middleware to all AI routes

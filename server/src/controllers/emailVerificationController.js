@@ -1,9 +1,9 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const crypto = require('crypto');
 const emailService = require('../services/emailService');
 const emailVerificationEmail = require('../templates/emailVerificationEmail');
 
-const prisma = new PrismaClient();
+
 
 // Send verification email
 const sendVerificationEmail = async (req, res) => {

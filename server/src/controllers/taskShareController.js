@@ -1,8 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { createNotification } = require('./notificationController');
 const { logAuditActionDirect } = require('../middleware/auditLogger');
 
-const prisma = new PrismaClient();
+
 
 // Share a task with a user
 const shareTask = async (req, res) => {
