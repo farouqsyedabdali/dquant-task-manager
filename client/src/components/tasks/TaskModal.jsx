@@ -474,7 +474,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   return (
     <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 50 }}>
-      <div className="modal-box max-w-5xl h-[75vh] min-h-[550px] overflow-hidden bg-gray-800 border border-gray-700">
+      <div className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto bg-gray-800 border border-gray-700 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
         {/* Header - Title and Action Buttons */}
         <div className="mb-6">
           <div className="flex justify-between items-start mb-4">
@@ -621,9 +621,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     </div>
 
         {/* Two Column Layout: Left (Task Details) and Right (Comments) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
           {/* LEFT COLUMN - Task Details */}
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
             {/* Description */}
             <div>
               <h4 className="text-sm font-semibold text-gray-300 mb-2">Description</h4>
@@ -752,7 +752,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                   ) : (
                     <div className="flex items-center space-x-3">
                       {viewedTask.assignee ? (
-                        <>
+                        <div className="flex items-center space-x-3 group relative">
                           <div className="avatar placeholder">
                             <div className="bg-indigo-600 text-white rounded-full w-10">
                               <span className="text-sm">{viewedTask.assignee.name.charAt(0)}</span>
@@ -760,9 +760,12 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           </div>
                           <div>
                             <span className="text-white text-base">{viewedTask.assignee.name}</span>
-                            <p className="text-gray-400 text-sm">{viewedTask.assignee.email}</p>
                           </div>
-                        </>
+                          {/* Email tooltip */}
+                          <div className="absolute left-0 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap">
+                            {viewedTask.assignee.email}
+                          </div>
+                        </div>
                       ) : (
                         <span className="text-gray-400 text-base">Unassigned</span>
                       )}
@@ -809,7 +812,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                       ) : coAssignees.length > 0 ? (
                         <div className="space-y-3">
                           {coAssignees.map((coAssignee) => (
-                            <div key={coAssignee.id} className="flex items-center justify-between bg-gray-700 rounded-lg p-3 gap-3">
+                            <div key={coAssignee.id} className="flex items-center justify-between gap-3 group relative">
                               <div className="flex items-center space-x-3 flex-1 min-w-0">
                                 <div className="avatar placeholder flex-shrink-0">
                                   <div className="bg-green-600 text-white rounded-full w-8">
@@ -818,7 +821,10 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <span className="text-white text-base block truncate">{coAssignee.user.name}</span>
-                                  <p className="text-sm text-gray-400 truncate">{coAssignee.user.email}</p>
+                                </div>
+                                {/* Email tooltip */}
+                                <div className="absolute left-0 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap">
+                                  {coAssignee.user.email}
                                 </div>
                               </div>
                               <button
@@ -844,7 +850,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                       ) : coAssignees.length > 0 ? (
                         <div className="space-y-3">
                           {coAssignees.map((coAssignee) => (
-                            <div key={coAssignee.id} className="flex items-center space-x-3 bg-gray-700 rounded-lg p-3">
+                            <div key={coAssignee.id} className="flex items-center space-x-3 group relative">
                               <div className="avatar placeholder">
                                 <div className="bg-green-600 text-white rounded-full w-8">
                                   <span className="text-sm">{coAssignee.user.name.charAt(0)}</span>
@@ -852,7 +858,10 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                               </div>
                               <div>
                                 <span className="text-white text-base">{coAssignee.user.name}</span>
-                                <p className="text-sm text-gray-400">{coAssignee.user.email}</p>
+                              </div>
+                              {/* Email tooltip */}
+                              <div className="absolute left-0 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap">
+                                {coAssignee.user.email}
                               </div>
                             </div>
                           ))}
@@ -950,9 +959,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           </div>
 
         {/* RIGHT COLUMN - Comments */}
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
           <h4 className="text-lg font-semibold text-white mb-2">Comments</h4>
-          <div className="max-h-[50vh] overflow-y-auto pr-2">
+          <div className="overflow-y-auto pr-2">
             <CommentSection taskId={viewedTask.id} extensionUpdateData={extensionUpdateData} />
           </div>
         </div>

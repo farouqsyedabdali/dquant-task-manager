@@ -20,12 +20,19 @@ import TaskInvitation from './pages/TaskInvitation';
 import EmailVerification from './pages/EmailVerification';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import AIModal from './components/tasks/AIModal';
+import AccessCodeModal from './components/AccessCodeModal';
 import { FaRobot } from 'react-icons/fa';
 import './App.css';
 
 function App() {
   const { getMe, isAuthenticated } = useAuthStore();
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [showAccessCode, setShowAccessCode] = useState(false);
+
+  // Always show access code modal - no session persistence
+  useEffect(() => {
+    setShowAccessCode(true);
+  }, []);
 
   useEffect(() => {
     // Check if user is authenticated and get user info
@@ -34,10 +41,19 @@ function App() {
     }
   }, [getMe, isAuthenticated]);
 
+  const handleAccessCodeVerified = () => {
+    setShowAccessCode(false);
+  };
+
   return (
     <FontSizeProvider>
       <Router>
         <div className="App bg-gray-900 min-h-screen">
+        {/* Access Code Modal - Show before any content if not verified */}
+        {showAccessCode && (
+          <AccessCodeModal onCodeVerified={handleAccessCodeVerified} />
+        )}
+        
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
