@@ -19,6 +19,7 @@ import LandingPage from './pages/LandingPage';
 import TaskInvitation from './pages/TaskInvitation';
 import EmailVerification from './pages/EmailVerification';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import Contacts from './pages/Contacts';
 import AIModal from './components/tasks/AIModal';
 import AccessCodeModal from './components/AccessCodeModal';
 import { FaRobot } from 'react-icons/fa';
@@ -142,6 +143,18 @@ function App() {
                 <div className="min-h-screen bg-gray-900">
                   <Header />
                   <Calendar />
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/contacts"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen bg-gray-900">
+                  <Header />
+                  <Contacts />
                 </div>
               </ProtectedRoute>
             }

@@ -18,6 +18,7 @@ const feedbackRoutes = require('./routes/feedback')
 const emailVerificationRoutes = require('./routes/emailVerification')
 const superAdminRoutes = require('./routes/superAdmin')
 const securityRoutes = require('./routes/security')
+const contactRoutes = require('./routes/contacts')
 
 const app = express()
 
@@ -45,6 +46,7 @@ app.use('/api/feedback', feedbackRoutes)
 app.use('/api/email-verification', emailVerificationRoutes)
 app.use('/api/super-admin', superAdminRoutes)
 app.use('/api/security', securityRoutes)
+app.use('/api/contacts', contactRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

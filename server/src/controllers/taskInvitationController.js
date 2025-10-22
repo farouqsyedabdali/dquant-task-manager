@@ -290,19 +290,14 @@ const taskInvitationController = {
         });
       }
 
-      // Create a copy of the task for the recipient
-      const newTask = await prisma.task.create({
+      // Add user as a collaborator to the original task (truly collaborative)
+      await prisma.taskCollaborator.create({
         data: {
-          title: invitation.task.title,
-          description: invitation.task.description 
-            ? `${invitation.task.description}\n\n[Shared by: ${invitation.sender.name}]`
-            : `[Shared by: ${invitation.sender.name}]`,
-          priority: invitation.task.priority,
-          dueDate: invitation.task.dueDate,
-          status: 'TODO', // Reset to TODO
-          assignerId: userId, // User assigns it to themselves
-          assigneeId: userId,
-          companyId: user.companyId
+          taskId: invitation.task.id,
+          userId: userId,
+          companyId: user.companyId,
+          permissionLevel: 'COMMENT', // External collaborators can comment
+          isExternal: true // This is an external collaborator
         }
       });
 
@@ -321,8 +316,8 @@ const taskInvitationController = {
         data: {
           type: 'TASK_INVITATION_ACCEPTED',
           title: 'Task Invitation Accepted',
-          message: `You accepted the task invitation: "${newTask.title}"`,
-          taskId: newTask.id,
+          message: `You are now collaborating on: "${invitation.task.title}"`,
+          taskId: invitation.task.id,
           userId: userId,
           companyId: user.companyId
         }
@@ -333,7 +328,7 @@ const taskInvitationController = {
         data: {
           type: 'TASK_INVITATION_ACCEPTED',
           title: 'Task Invitation Accepted',
-          message: `${user.name} accepted your task invitation: "${invitation.task.title}"`,
+          message: `${user.name} is now collaborating on: "${invitation.task.title}"`,
           taskId: invitation.task.id,
           userId: invitation.senderId,
           companyId: invitation.sender.companyId || user.companyId
@@ -356,8 +351,8 @@ const taskInvitationController = {
 
       res.json({
         success: true,
-        message: 'Task invitation accepted successfully',
-        task: newTask
+        message: 'Task invitation accepted successfully. You are now collaborating on this task.',
+        task: invitation.task
       });
 
     } catch (error) {

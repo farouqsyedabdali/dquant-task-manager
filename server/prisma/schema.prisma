@@ -8,89 +8,81 @@ datasource db {
 }
 
 model Company {
-  id               Int       @id @default(autoincrement())
-  name             String
-  email            String    @unique
-  passwordHash     String?
-  subscriptionPlan String    @default("free")
-  markedForDeletion Boolean  @default(false)
-  isPersonal       Boolean   @default(false)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  users            User[]
-  tasks            Task[]
-  comments         Comment[]
-  notifications    Notification[]
-  coAssignees      TaskCoAssignee[]
-  taskShares       TaskShare[]
-  auditLogs        AuditLog[]
+  id                Int                @id @default(autoincrement())
+  name              String
+  email             String             @unique
+  passwordHash      String?
+  subscriptionPlan  String             @default("free")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  markedForDeletion Boolean            @default(false)
+  isPersonal        Boolean            @default(false)
+  auditLogs         AuditLog[]
+  comments          Comment[]
+  notifications     Notification[]
+  tasks             Task[]
+  coAssignees       TaskCoAssignee[]
+  taskCollaborators TaskCollaborator[]
+  taskShares        TaskShare[]
+  users             User[]
 }
 
 model User {
-  id            Int       @id @default(autoincrement())
-  name          String
-  email         String
-  password      String
-  role          Role      @default(EMPLOYEE)
-  companyId     Int
-  isEmailVerified Boolean @default(false)
-  emailVerificationCode String?
+  id                       Int                @id @default(autoincrement())
+  name                     String
+  email                    String
+  password                 String
+  role                     Role               @default(EMPLOYEE)
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  companyId                Int
+  emailVerificationCode    String?
   emailVerificationExpires DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  company       Company   @relation(fields: [companyId], references: [id])
-  comments      Comment[]
-  notifications Notification[]
-  coAssignedTasks TaskCoAssignee[] // Tasks where this user is a co-assignee
-  auditLogs     AuditLog[] // Actions performed by this user
-  
-  // Task relationships
-  assignedTasks Task[]    @relation("AssignedTasks")     // Tasks assigned to this user
-  createdTasks  Task[]    @relation("CreatedTasks")      // Tasks created by this user
-  sharedTasks   TaskShare[] // Tasks shared with this user
-  
-  // Task invitation relationships
-  sentTaskInvitations     TaskInvitation[] @relation("SentInvitations")
-  receivedTaskInvitations TaskInvitation[] @relation("ReceivedInvitations")
-  
+  isEmailVerified          Boolean            @default(false)
+  auditLogs                AuditLog[]
+  comments                 Comment[]
+  contacts                 Contact[]
+  notifications            Notification[]
+  assignedTasks            Task[]             @relation("AssignedTasks")
+  createdTasks             Task[]             @relation("CreatedTasks")
+  coAssignedTasks          TaskCoAssignee[]
+  collaboratedTasks        TaskCollaborator[]
+  receivedTaskInvitations  TaskInvitation[]   @relation("ReceivedInvitations")
+  sentTaskInvitations      TaskInvitation[]   @relation("SentInvitations")
+  sharedTasks              TaskShare[]
+  company                  Company            @relation(fields: [companyId], references: [id])
+
   @@unique([email, companyId])
 }
 
 model Task {
-  id           Int        @id @default(autoincrement())
-  title        String
-  description  String?
-  
-  // Task assignment and hierarchy
-  assignerId   Int        // Who created/assigned the task
-  assigneeId   Int        // Who the task is assigned to (lead assignee)
-  parentTaskId Int?       // For subtasks (optional)
-  
-  // Metadata
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  status       TaskStatus @default(TODO)
-  priority     Priority   @default(MEDIUM)
-  dueDate      DateTime?  // Optional due date for tasks
-  companyId    Int
-  
-  // Auto-status management
-  statusManuallyChanged Boolean @default(false) // Track if status was manually changed by creator
-  
-  // Archive management
-  archived Boolean @default(false) // Whether task is archived
-  
-  // Relations
-  comments     Comment[]
-  notifications Notification[]
-  coAssignees  TaskCoAssignee[] // Co-assignees for this task
-  sharedWith   TaskShare[] // Users this task is shared with
-  invitations  TaskInvitation[] // Email invitations for this task
-  assigner     User       @relation("CreatedTasks", fields: [assignerId], references: [id])
-  assignee     User       @relation("AssignedTasks", fields: [assigneeId], references: [id])
-  parentTask   Task?      @relation("SubTasks", fields: [parentTaskId], references: [id])
-  subtasks     Task[]     @relation("SubTasks")
-  company      Company    @relation(fields: [companyId], references: [id])
+  id                    Int                @id @default(autoincrement())
+  title                 String
+  description           String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  status                TaskStatus         @default(TODO)
+  priority              Priority           @default(MEDIUM)
+  companyId             Int
+  assigneeId            Int?
+  assignerId            Int
+  parentTaskId          Int?
+  dueDate               DateTime?
+  statusManuallyChanged Boolean            @default(false)
+  archived              Boolean            @default(false)
+  externalContactId     Int?
+  comments              Comment[]
+  notifications         Notification[]
+  assignee              User?              @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  assigner              User               @relation("CreatedTasks", fields: [assignerId], references: [id])
+  company               Company            @relation(fields: [companyId], references: [id])
+  externalContact       Contact?           @relation("AssignedTasks", fields: [externalContactId], references: [id])
+  parentTask            Task?              @relation("SubTasks", fields: [parentTaskId], references: [id])
+  subtasks              Task[]             @relation("SubTasks")
+  coAssignees           TaskCoAssignee[]
+  collaborators         TaskCollaborator[]
+  invitations           TaskInvitation[]
+  sharedWith            TaskShare[]
 }
 
 model Comment {
@@ -98,36 +90,135 @@ model Comment {
   content   String
   taskId    Int
   authorId  Int
-  companyId Int
   createdAt DateTime  @default(now())
+  companyId Int
   editedAt  DateTime?
   author    User      @relation(fields: [authorId], references: [id])
-  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
   company   Company   @relation(fields: [companyId], references: [id])
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
-  id          Int              @id @default(autoincrement())
-  type        NotificationType
-  title       String
-  message     String
-  isRead      Boolean          @default(false)
-  taskId      Int
-  userId      Int              // User who should receive this notification
+  id        Int              @id @default(autoincrement())
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  taskId    Int
+  userId    Int
+  companyId Int
+  createdAt DateTime         @default(now())
+  company   Company          @relation(fields: [companyId], references: [id])
+  task      Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TaskCoAssignee {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  userId    Int
+  companyId Int
+  createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id])
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+}
+
+model TaskShare {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  userId    Int
+  companyId Int
+  createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id])
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+}
+
+model TaskCollaborator {
+  id              Int      @id @default(autoincrement())
+  taskId          Int
+  userId          Int
+  companyId       Int
+  permissionLevel String   @default("VIEW")
+  isExternal      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  company         Company  @relation(fields: [companyId], references: [id])
+  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+}
+
+model TaskInvitation {
+  id              String           @id @default(cuid())
+  token           String           @unique @default(uuid())
+  taskId          Int
+  senderId        Int
+  recipientEmail  String
+  recipientUserId Int?
+  status          InvitationStatus @default(PENDING)
+  message         String?
+  createdAt       DateTime         @default(now())
+  expiresAt       DateTime?
+  respondedAt     DateTime?
+  recipient       User?            @relation("ReceivedInvitations", fields: [recipientUserId], references: [id])
+  sender          User             @relation("SentInvitations", fields: [senderId], references: [id])
+  task            Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([recipientEmail])
+}
+
+model AuditLog {
+  id          Int         @id @default(autoincrement())
+  action      AuditAction
+  entityType  String
+  entityId    Int?
+  description String
+  oldValues   Json?
+  newValues   Json?
+  metadata    Json?
+  userId      Int
   companyId   Int
-  createdAt   DateTime         @default(now())
-  
-  // Relations
-  task        Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company     Company          @relation(fields: [companyId], references: [id])
+  createdAt   DateTime    @default(now())
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+}
+
+model Contact {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  name          String
+  email         String
+  company       String?
+  phone         String?
+  isPersonal    Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedTasks Task[]   @relation("AssignedTasks")
+
+  @@unique([userId, email])
+  @@index([userId, email])
 }
 
 enum Role {
-  SUPER_ADMIN
   SYSDMIN
   ADMIN
   EMPLOYEE
+  SUPER_ADMIN
 }
 
 enum TaskStatus {
@@ -143,66 +234,6 @@ enum Priority {
   MEDIUM
   HIGH
   URGENT
-}
-
-model TaskCoAssignee {
-  id        Int      @id @default(autoincrement())
-  taskId    Int
-  userId    Int      // Co-assignee user
-  companyId Int
-  createdAt DateTime @default(now())
-
-  // Relations
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company   Company  @relation(fields: [companyId], references: [id])
-
-  @@unique([taskId, userId]) // Prevent duplicate co-assignees for same task
-}
-
-model TaskShare {
-  id        Int      @id @default(autoincrement())
-  taskId    Int
-  userId    Int      // User the task is shared with
-  companyId Int
-  createdAt DateTime @default(now())
-
-  // Relations
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company   Company  @relation(fields: [companyId], references: [id])
-
-  @@unique([taskId, userId]) // Prevent duplicate shares for same task and user
-}
-
-model TaskInvitation {
-  id              String           @id @default(cuid())
-  token           String           @unique @default(uuid())
-  
-  // Task being shared
-  taskId          Int
-  task            Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  
-  // Sender info
-  senderId        Int
-  sender          User             @relation("SentInvitations", fields: [senderId], references: [id])
-  
-  // Recipient info
-  recipientEmail  String
-  recipientUserId Int?
-  recipient       User?            @relation("ReceivedInvitations", fields: [recipientUserId], references: [id])
-  
-  // Status and metadata
-  status          InvitationStatus @default(PENDING)
-  message         String?          // Optional personal message from sender
-  
-  // Timestamps
-  createdAt       DateTime         @default(now())
-  expiresAt       DateTime?        // Optional expiration (e.g., 7 days)
-  respondedAt     DateTime?
-  
-  @@index([token])
-  @@index([recipientEmail])
 }
 
 enum InvitationStatus {
@@ -230,32 +261,7 @@ enum NotificationType {
   TASK_INVITATION_DECLINED
 }
 
-model AuditLog {
-  id          Int         @id @default(autoincrement())
-  action      AuditAction
-  entityType  String      // e.g., "Task", "Comment", "User", "CoAssignee"
-  entityId    Int?        // ID of the affected entity (null for some actions)
-  description String      // Human-readable description of the action
-  oldValues   Json?       // Previous values (for updates)
-  newValues   Json?       // New values (for creates/updates)
-  metadata    Json?       // Additional context (e.g., task title, comment content)
-  
-  // Who performed the action
-  userId      Int
-  companyId   Int
-  createdAt   DateTime    @default(now())
-  
-  // Relations
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  
-  @@index([companyId, createdAt])
-  @@index([userId, createdAt])
-  @@index([action, createdAt])
-}
-
 enum AuditAction {
-  // Task actions
   TASK_CREATED
   TASK_UPDATED
   TASK_DELETED
@@ -264,37 +270,26 @@ enum AuditAction {
   TASK_ASSIGNED
   TASK_UNASSIGNED
   TASK_DUE_DATE_CHANGED
-  
-  // Comment actions
   COMMENT_CREATED
   COMMENT_UPDATED
   COMMENT_DELETED
-  
-  // Co-assignee actions
   CO_ASSIGNEE_ADDED
   CO_ASSIGNEE_REMOVED
-  
-  // User actions
   USER_CREATED
   USER_UPDATED
   USER_DELETED
   USER_ROLE_CHANGED
-  
-  // Company actions
   COMPANY_UPDATED
   COMPANY_DELETED
-  
-  // Authentication actions
   USER_LOGIN
   USER_LOGOUT
   PASSWORD_CHANGED
-  
-  // System actions
   SYSTEM_ACTION
-  // Task sharing actions
   TASK_SHARED
   TASK_UNSHARED
-  // Task archive actions
   TASK_ARCHIVED
   TASK_UNARCHIVED
+  CONTACT_CREATED
+  CONTACT_UPDATED
+  CONTACT_DELETED
 }

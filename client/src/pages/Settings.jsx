@@ -417,7 +417,7 @@ const Settings = () => {
                     </button>
                     <div className="pt-4">
                       <p className="text-sm">
-                        <strong className="text-gray-200">Task Manager</strong> v0.0.4
+                        <strong className="text-gray-200">Task Manager</strong> v0.0.5
                       </p>
                       <p className="text-sm">© 2025 COMPANY NAME. All rights reserved.</p>
                     </div>
@@ -492,6 +492,55 @@ const Settings = () => {
             <h3 className="font-bold text-2xl text-white mb-6">Changelog</h3>
             
             <div className="space-y-6 overflow-y-auto pr-2" style={{ maxHeight: 'calc(80vh - 150px)' }}>
+              {/* Version 0.0.5 */}
+              <div className="border-l-4 border-green-600 pl-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-lg font-semibold text-white">v0.0.5</h4>
+                  <span className="text-sm text-gray-400">January 22, 2025</span>
+                </div>
+                <div className="space-y-2 text-gray-300 text-sm">
+                  <div>
+                    <p className="font-semibold text-green-400">✨ New Features</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>External contact task assignments with automatic email invitations</li>
+                      <li>Cross-company task collaboration system</li>
+                      <li>Contact-based task invitations (not just email-based)</li>
+                      <li>True collaborative task sharing between different companies</li>
+                      <li>External contact management system</li>
+                      <li>Personal account contact invitations</li>
+                      <li>Company external contact invitations</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-blue-400">🔧 Improvements</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Fixed external contact email notifications when tasks are assigned</li>
+                      <li>Enhanced comment system for cross-company collaboration</li>
+                      <li>Improved task assignment workflow for external contacts</li>
+                      <li>Better permission handling for external collaborators</li>
+                      <li>Seamless collaboration between personal and company accounts</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-red-400">🐛 Bug Fixes</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Fixed "Failed to load comments" error for external collaborators</li>
+                      <li>Resolved company permission issues in comments API</li>
+                      <li>Fixed external contact assignment not sending email invitations</li>
+                      <li>Corrected task update permissions for external contacts</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-purple-400">🔒 Security</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Enhanced collaborator permission system</li>
+                      <li>Improved cross-company data isolation</li>
+                      <li>Secure external contact invitation system</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
               {/* Version 0.0.4 */}
               <div className="border-l-4 border-indigo-600 pl-4">
                 <div className="flex items-center justify-between mb-2">

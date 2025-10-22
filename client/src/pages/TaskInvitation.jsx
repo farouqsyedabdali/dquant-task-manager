@@ -156,12 +156,12 @@ const TaskInvitation = () => {
             </div>
             <h2 className="card-title text-white text-2xl justify-center mb-4">
               {actionSuccess === 'accepted' 
-                ? 'Invitation Accepted!' 
+                ? 'Collaboration Started!'
                 : 'Invitation Declined'}
             </h2>
             <p className="text-gray-400 mb-6">
               {actionSuccess === 'accepted'
-                ? 'The task has been added to your account. Redirecting to dashboard...'
+                ? 'You are now collaborating on this task. You can view and comment on it. Redirecting to dashboard...'
                 : 'You have declined this task invitation. Redirecting...'}
             </p>
             <span className="loading loading-spinner loading-md text-primary"></span>

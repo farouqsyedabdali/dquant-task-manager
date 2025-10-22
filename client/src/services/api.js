@@ -181,10 +181,20 @@ export const securityAPI = {
   getSuspiciousActivity: (params) => api.get('/security/suspicious-activity', { params }),
   generateSecurityReport: (params) => api.get('/security/security-report', { params }),
   getUserSessions: (params) => api.get('/security/user-sessions', { params }),
-  
+
   // Security actions
   resetAllPasswords: (data) => api.post('/security/reset-all-passwords', data),
   lockSuspiciousAccounts: (params) => api.post('/security/lock-suspicious-accounts', params),
+};
+
+// Contacts API
+export const contactsAPI = {
+  getAll: (params) => api.get('/contacts', { params }),
+  getById: (id) => api.get(`/contacts/${id}`),
+  create: (contactData) => api.post('/contacts', contactData),
+  update: (id, contactData) => api.put(`/contacts/${id}`, contactData),
+  delete: (id) => api.delete(`/contacts/${id}`),
+  search: (query, limit) => api.get('/contacts/search', { params: { q: query, limit } }),
 };
 
 export default api;

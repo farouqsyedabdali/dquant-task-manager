@@ -11,6 +11,7 @@ import SendTaskEmailModal from './SendTaskEmailModal';
 import TaskUpdatesModal from './TaskUpdatesModal';
 import SearchableDropdown from '../common/SearchableDropdown';
 import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
+import useContactStore from '../../stores/contactStore';
 
 const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     status: 'TODO',
     priority: 'MEDIUM',
     assigneeId: '',
+    externalContactId: '',
     dueDate: ''
   });
   const [isEditing, setIsEditing] = useState(false);
@@ -38,9 +40,12 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [summaryData, setSummaryData] = useState(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isUpdatesModalOpen, setIsUpdatesModalOpen] = useState(false);
+  const [contacts, setContacts] = useState([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
   const { updateTask, isLoading, fetchTask } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
+  const { fetchContacts } = useContactStore();
   
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
@@ -84,16 +89,35 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     }
   }, []);
 
+  const fetchContactsForTask = async () => {
+    setIsLoadingContacts(true);
+    try {
+      const result = await fetchContacts();
+      if (result.success) {
+        setContacts(result.data.contacts || []);
+      }
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  };
+
   // When the modal opens or the task prop changes, update viewedTask
   useEffect(() => {
     if (isOpen && task) {
       setViewedTask(task);
       if (isOpen) {
-        fetchUsers();
+        if (!isPersonalAccount) {
+          fetchUsers();
+        }
         fetchCoAssignees(task.id);
+        if (isPersonalAccount) {
+          fetchContactsForTask();
+        }
       }
     }
-  }, [isOpen, task, fetchCoAssignees]);
+  }, [isOpen, task, fetchCoAssignees, isPersonalAccount]);
 
   const handleAddCoAssignee = async () => {
     if (!selectedCoAssigneeId || !viewedTask?.id) return;
@@ -140,6 +164,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         status: viewedTask.status || 'TODO',
         priority: viewedTask.priority || 'MEDIUM',
         assigneeId: viewedTask.assigneeId?.toString() || '',
+        externalContactId: viewedTask.externalContactId?.toString() || '',
         dueDate: viewedTask.dueDate ? new Date(viewedTask.dueDate).toISOString().slice(0, 16) : ''
       });
     }
@@ -215,7 +240,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     // Prepare the data for update
     const updateData = {
       ...formData,
-      assigneeId: parseInt(formData.assigneeId),
+      assigneeId: formData.assigneeId ? parseInt(formData.assigneeId) : null,
+      externalContactId: formData.externalContactId ? parseInt(formData.externalContactId) : null,
       dueDate: formData.dueDate || null
     };
 
@@ -872,6 +898,102 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     </div>
                   )}
                 </div>
+
+                {/* External Collaborators */}
+                {viewedTask.collaborators && viewedTask.collaborators.length > 0 && (
+                  <div>
+                    <h4 className="text-base font-semibold text-gray-300 mb-3">External Collaborators</h4>
+                    <div className="space-y-3">
+                      {viewedTask.collaborators.map((collaborator) => (
+                        <div key={collaborator.id} className="flex items-center space-x-3 group relative">
+                          <div className="avatar placeholder">
+                            <div className="bg-blue-600 text-white rounded-full w-8">
+                              <span className="text-sm">{collaborator.user.name.charAt(0)}</span>
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-white text-base">{collaborator.user.name}</span>
+                              <span className="text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded">
+                                {collaborator.permissionLevel}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              {collaborator.company.name}
+                            </div>
+                          </div>
+                          {/* Email tooltip */}
+                          <div className="absolute left-0 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap">
+                            {collaborator.user.email}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Personal Account Assignment */}
+            {isPersonalAccount && (
+              <div>
+                <h4 className="text-base font-semibold text-gray-300 mb-3">Assigned To</h4>
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <SearchableDropdown
+                      options={contacts}
+                      value={formData.externalContactId || ''}
+                      onChange={(value) => {
+                        setFormData(prev => ({ ...prev, externalContactId: value }));
+                      }}
+                      placeholder="Select a contact (optional)"
+                      disabled={isLoadingContacts}
+                      renderOption={(contact) => (
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-2 h-2 rounded-full ${contact.isPersonal ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                          <span>{contact.name}</span>
+                          <span className="text-gray-400">({contact.email})</span>
+                          {contact.company && <span className="text-gray-500">- {contact.company}</span>}
+                        </div>
+                      )}
+                    />
+                    <p className="text-sm text-gray-400">
+                      Leave blank to assign to yourself
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-3">
+                    {viewedTask.externalContact ? (
+                      <div className="flex items-center space-x-3 group relative">
+                        <div className="avatar placeholder">
+                          <div className="bg-blue-600 text-white rounded-full w-10">
+                            <span className="text-sm">{viewedTask.externalContact.name.charAt(0)}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-white text-base">{viewedTask.externalContact.name}</span>
+                          <div className="text-sm text-gray-400">{viewedTask.externalContact.email}</div>
+                        </div>
+                        {/* Email tooltip */}
+                        <div className="absolute left-0 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap">
+                          {viewedTask.externalContact.email}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-3 group relative">
+                        <div className="avatar placeholder">
+                          <div className="bg-indigo-600 text-white rounded-full w-10">
+                            <span className="text-sm">{user?.name?.charAt(0)}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-white text-base">You</span>
+                          <div className="text-sm text-gray-400">{user?.email}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

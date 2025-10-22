@@ -13,30 +13,36 @@ const getTasks = async (req, res) => {
     const companyId = req.user.companyId;
 
     let whereClause = {
-      companyId: companyId, // Always filter by company
       archived: false // Exclude archived tasks from main dashboard
     };
 
     // Filter by task type
     if (type === 'assigned-to-me') {
-      // Show tasks where user is lead assignee, co-assignee, or shared with them
+      // Show tasks where user is lead assignee, co-assignee, shared with them, or collaborating
       whereClause.OR = [
         { assigneeId: userId },
         { coAssignees: { some: { userId: userId } } },
-        { sharedWith: { some: { userId: userId } } }
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId, companyId: companyId } } }
       ];
     } else if (type === 'created-by-me') {
       whereClause.assignerId = userId;
     } else if (userRole === 'EMPLOYEE') {
-      // Employees see tasks assigned to them, tasks they created, tasks they're co-assigned to, and tasks shared with them
+      // Employees see tasks assigned to them, tasks they created, tasks they're co-assigned to, shared with them, or collaborating
       whereClause.OR = [
         { assigneeId: userId },
         { assignerId: userId },
         { coAssignees: { some: { userId: userId } } },
-        { sharedWith: { some: { userId: userId } } }
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId, companyId: companyId } } }
+      ];
+    } else {
+      // Admins see all tasks in their company OR tasks they're collaborating on
+      whereClause.OR = [
+        { companyId: companyId },
+        { collaborators: { some: { userId: userId, companyId: companyId } } }
       ];
     }
-    // Admins see all tasks (no additional filtering)
 
     // Add filters
     if (status) {
@@ -178,6 +184,23 @@ const getTasks = async (req, res) => {
             }
           }
         },
+        collaborators: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            },
+            company: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        },
         sharedWith: {
           include: {
             user: {
@@ -295,16 +318,48 @@ const getTask = async (req, res) => {
     const companyId = req.user.companyId;
 
     let whereClause = { 
-      id: parseInt(id),
-      companyId: companyId // Always filter by company
+      id: parseInt(id)
     };
 
     // Check if user has access to this task
     if (userRole === 'EMPLOYEE') {
       whereClause.OR = [
-        { assigneeId: userId },
-        { assignerId: userId },
-        { coAssignees: { some: { userId: userId } } }
+        // Internal company access
+        { 
+          AND: [
+            { companyId: companyId },
+            {
+              OR: [
+                { assigneeId: userId },
+                { assignerId: userId },
+                { coAssignees: { some: { userId: userId } } },
+                { sharedWith: { some: { userId: userId } } }
+              ]
+            }
+          ]
+        },
+        // External collaborator access
+        { 
+          collaborators: { 
+            some: { 
+              userId: userId,
+              companyId: companyId
+            }
+          }
+        }
+      ];
+    } else {
+      // Admins can see all tasks in their company OR tasks they're collaborating on
+      whereClause.OR = [
+        { companyId: companyId },
+        { 
+          collaborators: { 
+            some: { 
+              userId: userId,
+              companyId: companyId
+            }
+          }
+        }
       ];
     }
 
@@ -411,28 +466,56 @@ const getTask = async (req, res) => {
 // Create task (anyone can create tasks)
 const createTask = async (req, res) => {
   try {
-    const { title, description, priority, assigneeId, parentTaskId, dueDate } = req.body;
+    const { title, description, priority, assigneeId, externalContactId, parentTaskId, dueDate } = req.body;
     const assignerId = req.user.id;
     const companyId = req.user.companyId;
+
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    if (!assigneeId) {
-      return res.status(400).json({ error: 'Assignee is required' });
+    // For personal accounts, allow tasks without assignee (self-assigned)
+    // For company accounts, require either assigneeId or externalContactId
+    if (!req.user.isPersonal) {
+      if (!assigneeId && !externalContactId) {
+        return res.status(400).json({ error: 'Either assignee or external contact is required' });
+      }
+
+      if (assigneeId && externalContactId) {
+        return res.status(400).json({ error: 'Cannot assign to both internal user and external contact' });
+      }
     }
 
-    // Verify assignee exists in the same company
-    const assignee = await prisma.user.findFirst({
-      where: {
-        id: parseInt(assigneeId),
-        companyId: companyId
-      }
-    });
+    let assignee = null;
+    let externalContact = null;
 
-    if (!assignee) {
-      return res.status(400).json({ error: 'Assignee not found in your company' });
+    // Verify internal assignee exists in the same company
+    if (assigneeId) {
+      assignee = await prisma.user.findFirst({
+        where: {
+          id: parseInt(assigneeId),
+          companyId: companyId
+        }
+      });
+
+      if (!assignee) {
+        return res.status(400).json({ error: 'Assignee not found in your company' });
+      }
+    }
+
+    // Verify external contact exists and belongs to the user
+    if (externalContactId) {
+      externalContact = await prisma.contact.findFirst({
+        where: {
+          id: parseInt(externalContactId),
+          userId: assignerId
+        }
+      });
+
+      if (!externalContact) {
+        return res.status(400).json({ error: 'External contact not found in your contacts' });
+      }
     }
 
     // If this is a subtask, verify parent task exists and user has access
@@ -459,7 +542,8 @@ const createTask = async (req, res) => {
         description,
         priority: priority || 'MEDIUM',
         assignerId,
-        assigneeId: parseInt(assigneeId),
+        assigneeId: assigneeId ? parseInt(assigneeId) : null,
+        externalContactId: externalContactId ? parseInt(externalContactId) : null,
         parentTaskId: parentTaskId ? parseInt(parentTaskId) : null,
         dueDate: dueDate ? new Date(dueDate) : null,
         companyId
@@ -477,6 +561,15 @@ const createTask = async (req, res) => {
             id: true,
             name: true,
             email: true
+          }
+        },
+        externalContact: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            company: true,
+            isPersonal: true
           }
         },
         parentTask: {
@@ -517,8 +610,8 @@ const createTask = async (req, res) => {
       }
     });
 
-    // Create notification for the assignee
-    if (task.assigneeId !== assignerId) {
+    // Create notification for the assignee (only for internal users)
+    if (task.assigneeId && task.assigneeId !== assignerId) {
       await createNotification(
         'TASK_CREATED',
         'New Task Assigned',
@@ -527,6 +620,46 @@ const createTask = async (req, res) => {
         task.assigneeId,
         companyId
       );
+    }
+
+    // Send email invitation to external contact if assigned
+    if (task.externalContactId && task.externalContact) {
+      try {
+        const emailService = require('../services/emailService');
+        
+        // Create a task invitation for the external contact
+        const invitation = await prisma.taskInvitation.create({
+          data: {
+            taskId: task.id,
+            senderId: assignerId,
+            recipientEmail: task.externalContact.email,
+            message: `You have been assigned a new task: "${task.title}"`,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+            status: 'PENDING'
+          }
+        });
+
+        // Send email invitation
+        await emailService.sendTaskInvitation({
+          recipientEmail: task.externalContact.email,
+          recipientName: task.externalContact.name,
+          senderName: task.assigner.name,
+          task: {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            dueDate: task.dueDate
+          },
+          token: invitation.token,
+          message: `You have been assigned a new task: "${task.title}"`
+        });
+
+        console.log(`✅ Email invitation sent to external contact: ${task.externalContact.email}`);
+      } catch (error) {
+        console.error('❌ Error sending email invitation to external contact:', error);
+        // Don't fail the task creation if email fails
+      }
     }
 
     // If this is a subtask, notify the parent task's creator and co-assignees
@@ -542,14 +675,16 @@ const createTask = async (req, res) => {
     }
 
     // Log audit action
+    const assigneeName = task.assignee ? task.assignee.name : task.externalContact.name;
     await logAuditActionDirect(req, 'TASK_CREATED', 'Task', {
       entityId: task.id,
       taskTitle: task.title,
-      assigneeName: task.assignee.name,
+      assigneeName: assigneeName,
       metadata: {
         priority: task.priority,
         dueDate: task.dueDate,
-        isSubtask: !!parentTaskId
+        isSubtask: !!parentTaskId,
+        isExternalContact: !!task.externalContactId
       }
     });
 
@@ -601,6 +736,7 @@ const updateTask = async (req, res) => {
         priority: updateData.priority,
         status: updateData.status,
         assigneeId: updateData.assigneeId,
+        externalContactId: updateData.externalContactId,
         dueDate: updateData.dueDate ? new Date(updateData.dueDate) : null
       };
     } else if (isAssignee) {
@@ -784,6 +920,56 @@ const updateTask = async (req, res) => {
           updatedBy: isAdmin ? 'admin' : isAssigner ? 'assigner' : 'assignee'
         }
       });
+    }
+
+    // Send email invitation to external contact if newly assigned
+    if (updateData.externalContactId && updateData.externalContactId !== task.externalContactId) {
+      try {
+        // Get the external contact details
+        const externalContact = await prisma.contact.findFirst({
+          where: {
+            id: parseInt(updateData.externalContactId),
+            userId: userId
+          }
+        });
+
+        if (externalContact) {
+          const emailService = require('../services/emailService');
+          
+          // Create a task invitation for the external contact
+          const invitation = await prisma.taskInvitation.create({
+            data: {
+              taskId: updatedTask.id,
+              senderId: userId,
+              recipientEmail: externalContact.email,
+              message: `You have been assigned a task: "${updatedTask.title}"`,
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+              status: 'PENDING'
+            }
+          });
+
+          // Send email invitation
+          await emailService.sendTaskInvitation({
+            recipientEmail: externalContact.email,
+            recipientName: externalContact.name,
+            senderName: updatedTask.assigner.name,
+            task: {
+              id: updatedTask.id,
+              title: updatedTask.title,
+              description: updatedTask.description,
+              priority: updatedTask.priority,
+              dueDate: updatedTask.dueDate
+            },
+            token: invitation.token,
+            message: `You have been assigned a task: "${updatedTask.title}"`
+          });
+
+          console.log(`✅ Email invitation sent to external contact: ${externalContact.email}`);
+        }
+      } catch (error) {
+        console.error('❌ Error sending email invitation to external contact:', error);
+        // Don't fail the task update if email fails
+      }
     }
 
     res.json(updatedTask);

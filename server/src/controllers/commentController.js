@@ -15,17 +15,25 @@ const getComments = async (req, res) => {
 
     // Check if user has access to this task
     let whereClause = { 
-      id: parseInt(taskId),
-      companyId: companyId
+      id: parseInt(taskId)
     };
+    
+    // For employees, check if they have access to the task
     if (userRole === 'EMPLOYEE') {
       whereClause.OR = [
         { assigneeId: userId },
         { assignerId: userId },
         { coAssignees: { some: { userId: userId } } },
-        { sharedWith: { some: { userId: userId } } }
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } } // Add collaborator check
       ];
-    } // For ADMIN and SYSADMIN, no additional restriction (can see all tasks in company)
+    } else {
+      // For ADMIN and SYSADMIN, check company OR collaborator access
+      whereClause.OR = [
+        { companyId: companyId },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    }
 
     const task = await prisma.task.findFirst({
       where: whereClause
@@ -37,8 +45,7 @@ const getComments = async (req, res) => {
 
     const comments = await prisma.comment.findMany({
       where: { 
-        taskId: parseInt(taskId),
-        companyId: companyId
+        taskId: parseInt(taskId)
       },
       include: {
         author: {
@@ -75,14 +82,23 @@ const createComment = async (req, res) => {
 
     // Check if user has access to this task
     let whereClause = { 
-      id: parseInt(taskId),
-      companyId: companyId
+      id: parseInt(taskId)
     };
+    
+    // For employees, check if they have access to the task
     if (userRole === 'EMPLOYEE') {
       whereClause.OR = [
         { assigneeId: authorId },
         { assignerId: authorId },
-        { coAssignees: { some: { userId: authorId } } }
+        { coAssignees: { some: { userId: authorId } } },
+        { sharedWith: { some: { userId: authorId } } },
+        { collaborators: { some: { userId: authorId } } } // Add collaborator check
+      ];
+    } else {
+      // For ADMIN and SYSADMIN, check company OR collaborator access
+      whereClause.OR = [
+        { companyId: companyId },
+        { collaborators: { some: { userId: authorId } } }
       ];
     }
 
@@ -160,8 +176,7 @@ const updateComment = async (req, res) => {
 
     const comment = await prisma.comment.findFirst({
       where: { 
-        id: parseInt(id),
-        companyId: companyId
+        id: parseInt(id)
       },
       include: {
         task: true
@@ -179,14 +194,23 @@ const updateComment = async (req, res) => {
 
     // Check if user has access to the task this comment belongs to
     let taskWhereClause = { 
-      id: comment.taskId,
-      companyId: companyId
+      id: comment.taskId
     };
+    
+    // For employees, check if they have access to the task
     if (userRole === 'EMPLOYEE') {
       taskWhereClause.OR = [
         { assigneeId: userId },
         { assignerId: userId },
-        { coAssignees: { some: { userId: userId } } }
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } } // Add collaborator check
+      ];
+    } else {
+      // For ADMIN and SYSADMIN, check company OR collaborator access
+      taskWhereClause.OR = [
+        { companyId: companyId },
+        { collaborators: { some: { userId: userId } } }
       ];
     }
 
@@ -254,8 +278,7 @@ const deleteComment = async (req, res) => {
 
     const comment = await prisma.comment.findFirst({
       where: { 
-        id: parseInt(id),
-        companyId: companyId
+        id: parseInt(id)
       },
       include: {
         task: {

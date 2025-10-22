@@ -1,6 +1,6 @@
 {
   "name": "company-name-task-manager-desktop",
-  "version": "0.0.2",
+  "version": "0.0.5",
   "description": "COMPANY NAME Task Manager - Desktop (Electron)",
   "main": "main/main.js",
   "private": true,
