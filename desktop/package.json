@@ -3,10 +3,13 @@
   "version": "0.0.5",
   "description": "COMPANY NAME Task Manager - Desktop (Electron)",
   "main": "main/main.js",
+  "author": "COMPANY NAME",
   "private": true,
   "scripts": {
     "start": "cross-env NODE_ENV=development electron .",
-    "build": "electron-builder --win nsis",
+    "dev": "cross-env NODE_ENV=development electron .",
+    "build": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win nsis",
+    "build-dev": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win nsis",
     "dist": "electron-builder --publish=never",
     "publish": "electron-builder --publish=always"
   },
@@ -41,9 +44,7 @@
         }
       ],
       "icon": "main/icon.ico",
-      "sign": false,
-      "certificateFile": null,
-      "certificatePassword": null
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": true,

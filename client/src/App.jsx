@@ -29,6 +29,7 @@ function App() {
   const { getMe, isAuthenticated } = useAuthStore();
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [showAccessCode, setShowAccessCode] = useState(false);
+  const [taskbarAction, setTaskbarAction] = useState(null);
 
   // Always show access code modal - no session persistence
   useEffect(() => {
@@ -41,6 +42,27 @@ function App() {
       getMe();
     }
   }, [getMe, isAuthenticated]);
+
+  // Handle taskbar actions from Electron
+  useEffect(() => {
+    // Check if we're running in Electron
+    if (window.desktop && window.desktop.onTaskbarAction) {
+      console.log('Setting up taskbar action listener');
+      window.desktop.onTaskbarAction((data) => {
+        console.log('Received taskbar action in App:', data);
+        setTaskbarAction(data);
+      });
+    } else {
+      console.log('Desktop API not available or onTaskbarAction not found');
+    }
+
+    // Cleanup listener on unmount
+    return () => {
+      if (window.desktop && window.desktop.removeAllListeners) {
+        window.desktop.removeAllListeners('taskbar-action');
+      }
+    };
+  }, []);
 
   const handleAccessCodeVerified = () => {
     setShowAccessCode(false);
@@ -76,7 +98,7 @@ function App() {
               <ProtectedRoute>
                 <div className="min-h-screen bg-gray-900">
                   <Header />
-                  <Dashboard />
+                  <Dashboard taskbarAction={taskbarAction} onTaskbarActionHandled={() => setTaskbarAction(null)} />
                 </div>
               </ProtectedRoute>
             }
@@ -86,7 +108,7 @@ function App() {
             path="/personal-dashboard"
             element={
               <ProtectedRoute>
-                <PersonalDashboard />
+                <PersonalDashboard taskbarAction={taskbarAction} onTaskbarActionHandled={() => setTaskbarAction(null)} />
               </ProtectedRoute>
             }
           />

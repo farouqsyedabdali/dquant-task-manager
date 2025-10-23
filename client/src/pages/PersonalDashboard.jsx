@@ -14,7 +14,7 @@ import ArchiveSwitcher from '../components/tasks/ArchiveSwitcher';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import NotificationBoard from '../components/notifications/NotificationBoard';
 
-const PersonalDashboard = () => {
+const PersonalDashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState(null);
@@ -83,6 +83,59 @@ const PersonalDashboard = () => {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);
+
+  // Handle taskbar actions from Electron
+  useEffect(() => {
+    if (taskbarAction) {
+      console.log('PersonalDashboard: Handling taskbar action:', taskbarAction);
+      
+      switch (taskbarAction.action) {
+        case 'create-task':
+          console.log('PersonalDashboard: Opening create task modal with data:', taskbarAction.clipboardText);
+          // Create task with clipboard data
+          setExtensionTaskData({
+            title: taskbarAction.clipboardText?.substring(0, 50) || 'New Task',
+            description: taskbarAction.clipboardText || '',
+            priority: 'MEDIUM',
+            dueDate: null,
+            assignee: null,
+            originalText: taskbarAction.clipboardText
+          });
+          setIsAddModalOpen(true);
+          break;
+          
+        case 'update-task':
+          // Handle task update with clipboard data
+          handleTaskUpdate({
+            updateContent: taskbarAction.clipboardText || '',
+            originalText: taskbarAction.clipboardText
+          });
+          break;
+          
+        case 'add-subtask':
+          // Handle adding subtask with clipboard data
+          handleAddSubtask({
+            subtaskData: {
+              title: taskbarAction.clipboardText?.substring(0, 50) || 'New Subtask',
+              description: taskbarAction.clipboardText || '',
+              priority: 'MEDIUM',
+              dueDate: null,
+              assignee: null
+            },
+            originalText: taskbarAction.clipboardText
+          });
+          break;
+          
+        default:
+          console.log('Unknown taskbar action:', taskbarAction.action);
+      }
+      
+      // Notify parent that action has been handled
+      if (onTaskbarActionHandled) {
+        onTaskbarActionHandled();
+      }
+    }
+  }, [taskbarAction, onTaskbarActionHandled]);
 
   // Function to handle task updates from extension
   const handleTaskUpdate = async (updateData) => {
