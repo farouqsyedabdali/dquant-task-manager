@@ -206,7 +206,8 @@ function handleTaskbarAction(action) {
         console.log('📋 Sending taskbar action to new window:', action, 'with clipboard:', clipboardText);
         mainWindow.webContents.send('taskbar-action', {
           action: action,
-          clipboardText: clipboardText
+          clipboardText: clipboardText,
+          useAI: true // Flag to indicate this should use AI processing
         });
       }, 3000); // 3 second delay to ensure web app is ready
     });
@@ -238,7 +239,8 @@ function handleTaskbarAction(action) {
         console.log('📤 Sending taskbar action after page load:', action);
         mainWindow.webContents.send('taskbar-action', {
           action: action,
-          clipboardText: clipboardText
+          clipboardText: clipboardText,
+          useAI: true // Flag to indicate this should use AI processing
         });
       }, 2000);
     });
@@ -249,7 +251,8 @@ function handleTaskbarAction(action) {
       console.log('📤 Sending taskbar action immediately:', action);
       mainWindow.webContents.send('taskbar-action', {
         action: action,
-        clipboardText: clipboardText
+        clipboardText: clipboardText,
+        useAI: true // Flag to indicate this should use AI processing
       });
     }, 2000);
   }
@@ -259,7 +262,8 @@ function handleTaskbarAction(action) {
     console.log('🔄 Fallback: Sending taskbar action again:', action);
     mainWindow.webContents.send('taskbar-action', {
       action: action,
-      clipboardText: clipboardText
+      clipboardText: clipboardText,
+      useAI: true // Flag to indicate this should use AI processing
     });
   }, 5000);
 }

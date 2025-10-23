@@ -92,16 +92,23 @@ const PersonalDashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
       switch (taskbarAction.action) {
         case 'create-task':
           console.log('PersonalDashboard: Opening create task modal with data:', taskbarAction.clipboardText);
-          // Create task with clipboard data
-          setExtensionTaskData({
-            title: taskbarAction.clipboardText?.substring(0, 50) || 'New Task',
-            description: taskbarAction.clipboardText || '',
-            priority: 'MEDIUM',
-            dueDate: null,
-            assignee: null,
-            originalText: taskbarAction.clipboardText
-          });
-          setIsAddModalOpen(true);
+          
+          if (taskbarAction.useAI) {
+            console.log('PersonalDashboard: Using AI to process clipboard text');
+            // Use AI to analyze the clipboard text, same as popup functionality
+            handleTaskExtractionFromTaskbar(taskbarAction.clipboardText);
+          } else {
+            // Fallback to simple clipboard paste (old behavior)
+            setExtensionTaskData({
+              title: taskbarAction.clipboardText?.substring(0, 50) || 'New Task',
+              description: taskbarAction.clipboardText || '',
+              priority: 'MEDIUM',
+              dueDate: null,
+              assignee: null,
+              originalText: taskbarAction.clipboardText
+            });
+            setIsAddModalOpen(true);
+          }
           break;
           
         case 'update-task':
@@ -136,6 +143,68 @@ const PersonalDashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
       }
     }
   }, [taskbarAction, onTaskbarActionHandled]);
+
+  // Function to handle AI task extraction from taskbar (same as popup functionality)
+  const handleTaskExtractionFromTaskbar = async (text) => {
+    console.log('PersonalDashboard: Processing AI task extraction from taskbar:', text);
+    
+    try {
+      // Call the same AI extraction endpoint that the popup uses
+      const response = await fetch('/api/ai/extract-task', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ text: text })
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI extraction failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('PersonalDashboard: AI extraction result:', data);
+
+      if (data && data.title) {
+        // Set the AI-extracted task data
+        setExtensionTaskData({
+          title: data.title,
+          description: data.description || '',
+          priority: data.priority || 'MEDIUM',
+          dueDate: data.dueDate || null,
+          assignee: data.assignee || null,
+          originalText: text
+        });
+        setIsAddModalOpen(true);
+        console.log('PersonalDashboard: Task modal opened with AI-extracted data');
+      } else {
+        console.error('PersonalDashboard: Invalid AI extraction response:', data);
+        // Fallback to simple clipboard paste
+        setExtensionTaskData({
+          title: text?.substring(0, 50) || 'New Task',
+          description: text || '',
+          priority: 'MEDIUM',
+          dueDate: null,
+          assignee: null,
+          originalText: text
+        });
+        setIsAddModalOpen(true);
+      }
+    } catch (error) {
+      console.error('PersonalDashboard: AI extraction error:', error);
+      // Fallback to simple clipboard paste
+      setExtensionTaskData({
+        title: text?.substring(0, 50) || 'New Task',
+        description: text || '',
+        priority: 'MEDIUM',
+        dueDate: null,
+        assignee: null,
+        originalText: text
+      });
+      setIsAddModalOpen(true);
+    }
+  };
 
   // Function to handle task updates from extension
   const handleTaskUpdate = async (updateData) => {
