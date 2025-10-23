@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import useTaskStore from '../stores/taskStore';
 import useAuthStore from '../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../utils/constants';
-import { commentsAPI, taskArchiveAPI } from '../services/api';
+import { commentsAPI, taskArchiveAPI, aiAPI } from '../services/api';
 import TaskCard from '../components/tasks/TaskCard';
 import TaskList from '../components/tasks/TaskList';
 import AddTaskModal from '../components/tasks/AddTaskModal';
@@ -149,48 +149,36 @@ const PersonalDashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
     console.log('PersonalDashboard: Processing AI task extraction from taskbar:', text);
     
     try {
-      // Call the same AI extraction endpoint that the popup uses
-      const response = await fetch('/api/ai/extract-task', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ text: text })
-      });
-
-      if (!response.ok) {
-        throw new Error(`AI extraction failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('PersonalDashboard: AI extraction result:', data);
-
-      if (data && data.title) {
-        // Set the AI-extracted task data
-        setExtensionTaskData({
-          title: data.title,
-          description: data.description || '',
-          priority: data.priority || 'MEDIUM',
-          dueDate: data.dueDate || null,
-          assignee: data.assignee || null,
-          originalText: text
-        });
-        setIsAddModalOpen(true);
-        console.log('PersonalDashboard: Task modal opened with AI-extracted data');
+      // Use the exact same AI API call as the popup
+      const response = await aiAPI.extractTask(text.trim());
+      
+      let taskData = null;
+      if (response.data.success && response.data.taskData) {
+        taskData = response.data.taskData;
+        console.log('PersonalDashboard: AI successfully extracted task data:', taskData);
       } else {
-        console.error('PersonalDashboard: Invalid AI extraction response:', data);
-        // Fallback to simple clipboard paste
-        setExtensionTaskData({
-          title: text?.substring(0, 50) || 'New Task',
-          description: text || '',
+        console.log('PersonalDashboard: AI failed to extract task data, using fallback');
+        taskData = {
+          title: text.trim().substring(0, 50),
+          description: text.trim().substring(0, 300),
           priority: 'MEDIUM',
           dueDate: null,
-          assignee: null,
-          originalText: text
-        });
-        setIsAddModalOpen(true);
+          assignee: null
+        };
       }
+      
+      // Set the AI-extracted task data (same structure as popup)
+      setExtensionTaskData({
+        title: taskData.title,
+        description: taskData.description || '',
+        priority: taskData.priority || 'MEDIUM',
+        dueDate: taskData.dueDate || null,
+        assignee: taskData.assignee || null,
+        originalText: text
+      });
+      setIsAddModalOpen(true);
+      console.log('PersonalDashboard: Task modal opened with AI-extracted data');
+      
     } catch (error) {
       console.error('PersonalDashboard: AI extraction error:', error);
       // Fallback to simple clipboard paste
