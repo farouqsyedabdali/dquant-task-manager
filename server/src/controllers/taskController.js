@@ -717,19 +717,19 @@ const updateTask = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Check permissions
-    const isAdmin = userRole === 'ADMIN';
+    // Check permissions - company admin, assigner, or assignee
+    const isCompanyAdmin = userRole === 'ADMIN' && task.companyId === companyId;
     const isAssigner = task.assignerId === userId;
     const isAssignee = task.assigneeId === userId;
 
-    if (!isAdmin && !isAssigner && !isAssignee) {
+    if (!isCompanyAdmin && !isAssigner && !isAssignee) {
       return res.status(403).json({ error: 'You do not have permission to update this task' });
     }
 
     // Determine what can be updated
     let allowedUpdates = {};
     
-    if (isAdmin || isAssigner) {
+    if (isCompanyAdmin || isAssigner) {
       // Assigner and admin can update everything
       allowedUpdates = {
         title: updateData.title,
@@ -1003,11 +1003,11 @@ const deleteTask = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Check permissions
-    const isAdmin = userRole === 'ADMIN';
+    // Check permissions - only company admins or task assigner can delete
+    const isCompanyAdmin = userRole === 'ADMIN' && task.companyId === companyId;
     const isAssigner = task.assignerId === userId;
 
-    if (!isAdmin && !isAssigner) {
+    if (!isCompanyAdmin && !isAssigner) {
       return res.status(403).json({ error: 'You do not have permission to delete this task' });
     }
 

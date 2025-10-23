@@ -3,7 +3,7 @@ import { commentsAPI } from '../../services/api';
 import useAuthStore from '../../context/authStore';
 import DeleteConfirmModal from '../common/DeleteConfirmModal';
 
-const CommentSection = ({ taskId, extensionUpdateData = null }) => {
+const CommentSection = ({ taskId, task = null, extensionUpdateData = null }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +14,9 @@ const CommentSection = ({ taskId, extensionUpdateData = null }) => {
   const [editContent, setEditContent] = useState('');
 
   const { user, isAdmin } = useAuthStore();
+  
+  // Check if user is a company admin (same company as task)
+  const isCompanyAdmin = task && user && isAdmin() && task.companyId === user.companyId;
 
   useEffect(() => {
     fetchComments();
@@ -76,7 +79,10 @@ const CommentSection = ({ taskId, extensionUpdateData = null }) => {
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (!isAdmin()) return;
+    const comment = comments.find(c => c.id === commentId);
+    const canDelete = isCompanyAdmin || (comment && comment.author.id === user?.id);
+    
+    if (!canDelete) return;
     
     setDeleteCommentId(commentId);
     setIsDeleteModalOpen(true);
@@ -262,8 +268,8 @@ const CommentSection = ({ taskId, extensionUpdateData = null }) => {
                       ✏️
                     </button>
                   )}
-                  {/* Delete button - only for admins */}
-                  {isAdmin() && (
+                  {/* Delete button - only for company admins or comment author */}
+                  {(isCompanyAdmin || comment.author.id === user?.id) && (
                     <button
                       onClick={() => handleDeleteComment(comment.id)}
                       className="btn btn-ghost btn-xs text-red-400 hover:text-red-300"

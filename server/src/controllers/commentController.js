@@ -189,9 +189,12 @@ const updateComment = async (req, res) => {
       return res.status(404).json({ error: 'Comment not found' });
     }
 
-    // Check if user can edit this comment (author or admin)
-    if (userRole !== 'ADMIN' && userRole !== 'SYSDMIN' && comment.authorId !== userId) {
-      return res.status(403).json({ error: 'You can only edit your own comments' });
+    // Check if user can edit this comment (author or company admin)
+    const isCompanyAdmin = (userRole === 'ADMIN' || userRole === 'SYSDMIN') && comment.task.companyId === companyId;
+    const isAuthor = comment.authorId === userId;
+    
+    if (!isCompanyAdmin && !isAuthor) {
+      return res.status(403).json({ error: 'You can only edit your own comments or be a company administrator' });
     }
 
     // Check if user has access to the task this comment belongs to
@@ -273,10 +276,12 @@ const updateComment = async (req, res) => {
   }
 };
 
-// Delete comment (admin only)
+// Delete comment (company admin only)
 const deleteComment = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
     const companyId = req.user.companyId;
 
     const comment = await prisma.comment.findFirst({
@@ -287,7 +292,8 @@ const deleteComment = async (req, res) => {
         task: {
           select: {
             id: true,
-            title: true
+            title: true,
+            companyId: true
           }
         }
       }
@@ -295,6 +301,14 @@ const deleteComment = async (req, res) => {
 
     if (!comment) {
       return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    // Check permissions - company admins or comment author can delete comments
+    const isCompanyAdmin = (userRole === 'ADMIN' || userRole === 'SYSDMIN') && comment.task.companyId === companyId;
+    const isCommentAuthor = comment.authorId === userId;
+    
+    if (!isCompanyAdmin && !isCommentAuthor) {
+      return res.status(403).json({ error: 'Only company administrators or comment authors can delete comments' });
     }
 
     // Log audit action before deletion

@@ -602,7 +602,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
               </button>
             )}
             
-            {(isAdmin() || viewedTask.assignerId === user?.id) && !isSharedTask && (
+            {((isAdmin() && viewedTask.companyId === user?.companyId) || viewedTask.assignerId === user?.id) && !isSharedTask && (
               <button
                 onClick={() => setIsEditing(!isEditing)}
                 className="btn btn-sm bg-gray-700 hover:bg-gray-600 text-white border-gray-600 text-xs px-2"
@@ -612,7 +612,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
               </button>
             )}
             
-            {(isAdmin() || viewedTask.assignerId === user?.id) && !isSharedTask && (
+            {((isAdmin() && viewedTask.companyId === user?.companyId) || viewedTask.assignerId === user?.id) && !isSharedTask && (
               <button
                 onClick={handleDelete}
                 className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-0 text-xs px-2"
@@ -1072,7 +1072,11 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
           <h4 className="text-lg font-semibold text-white mb-2">Comments</h4>
           <div className="overflow-y-auto pr-2">
-            <CommentSection taskId={viewedTask.id} extensionUpdateData={extensionUpdateData} />
+            <CommentSection 
+              taskId={viewedTask.id} 
+              task={viewedTask}
+              extensionUpdateData={extensionUpdateData} 
+            />
           </div>
         </div>
         </div>
