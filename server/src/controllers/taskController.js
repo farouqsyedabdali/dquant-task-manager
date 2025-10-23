@@ -20,7 +20,7 @@ const getTasks = async (req, res) => {
     if (type === 'assigned-to-me') {
       // Show tasks where user is lead assignee, co-assignee, shared with them, or collaborating
       whereClause.OR = [
-        { assigneeId: userId },
+        { assigneeId: userId }, // Include tasks assigned to them (even from other companies)
         { coAssignees: { some: { userId: userId } } },
         { sharedWith: { some: { userId: userId } } },
         { collaborators: { some: { userId: userId, companyId: companyId } } }
@@ -30,16 +30,17 @@ const getTasks = async (req, res) => {
     } else if (userRole === 'EMPLOYEE') {
       // Employees see tasks assigned to them, tasks they created, tasks they're co-assigned to, shared with them, or collaborating
       whereClause.OR = [
-        { assigneeId: userId },
+        { assigneeId: userId }, // Include tasks assigned to them (even from other companies)
         { assignerId: userId },
         { coAssignees: { some: { userId: userId } } },
         { sharedWith: { some: { userId: userId } } },
         { collaborators: { some: { userId: userId, companyId: companyId } } }
       ];
     } else {
-      // Admins see all tasks in their company OR tasks they're collaborating on
+      // Admins see all tasks in their company OR tasks they're collaborating on OR tasks assigned to them
       whereClause.OR = [
         { companyId: companyId },
+        { assigneeId: userId }, // Include tasks assigned to them (even from other companies)
         { collaborators: { some: { userId: userId, companyId: companyId } } }
       ];
     }

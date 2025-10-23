@@ -8,7 +8,7 @@ const { logAuditActionDirect } = require('../middleware/auditLogger');
 const shareTask = async (req, res) => {
   try {
     const { taskId } = req.params;
-    const { userId } = req.body;
+    const { userId, permissionLevel = 'VIEWER' } = req.body;
     const currentUserId = req.user.id;
     const companyId = req.user.companyId;
 
@@ -81,7 +81,8 @@ const shareTask = async (req, res) => {
       data: {
         taskId: parseInt(taskId),
         userId: parseInt(userId),
-        companyId: companyId
+        companyId: companyId,
+        permissionLevel: permissionLevel
       },
       include: {
         user: {
@@ -342,8 +343,253 @@ const getSharedTasks = async (req, res) => {
   }
 };
 
+// Share a task with a contact
+const shareTaskWithContact = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { contactId, permissionLevel = 'VIEWER' } = req.body;
+    const currentUserId = req.user.id;
+    const companyId = req.user.companyId;
+
+    // Verify task exists and user has permission to share it
+    const task = await prisma.task.findFirst({
+      where: {
+        id: parseInt(taskId),
+        companyId: companyId
+      },
+      include: {
+        assignee: true,
+        assigner: true
+      }
+    });
+
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // Check if current user can share
+    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSADMIN';
+    const isAssigner = task.assignerId === currentUserId;
+    const isLeadAssignee = task.assigneeId === currentUserId;
+    if (!(isLeadAssignee || isAssigner || isAdminOrSysadmin)) {
+      return res.status(403).json({ error: 'Only the lead assignee, assigner, or admin/sysadmin can share this task' });
+    }
+
+    // Verify contact exists and belongs to current user
+    const contact = await prisma.contact.findFirst({
+      where: {
+        id: parseInt(contactId),
+        userId: currentUserId
+      }
+    });
+
+    if (!contact) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+
+    // Check if task is already shared with this contact
+    const existingShare = await prisma.taskShare.findFirst({
+      where: {
+        taskId: parseInt(taskId),
+        contactId: parseInt(contactId)
+      }
+    });
+
+    if (existingShare) {
+      return res.status(400).json({ error: 'Task is already shared with this contact' });
+    }
+
+    // Create the share
+    const taskShare = await prisma.taskShare.create({
+      data: {
+        taskId: parseInt(taskId),
+        contactId: parseInt(contactId),
+        companyId: companyId,
+        permissionLevel: permissionLevel,
+        isExternal: true
+      },
+      include: {
+        contact: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    // Create a TaskInvitation for the external contact
+    try {
+      const invitation = await prisma.taskInvitation.create({
+        data: {
+          taskId: task.id,
+          senderId: currentUserId,
+          recipientEmail: contact.email,
+          message: `You have been invited to ${permissionLevel === 'VIEWER' ? 'view' : 'comment on'} a task: "${task.title}"`,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          status: 'PENDING'
+        }
+      });
+
+      // Send email invitation
+      const emailService = require('../services/emailService');
+      await emailService.sendTaskInvitation({
+        recipientEmail: contact.email,
+        recipientName: contact.name,
+        senderName: req.user.name,
+        task: {
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          dueDate: task.dueDate
+        },
+        token: invitation.token,
+        message: `You have been invited to ${permissionLevel === 'VIEWER' ? 'view' : 'comment on'} a task: "${task.title}"`
+      });
+    } catch (emailError) {
+      console.error('Error sending email invitation:', emailError);
+      // Don't fail the share if email fails
+    }
+
+    // Log audit action
+    await logAuditActionDirect(req, 'TASK_SHARED', 'TaskShare', {
+      entityId: taskShare.id,
+      taskTitle: task.title,
+      sharedWithName: contact.name,
+      metadata: {
+        taskId: parseInt(taskId),
+        sharedWithContactId: parseInt(contactId),
+        permissionLevel: permissionLevel
+      }
+    });
+
+    res.status(201).json(taskShare);
+  } catch (error) {
+    console.error('Share task with contact error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Share a task with an email address
+const shareTaskWithEmail = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { email, permissionLevel = 'VIEWER' } = req.body;
+    const currentUserId = req.user.id;
+    const companyId = req.user.companyId;
+
+    // Verify task exists and user has permission to share it
+    const task = await prisma.task.findFirst({
+      where: {
+        id: parseInt(taskId),
+        companyId: companyId
+      },
+      include: {
+        assignee: true,
+        assigner: true
+      }
+    });
+
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // Check if current user can share
+    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSADMIN';
+    const isAssigner = task.assignerId === currentUserId;
+    const isLeadAssignee = task.assigneeId === currentUserId;
+    if (!(isLeadAssignee || isAssigner || isAdminOrSysadmin)) {
+      return res.status(403).json({ error: 'Only the lead assignee, assigner, or admin/sysadmin can share this task' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Check if task is already shared with this email
+    const existingShare = await prisma.taskShare.findFirst({
+      where: {
+        taskId: parseInt(taskId),
+        email: email
+      }
+    });
+
+    if (existingShare) {
+      return res.status(400).json({ error: 'Task is already shared with this email address' });
+    }
+
+    // Create the share
+    const taskShare = await prisma.taskShare.create({
+      data: {
+        taskId: parseInt(taskId),
+        email: email,
+        companyId: companyId,
+        permissionLevel: permissionLevel,
+        isExternal: true
+      }
+    });
+
+    // Create a TaskInvitation for the email address
+    try {
+      const invitation = await prisma.taskInvitation.create({
+        data: {
+          taskId: task.id,
+          senderId: currentUserId,
+          recipientEmail: email,
+          message: `You have been invited to ${permissionLevel === 'VIEWER' ? 'view' : 'comment on'} a task: "${task.title}"`,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          status: 'PENDING'
+        }
+      });
+
+      // Send email invitation
+      const emailService = require('../services/emailService');
+      await emailService.sendTaskInvitation({
+        recipientEmail: email,
+        recipientName: email.split('@')[0], // Use email prefix as name
+        senderName: req.user.name,
+        task: {
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          dueDate: task.dueDate
+        },
+        token: invitation.token,
+        message: `You have been invited to ${permissionLevel === 'VIEWER' ? 'view' : 'comment on'} a task: "${task.title}"`
+      });
+    } catch (emailError) {
+      console.error('Error sending email invitation:', emailError);
+      // Don't fail the share if email fails
+    }
+
+    // Log audit action
+    await logAuditActionDirect(req, 'TASK_SHARED', 'TaskShare', {
+      entityId: taskShare.id,
+      taskTitle: task.title,
+      sharedWithName: email,
+      metadata: {
+        taskId: parseInt(taskId),
+        sharedWithEmail: email,
+        permissionLevel: permissionLevel
+      }
+    });
+
+    res.status(201).json(taskShare);
+  } catch (error) {
+    console.error('Share task with email error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   shareTask,
+  shareTaskWithContact,
+  shareTaskWithEmail,
   unshareTask,
   getTaskShares,
   getSharedTasks

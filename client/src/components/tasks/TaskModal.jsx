@@ -7,7 +7,6 @@ import CommentSection from '../comments/CommentSection';
 import AddSubtaskModal from './AddSubtaskModal';
 import DeleteConfirmModal from '../common/DeleteConfirmModal';
 import TaskShareModal from './TaskShareModal';
-import SendTaskEmailModal from './SendTaskEmailModal';
 import TaskUpdatesModal from './TaskUpdatesModal';
 import SearchableDropdown from '../common/SearchableDropdown';
 import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
@@ -28,7 +27,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isSendEmailModalOpen, setIsSendEmailModalOpen] = useState(false);
   const [viewedTask, setViewedTask] = useState(task); // local state for current viewed task
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -53,8 +51,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   // Check if current user is viewing a shared task (view-only access)
   const isSharedTask = viewedTask?.sharedWith?.some(share => share.userId === user?.id);
   
-  // Check if current user is the lead assignee (can share)
-  const canShare = viewedTask?.assigneeId === user?.id;
+  // Check if current user can share (lead assignee or assigner)
+  const canShare = viewedTask?.assigneeId === user?.id || viewedTask?.assignerId === user?.id;
   
   // Check if user can archive/unarchive this task
   const canArchive = !isSharedTask && (
@@ -582,16 +580,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
               </button>
             )}
             
-            {(viewedTask?.assignerId === user?.id) && (
-              <button
-                onClick={() => setIsSendEmailModalOpen(true)}
-                className="btn btn-sm bg-green-600 hover:bg-green-700 text-white border-green-600 text-xs px-2"
-                title="Send task via email"
-              >
-                <span className="text-sm">📧</span>
-                <span className="hidden sm:inline ml-1">Email</span>
-              </button>
-            )}
             
             {canArchive && (
               <button
@@ -1112,12 +1100,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         }}
       />
 
-      {/* Send Task Email Modal */}
-      <SendTaskEmailModal
-        isOpen={isSendEmailModalOpen}
-        onClose={() => setIsSendEmailModalOpen(false)}
-        task={viewedTask}
-      />
 
       {/* Task Updates Modal */}
       <TaskUpdatesModal

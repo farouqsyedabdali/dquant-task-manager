@@ -111,7 +111,9 @@ export const aiAPI = {
 
 // Task Share API
 export const taskShareAPI = {
-  shareTask: (taskId, userId) => api.post(`/task-shares/${taskId}/share`, { userId }),
+  shareTask: (taskId, userId, permissionLevel = 'VIEWER') => api.post(`/task-shares/${taskId}/share`, { userId, permissionLevel }),
+  shareTaskWithContact: (taskId, contactId, permissionLevel = 'VIEWER') => api.post(`/task-shares/${taskId}/share-contact`, { contactId, permissionLevel }),
+  shareTaskWithEmail: (taskId, email, permissionLevel = 'VIEWER') => api.post(`/task-shares/${taskId}/share-email`, { email, permissionLevel }),
   unshareTask: (taskId, userId) => api.delete(`/task-shares/${taskId}/share/${userId}`),
   getTaskShares: (taskId) => api.get(`/task-shares/${taskId}/shares`),
   getSharedTasks: () => api.get('/task-shares/shared'),

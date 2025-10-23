@@ -1,5 +1,5 @@
 const express = require('express');
-const { shareTask, unshareTask, getTaskShares, getSharedTasks } = require('../controllers/taskShareController');
+const { shareTask, shareTaskWithContact, shareTaskWithEmail, unshareTask, getTaskShares, getSharedTasks } = require('../controllers/taskShareController');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -9,6 +9,12 @@ router.use(auth);
 
 // Share a task with a user
 router.post('/:taskId/share', shareTask);
+
+// Share a task with a contact
+router.post('/:taskId/share-contact', shareTaskWithContact);
+
+// Share a task with an email address
+router.post('/:taskId/share-email', shareTaskWithEmail);
 
 // Unshare a task with a user
 router.delete('/:taskId/share/:userId', unshareTask);

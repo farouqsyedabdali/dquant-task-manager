@@ -28,9 +28,10 @@ const getComments = async (req, res) => {
         { collaborators: { some: { userId: userId } } } // Add collaborator check
       ];
     } else {
-      // For ADMIN and SYSADMIN, check company OR collaborator access
+      // For ADMIN and SYSADMIN, check company OR collaborator access OR tasks assigned to them
       whereClause.OR = [
         { companyId: companyId },
+        { assigneeId: userId }, // Include tasks assigned to them (even from other companies)
         { collaborators: { some: { userId: userId } } }
       ];
     }
@@ -95,9 +96,10 @@ const createComment = async (req, res) => {
         { collaborators: { some: { userId: authorId } } } // Add collaborator check
       ];
     } else {
-      // For ADMIN and SYSADMIN, check company OR collaborator access
+      // For ADMIN and SYSADMIN, check company OR collaborator access OR tasks assigned to them
       whereClause.OR = [
         { companyId: companyId },
+        { assigneeId: authorId }, // Include tasks assigned to them (even from other companies)
         { collaborators: { some: { userId: authorId } } }
       ];
     }
@@ -207,9 +209,10 @@ const updateComment = async (req, res) => {
         { collaborators: { some: { userId: userId } } } // Add collaborator check
       ];
     } else {
-      // For ADMIN and SYSADMIN, check company OR collaborator access
+      // For ADMIN and SYSADMIN, check company OR collaborator access OR tasks assigned to them
       taskWhereClause.OR = [
         { companyId: companyId },
+        { assigneeId: userId }, // Include tasks assigned to them (even from other companies)
         { collaborators: { some: { userId: userId } } }
       ];
     }

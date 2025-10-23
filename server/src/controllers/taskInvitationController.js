@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const emailService = require('../services/emailService');
+const { createNotification } = require('./notificationController');
 
 
 // Helper function to check if invitation is expired
@@ -290,16 +291,51 @@ const taskInvitationController = {
         });
       }
 
-      // Add user as a collaborator to the original task (truly collaborative)
-      await prisma.taskCollaborator.create({
-        data: {
-          taskId: invitation.task.id,
-          userId: userId,
-          companyId: user.companyId,
-          permissionLevel: 'COMMENT', // External collaborators can comment
-          isExternal: true // This is an external collaborator
-        }
-      });
+      // Check if this was an assignment (task has externalContactId) or sharing
+      const isAssignment = invitation.task.externalContactId !== null;
+      
+      if (isAssignment) {
+        // This was an assignment - make them the lead assignee
+        await prisma.task.update({
+          where: { id: invitation.task.id },
+          data: {
+            assigneeId: userId,
+            externalContactId: null // Clear the external contact reference
+          }
+        });
+        
+        // Create notification for the new assignee
+        await createNotification(
+          'TASK_ASSIGNED',
+          'Task Assigned',
+          `You have been assigned to task "${invitation.task.title}"`,
+          invitation.task.id,
+          userId,
+          user.companyId
+        );
+      } else {
+        // This was sharing - make them a collaborator and create TaskShare entry
+        await prisma.taskCollaborator.create({
+          data: {
+            taskId: invitation.task.id,
+            userId: userId,
+            companyId: user.companyId,
+            permissionLevel: 'COMMENT', // External collaborators can comment
+            isExternal: true // This is an external collaborator
+          }
+        });
+
+        // Also create a TaskShare entry for consistency
+        await prisma.taskShare.create({
+          data: {
+            taskId: invitation.task.id,
+            userId: userId,
+            companyId: user.companyId,
+            permissionLevel: 'COMMENTER',
+            isExternal: true
+          }
+        });
+      }
 
       // Update invitation status
       await prisma.taskInvitation.update({
