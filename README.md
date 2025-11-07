@@ -1,4 +1,4 @@
-# COMPANY NAME Task Manager
+# Tialz Task Manager
 
 A modern, Jira-like task management system built with React, Node.js, and PostgreSQL. Features role-based access control with admin and employee user types.
 

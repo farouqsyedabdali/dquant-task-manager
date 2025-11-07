@@ -102,7 +102,7 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
-        'X-Title': process.env.SITE_NAME || 'COMPANY NAME Task Manager'
+        'X-Title': process.env.SITE_NAME || 'Tialz Task Manager'
       },
       responseType: 'stream'
     });
@@ -381,7 +381,7 @@ Output: {"title": "Update website homepage", "description": "Update the website 
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
-        'X-Title': process.env.SITE_NAME || 'COMPANY NAME Task Manager'
+        'X-Title': process.env.SITE_NAME || 'Tialz Task Manager'
       },
       responseType: 'stream'
     });
@@ -576,7 +576,7 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
-        'X-Title': process.env.SITE_NAME || 'COMPANY NAME Task Manager'
+        'X-Title': process.env.SITE_NAME || 'Tialz Task Manager'
       },
       responseType: 'stream'
     });

@@ -1,4 +1,6 @@
 import React from 'react';
+import IconButton from './IconButton';
+import { FaTimes, FaTrash } from 'react-icons/fa';
 
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, taskTitle, isLoading = false, deleteType = 'task' }) => {
   if (!isOpen) return null;
@@ -51,24 +53,23 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, taskTitle, isLoading =
           
           {/* Buttons */}
           <div className="flex space-x-3">
-            <button
+            <IconButton
+              icon={<FaTimes />}
+              label="Cancel"
+              variant="ghost"
               onClick={onClose}
               disabled={isLoading}
-              className="btn btn-ghost flex-1"
-            >
-              Cancel
-            </button>
-            <button
+              className="flex-1"
+            />
+            <IconButton
+              icon={<FaTrash />}
+              label="Delete"
+              variant="danger"
               onClick={onConfirm}
               disabled={isLoading}
-              className="btn btn-error flex-1"
-            >
-              {isLoading ? (
-                <span className="loading loading-spinner loading-sm"></span>
-              ) : (
-                'Delete'
-              )}
-            </button>
+              loading={isLoading}
+              className="flex-1"
+            />
           </div>
         </div>
       </div>

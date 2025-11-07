@@ -189,7 +189,7 @@ const LandingPage = () => {
               <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">CN</span>
               </div>
-              <span className="text-white font-bold text-xl">COMPANY NAME</span>
+              <span className="text-white font-bold text-xl">Tialz</span>
         </div>
       </div>
 
@@ -829,7 +829,7 @@ const LandingPage = () => {
               Ready to Get Started?
             </h2>
             <p className="text-xl text-white/70 mb-12">
-              Download COMPANY NAME Task Manager and transform your productivity today
+              Download Tialz Task Manager and transform your productivity today
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
@@ -925,7 +925,7 @@ const LandingPage = () => {
                 <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">CN</span>
                 </div>
-                <span className="text-white font-bold text-xl">COMPANY NAME</span>
+                <span className="text-white font-bold text-xl">Tialz</span>
               </div>
               <p className="text-white/70">
                 Revolutionizing productivity with AI-powered task management.
@@ -964,7 +964,7 @@ const LandingPage = () => {
           </div>
           
           <div className="border-t border-white/10 mt-8 pt-8 text-center text-white/70">
-            <p>&copy; 2024 COMPANY NAME. All rights reserved. Made with ❤️ for productivity enthusiasts.</p>
+            <p>&copy; 2024 Tialz. All rights reserved. Made with ❤️ for productivity enthusiasts.</p>
           </div>
         </div>
       </footer>

@@ -13,6 +13,8 @@ import ViewSwitcher from '../components/tasks/ViewSwitcher';
 import ArchiveSwitcher from '../components/tasks/ArchiveSwitcher';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import NotificationBoard from '../components/notifications/NotificationBoard';
+import IconButton from '../components/common/IconButton';
+import { FaPlus, FaTimes } from 'react-icons/fa';
 
 const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -853,15 +855,12 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
               {/* Notification Board */}
               <NotificationBoard />
               
-              <button
+              <IconButton
+                icon={<FaPlus />}
+                label="Add New Task"
+                variant="primary"
                 onClick={handleAddTask}
-                className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add New Task
-              </button>
+              />
             </div>
           </div>
         </div>
@@ -1019,15 +1018,18 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           <div className="modal-box max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border border-gray-700">
             <div className="flex justify-between items-start mb-6">
               <h3 className="text-2xl font-bold text-white">Task Summary</h3>
-              <button
+              <IconButton
+                icon={<FaTimes />}
+                label="Close"
+                iconOnly={true}
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setIsSummaryModalOpen(false);
                   setSummaryData(null);
                 }}
-                className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
-              >
-                ✕
-              </button>
+                className="!p-2 !rounded-full"
+              />
             </div>
             
             <div className="space-y-6">

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { commentsAPI } from '../../services/api';
 import useAuthStore from '../../context/authStore';
 import DeleteConfirmModal from '../common/DeleteConfirmModal';
+import IconButton from '../common/IconButton';
+import { FaComment, FaEdit, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
 
 const CommentSection = ({ taskId, task = null, extensionUpdateData = null }) => {
   const [comments, setComments] = useState([]);
@@ -206,20 +208,15 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null }) => 
           </div>
         </div>
         <div className="flex justify-end">
-          <button
+          <IconButton
+            icon={<FaComment />}
+            label={isLoading ? 'Adding...' : 'Add Comment'}
+            variant="primary"
+            size="sm"
             type="submit"
             disabled={isLoading || !newComment.trim()}
-            className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 btn-sm"
-          >
-            {isLoading ? (
-              <>
-                <span className="loading loading-spinner loading-xs"></span>
-                Adding...
-              </>
-            ) : (
-              'Add Comment'
-            )}
-          </button>
+            loading={isLoading}
+          />
         </div>
       </form>
 
@@ -259,24 +256,28 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null }) => 
                 <div className="flex space-x-1">
                   {/* Edit button - only for comment author */}
                   {comment.author.id === user?.id && (
-                    <button
+                    <IconButton
+                      icon={<FaEdit />}
+                      label="Edit comment"
+                      iconOnly={true}
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleEditComment(comment)}
-                      className="btn btn-ghost btn-xs text-blue-400 hover:text-blue-300"
-                      title="Edit comment"
                       disabled={editingCommentId === comment.id}
-                    >
-                      ✏️
-                    </button>
+                      className="!text-blue-400 hover:!text-blue-300 !p-1.5"
+                    />
                   )}
                   {/* Delete button - only for company admins or comment author */}
                   {(isCompanyAdmin || comment.author.id === user?.id) && (
-                    <button
+                    <IconButton
+                      icon={<FaTrash />}
+                      label="Delete comment"
+                      iconOnly={true}
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDeleteComment(comment.id)}
-                      className="btn btn-ghost btn-xs text-red-400 hover:text-red-300"
-                      title="Delete comment"
-                    >
-                      🗑️
-                    </button>
+                      className="!text-red-400 hover:!text-red-300 !p-1.5"
+                    />
                   )}
                 </div>
               </div>
@@ -297,27 +298,24 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null }) => 
                       {editContent.length}/200 characters
                     </div>
                     <div className="flex space-x-2">
-                      <button
+                      <IconButton
+                        icon={<FaTimes />}
+                        label="Cancel"
+                        variant="ghost"
+                        size="sm"
                         onClick={handleCancelEdit}
-                        className="btn btn-ghost btn-xs text-gray-400 hover:text-gray-300"
                         disabled={isLoading}
-                      >
-                        Cancel
-                      </button>
-                      <button
+                      />
+                      <IconButton
+                        icon={<FaSave />}
+                        label={isLoading ? 'Saving...' : 'Save'}
+                        variant="primary"
+                        size="sm"
                         onClick={handleSaveEdit}
                         disabled={isLoading || !editContent.trim()}
-                        className="btn bg-blue-600 hover:bg-blue-700 text-white border-0 btn-xs"
-                      >
-                        {isLoading ? (
-                          <>
-                            <span className="loading loading-spinner loading-xs"></span>
-                            Saving...
-                          </>
-                        ) : (
-                          'Save'
-                        )}
-                      </button>
+                        loading={isLoading}
+                        className="!bg-blue-600 hover:!bg-blue-700"
+                      />
                     </div>
                   </div>
                 </div>

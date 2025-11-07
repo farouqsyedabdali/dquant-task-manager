@@ -11,6 +11,11 @@ import TaskUpdatesModal from './TaskUpdatesModal';
 import SearchableDropdown from '../common/SearchableDropdown';
 import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
 import useContactStore from '../../stores/contactStore';
+import IconButton from '../common/IconButton';
+import { 
+  FaTimes, FaEdit, FaTrash, FaArchive, FaShareAlt, FaChartBar, 
+  FaMagic, FaSave, FaPlus, FaUserPlus 
+} from 'react-icons/fa';
 
 const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
@@ -543,46 +548,43 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             {/* Right: Action Buttons and Close */}
             <div className="flex items-start gap-2 flex-shrink-0">
               {/* Action Buttons */}
-              <div className="grid grid-cols-3 gap-2 max-w-xs">
-            <button
+              <div className="flex flex-wrap gap-2">
+            <IconButton
+              icon={<FaChartBar />}
+              label="Updates"
+              variant="primary"
+              size="sm"
               onClick={() => setIsUpdatesModalOpen(true)}
-              className="btn btn-sm bg-blue-600 hover:bg-blue-700 text-white border-blue-600 text-xs px-2"
-              title="View task updates"
-            >
-              <span className="text-sm">📊</span>
-              <span className="hidden sm:inline ml-1">Updates</span>
-            </button>
+              className="!bg-blue-600 hover:!bg-blue-700"
+            />
             
-            <button
+            <IconButton
+              icon={<FaMagic />}
+              label="Summary"
+              variant="primary"
+              size="sm"
               onClick={handleSummarizeTask}
               disabled={isLoadingSummary}
-              className="btn btn-sm bg-purple-600 hover:bg-purple-700 text-white border-purple-600 text-xs px-2"
-              title="Summarize this task"
-            >
-              {isLoadingSummary ? (
-                <span className="loading loading-spinner loading-xs"></span>
-              ) : (
-                <>
-                  <span className="text-sm">📋</span>
-                  <span className="hidden sm:inline ml-1">Summary</span>
-                </>
-              )}
-            </button>
+              loading={isLoadingSummary}
+              className="!bg-purple-600 hover:!bg-purple-700"
+            />
             
             {canShare && !isPersonalAccount && (
-              <button
+              <IconButton
+                icon={<FaShareAlt />}
+                label="Share"
+                variant="primary"
+                size="sm"
                 onClick={() => setIsShareModalOpen(true)}
-                className="btn btn-sm bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600 text-xs px-2"
-                title="Share this task"
-              >
-                <span className="text-sm">📤</span>
-                <span className="hidden sm:inline ml-1">Share</span>
-              </button>
+              />
             )}
             
-            
             {canArchive && (
-              <button
+              <IconButton
+                icon={<FaArchive />}
+                label={viewedTask.archived ? 'Unarchive' : 'Archive'}
+                variant={viewedTask.archived ? 'success' : 'warning'}
+                size="sm"
                 onClick={() => {
                   if (viewedTask.archived) {
                     onUnarchive?.(viewedTask.id);
@@ -590,46 +592,40 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     onArchive?.(viewedTask.id);
                   }
                 }}
-                className={`btn btn-sm text-xs px-2 ${
-                  viewedTask.archived 
-                    ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
-                    : 'bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-600'
-                }`}
-                title={viewedTask.archived ? 'Unarchive this task' : 'Archive this task'}
-              >
-                <span className="text-sm">{viewedTask.archived ? '📂' : '📁'}</span>
-                <span className="hidden sm:inline ml-1">{viewedTask.archived ? 'Unarchive' : 'Archive'}</span>
-              </button>
+              />
             )}
             
             {((isAdmin() && viewedTask.companyId === user?.companyId) || viewedTask.assignerId === user?.id) && !isSharedTask && (
-              <button
+              <IconButton
+                icon={<FaEdit />}
+                label={isEditing ? 'Cancel' : 'Edit'}
+                variant="secondary"
+                size="sm"
                 onClick={() => setIsEditing(!isEditing)}
-                className="btn btn-sm bg-gray-700 hover:bg-gray-600 text-white border-gray-600 text-xs px-2"
-              >
-                <span className="text-sm">✏️</span>
-                <span className="hidden sm:inline ml-1">{isEditing ? 'Cancel' : 'Edit'}</span>
-              </button>
+              />
             )}
             
             {((isAdmin() && viewedTask.companyId === user?.companyId) || viewedTask.assignerId === user?.id) && !isSharedTask && (
-              <button
+              <IconButton
+                icon={<FaTrash />}
+                label="Delete"
+                variant="danger"
+                size="sm"
                 onClick={handleDelete}
-                className="btn btn-sm bg-red-600 hover:bg-red-700 text-white border-0 text-xs px-2"
-              >
-                <span className="text-sm">🗑️</span>
-                <span className="hidden sm:inline ml-1">Delete</span>
-              </button>
+              />
             )}
           </div>
           
           {/* Close Button */}
-          <button
+          <IconButton
+            icon={<FaTimes />}
+            label="Close"
+            iconOnly={true}
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
-          >
-            ✕
-          </button>
+            className="!p-2 !rounded-full"
+          />
         </div>
       </div>
     </div>
@@ -809,13 +805,15 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             recentEmployees={recentEmployees}
                           />
                         </div>
-                        <button
+                        <IconButton
+                          icon={<FaUserPlus />}
+                          label="Add Co-Assignee"
+                          variant="primary"
+                          size="sm"
                           onClick={handleAddCoAssignee}
                           disabled={!selectedCoAssigneeId || isAddingCoAssignee}
-                          className="btn btn-primary btn-sm"
-                        >
-                          +
-                        </button>
+                          loading={isAddingCoAssignee}
+                        />
                       </div>
                       
                       {/* Co-Assignees List */}
@@ -841,13 +839,15 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                   {coAssignee.user.email}
                                 </div>
                               </div>
-                              <button
+                              <IconButton
+                                icon={<FaTimes />}
+                                label="Remove co-assignee"
+                                iconOnly={true}
+                                variant="danger"
+                                size="sm"
                                 onClick={() => handleRemoveCoAssignee(coAssignee.userId)}
-                                className="btn btn-error btn-xs flex-shrink-0 w-6 h-6 min-h-0 p-0 flex items-center justify-center"
-                                title="Remove co-assignee"
-                              >
-                                ✕
-                              </button>
+                                className="!p-1 !w-6 !h-6 !min-h-0"
+                              />
                             </div>
                           ))}
                         </div>
@@ -1030,12 +1030,14 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
             {/* Add Subtask Button (assigner or assignee only) */}
             {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
-              <button
-                className="btn btn-sm bg-indigo-600 hover:bg-indigo-700 text-white border-0 w-full"
+              <IconButton
+                icon={<FaPlus />}
+                label="Add Subtask"
+                variant="primary"
+                size="sm"
                 onClick={() => setIsAddSubtaskOpen(true)}
-              >
-                + Add Subtask
-              </button>
+                className="w-full"
+              />
             )}
             {/* AddSubtaskModal */}
             {isAddSubtaskOpen && (
@@ -1050,20 +1052,15 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             {/* Save Button */}
             {isEditing && (
               <div className="pt-4">
-                <button
+                <IconButton
+                  icon={<FaSave />}
+                  label={isLoading ? 'Saving...' : 'Save Changes'}
+                  variant="primary"
                   onClick={handleSave}
                   disabled={isLoading}
-                  className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 w-full"
-                >
-                  {isLoading ? (
-                    <>
-                      <span className="loading loading-spinner loading-sm"></span>
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </button>
+                  loading={isLoading}
+                  className="w-full"
+                />
               </div>
             )}
           </div>
@@ -1118,15 +1115,18 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           <div className="modal-box max-w-6xl max-h-[95vh] overflow-y-auto bg-gray-800 border border-gray-700">
             <div className="flex justify-between items-start mb-6">
               <h3 className="text-2xl font-bold text-white">Task Summary</h3>
-              <button
+              <IconButton
+                icon={<FaTimes />}
+                label="Close"
+                iconOnly={true}
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setIsSummaryModalOpen(false);
                   setSummaryData(null);
                 }}
-                className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
-              >
-                ✕
-              </button>
+                className="!p-2 !rounded-full"
+              />
             </div>
             
             <div className="space-y-6">

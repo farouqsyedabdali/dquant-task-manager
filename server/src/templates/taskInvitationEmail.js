@@ -256,7 +256,7 @@ const taskInvitationTemplate = ({ recipientName, senderName, task, invitationLin
             This email was sent by Task Manager. If you didn't expect this invitation, you can safely ignore it.
           </p>
           <p class="footer-text" style="margin-top: 8px;">
-            © ${new Date().getFullYear()} COMPANY NAME. All rights reserved.
+            © ${new Date().getFullYear()} Tialz. All rights reserved.
           </p>
         </div>
       </div>

@@ -121,7 +121,7 @@ const PersonalSignup = () => {
           <span className="text-white font-bold text-lg">CN</span>
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">COMPANY NAME</h1>
+          <h1 className="text-2xl font-bold text-white">Tialz</h1>
           <p className="text-gray-400 text-sm">Task Manager</p>
         </div>
       </div>

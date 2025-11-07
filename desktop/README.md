@@ -1,4 +1,4 @@
-# COMPANY NAME Task Manager - Desktop
+# Tialz Task Manager - Desktop
 
 ## Development
 

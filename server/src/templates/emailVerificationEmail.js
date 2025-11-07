@@ -1,6 +1,6 @@
 const emailVerificationEmail = (name, verificationCode) => {
   return {
-    subject: 'Verify Your Email Address - COMPANY NAME Task Manager',
+    subject: 'Verify Your Email Address - Tialz Task Manager',
     html: `
       <!DOCTYPE html>
       <html lang="en">
@@ -103,13 +103,13 @@ const emailVerificationEmail = (name, verificationCode) => {
           <div class="header">
             <div class="logo">CN</div>
             <h1 class="title">Verify Your Email</h1>
-            <p class="subtitle">Welcome to COMPANY NAME Task Manager</p>
+            <p class="subtitle">Welcome to Tialz Task Manager</p>
           </div>
           
           <div class="content">
             <p>Hi ${name},</p>
             
-            <p>Thank you for signing up for COMPANY NAME Task Manager! To complete your registration and start managing your tasks, please verify your email address.</p>
+            <p>Thank you for signing up for Tialz Task Manager! To complete your registration and start managing your tasks, please verify your email address.</p>
             
             <div style="text-align: center; margin: 30px 0;">
               <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 30px; display: inline-block;">
@@ -137,19 +137,19 @@ const emailVerificationEmail = (name, verificationCode) => {
           
           <div class="footer">
             <p>If you didn't create an account with us, please ignore this email.</p>
-            <p>This email was sent from COMPANY NAME Task Manager. Please do not reply to this email.</p>
-            <p>&copy; 2024 COMPANY NAME. All rights reserved.</p>
+            <p>This email was sent from Tialz Task Manager. Please do not reply to this email.</p>
+            <p>&copy; 2024 Tialz. All rights reserved.</p>
           </div>
         </div>
       </body>
       </html>
     `,
     text: `
-      Verify Your Email Address - COMPANY NAME Task Manager
+      Verify Your Email Address - Tialz Task Manager
       
       Hi ${name},
       
-      Thank you for signing up for COMPANY NAME Task Manager! To complete your registration and start managing your tasks, please verify your email address.
+      Thank you for signing up for Tialz Task Manager! To complete your registration and start managing your tasks, please verify your email address.
       
       Your verification code is: ${verificationCode}
       
@@ -161,9 +161,9 @@ const emailVerificationEmail = (name, verificationCode) => {
       
       If you didn't create an account with us, please ignore this email.
       
-      This email was sent from COMPANY NAME Task Manager. Please do not reply to this email.
+      This email was sent from Tialz Task Manager. Please do not reply to this email.
       
-      © 2024 COMPANY NAME. All rights reserved.
+      © 2024 Tialz. All rights reserved.
     `
   };
 };

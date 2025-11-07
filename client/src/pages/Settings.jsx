@@ -419,7 +419,7 @@ const Settings = () => {
                       <p className="text-sm">
                         <strong className="text-gray-200">Task Manager</strong> v0.0.5
                       </p>
-                      <p className="text-sm">© 2025 COMPANY NAME. All rights reserved.</p>
+                      <p className="text-sm">© 2025 Tialz. All rights reserved.</p>
                     </div>
                   </div>
                 </div>

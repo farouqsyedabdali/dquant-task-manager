@@ -55,7 +55,7 @@ const Header = () => {
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <h1 className="text-xl font-bold text-white">
-                {user?.companyName || 'COMPANY NAME Task Manager'}
+                {user?.companyName || 'Tialz Task Manager'}
               </h1>
             </div>
             

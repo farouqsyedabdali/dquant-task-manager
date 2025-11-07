@@ -6,6 +6,8 @@ import useContactStore from '../../stores/contactStore';
 import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
 import { usersAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
+import IconButton from '../common/IconButton';
+import { FaTimes, FaPlus, FaSave } from 'react-icons/fa';
 
 const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   const [formData, setFormData] = useState({
@@ -228,12 +230,15 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
               </p>
             )}
           </div>
-          <button
+          <IconButton
+            icon={<FaTimes />}
+            label="Close"
+            iconOnly={true}
+            variant="ghost"
+            size="sm"
             onClick={handleClose}
-            className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
-          >
-            ✕
-          </button>
+            className="!p-2 !rounded-full"
+          />
         </div>
 
         {/* Form */}
@@ -460,27 +465,21 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
            {/* Submit Buttons */}
           <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
+            <IconButton
+              icon={<FaTimes />}
+              label="Cancel"
+              variant="secondary"
               onClick={handleClose}
-              className="btn bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-            >
-              Cancel
-            </button>
-            <button
+              disabled={isLoading}
+            />
+            <IconButton
+              icon={<FaPlus />}
+              label={isLoading ? 'Creating...' : 'Create Task'}
+              variant="primary"
               type="submit"
               disabled={isLoading}
-              className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-            >
-              {isLoading ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  Creating...
-                </>
-              ) : (
-                'Create Task'
-              )}
-            </button>
+              loading={isLoading}
+            />
           </div>
         </form>
       </div>
