@@ -14,7 +14,9 @@ import useContactStore from '../../stores/contactStore';
 import IconButton from '../common/IconButton';
 import { 
   FaTimes, FaEdit, FaTrash, FaArchive, FaShareAlt, FaChartBar, 
-  FaMagic, FaSave, FaPlus, FaUserPlus 
+  FaMagic, FaSave, FaPlus, FaUserPlus,
+  FaCircle, FaSpinner, FaCheckCircle, FaPauseCircle, FaTimesCircle,
+  FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle
 } from 'react-icons/fa';
 
 const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null }) => {
@@ -499,6 +501,38 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     }
   };
 
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'TODO':
+        return <FaCircle className="w-3 h-3" />;
+      case 'IN_PROGRESS':
+        return <FaSpinner className="w-3 h-3 animate-spin" />;
+      case 'COMPLETED':
+        return <FaCheckCircle className="w-3 h-3" />;
+      case 'ON_HOLD':
+        return <FaPauseCircle className="w-3 h-3" />;
+      case 'CANCELLED':
+        return <FaTimesCircle className="w-3 h-3" />;
+      default:
+        return <FaCircle className="w-3 h-3" />;
+    }
+  };
+
+  const getPriorityIcon = (priority) => {
+    switch (priority) {
+      case 'LOW':
+        return <FaArrowDown className="w-3 h-3" />;
+      case 'MEDIUM':
+        return <FaMinus className="w-3 h-3" />;
+      case 'HIGH':
+        return <FaArrowUp className="w-3 h-3" />;
+      case 'URGENT':
+        return <FaExclamationTriangle className="w-3 h-3" />;
+      default:
+        return <FaMinus className="w-3 h-3" />;
+    }
+  };
+
   if (!isOpen || !viewedTask) return null;
 
   return (
@@ -531,8 +565,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                       {viewedTask.title}
                     </h3>
                     {isSharedTask && (
-                      <div className="status-badge bg-blue-600 text-blue-100 capitalize">
-                        📤 Shared with you
+                      <div className="status-badge bg-blue-600 text-blue-100 capitalize flex items-center gap-1.5">
+                        <FaShareAlt className="w-3 h-3" />
+                        <span>Shared with you</span>
                       </div>
                     )}
                   </div>
@@ -678,7 +713,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     ))}
                   </select>
                 ) : (
-                  <span className={`px-3 py-2 rounded-full text-sm font-medium capitalize ${getStatusColor(viewedTask.status)}`}>
+                  <span className={`px-3 py-2 rounded-full text-sm font-medium capitalize ${getStatusColor(viewedTask.status)} flex items-center gap-1.5 w-fit`}>
+                    {getStatusIcon(viewedTask.status)}
                     {STATUS_LABELS[viewedTask.status]}
                   </span>
                 )}
@@ -699,7 +735,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     ))}
                   </select>
                 ) : (
-                  <span className={`px-3 py-2 rounded-full text-sm font-medium capitalize ${getPriorityColor(viewedTask.priority)}`}>
+                  <span className={`px-3 py-2 rounded-full text-sm font-medium capitalize ${getPriorityColor(viewedTask.priority)} flex items-center gap-1.5 w-fit`}>
+                    {getPriorityIcon(viewedTask.priority)}
                     {PRIORITY_LABELS[viewedTask.priority]}
                   </span>
                 )}
@@ -1013,7 +1050,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-white text-sm">{subtask.title}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(subtask.status)}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(subtask.status)} flex items-center gap-1 w-fit`}>
+                          {getStatusIcon(subtask.status)}
                           {STATUS_LABELS[subtask.status]}
                         </span>
                       </div>

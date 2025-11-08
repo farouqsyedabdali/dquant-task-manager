@@ -3,6 +3,11 @@ import useAuthStore from '../../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
 import TaskModal from './TaskModal';
 import AddSubtaskModal from './AddSubtaskModal';
+import { 
+  FaCircle, FaSpinner, FaCheckCircle, FaPauseCircle, FaTimesCircle,
+  FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle,
+  FaCalendar, FaComment, FaList, FaLevelUpAlt, FaShareAlt
+} from 'react-icons/fa';
 
 const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive, onUnarchive }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,6 +57,38 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
     }
   };
 
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'TODO':
+        return <FaCircle className="w-3 h-3" />;
+      case 'IN_PROGRESS':
+        return <FaSpinner className="w-3 h-3 animate-spin" />;
+      case 'COMPLETED':
+        return <FaCheckCircle className="w-3 h-3" />;
+      case 'ON_HOLD':
+        return <FaPauseCircle className="w-3 h-3" />;
+      case 'CANCELLED':
+        return <FaTimesCircle className="w-3 h-3" />;
+      default:
+        return <FaCircle className="w-3 h-3" />;
+    }
+  };
+
+  const getPriorityIcon = (priority) => {
+    switch (priority) {
+      case 'LOW':
+        return <FaArrowDown className="w-3 h-3" />;
+      case 'MEDIUM':
+        return <FaMinus className="w-3 h-3" />;
+      case 'HIGH':
+        return <FaArrowUp className="w-3 h-3" />;
+      case 'URGENT':
+        return <FaExclamationTriangle className="w-3 h-3" />;
+      default:
+        return <FaMinus className="w-3 h-3" />;
+    }
+  };
+
   const getLastUpdate = () => {
     if (task.comments && task.comments.length > 0) {
       const lastComment = task.comments[0];
@@ -84,16 +121,18 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
               {task.title}
             </h3>
             {isSharedTask && (
-              <div className="status-badge bg-blue-600 text-blue-100 uppercase">
-                📤
+              <div className="status-badge bg-blue-600 text-blue-100 uppercase flex items-center gap-1">
+                <FaShareAlt className="w-3 h-3" />
               </div>
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <span className={`status-badge uppercase ${getStatusColor(task.status)}`}>
+            <span className={`status-badge uppercase ${getStatusColor(task.status)} flex items-center gap-1.5`}>
+              {getStatusIcon(task.status)}
               {STATUS_LABELS[task.status]}
             </span>
-            <span className={`status-badge uppercase ${getPriorityColor(task.priority)}`}>
+            <span className={`status-badge uppercase ${getPriorityColor(task.priority)} flex items-center gap-1.5`}>
+              {getPriorityIcon(task.priority)}
               {PRIORITY_LABELS[task.priority]}
             </span>
           </div>
@@ -152,6 +191,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
           {/* Parent Task Info */}
           {task.parentTask && (
             <div className="flex items-center space-x-2">
+              <FaLevelUpAlt className="w-4 h-4 text-gray-400" />
               <span className="text-gray-400 text-sm">Parent:</span>
               <span className="text-indigo-400 text-sm">{task.parentTask.title}</span>
             </div>
@@ -160,6 +200,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
           {/* Subtasks Count */}
           {task.subtasks && task.subtasks.length > 0 && (
             <div className="flex items-center space-x-2">
+              <FaList className="w-4 h-4 text-gray-400" />
               <span className="text-gray-400 text-sm">Subtasks:</span>
               <span className="text-white text-sm">{task.subtasks.length}</span>
             </div>
@@ -167,6 +208,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
 
           {/* Due Date */}
           <div className="flex items-center space-x-2">
+            <FaCalendar className="w-4 h-4 text-gray-400" />
             <span className="text-gray-400 text-sm">Due:</span>
             {task.dueDate ? (
               <div className="flex items-center space-x-2">
@@ -228,8 +270,9 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
           </div>
           <div className="flex items-center space-x-2">
             {task.comments && task.comments.length > 0 && (
-              <span className="text-gray-400 text-xs">
-                💬 {task.comments.length}
+              <span className="text-gray-400 text-xs flex items-center gap-1">
+                <FaComment className="w-3 h-3" />
+                {task.comments.length}
               </span>
             )}
             

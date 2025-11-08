@@ -1,5 +1,7 @@
 import { STATUS_OPTIONS, PRIORITY_OPTIONS, SORT_OPTIONS } from '../../utils/constants';
 import useAuthStore from '../../context/authStore';
+import IconButton from '../common/IconButton';
+import { FaSearch, FaCheckCircle, FaFlag, FaCalendar, FaFilter, FaSort, FaTimes } from 'react-icons/fa';
 
 const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
   const { user } = useAuthStore();
@@ -17,22 +19,27 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
       <div className={`grid grid-cols-1 gap-4 ${isPersonalAccount ? 'md:grid-cols-6' : 'md:grid-cols-7'}`}>
         {/* Search */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Search
+          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+            <FaSearch className="w-4 h-4" />
+            <span>Search</span>
           </label>
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
-          />
+          <div className="relative">
+            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              className="input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full h-10 pl-10 focus:border-indigo-500 focus:ring-indigo-500"
+            />
+          </div>
         </div>
 
         {/* Status Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Status
+          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+            <FaCheckCircle className="w-4 h-4" />
+            <span>Status</span>
           </label>
           <select
             value={filters.status}
@@ -51,8 +58,9 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
         {/* Priority Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Priority
+          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+            <FaFlag className="w-4 h-4" />
+            <span>Priority</span>
           </label>
           <select
             value={filters.priority}
@@ -70,8 +78,9 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
         {/* Due Date Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Due Date
+          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+            <FaCalendar className="w-4 h-4" />
+            <span>Due Date</span>
           </label>
           <select
             value={filters.dueDateFilter}
@@ -90,8 +99,9 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
         {/* Task Type Filter - Only show for company accounts */}
         {!isPersonalAccount && (
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Task Type
+            <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+              <FaFilter className="w-4 h-4" />
+              <span>Task Type</span>
             </label>
             <select
               value={filters.taskType || ''}
@@ -108,8 +118,9 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
         {/* Sort By Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Sort By
+          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+            <FaSort className="w-4 h-4" />
+            <span>Sort By</span>
           </label>
           <select
             value={filters.sortBy || 'urgency'}
@@ -126,13 +137,14 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
         {/* Clear Filters */}
         <div className="flex items-end">
-          <button
+          <IconButton
+            icon={<FaTimes />}
+            label="Clear Filters"
+            variant="secondary"
             onClick={onClearFilters}
             disabled={!hasActiveFilters}
-            className="btn bg-gray-700 hover:bg-gray-600 text-white border-gray-600 w-full h-10 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Clear Filters
-          </button>
+            className="w-full h-10"
+          />
         </div>
       </div>
 
@@ -142,12 +154,15 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           {filters.search && (
             <div className="status-badge bg-indigo-600 text-white gap-2 border-0 flex items-center">
               Search: {filters.search}
-              <button
+              <IconButton
+                icon={<FaTimes />}
+                label="Remove search filter"
+                iconOnly={true}
+                variant="ghost"
+                size="sm"
                 onClick={() => handleFilterChange('search', '')}
-                className="btn btn-ghost btn-xs text-white hover:bg-indigo-700 ml-1"
-              >
-                ✕
-              </button>
+                className="!text-white hover:!bg-indigo-700 !p-1 !ml-1"
+              />
             </div>
           )}
           {filters.status && (
@@ -155,23 +170,29 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
               Status: {filters.status.includes(',') 
                 ? filters.status.split(',').map(s => STATUS_OPTIONS.find(opt => opt.value === s.trim())?.label).join(', ')
                 : STATUS_OPTIONS.find(opt => opt.value === filters.status)?.label}
-              <button
+              <IconButton
+                icon={<FaTimes />}
+                label="Remove status filter"
+                iconOnly={true}
+                variant="ghost"
+                size="sm"
                 onClick={() => handleFilterChange('status', '')}
-                className="btn btn-ghost btn-xs text-white hover:bg-blue-700 ml-1"
-              >
-                ✕
-              </button>
+                className="!text-white hover:!bg-blue-700 !p-1 !ml-1"
+              />
             </div>
           )}
           {filters.priority && (
             <div className="status-badge bg-orange-600 text-white gap-2 border-0 flex items-center">
               Priority: {PRIORITY_OPTIONS.find(opt => opt.value === filters.priority)?.label}
-              <button
+              <IconButton
+                icon={<FaTimes />}
+                label="Remove priority filter"
+                iconOnly={true}
+                variant="ghost"
+                size="sm"
                 onClick={() => handleFilterChange('priority', '')}
-                className="btn btn-ghost btn-xs text-white hover:bg-orange-700 ml-1"
-              >
-                ✕
-              </button>
+                className="!text-white hover:!bg-orange-700 !p-1 !ml-1"
+              />
             </div>
           )}
           {filters.dueDateFilter && (
@@ -181,12 +202,15 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
                          filters.dueDateFilter === 'due-this-week' ? 'Due This Week' :
                          filters.dueDateFilter === 'due-this-month' ? 'Due This Month' :
                          filters.dueDateFilter === 'no-due-date' ? 'No Due Date' : filters.dueDateFilter}
-              <button
+              <IconButton
+                icon={<FaTimes />}
+                label="Remove due date filter"
+                iconOnly={true}
+                variant="ghost"
+                size="sm"
                 onClick={() => handleFilterChange('dueDateFilter', '')}
-                className="btn btn-ghost btn-xs text-white hover:bg-purple-700 ml-1"
-              >
-                ✕
-              </button>
+                className="!text-white hover:!bg-purple-700 !p-1 !ml-1"
+              />
             </div>
           )}
           {filters.taskType && (
@@ -194,23 +218,29 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
               Type: {filters.taskType === 'shared' ? 'Shared with me' :
                      filters.taskType === 'assigned' ? 'Assigned to me' :
                      filters.taskType === 'created' ? 'Created by me' : filters.taskType}
-              <button
+              <IconButton
+                icon={<FaTimes />}
+                label="Remove task type filter"
+                iconOnly={true}
+                variant="ghost"
+                size="sm"
                 onClick={() => handleFilterChange('taskType', '')}
-                className="btn btn-ghost btn-xs text-white hover:bg-green-700 ml-1"
-              >
-                ✕
-              </button>
+                className="!text-white hover:!bg-green-700 !p-1 !ml-1"
+              />
             </div>
           )}
           {filters.sortBy && filters.sortBy !== 'urgency' && (
             <div className="status-badge bg-yellow-600 text-white gap-2 border-0 flex items-center">
               Sort: {SORT_OPTIONS.find(opt => opt.value === filters.sortBy)?.label}
-              <button
+              <IconButton
+                icon={<FaTimes />}
+                label="Remove sort filter"
+                iconOnly={true}
+                variant="ghost"
+                size="sm"
                 onClick={() => handleFilterChange('sortBy', 'urgency')}
-                className="btn btn-ghost btn-xs text-white hover:bg-yellow-700 ml-1"
-              >
-                ✕
-              </button>
+                className="!text-white hover:!bg-yellow-700 !p-1 !ml-1"
+              />
             </div>
           )}
         </div>
