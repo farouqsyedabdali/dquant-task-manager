@@ -1,12 +1,5 @@
-/* Custom CSS for dark theme */
+/* Theme-aware CSS Variables */
 :root {
-  --background: #1a1a1a;
-  --surface: #2a2a2a;
-  --primary: #6366f1;
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --border: #3f3f46;
-  
   /* Font size variables */
   --font-size-base: 16px;
   --font-size-sm: 14px;
@@ -30,14 +23,16 @@
 }
 
 body {
-  background-color: var(--background);
-  color: var(--text-primary);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: var(--font-size-base);
+  transition: background-color 0.15s ease, color 0.15s ease;
+  will-change: background-color, color;
 }
 
 /* Font size utility classes */
@@ -202,30 +197,36 @@ body {
 .font-large .m-6 { margin: var(--spacing-6) !important; }
 
 .App {
-  background-color: var(--background);
+  background-color: var(--color-bg-primary);
   min-height: 100vh;
+  transition: background-color 0.15s ease;
+  will-change: background-color;
 }
 
-/* Custom scrollbar for dark theme */
+/* Custom scrollbar - Theme Aware */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--surface);
+  background: var(--color-scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--color-scrollbar-thumb);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--color-scrollbar-thumb-hover);
 }
 
-/* Modal backdrop */
+/* Modal backdrop - Theme Aware */
 .modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.dark .modal-backdrop {
   background-color: rgba(0, 0, 0, 0.8);
 }
 
@@ -258,48 +259,94 @@ body {
   letter-spacing: 0.05em;
 }
 
+/* Status badges - Theme Aware */
 .status-todo {
+  background-color: #9ca3af;
+  color: #ffffff;
+}
+
+.dark .status-todo {
   background-color: #374151;
   color: #d1d5db;
 }
 
 .status-in-progress {
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+.dark .status-in-progress {
   background-color: #1e40af;
   color: #93c5fd;
 }
 
 .status-completed {
+  background-color: #10b981;
+  color: #ffffff;
+}
+
+.dark .status-completed {
   background-color: #059669;
   color: #6ee7b7;
 }
 
 .status-on-hold {
+  background-color: #f59e0b;
+  color: #ffffff;
+}
+
+.dark .status-on-hold {
   background-color: #d97706;
   color: #fed7aa;
 }
 
 .status-cancelled {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+.dark .status-cancelled {
   background-color: #dc2626;
   color: #fecaca;
 }
 
-/* Priority indicators */
+/* Priority indicators - Theme Aware */
 .priority-urgent {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+.dark .priority-urgent {
   background-color: #dc2626;
   color: #fecaca;
 }
 
 .priority-high {
+  background-color: #f97316;
+  color: #ffffff;
+}
+
+.dark .priority-high {
   background-color: #ea580c;
   color: #fed7aa;
 }
 
 .priority-medium {
+  background-color: #f59e0b;
+  color: #ffffff;
+}
+
+.dark .priority-medium {
   background-color: #d97706;
   color: #fed7aa;
 }
 
 .priority-low {
+  background-color: #10b981;
+  color: #ffffff;
+}
+
+.dark .priority-low {
   background-color: #059669;
   color: #6ee7b7;
 }

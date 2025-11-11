@@ -107,17 +107,32 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
   return (
     <>
       <div 
-        className={`task-card bg-gray-800 border rounded-lg p-4 cursor-pointer hover:bg-gray-900 transition-all duration-200 ${
+        className={`task-card border rounded-lg p-4 cursor-pointer transition-all duration-200 ${
           task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED'
             ? 'border-red-500 border-2'
-            : 'border-gray-700'
+            : ''
         }`}
+        style={{
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED' 
+            ? '#ef4444' 
+            : 'var(--color-border-default)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+        }}
         onClick={handleCardClick}
       >
         {/* Task Header */}
         <div className="mb-3">
           <div className="flex items-center space-x-2 mb-2">
-            <h3 className="text-white font-medium text-lg line-clamp-2 flex-1">
+            <h3 
+              className="font-medium text-lg line-clamp-2 flex-1 transition-colors duration-200"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               {task.title}
             </h3>
             {isSharedTask && (
@@ -144,40 +159,78 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
           {!isPersonalAccount && (
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <span className="text-gray-400 text-sm">Lead:</span>
+                <span 
+                  className="text-sm transition-colors duration-200"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                >
+                  Lead:
+                </span>
                 {task.assignee ? (
                   <div className="flex items-center space-x-2">
                     <div className="avatar placeholder">
-                      <div className="bg-indigo-600 text-white rounded-full w-6">
+                      <div 
+                        className="text-white rounded-full w-6"
+                        style={{ backgroundColor: 'var(--color-primary)' }}
+                      >
                         <span className="text-xs">{task.assignee.name.charAt(0)}</span>
                       </div>
                     </div>
-                    <span className="text-white text-sm">{task.assignee.name}</span>
+                    <span 
+                      className="text-sm transition-colors duration-200"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      {task.assignee.name}
+                    </span>
                   </div>
                 ) : (
-                  <span className="text-gray-500 text-sm">Unassigned</span>
+                    <span 
+                      className="text-sm transition-colors duration-200"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      Unassigned
+                    </span>
                 )}
               </div>
               
               {/* Co-Assignees */}
               {task.coAssignees && task.coAssignees.length > 0 && (
                 <div className="flex items-center space-x-2">
-                  <span className="text-gray-400 text-sm">Co-assignees:</span>
+                  <span 
+                    className="text-sm transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    Co-assignees:
+                  </span>
                   <div className="flex flex-wrap gap-1">
                     {(showAllCoAssignees ? task.coAssignees : task.coAssignees.slice(0, 5)).map((coAssignee) => (
                       <div key={coAssignee.id} className="flex items-center space-x-1">
                         <div className="avatar placeholder">
-                          <div className="bg-green-600 text-white rounded-full w-5">
+                          <div 
+                            className="text-white rounded-full w-5"
+                            style={{ backgroundColor: '#10b981' }}
+                          >
                             <span className="text-xs">{coAssignee.user.name.charAt(0)}</span>
                           </div>
                         </div>
-                        <span className="text-white text-xs">{coAssignee.user.name}</span>
+                        <span 
+                          className="text-xs transition-colors duration-200"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {coAssignee.user.name}
+                        </span>
                       </div>
                     ))}
                     {task.coAssignees.length > 5 && (
                       <button
                         onClick={() => setShowAllCoAssignees(!showAllCoAssignees)}
-                        className="text-gray-400 hover:text-white text-xs underline"
+                        className="text-xs underline transition-colors duration-200"
+                        style={{ color: 'var(--color-text-tertiary)' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = 'var(--color-text-primary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = 'var(--color-text-tertiary)';
+                        }}
                       >
                         {showAllCoAssignees ? 'Show Less' : `+${task.coAssignees.length - 5} more`}
                       </button>
@@ -191,32 +244,72 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
           {/* Parent Task Info */}
           {task.parentTask && (
             <div className="flex items-center space-x-2">
-              <FaLevelUpAlt className="w-4 h-4 text-gray-400" />
-              <span className="text-gray-400 text-sm">Parent:</span>
-              <span className="text-indigo-400 text-sm">{task.parentTask.title}</span>
+              <FaLevelUpAlt 
+                className="w-4 h-4 transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              />
+              <span 
+                className="text-sm transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
+                Parent:
+              </span>
+              <span 
+                className="text-sm transition-colors duration-200"
+                style={{ color: 'var(--color-primary-light)' }}
+              >
+                {task.parentTask.title}
+              </span>
             </div>
           )}
 
           {/* Subtasks Count */}
           {task.subtasks && task.subtasks.length > 0 && (
             <div className="flex items-center space-x-2">
-              <FaList className="w-4 h-4 text-gray-400" />
-              <span className="text-gray-400 text-sm">Subtasks:</span>
-              <span className="text-white text-sm">{task.subtasks.length}</span>
+              <FaList 
+                className="w-4 h-4 transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              />
+              <span 
+                className="text-sm transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
+                Subtasks:
+              </span>
+              <span 
+                className="text-sm transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                {task.subtasks.length}
+              </span>
             </div>
           )}
 
           {/* Due Date */}
           <div className="flex items-center space-x-2">
-            <FaCalendar className="w-4 h-4 text-gray-400" />
-            <span className="text-gray-400 text-sm">Due:</span>
+            <FaCalendar 
+              className="w-4 h-4 transition-colors duration-200"
+              style={{ color: 'var(--color-text-tertiary)' }}
+            />
+            <span 
+              className="text-sm transition-colors duration-200"
+              style={{ color: 'var(--color-text-tertiary)' }}
+            >
+              Due:
+            </span>
             {task.dueDate ? (
               <div className="flex items-center space-x-2">
-                <span className={`text-sm ${
-                  new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED'
-                    ? 'text-red-400 font-medium'
-                    : 'text-white'
-                }`}>
+                <span 
+                  className={`text-sm transition-colors duration-200 ${
+                    new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED'
+                      ? 'text-red-400 font-medium'
+                      : ''
+                  }`}
+                  style={new Date(task.dueDate) >= new Date() || task.status === 'COMPLETED' 
+                    ? { color: 'var(--color-text-primary)' }
+                    : {}
+                  }
+                >
                   {new Date(task.dueDate).toLocaleDateString()}
                 </span>
                 {new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED' && (
@@ -224,33 +317,71 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
                 )}
               </div>
             ) : (
-              <span className="text-gray-500 text-sm">No due date</span>
+              <span 
+                className="text-sm transition-colors duration-200"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                No due date
+              </span>
             )}
           </div>
 
           {/* Last Update */}
           {lastUpdate ? (
-            <div className="border-t border-gray-700 pt-3">
+            <div 
+              className="border-t pt-3 transition-colors duration-200"
+              style={{ borderColor: 'var(--color-border-default)' }}
+            >
               <div className="flex items-start space-x-2">
-                <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div 
+                  className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
+                  style={{ backgroundColor: 'var(--color-primary)' }}
+                ></div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-gray-300 text-sm line-clamp-2">
+                  <p 
+                    className="text-sm line-clamp-2 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
                     {lastUpdate.content}
                   </p>
                   <div className="flex items-center space-x-2 mt-1">
-                    <span className="text-gray-500 text-xs">{lastUpdate.author}</span>
-                    <span className="text-gray-500 text-xs">•</span>
-                    <span className="text-gray-500 text-xs">{lastUpdate.time}</span>
+                    <span 
+                      className="text-xs transition-colors duration-200"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      {lastUpdate.author}
+                    </span>
+                    <span 
+                      className="text-xs transition-colors duration-200"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      •
+                    </span>
+                    <span 
+                      className="text-xs transition-colors duration-200"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      {lastUpdate.time}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="border-t border-gray-700 pt-3">
+            <div 
+              className="border-t pt-3 transition-colors duration-200"
+              style={{ borderColor: 'var(--color-border-default)' }}
+            >
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-gray-500 rounded-full flex-shrink-0"></div>
+                <div 
+                  className="w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-200"
+                  style={{ backgroundColor: 'var(--color-text-muted)' }}
+                ></div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-gray-500 text-sm">
+                  <p 
+                    className="text-sm transition-colors duration-200"
+                    style={{ color: 'var(--color-text-muted)' }}
+                  >
                     No recent updates
                   </p>
                 </div>
@@ -260,17 +391,26 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
         </div>
 
         {/* Quick Actions */}
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-700">
+        <div 
+          className="flex items-center justify-between mt-4 pt-3 border-t transition-colors duration-200"
+          style={{ borderColor: 'var(--color-border-default)' }}
+        >
           <div className="flex items-center space-x-2">
             {!isPersonalAccount && (
-              <span className="text-gray-400 text-xs">
+              <span 
+                className="text-xs transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
                 Created by {task.assigner.name}
               </span>
             )}
           </div>
           <div className="flex items-center space-x-2">
             {task.comments && task.comments.length > 0 && (
-              <span className="text-gray-400 text-xs flex items-center gap-1">
+              <span 
+                className="text-xs flex items-center gap-1 transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
                 <FaComment className="w-3 h-3" />
                 {task.comments.length}
               </span>

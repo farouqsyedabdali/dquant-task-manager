@@ -1,7 +1,104 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-/* Custom scrollbar styles */
+/* Performance optimization for theme switching */
+* {
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Disable transitions during theme switch for better performance */
+.theme-transitioning * {
+  transition: none !important;
+}
+
+/* Theme Variables - Light Mode (Default) */
+:root {
+  /* Background Colors */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-bg-tertiary: #f3f4f6;
+  --color-bg-quaternary: #e5e7eb;
+  
+  /* Text Colors */
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+  --color-text-muted: #6b7280;
+  
+  /* Border Colors */
+  --color-border-default: #e5e7eb;
+  --color-border-light: #d1d5db;
+  --color-border-dark: #9ca3af;
+  
+  /* Primary Colors (Indigo) */
+  --color-primary: #6366f1;
+  --color-primary-hover: #4f46e5;
+  --color-primary-light: #818cf8;
+  --color-primary-dark: #4338ca;
+  
+  /* Accent Colors (Purple) */
+  --color-accent: #8b5cf6;
+  --color-accent-hover: #7c3aed;
+  
+  /* Surface Colors (for cards, modals) */
+  --color-surface: var(--color-bg-secondary);
+  --color-surface-hover: var(--color-bg-tertiary);
+  --color-surface-active: var(--color-bg-quaternary);
+  
+  /* Scrollbar Colors */
+  --color-scrollbar-track: #f3f4f6;
+  --color-scrollbar-thumb: #d1d5db;
+  --color-scrollbar-thumb-hover: #9ca3af;
+}
+
+/* Theme Variables - Dark Mode (Darker Black-Gray Grayscale) */
+.dark {
+  /* Background Colors - Darker, more black-gray */
+  --color-bg-primary: #0a0a0a;
+  --color-bg-secondary: #141414;
+  --color-bg-tertiary: #1a1a1a;
+  --color-bg-quaternary: #242424;
+  
+  /* Text Colors */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #b3b3b3;
+  --color-text-tertiary: #808080;
+  --color-text-muted: #666666;
+  
+  /* Border Colors */
+  --color-border-default: #2a2a2a;
+  --color-border-light: #333333;
+  --color-border-dark: #404040;
+  
+  /* Primary Colors (Indigo) - Slightly brighter for contrast */
+  --color-primary: #6366f1;
+  --color-primary-hover: #818cf8;
+  --color-primary-light: #a78bfa;
+  --color-primary-dark: #4f46e5;
+  
+  /* Accent Colors (Purple) */
+  --color-accent: #a78bfa;
+  --color-accent-hover: #8b5cf6;
+  
+  /* Surface Colors */
+  --color-surface: var(--color-bg-secondary);
+  --color-surface-hover: var(--color-bg-tertiary);
+  --color-surface-active: var(--color-bg-quaternary);
+  
+  /* Scrollbar Colors */
+  --color-scrollbar-track: #141414;
+  --color-scrollbar-thumb: #2a2a2a;
+  --color-scrollbar-thumb-hover: #404040;
+}
+
+/* Map CSS Variables to Tailwind Utilities using @theme */
+@theme {
+  --color-surface: var(--color-bg-secondary);
+  --color-surface-hover: var(--color-bg-tertiary);
+  --color-surface-active: var(--color-bg-quaternary);
+}
+
+/* Custom scrollbar styles - Theme Aware */
 .scrollbar-thin {
   scrollbar-width: thin;
 }
@@ -12,15 +109,15 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: #1f2937; /* gray-800 */
+  background: var(--color-scrollbar-track);
   border-radius: 3px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #4b5563; /* gray-600 */
+  background: var(--color-scrollbar-thumb);
   border-radius: 3px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #6b7280; /* gray-500 */
+  background: var(--color-scrollbar-thumb-hover);
 }

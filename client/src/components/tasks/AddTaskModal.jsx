@@ -217,15 +217,27 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
   return (
     <div className="modal modal-open backdrop-blur-sm">
-      <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700">
+      <div 
+        className="modal-box max-w-2xl border transition-colors duration-200"
+        style={{
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: 'var(--color-border-default)',
+        }}
+      >
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-          <h3 className="text-2xl font-bold text-white">
+          <h3 
+            className="text-2xl font-bold transition-colors duration-200"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
             Create New Task
           </h3>
             {initialData && (
-              <p className="text-sm text-indigo-400 mt-1">
+              <p 
+                className="text-sm mt-1 transition-colors duration-200"
+                style={{ color: 'var(--color-primary-light)' }}
+              >
                 ✨ Task details extracted from browser extension
               </p>
             )}
@@ -245,7 +257,10 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Title * ({formData.title.length}/50)
             </label>
             <input
@@ -254,7 +269,22 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
               value={formData.title}
               onChange={handleChange}
               maxLength={50}
-              className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.title ? 'border-red-500' : ''}`}
+              className={`input w-full transition-colors duration-200 ${errors.title ? 'border-red-500' : ''}`}
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: errors.title ? '#ef4444' : 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+              onFocus={(e) => {
+                if (!errors.title) {
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                }
+              }}
+              onBlur={(e) => {
+                if (!errors.title) {
+                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                }
+              }}
               placeholder="Enter task title"
             />
             {errors.title && (
@@ -264,7 +294,10 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Description ({formData.description.length}/300)
             </label>
             <textarea
@@ -273,7 +306,18 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
               onChange={handleChange}
               maxLength={300}
               rows={4}
-              className="textarea bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500"
+              className="textarea w-full transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-primary)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border-default)';
+              }}
               placeholder="Enter task description"
             />
             {errors.description && (
@@ -283,14 +327,28 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
           {/* Priority */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Priority
             </label>
             <select
               name="priority"
               value={formData.priority}
               onChange={handleChange}
-              className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+              className="select w-full transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-primary)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border-default)';
+              }}
             >
               {PRIORITY_OPTIONS.map(({ value, label }) => (
                 <option key={value} value={value}>{label}</option>
@@ -300,7 +358,10 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
           {/* Due Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Due Date (Optional)
             </label>
             <input
@@ -308,14 +369,28 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
               name="dueDate"
               value={formData.dueDate}
               onChange={handleChange}
-              className="input bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+              className="input w-full transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-primary)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border-default)';
+              }}
             />
           </div>
 
            {/* Assignment Type - Only show for company accounts */}
            {!isPersonalAccount && (
              <div>
-               <label className="block text-sm font-medium text-gray-300 mb-2">
+               <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
                  Assignment Type *
                </label>
                <div className="flex space-x-4 mb-4">
@@ -331,7 +406,12 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                      }}
                      className="radio radio-primary mr-2"
                    />
-                   <span className="text-gray-300">Internal Employee</span>
+                   <span 
+                     className="transition-colors duration-200"
+                     style={{ color: 'var(--color-text-secondary)' }}
+                   >
+                     Internal Employee
+                   </span>
                  </label>
                  <label className="flex items-center">
                    <input
@@ -345,14 +425,22 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                      }}
                      className="radio radio-primary mr-2"
                    />
-                   <span className="text-gray-300">External Contact</span>
+                   <span 
+                     className="transition-colors duration-200"
+                     style={{ color: 'var(--color-text-secondary)' }}
+                   >
+                     External Contact
+                   </span>
                  </label>
                </div>
 
                {/* Internal Employee Assignment */}
                {assignmentType === 'internal' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
                     Select Employee *
                   </label>
                   <SearchableDropdown
@@ -375,7 +463,12 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                     <p className="text-red-400 text-sm mt-1">{errors.assigneeId}</p>
                   )}
                   {isLoadingUsers && (
-                    <p className="text-sm text-gray-400 mt-1">Loading employees...</p>
+                    <p 
+                      className="text-sm mt-1 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                    >
+                      Loading employees...
+                    </p>
                   )}
                 </div>
               )}
@@ -383,7 +476,10 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
               {/* External Contact Assignment */}
               {assignmentType === 'external' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
                     Select Contact *
                   </label>
                   <SearchableDropdown
@@ -399,8 +495,20 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                       <div className="flex items-center space-x-2">
                         <div className={`w-2 h-2 rounded-full ${contact.isPersonal ? 'bg-green-500' : 'bg-blue-500'}`}></div>
                         <span>{contact.name}</span>
-                        <span className="text-gray-400">({contact.email})</span>
-                        {contact.company && <span className="text-gray-500">- {contact.company}</span>}
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          ({contact.email})
+                        </span>
+                        {contact.company && (
+                          <span 
+                            className="transition-colors duration-200"
+                            style={{ color: 'var(--color-text-muted)' }}
+                          >
+                            - {contact.company}
+                          </span>
+                        )}
                       </div>
                     )}
                   />
@@ -408,7 +516,12 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                     <p className="text-red-400 text-sm mt-1">{errors.externalContactId}</p>
                   )}
                   {isLoadingContacts && (
-                    <p className="text-sm text-gray-400 mt-1">Loading contacts...</p>
+                    <p 
+                      className="text-sm mt-1 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                    >
+                      Loading contacts...
+                    </p>
                   )}
                   {contacts.length === 0 && !isLoadingContacts && (
                     <p className="text-sm text-gray-400 mt-1">
@@ -423,7 +536,10 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
            {/* Optional Contact Assignment - Only for personal accounts */}
            {isPersonalAccount && (
              <div>
-               <label className="block text-sm font-medium text-gray-300 mb-2">
+               <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
                  Assign to Contact (Optional)
                </label>
                <div className="mb-2">

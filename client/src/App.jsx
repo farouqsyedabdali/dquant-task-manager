@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import useAuthStore from './context/authStore';
+import useThemeStore from './stores/themeStore';
 import './debug-env'; // Debug environment variables
 import ProtectedRoute from './layouts/ProtectedRoute';
 import FontSizeProvider from './components/FontSizeProvider';
@@ -27,9 +28,15 @@ import './App.css';
 
 function App() {
   const { getMe, isAuthenticated } = useAuthStore();
+  const { theme, setTheme } = useThemeStore();
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [showAccessCode, setShowAccessCode] = useState(false);
   const [taskbarAction, setTaskbarAction] = useState(null);
+
+  // Initialize theme on app load
+  useEffect(() => {
+    setTheme(theme);
+  }, [theme, setTheme]);
 
   // Always show access code modal - no session persistence
   useEffect(() => {
@@ -71,7 +78,7 @@ function App() {
   return (
     <FontSizeProvider>
       <Router>
-        <div className="App bg-gray-900 min-h-screen">
+        <div className="App min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
         {/* Access Code Modal - Show before any content if not verified */}
         {showAccessCode && (
           <AccessCodeModal onCodeVerified={handleAccessCodeVerified} />
@@ -96,7 +103,7 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen bg-gray-900">
+                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
                   <Dashboard taskbarAction={taskbarAction} onTaskbarActionHandled={() => setTaskbarAction(null)} />
                 </div>
@@ -117,7 +124,7 @@ function App() {
             path="/admin"
             element={
               <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
-                <div className="min-h-screen bg-gray-900">
+                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
                   <Dashboard />
                 </div>
@@ -129,7 +136,7 @@ function App() {
             path="/employees"
             element={
               <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
-                <div className="min-h-screen bg-gray-900">
+                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
                   <Employees />
                 </div>
@@ -150,7 +157,7 @@ function App() {
             path="/settings"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen bg-gray-900">
+                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
                   <Settings />
                 </div>
@@ -162,7 +169,7 @@ function App() {
             path="/calendar"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen bg-gray-900">
+                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
                   <Calendar />
                 </div>
@@ -174,7 +181,7 @@ function App() {
             path="/contacts"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen bg-gray-900">
+                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
                   <Contacts />
                 </div>
@@ -186,7 +193,7 @@ function App() {
             path="/employee"
             element={
               <ProtectedRoute allowedRoles={['EMPLOYEE']}>
-                <div className="min-h-screen bg-gray-900">
+                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
                   <Dashboard />
                 </div>

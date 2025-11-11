@@ -693,18 +693,49 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
 
   const StatCard = ({ title, value, icon, status, isActive, onClick }) => (
     <div 
-      className={`bg-gray-800 border rounded-lg p-4 text-white cursor-pointer transition-all duration-200 hover:bg-gray-700 hover:scale-105 ${
+      className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:scale-105 ${
         isActive 
-          ? 'border-indigo-500 bg-indigo-900/20 shadow-lg shadow-indigo-500/20' 
-          : 'border-gray-700 hover:border-gray-600'
+          ? 'shadow-lg' 
+          : ''
       }`}
+      style={{
+        backgroundColor: isActive 
+          ? 'var(--color-bg-tertiary)' 
+          : 'var(--color-bg-secondary)',
+        borderColor: isActive 
+          ? 'var(--color-primary)' 
+          : 'var(--color-border-default)',
+        boxShadow: isActive 
+          ? '0 10px 25px rgba(99, 102, 241, 0.2)' 
+          : 'none',
+      }}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+        }
+      }}
       onClick={onClick}
       title={`Click to ${status === 'total' ? 'show all tasks' : `toggle ${title.toLowerCase()} filter`}`}
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-400 text-sm font-medium">{title}</p>
-          <p className="text-2xl font-bold text-white">{value}</p>
+          <p 
+            className="text-sm font-medium transition-colors duration-200"
+            style={{ color: 'var(--color-text-tertiary)' }}
+          >
+            {title}
+          </p>
+          <p 
+            className="text-2xl font-bold transition-colors duration-200"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            {value}
+          </p>
         </div>
         <div className="text-3xl">{icon}</div>
       </div>
@@ -828,16 +859,25 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   const filteredTasks = getFilteredAndSortedTasks();
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div 
+      className="min-h-screen transition-colors duration-200"
+      style={{ backgroundColor: 'var(--color-bg-primary)' }}
+    >
       <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-white">
+              <h1 
+                className="text-3xl font-bold transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
                 Welcome back, {user?.name}!
               </h1>
-              <p className="text-gray-400 mt-2">
+              <p 
+                className="mt-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 {user?.isPersonal 
                   ? 'Manage your personal tasks and stay organized'
                   : isAdmin() 
@@ -931,9 +971,15 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
         </div>
 
         {/* Tasks View */}
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6">
+        <div 
+          className="rounded-lg shadow-lg p-6 transition-colors duration-200"
+          style={{ backgroundColor: 'var(--color-bg-secondary)' }}
+        >
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-white">
+            <h2 
+              className="text-xl font-semibold transition-colors duration-200"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               {archiveView === 'archived' ? 'Archived Tasks' : 'All Tasks'} ({filteredTasks.length})
             </h2>
             <ArchiveSwitcher 
@@ -944,8 +990,18 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           
           {filteredTasks.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-gray-400 text-lg mb-2">No tasks found</div>
-              <p className="text-gray-500">Try adjusting your filters or create a new task.</p>
+              <div 
+                className="text-lg mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
+                No tasks found
+              </div>
+              <p 
+                className="transition-colors duration-200"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                Try adjusting your filters or create a new task.
+              </p>
             </div>
           ) : viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
@@ -1015,9 +1071,20 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
       {/* Task Summary Modal */}
       {isSummaryModalOpen && summaryData && (
         <div className="modal modal-open">
-          <div className="modal-box max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border border-gray-700">
+          <div 
+            className="modal-box max-w-4xl max-h-[90vh] overflow-y-auto border transition-colors duration-200"
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)',
+            }}
+          >
             <div className="flex justify-between items-start mb-6">
-              <h3 className="text-2xl font-bold text-white">Task Summary</h3>
+              <h3 
+                className="text-2xl font-bold transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                Task Summary
+              </h3>
               <IconButton
                 icon={<FaTimes />}
                 label="Close"
@@ -1034,9 +1101,23 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
             
             <div className="space-y-6">
               {/* Text Summary Section */}
-              <div className="bg-gray-700 rounded-lg p-4">
-                <h4 className="text-lg font-semibold text-white mb-3">📋 Content Summary</h4>
-                <div className="bg-gray-800 rounded p-3 text-gray-200 whitespace-pre-line">
+              <div 
+                className="rounded-lg p-4 transition-colors duration-200"
+                style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+              >
+                <h4 
+                  className="text-lg font-semibold mb-3 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  📋 Content Summary
+                </h4>
+                <div 
+                  className="rounded p-3 whitespace-pre-line transition-colors duration-200"
+                  style={{
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text-secondary)',
+                  }}
+                >
                   {summaryData.textSummary}
                 </div>
               </div>
@@ -1045,19 +1126,54 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <h4 className="text-lg font-semibold text-white mb-3">📊 Task Details</h4>
+                    <h4 
+                      className="text-lg font-semibold mb-3 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      📊 Task Details
+                    </h4>
                     <div className="space-y-3">
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Status:</span>
-                        <span className="text-white">{summaryData.status}</span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          Status:
+                        </span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {summaryData.status}
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Priority:</span>
-                        <span className="text-white">{summaryData.priority}</span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          Priority:
+                        </span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {summaryData.priority}
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Due Date:</span>
-                        <span className="text-white">{summaryData.dueDate}</span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          Due Date:
+                        </span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {summaryData.dueDate}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1065,19 +1181,54 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
 
                 <div className="space-y-4">
                   <div>
-                    <h4 className="text-lg font-semibold text-white mb-3">👥 People</h4>
+                    <h4 
+                      className="text-lg font-semibold mb-3 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      👥 People
+                    </h4>
                     <div className="space-y-3">
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Created by:</span>
-                        <span className="text-white">{summaryData.createdBy}</span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          Created by:
+                        </span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {summaryData.createdBy}
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Assigned to:</span>
-                        <span className="text-white">{summaryData.assignedTo}</span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          Assigned to:
+                        </span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {summaryData.assignedTo}
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Created:</span>
-                        <span className="text-white">{summaryData.createdAt}</span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          Created:
+                        </span>
+                        <span 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {summaryData.createdAt}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1085,16 +1236,44 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
               </div>
 
               {/* Additional Info */}
-              <div className="bg-gray-700 rounded-lg p-4">
-                <h4 className="text-lg font-semibold text-white mb-3">📈 Additional Information</h4>
+              <div 
+                className="rounded-lg p-4 transition-colors duration-200"
+                style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+              >
+                <h4 
+                  className="text-lg font-semibold mb-3 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  📈 Additional Information
+                </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-indigo-400">{summaryData.comments}</div>
-                    <div className="text-gray-400 text-sm">Comments</div>
+                    <div 
+                      className="text-2xl font-bold transition-colors duration-200"
+                      style={{ color: 'var(--color-primary-light)' }}
+                    >
+                      {summaryData.comments}
+                    </div>
+                    <div 
+                      className="text-sm transition-colors duration-200"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                    >
+                      Comments
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-indigo-400">{summaryData.subtasks}</div>
-                    <div className="text-gray-400 text-sm">Subtasks</div>
+                    <div 
+                      className="text-2xl font-bold transition-colors duration-200"
+                      style={{ color: 'var(--color-primary-light)' }}
+                    >
+                      {summaryData.subtasks}
+                    </div>
+                    <div 
+                      className="text-sm transition-colors duration-200"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                    >
+                      Subtasks
+                    </div>
                   </div>
                 </div>
               </div>
