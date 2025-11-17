@@ -269,7 +269,10 @@ const Employees = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}
+    >
       <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -305,7 +308,14 @@ const Employees = () => {
         )}
 
         {/* Search and Actions Bar */}
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+        <div
+          className="rounded-lg shadow-lg p-6 mb-6"
+          style={{
+            backgroundColor: 'var(--color-bg-secondary)',
+            borderColor: 'var(--color-border-default)',
+            borderWidth: 1,
+          }}
+        >
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {/* Search Bar */}
             <div className="flex-1 max-w-md">
@@ -315,7 +325,12 @@ const Employees = () => {
                   placeholder="Search employees by name, email, or role..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="input input-bordered w-full bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-indigo-500"
+                  className="input input-bordered w-full focus:border-indigo-500 focus:ring-indigo-500"
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
                 />
                 <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -340,15 +355,28 @@ const Employees = () => {
           </div>
 
           {/* Search Results Count */}
-          <div className="mt-4 text-sm text-gray-400">
+          <div
+            className="mt-4 text-sm"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
             Showing {filteredUsers.length} of {users.filter(u => u.id !== user?.id).length} employees
           </div>
         </div>
 
         {/* Employees List */}
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6">
+        <div
+          className="rounded-lg shadow-lg p-6"
+          style={{
+            backgroundColor: 'var(--color-bg-secondary)',
+            borderColor: 'var(--color-border-default)',
+            borderWidth: 1,
+          }}
+        >
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-white">
+            <h2
+              className="text-xl font-semibold"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               Company Employees ({filteredUsers.length})
             </h2>
           </div>
@@ -359,24 +387,61 @@ const Employees = () => {
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-gray-400 text-lg mb-2">No employees found</div>
-              <p className="text-gray-500">Add your first employee to get started.</p>
+              <div
+                className="text-lg mb-2"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                No employees found
+              </div>
+              <p style={{ color: 'var(--color-text-tertiary)' }}>
+                Add your first employee to get started.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="table w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-gray-300 font-medium">Name</th>
-                    <th className="text-left text-gray-300 font-medium">Email</th>
-                    <th className="text-left text-gray-300 font-medium">Role</th>
-                    <th className="text-left text-gray-300 font-medium">Joined</th>
-                    <th className="text-left text-gray-300 font-medium">Actions</th>
+                  <tr className="border-b" style={{ borderColor: 'var(--color-border-default)' }}>
+                    <th
+                      className="text-left font-medium"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      Name
+                    </th>
+                    <th
+                      className="text-left font-medium"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      Email
+                    </th>
+                    <th
+                      className="text-left font-medium"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      Role
+                    </th>
+                    <th
+                      className="text-left font-medium"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      Joined
+                    </th>
+                    <th
+                      className="text-left font-medium"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUsers.map((employee) => (
-                    <tr key={employee.id} className="border-b border-gray-700 hover:bg-gray-700 cursor-pointer" onClick={() => handleEmployeeClick(employee)}>
+                    <tr
+                      key={employee.id}
+                      className="border-b cursor-pointer"
+                      style={{ borderColor: 'var(--color-border-default)' }}
+                      onClick={() => handleEmployeeClick(employee)}
+                    >
                       <td className="py-4">
                         <div className="flex items-center space-x-3">
                           <div className="avatar placeholder">
@@ -385,17 +450,30 @@ const Employees = () => {
                             </div>
                           </div>
                           <div>
-                            <div className="font-medium text-white">{employee.name}</div>
+                            <div
+                              className="font-medium"
+                              style={{ color: 'var(--color-text-primary)' }}
+                            >
+                              {employee.name}
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 text-gray-300">{employee.email}</td>
+                      <td
+                        className="py-4"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {employee.email}
+                      </td>
                       <td className="py-4">
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleColor(employee.role)}`}>
                           {getRoleLabel(employee.role)}
                         </span>
                       </td>
-                      <td className="py-4 text-gray-300">
+                      <td
+                        className="py-4"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
                         {new Date(employee.createdAt).toLocaleDateString()}
                       </td>
                       <td className="py-4">

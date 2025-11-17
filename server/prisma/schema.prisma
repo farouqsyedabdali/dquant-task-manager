@@ -73,6 +73,7 @@ model Task {
   externalContactId     Int?
   comments              Comment[]
   notifications         Notification[]
+  reminders             TaskReminder[]
   assignee              User?              @relation("AssignedTasks", fields: [assigneeId], references: [id])
   assigner              User               @relation("CreatedTasks", fields: [assignerId], references: [id])
   company               Company            @relation(fields: [companyId], references: [id])
@@ -221,6 +222,18 @@ model Contact {
 
   @@unique([userId, email])
   @@index([userId, email])
+}
+
+model TaskReminder {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  userId    Int
+  sentAt    DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([sentAt])
 }
 
 enum Role {

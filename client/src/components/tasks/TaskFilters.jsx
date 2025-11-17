@@ -15,36 +15,73 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
   const hasActiveFilters = filters.status || filters.priority || filters.search || filters.dueDateFilter || filters.taskType || filters.sortBy;
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6">
+    <div 
+      className="border rounded-lg shadow-lg p-6 transition-colors duration-200"
+      style={{
+        backgroundColor: 'var(--color-bg-secondary)',
+        borderColor: 'var(--color-border-default)',
+      }}
+    >
       <div className={`grid grid-cols-1 gap-4 ${isPersonalAccount ? 'md:grid-cols-6' : 'md:grid-cols-7'}`}>
         {/* Search */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+          <label 
+            className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
             <FaSearch className="w-4 h-4" />
             <span>Search</span>
           </label>
           <div className="relative">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <FaSearch 
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-200"
+              style={{ color: 'var(--color-text-tertiary)' }}
+            />
             <input
               type="text"
               placeholder="Search tasks..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full h-10 pl-10 focus:border-indigo-500 focus:ring-indigo-500"
+              className="input w-full h-10 pl-10 transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-primary)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border-default)';
+              }}
             />
           </div>
         </div>
 
         {/* Status Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+          <label 
+            className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
             <FaCheckCircle className="w-4 h-4" />
             <span>Status</span>
           </label>
           <select
             value={filters.status}
             onChange={(e) => handleFilterChange('status', e.target.value)}
-            className="select bg-gray-700 border-gray-600 text-white w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
+            className="select w-full h-10 transition-colors duration-200"
+            style={{
+              backgroundColor: 'var(--color-bg-tertiary)',
+              borderColor: 'var(--color-border-default)',
+              color: 'var(--color-text-primary)',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-primary)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-border-default)';
+            }}
           >
             <option value="">All Statuses</option>
             <option value="TODO,IN_PROGRESS">Active Tasks (To Do + In Progress)</option>
@@ -58,14 +95,28 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
         {/* Priority Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+          <label 
+            className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
             <FaFlag className="w-4 h-4" />
             <span>Priority</span>
           </label>
           <select
             value={filters.priority}
             onChange={(e) => handleFilterChange('priority', e.target.value)}
-            className="select bg-gray-700 border-gray-600 text-white w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
+            className="select w-full h-10 transition-colors duration-200"
+            style={{
+              backgroundColor: 'var(--color-bg-tertiary)',
+              borderColor: 'var(--color-border-default)',
+              color: 'var(--color-text-primary)',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-primary)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-border-default)';
+            }}
           >
             <option value="">All Priorities</option>
             {PRIORITY_OPTIONS.map(({ value, label }) => (
@@ -78,14 +129,28 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
         {/* Due Date Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+          <label 
+            className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
             <FaCalendar className="w-4 h-4" />
             <span>Due Date</span>
           </label>
           <select
             value={filters.dueDateFilter}
             onChange={(e) => handleFilterChange('dueDateFilter', e.target.value)}
-            className="select bg-gray-700 border-gray-600 text-white w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
+            className="select w-full h-10 transition-colors duration-200"
+            style={{
+              backgroundColor: 'var(--color-bg-tertiary)',
+              borderColor: 'var(--color-border-default)',
+              color: 'var(--color-text-primary)',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-primary)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-border-default)';
+            }}
           >
             <option value="">All Due Dates</option>
             <option value="overdue">Overdue</option>
@@ -99,14 +164,28 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
         {/* Task Type Filter - Only show for company accounts */}
         {!isPersonalAccount && (
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+            <label 
+              className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               <FaFilter className="w-4 h-4" />
               <span>Task Type</span>
             </label>
             <select
               value={filters.taskType || ''}
               onChange={(e) => handleFilterChange('taskType', e.target.value)}
-              className="select bg-gray-700 border-gray-600 text-white w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
+              className="select w-full h-10 transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-primary)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border-default)';
+              }}
             >
               <option value="">All Tasks</option>
               <option value="shared">Shared with me</option>
@@ -118,14 +197,28 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
         {/* Sort By Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-2">
+          <label 
+            className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
             <FaSort className="w-4 h-4" />
             <span>Sort By</span>
           </label>
           <select
             value={filters.sortBy || 'urgency'}
             onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-            className="select bg-gray-700 border-gray-600 text-white w-full h-10 focus:border-indigo-500 focus:ring-indigo-500"
+            className="select w-full h-10 transition-colors duration-200"
+            style={{
+              backgroundColor: 'var(--color-bg-tertiary)',
+              borderColor: 'var(--color-border-default)',
+              color: 'var(--color-text-primary)',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-primary)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-border-default)';
+            }}
           >
             {SORT_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>

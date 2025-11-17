@@ -223,15 +223,32 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
   // Render above TaskModal using a portal attached to document.body with higher z-index
   return createPortal(
     <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }}>
-      <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700 max-h-[90vh] overflow-y-auto">
+      <div
+        className="modal-box max-w-2xl max-h-[90vh] overflow-y-auto"
+        style={{
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: 'var(--color-border-default)',
+          color: 'var(--color-text-primary)',
+        }}
+      >
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h3 className="text-2xl font-bold text-white">
+            <h3
+              className="text-2xl font-bold"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               Create Subtask
             </h3>
-            <p className="text-gray-400 text-sm mt-1">
-              Creating subtask for: <span className="text-white font-medium">
+            <p
+              className="text-sm mt-1"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Creating subtask for:{' '}
+              <span
+                className="font-medium"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
                 {selectedParentId ? availableTasks.find(t => t.id == selectedParentId)?.title || 'Selected Task' : 'Choose parent task below'}
               </span>
             </p>
@@ -248,13 +265,21 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Parent Task Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Parent Task *
             </label>
             <select
               value={selectedParentId}
               onChange={(e) => setSelectedParentId(e.target.value)}
-              className={`select select-bordered w-full bg-gray-700 border-gray-600 text-white focus:border-indigo-500 focus:ring-indigo-500 ${errors.parentTask ? 'border-red-500' : ''}`}
+              className={`select select-bordered w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.parentTask ? 'border-red-500' : ''}`}
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: errors.parentTask ? '#f87171' : 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
             >
               <option value="">Select a parent task...</option>
               {availableTasks.map(task => (
@@ -270,7 +295,10 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Title * ({formData.title.length}/50)
             </label>
             <input
@@ -279,7 +307,12 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
               value={formData.title}
               onChange={handleChange}
               maxLength={50}
-              className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.title ? 'border-red-500' : ''}`}
+              className={`input w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.title ? 'border-red-500' : ''}`}
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: errors.title ? '#f87171' : 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter subtask title"
             />
             {errors.title && (

@@ -1,16 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-/* Performance optimization for theme switching */
-* {
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-
-/* Disable transitions during theme switch for better performance */
-.theme-transitioning * {
-  transition: none !important;
-}
-
 /* Theme Variables - Light Mode (Default) */
 :root {
   /* Background Colors */

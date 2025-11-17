@@ -28,15 +28,10 @@ import './App.css';
 
 function App() {
   const { getMe, isAuthenticated } = useAuthStore();
-  const { theme, setTheme } = useThemeStore();
+  const { theme } = useThemeStore();
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [showAccessCode, setShowAccessCode] = useState(false);
   const [taskbarAction, setTaskbarAction] = useState(null);
-
-  // Initialize theme on app load
-  useEffect(() => {
-    setTheme(theme);
-  }, [theme, setTheme]);
 
   // Always show access code modal - no session persistence
   useEffect(() => {

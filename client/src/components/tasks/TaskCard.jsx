@@ -6,7 +6,7 @@ import AddSubtaskModal from './AddSubtaskModal';
 import { 
   FaCircle, FaSpinner, FaCheckCircle, FaPauseCircle, FaTimesCircle,
   FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle,
-  FaCalendar, FaComment, FaList, FaLevelUpAlt, FaShareAlt
+  FaCalendar, FaComment, FaList, FaLevelUpAlt, FaShareAlt, FaPlayCircle
 } from 'react-icons/fa';
 
 const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive, onUnarchive }) => {
@@ -62,7 +62,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
       case 'TODO':
         return <FaCircle className="w-3 h-3" />;
       case 'IN_PROGRESS':
-        return <FaSpinner className="w-3 h-3 animate-spin" />;
+        return <FaPlayCircle className="w-3 h-3" />;
       case 'COMPLETED':
         return <FaCheckCircle className="w-3 h-3" />;
       case 'ON_HOLD':

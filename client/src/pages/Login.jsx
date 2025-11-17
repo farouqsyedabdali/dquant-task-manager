@@ -86,26 +86,49 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ backgroundColor: 'var(--color-bg-primary)' }}
+    >
       {/* Company Branding */}
       <div className="absolute top-6 left-6 flex items-center space-x-3">
         <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold text-lg">CN</span>
+          <span className="font-bold text-lg text-white">CN</span>
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">Tialz</h1>
-          <p className="text-gray-400 text-sm">Task Manager</p>
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            Tialz
+          </h1>
+          <p
+            className="text-sm"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            Task Manager
+          </p>
         </div>
       </div>
 
       <div className="max-w-lg w-full space-y-8">
-        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-8">
+        <div
+          className="rounded-lg shadow-xl p-8"
+          style={{
+            backgroundColor: 'var(--color-bg-secondary)',
+            borderColor: 'var(--color-border-default)',
+            borderWidth: 1,
+          }}
+        >
           {/* Header */}
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">
+            <h2
+              className="text-3xl font-bold mb-2"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               Welcome Back
             </h2>
-            <p className="text-gray-400">
+            <p style={{ color: 'var(--color-text-secondary)' }}>
               Sign in to your account to continue
             </p>
           </div>

@@ -87,12 +87,22 @@ const Contacts = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6">
+    <div
+      className="min-h-screen p-6"
+      style={{ backgroundColor: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Contacts</h1>
-          <p className="text-gray-400">Manage your personal and business contacts</p>
+          <h1
+            className="text-3xl font-bold mb-2"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            Contacts
+          </h1>
+          <p style={{ color: 'var(--color-text-secondary)' }}>
+            Manage your personal and business contacts
+          </p>
         </div>
 
         {/* Controls */}
@@ -104,7 +114,12 @@ const Contacts = () => {
               placeholder="Search contacts..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input input-bordered bg-gray-800 border-gray-600 text-white placeholder-gray-400 w-full"
+              className="input input-bordered w-full"
+              style={{
+                backgroundColor: 'var(--color-bg-secondary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
             />
           </div>
 
@@ -112,7 +127,12 @@ const Contacts = () => {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="select select-bordered bg-gray-800 border-gray-600 text-white"
+            className="select select-bordered"
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)',
+              color: 'var(--color-text-primary)',
+            }}
           >
             <option value="all">All Contacts</option>
             <option value="personal">Personal</option>
@@ -180,7 +200,15 @@ const Contacts = () => {
         {!isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredContacts.map((contact) => (
-              <div key={contact.id} className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+              <div
+                key={contact.id}
+                className="rounded-lg p-6 transition-colors"
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                  borderWidth: 1,
+                }}
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="avatar placeholder">
@@ -191,10 +219,25 @@ const Contacts = () => {
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white">{contact.name}</h3>
-                      <p className="text-sm text-gray-400">{contact.email}</p>
+                      <h3
+                        className="text-lg font-semibold"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {contact.name}
+                      </h3>
+                      <p
+                        className="text-sm"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {contact.email}
+                      </p>
                       {contact.company && (
-                        <p className="text-xs text-gray-500">{contact.company}</p>
+                        <p
+                          className="text-xs"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          {contact.company}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -205,7 +248,11 @@ const Contacts = () => {
                         <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                       </svg>
                     </div>
-                    <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-gray-700 rounded-box w-32">
+                    <ul
+                      tabIndex={0}
+                      className="dropdown-content menu p-2 shadow rounded-box w-32"
+                      style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                    >
                       <li>
                         <button
                           onClick={() => handleEditContact(contact)}
@@ -228,7 +275,10 @@ const Contacts = () => {
 
                 <div className="space-y-2">
                   {contact.phone && (
-                    <div className="flex items-center space-x-2 text-sm text-gray-300">
+                    <div
+                      className="flex items-center space-x-2 text-sm"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
@@ -257,8 +307,16 @@ const Contacts = () => {
             <svg className="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            <h3 className="text-lg font-medium text-gray-300 mb-2">No contacts found</h3>
-            <p className="text-gray-500 mb-4">
+            <h3
+              className="text-lg font-medium mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              No contacts found
+            </h3>
+            <p
+              className="mb-4"
+              style={{ color: 'var(--color-text-tertiary)' }}
+            >
               {searchTerm ? 'Try adjusting your search terms' : 'Get started by adding your first contact'}
             </p>
             <button

@@ -1,4 +1,5 @@
 const app = require('./src/app')
+const { startReminderScheduler } = require('./src/utils/taskReminderScheduler')
 const PORT = process.env.PORT || 3000
 
 // Test database connection on startup
@@ -27,6 +28,9 @@ async function startServer() {
     console.log(`🆔 Process ID: ${process.pid}`)
     console.log(`Health check: http://localhost:${PORT}/api/health`)
     console.log('✅ Server ready to accept connections')
+    
+    // Start the task reminder scheduler
+    startReminderScheduler()
   })
 }
 

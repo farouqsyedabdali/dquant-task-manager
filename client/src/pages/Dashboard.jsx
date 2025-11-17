@@ -131,6 +131,31 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const popupDataKey = urlParams.get('popupData');
+    const taskIdParam = urlParams.get('taskId');
+    
+    // Handle direct task ID from email links (e.g., reminder emails)
+    if (taskIdParam) {
+      console.log('Dashboard: Found taskId in URL:', taskIdParam);
+      const openTaskFromUrl = async () => {
+        try {
+          const result = await fetchTask(parseInt(taskIdParam));
+          if (result.success && result.data) {
+            setCurrentTask(result.data);
+            setIsTaskModalOpen(true);
+            console.log('Dashboard: Opened task modal for task:', result.data.title);
+          } else {
+            console.error('Dashboard: Failed to fetch task with ID:', taskIdParam);
+          }
+        } catch (error) {
+          console.error('Dashboard: Error fetching task from URL:', error);
+        } finally {
+          // Clean up URL parameter
+          navigate('/dashboard', { replace: true });
+        }
+      };
+      openTaskFromUrl();
+      return; // Exit early to avoid processing other URL params
+    }
     
     if (popupDataKey) {
       console.log('Dashboard: Found popupDataKey in URL:', popupDataKey);

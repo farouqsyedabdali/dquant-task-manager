@@ -181,6 +181,49 @@ const emailService = {
       });
       return { success: false, error: error.message };
     }
+  },
+
+  /**
+   * Send a task reminder email
+   * @param {Object} params - Reminder parameters
+   * @param {string} params.recipientEmail - Recipient's email
+   * @param {string} params.userName - User's name
+   * @param {Object} params.task - Task details
+   * @param {number} params.taskId - Task ID
+   */
+  async sendTaskReminder({ recipientEmail, userName, task, taskId }) {
+    const taskLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/dashboard?taskId=${taskId}`;
+    
+    const { taskReminderTemplate } = require('../templates/taskReminderEmail');
+    const html = taskReminderTemplate({
+      userName,
+      task,
+      taskLink
+    });
+
+    try {
+      console.log('📧 Sending task reminder email...');
+      console.log('To:', recipientEmail);
+      console.log('Task:', task.title);
+      
+      const result = await resend.emails.send({
+        from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+        to: recipientEmail,
+        subject: `⏰ Reminder: "${task.title}" is due in 48 hours`,
+        html,
+      });
+
+      console.log('✅ Task reminder email sent successfully:', result);
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('❌ Error sending task reminder email:', error);
+      console.error('Error details:', {
+        message: error.message,
+        statusCode: error.statusCode,
+        name: error.name
+      });
+      return { success: false, error: error.message };
+    }
   }
 };
 

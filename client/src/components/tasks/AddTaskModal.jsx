@@ -388,9 +388,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
            {!isPersonalAccount && (
              <div>
                <label 
-              className="block text-sm font-medium mb-2 transition-colors duration-200"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
+                 className="block text-sm font-medium mb-2 transition-colors duration-200"
+                 style={{ color: 'var(--color-text-secondary)' }}
+               >
                  Assignment Type *
                </label>
                <div className="flex space-x-4 mb-4">
@@ -438,9 +438,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                {assignmentType === 'internal' && (
                 <div>
                   <label 
-              className="block text-sm font-medium mb-2 transition-colors duration-200"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
+                    className="block text-sm font-medium mb-2 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
                     Select Employee *
                   </label>
                   <SearchableDropdown
@@ -477,9 +477,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
               {assignmentType === 'external' && (
                 <div>
                   <label 
-              className="block text-sm font-medium mb-2 transition-colors duration-200"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
+                    className="block text-sm font-medium mb-2 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
                     Select Contact *
                   </label>
                   <SearchableDropdown
@@ -524,8 +524,23 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                     </p>
                   )}
                   {contacts.length === 0 && !isLoadingContacts && (
-                    <p className="text-sm text-gray-400 mt-1">
-                      No contacts available. <a href="/contacts" className="text-indigo-400 hover:text-indigo-300">Add contacts</a> to assign tasks externally.
+                    <p 
+                      className="text-sm mt-1 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                    >
+                      No contacts available. <a 
+                        href="/contacts" 
+                        className="transition-colors duration-200"
+                        style={{ color: 'var(--color-primary-light)' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = 'var(--color-primary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = 'var(--color-primary-light)';
+                        }}
+                      >
+                        Add contacts
+                      </a> to assign tasks externally.
                     </p>
                   )}
                 </div>
@@ -537,13 +552,16 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
            {isPersonalAccount && (
              <div>
                <label 
-              className="block text-sm font-medium mb-2 transition-colors duration-200"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
+                 className="block text-sm font-medium mb-2 transition-colors duration-200"
+                 style={{ color: 'var(--color-text-secondary)' }}
+               >
                  Assign to Contact (Optional)
                </label>
                <div className="mb-2">
-                 <p className="text-sm text-gray-400 mb-3">
+                 <p 
+                   className="text-sm mb-3 transition-colors duration-200"
+                   style={{ color: 'var(--color-text-tertiary)' }}
+                 >
                    Leave blank to assign to yourself, or select a contact to assign to them.
                  </p>
                  <SearchableDropdown
@@ -568,11 +586,31 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                    <p className="text-red-400 text-sm mt-1">{errors.externalContactId}</p>
                  )}
                  {isLoadingContacts && (
-                   <p className="text-sm text-gray-400 mt-1">Loading contacts...</p>
+                   <p 
+                     className="text-sm mt-1 transition-colors duration-200"
+                     style={{ color: 'var(--color-text-tertiary)' }}
+                   >
+                     Loading contacts...
+                   </p>
                  )}
                  {contacts.length === 0 && !isLoadingContacts && (
-                   <p className="text-sm text-gray-400 mt-1">
-                     No contacts available. <a href="/contacts" className="text-indigo-400 hover:text-indigo-300">Add contacts</a> to assign tasks to them.
+                   <p 
+                     className="text-sm mt-1 transition-colors duration-200"
+                     style={{ color: 'var(--color-text-tertiary)' }}
+                   >
+                     No contacts available. <a 
+                       href="/contacts" 
+                       className="transition-colors duration-200"
+                       style={{ color: 'var(--color-primary-light)' }}
+                       onMouseEnter={(e) => {
+                         e.currentTarget.style.color = 'var(--color-primary)';
+                       }}
+                       onMouseLeave={(e) => {
+                         e.currentTarget.style.color = 'var(--color-primary-light)';
+                       }}
+                     >
+                       Add contacts
+                     </a> to assign tasks to them.
                    </p>
                  )}
                </div>

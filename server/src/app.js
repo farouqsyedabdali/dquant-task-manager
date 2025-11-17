@@ -19,6 +19,7 @@ const emailVerificationRoutes = require('./routes/emailVerification')
 const superAdminRoutes = require('./routes/superAdmin')
 const securityRoutes = require('./routes/security')
 const contactRoutes = require('./routes/contacts')
+const reminderRoutes = require('./routes/reminders')
 
 const app = express()
 
@@ -47,6 +48,7 @@ app.use('/api/email-verification', emailVerificationRoutes)
 app.use('/api/super-admin', superAdminRoutes)
 app.use('/api/security', securityRoutes)
 app.use('/api/contacts', contactRoutes)
+app.use('/api/reminders', reminderRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

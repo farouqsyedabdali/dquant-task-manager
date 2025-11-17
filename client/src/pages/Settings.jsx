@@ -84,10 +84,15 @@ const Settings = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div
+      className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      style={{ color: 'var(--color-text-primary)' }}
+    >
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-        <p className="text-gray-400">
+        <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+          Settings
+        </h1>
+        <p style={{ color: 'var(--color-text-secondary)' }}>
           {isPersonalAccount ? 'Manage your personal account settings' : 'Manage your account and company settings'}
         </p>
       </div>
@@ -95,7 +100,14 @@ const Settings = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Sidebar */}
         <aside className="md:col-span-1">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 sticky top-6">
+          <div
+            className="rounded-lg p-3 sticky top-6"
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)',
+              borderWidth: 1,
+            }}
+          >
             <nav className="flex md:block space-x-2 md:space-x-0 md:space-y-2">
               {[
                 { id: 'account', label: 'Account' },
@@ -106,11 +118,18 @@ const Settings = () => {
                 <button
                   key={item.id}
                   onClick={() => setSelectedCategory(item.id)}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className="w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  style={
                     selectedCategory === item.id
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-700'
-                  }`}
+                      ? {
+                          backgroundColor: 'var(--color-primary)',
+                          color: '#ffffff',
+                        }
+                      : {
+                          color: 'var(--color-text-secondary)',
+                          backgroundColor: 'transparent',
+                        }
+                  }
                 >
                   {item.label}
                 </button>
@@ -124,9 +143,21 @@ const Settings = () => {
           {selectedCategory === 'account' && (
             <div className="space-y-8">
               {/* Profile Information */}
-              <div className="card bg-gray-800 border border-gray-700">
+              <div
+                className="card"
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                  borderWidth: 1,
+                }}
+              >
                 <div className="card-body">
-                  <h2 className="card-title text-xl text-white mb-6">Profile Information</h2>
+                  <h2
+                    className="card-title text-xl mb-6"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    Profile Information
+                  </h2>
                   <div className="space-y-6">
                     <div className="flex items-center space-x-4">
                       <div className="avatar placeholder">
@@ -135,57 +166,101 @@ const Settings = () => {
                         </div>
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-white">{user?.name}</h3>
+                        <h3
+                          className="text-lg font-semibold"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {user?.name}
+                        </h3>
                         {!isPersonalAccount && (
-                          <p className="text-gray-400 capitalize">{user?.role?.toLowerCase()}</p>
+                          <p
+                            className="capitalize"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            {user?.role?.toLowerCase()}
+                          </p>
                         )}
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="label">
-                          <span className="label-text text-gray-300">Full Name</span>
+                          <span className="label-text" style={{ color: 'var(--color-text-secondary)' }}>
+                            Full Name
+                          </span>
                         </label>
                         <input
                           type="text"
                           value={user?.name || ''}
                           disabled
-                          className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                          className="input input-bordered w-full"
+                          style={{
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            borderColor: 'var(--color-border-default)',
+                            color: 'var(--color-text-primary)',
+                          }}
                         />
                       </div>
                       <div>
                         <label className="label">
-                          <span className="label-text text-gray-300">Email</span>
+                          <span className="label-text" style={{ color: 'var(--color-text-secondary)' }}>
+                            Email
+                          </span>
                         </label>
                         <input
                           type="email"
                           value={user?.email || ''}
                           disabled
-                          className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                          className="input input-bordered w-full"
+                          style={{
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            borderColor: 'var(--color-border-default)',
+                            color: 'var(--color-text-primary)',
+                          }}
                         />
                       </div>
                       {!isPersonalAccount && (
                         <>
                           <div>
                             <label className="label">
-                              <span className="label-text text-gray-300">Role</span>
+                              <span
+                                className="label-text"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                              >
+                                Role
+                              </span>
                             </label>
                             <input
                               type="text"
                               value={user?.role || ''}
                               disabled
-                              className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                              className="input input-bordered w-full"
+                              style={{
+                                backgroundColor: 'var(--color-bg-tertiary)',
+                                borderColor: 'var(--color-border-default)',
+                                color: 'var(--color-text-primary)',
+                              }}
                             />
                           </div>
                           <div>
                             <label className="label">
-                              <span className="label-text text-gray-300">Company</span>
+                              <span
+                                className="label-text"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                              >
+                                Company
+                              </span>
                             </label>
                             <input
                               type="text"
                               value={user?.companyName || ''}
                               disabled
-                              className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                              className="input input-bordered w-full"
+                              style={{
+                                backgroundColor: 'var(--color-bg-tertiary)',
+                                borderColor: 'var(--color-border-default)',
+                                color: 'var(--color-text-primary)',
+                              }}
                             />
                           </div>
                         </>
@@ -197,9 +272,21 @@ const Settings = () => {
 
               {/* Admin Tools */}
               {(isAdmin() || isSysAdmin()) && (
-                <div className="card bg-gray-800 border border-gray-700">
+                <div
+                  className="card"
+                  style={{
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    borderColor: 'var(--color-border-default)',
+                    borderWidth: 1,
+                  }}
+                >
                   <div className="card-body">
-                    <h2 className="card-title text-xl text-white mb-6">Admin Tools</h2>
+                    <h2
+                      className="card-title text-xl mb-6"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      Admin Tools
+                    </h2>
                     <div className="space-y-4">
                       <button
                         onClick={() => setShowAuditLog(true)}
@@ -210,7 +297,7 @@ const Settings = () => {
                         </svg>
                         View Audit Log
                       </button>
-                      <div className="text-sm text-gray-400">
+                      <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                         Track all user actions and system changes
                       </div>
                     </div>
@@ -220,9 +307,19 @@ const Settings = () => {
 
               {/* Account/Company Management */}
               {isSysAdmin() && (
-                <div className="card bg-gray-800 border border-gray-700">
+                <div
+                  className="card"
+                  style={{
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    borderColor: 'var(--color-border-default)',
+                    borderWidth: 1,
+                  }}
+                >
                   <div className="card-body">
-                    <h2 className="card-title text-xl text-white mb-6">
+                    <h2
+                      className="card-title text-xl mb-6"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
                       {isPersonalAccount ? 'Account Management' : 'Company Management'}
                     </h2>
                     <div className="space-y-4">

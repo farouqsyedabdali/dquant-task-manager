@@ -31,8 +31,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: var(--font-size-base);
-  transition: background-color 0.15s ease, color 0.15s ease;
-  will-change: background-color, color;
 }
 
 /* Font size utility classes */
@@ -199,8 +197,6 @@ body {
 .App {
   background-color: var(--color-bg-primary);
   min-height: 100vh;
-  transition: background-color 0.15s ease;
-  will-change: background-color;
 }
 
 /* Custom scrollbar - Theme Aware */

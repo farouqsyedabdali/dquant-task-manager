@@ -82,7 +82,14 @@ const NotificationBoard = () => {
       {/* Notification Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-400 hover:text-white transition-colors"
+        className="relative p-2 transition-colors duration-200"
+        style={{ color: 'var(--color-text-tertiary)' }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = 'var(--color-text-primary)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = 'var(--color-text-tertiary)';
+        }}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -98,15 +105,36 @@ const NotificationBoard = () => {
 
       {/* Notification Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-12 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50">
+        <div 
+          className="absolute right-0 top-12 w-80 border rounded-lg shadow-xl z-50 transition-colors duration-200"
+          style={{
+            backgroundColor: 'var(--color-bg-secondary)',
+            borderColor: 'var(--color-border-default)',
+          }}
+        >
           {/* Header */}
-          <div className="p-4 border-b border-gray-700">
+          <div 
+            className="p-4 border-b transition-colors duration-200"
+            style={{ borderColor: 'var(--color-border-default)' }}
+          >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">Notifications</h3>
+              <h3 
+                className="text-lg font-semibold transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                Notifications
+              </h3>
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
-                  className="text-sm text-blue-400 hover:text-blue-300"
+                  className="text-sm transition-colors duration-200"
+                  style={{ color: '#60a5fa' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#93c5fd';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#60a5fa';
+                  }}
                 >
                   Mark all read
                 </button>
@@ -117,7 +145,10 @@ const NotificationBoard = () => {
           {/* Notifications List */}
           <div className="max-h-96 overflow-y-auto">
             {isLoading ? (
-              <div className="p-4 text-center text-gray-400">
+              <div 
+                className="p-4 text-center transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
                 Loading notifications...
               </div>
             ) : error ? (
@@ -125,7 +156,10 @@ const NotificationBoard = () => {
                 {error}
               </div>
             ) : notifications.length === 0 ? (
-              <div className="p-4 text-center text-gray-400">
+              <div 
+                className="p-4 text-center transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
                 No notifications yet
               </div>
             ) : (
@@ -133,9 +167,21 @@ const NotificationBoard = () => {
                 <div
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
-                  className={`p-4 border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition-colors ${
-                    !notification.isRead ? 'bg-gray-750' : ''
-                  }`}
+                  className="p-4 border-b cursor-pointer transition-colors duration-200"
+                  style={{
+                    borderColor: 'var(--color-border-default)',
+                    backgroundColor: !notification.isRead 
+                      ? 'var(--color-bg-tertiary)' 
+                      : 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = !notification.isRead 
+                      ? 'var(--color-bg-tertiary)' 
+                      : 'transparent';
+                  }}
                 >
                   <div className="flex items-start space-x-3">
                     <div className={`text-lg ${getNotificationColor(notification.type)}`}>
@@ -143,24 +189,41 @@ const NotificationBoard = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h4 className={`text-sm font-medium ${
-                          !notification.isRead ? 'text-white' : 'text-gray-300'
-                        }`}>
+                        <h4 
+                          className="text-sm font-medium transition-colors duration-200"
+                          style={{ 
+                            color: !notification.isRead 
+                              ? 'var(--color-text-primary)' 
+                              : 'var(--color-text-secondary)' 
+                          }}
+                        >
                           {notification.title}
                         </h4>
                         {!notification.isRead && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div 
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: '#3b82f6' }}
+                          ></div>
                         )}
                       </div>
-                      <p className="text-sm text-gray-400 mt-1">
+                      <p 
+                        className="text-sm mt-1 transition-colors duration-200"
+                        style={{ color: 'var(--color-text-tertiary)' }}
+                      >
                         {notification.message}
                       </p>
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs text-gray-500">
+                        <span 
+                          className="text-xs transition-colors duration-200"
+                          style={{ color: 'var(--color-text-muted)' }}
+                        >
                           {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                         </span>
                         {notification.task && (
-                          <span className="text-xs text-blue-400">
+                          <span 
+                            className="text-xs transition-colors duration-200"
+                            style={{ color: '#60a5fa' }}
+                          >
                             Task #{notification.task.id}
                           </span>
                         )}
@@ -174,10 +237,20 @@ const NotificationBoard = () => {
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="p-4 border-t border-gray-700">
+            <div 
+              className="p-4 border-t transition-colors duration-200"
+              style={{ borderColor: 'var(--color-border-default)' }}
+            >
               <button
                 onClick={() => setIsOpen(false)}
-                className="w-full text-sm text-gray-400 hover:text-white transition-colors"
+                className="w-full text-sm transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-tertiary)';
+                }}
               >
                 Close
               </button>

@@ -538,7 +538,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   return (
     <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 50 }}>
       <div 
-        className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto border scrollbar-thin transition-colors duration-200"
+        className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto scrollbar-thin transition-colors duration-200"
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)',
@@ -694,7 +694,13 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         {/* Two Column Layout: Left (Task Details) and Right (Comments) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
           {/* LEFT COLUMN - Task Details */}
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+          <div 
+            className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin transition-colors duration-200"
+            style={{
+              scrollbarThumbColor: 'var(--color-scrollbar-thumb)',
+              scrollbarTrackColor: 'var(--color-scrollbar-track)',
+            }}
+          >
             {/* Description */}
             <div>
               <h4 
@@ -936,8 +942,11 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           </div>
                           {/* Email tooltip */}
                           <div 
-                            className="absolute left-0 top-full mt-2 px-2 py-1 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                            style={{ backgroundColor: 'var(--color-bg-primary)' }}
+                            className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                            style={{
+                              backgroundColor: 'var(--color-bg-primary)',
+                              color: 'var(--color-text-primary)',
+                            }}
                           >
                             {viewedTask.assignee.email}
                           </div>
@@ -1020,9 +1029,12 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                 </div>
                                 {/* Email tooltip */}
                                 <div 
-                            className="absolute left-0 top-full mt-2 px-2 py-1 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                            style={{ backgroundColor: 'var(--color-bg-primary)' }}
-                          >
+                                  className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                  style={{
+                                    backgroundColor: 'var(--color-bg-primary)',
+                                    color: 'var(--color-text-primary)',
+                                  }}
+                                >
                                   {coAssignee.user.email}
                                 </div>
                               </div>
@@ -1039,7 +1051,12 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           ))}
                         </div>
                       ) : (
-                        <p className="text-gray-400 text-sm">No co-assignees</p>
+                        <p 
+                          className="text-sm transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          No co-assignees
+                        </p>
                       )}
                     </div>
                   ) : (
@@ -1053,25 +1070,41 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           {coAssignees.map((coAssignee) => (
                             <div key={coAssignee.id} className="flex items-center space-x-3 group relative">
                               <div className="avatar placeholder">
-                                <div className="bg-green-600 text-white rounded-full w-8">
+                                <div 
+                                  className="text-white rounded-full w-8"
+                                  style={{ backgroundColor: '#10b981' }}
+                                >
                                   <span className="text-sm">{coAssignee.user.name.charAt(0)}</span>
                                 </div>
                               </div>
                               <div>
-                                <span className="text-white text-base">{coAssignee.user.name}</span>
+                                <span 
+                                  className="text-base transition-colors duration-200"
+                                  style={{ color: 'var(--color-text-primary)' }}
+                                >
+                                  {coAssignee.user.name}
+                                </span>
                               </div>
                               {/* Email tooltip */}
                               <div 
-                            className="absolute left-0 top-full mt-2 px-2 py-1 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                            style={{ backgroundColor: 'var(--color-bg-primary)' }}
-                          >
+                                className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                style={{
+                                  backgroundColor: 'var(--color-bg-primary)',
+                                  color: 'var(--color-text-primary)',
+                                }}
+                              >
                                 {coAssignee.user.email}
                               </div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-gray-400 text-sm">No co-assignees</p>
+                        <p 
+                          className="text-sm transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          No co-assignees
+                        </p>
                       )}
                     </div>
                   )}
@@ -1080,30 +1113,55 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                 {/* External Collaborators */}
                 {viewedTask.collaborators && viewedTask.collaborators.length > 0 && (
                   <div>
-                    <h4 className="text-base font-semibold text-gray-300 mb-3">External Collaborators</h4>
+                    <h4 
+                      className="text-base font-semibold mb-3 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      External Collaborators
+                    </h4>
                     <div className="space-y-3">
                       {viewedTask.collaborators.map((collaborator) => (
                         <div key={collaborator.id} className="flex items-center space-x-3 group relative">
                           <div className="avatar placeholder">
-                            <div className="bg-blue-600 text-white rounded-full w-8">
+                            <div 
+                              className="text-white rounded-full w-8"
+                              style={{ backgroundColor: '#3b82f6' }}
+                            >
                               <span className="text-sm">{collaborator.user.name.charAt(0)}</span>
                             </div>
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center space-x-2">
-                              <span className="text-white text-base">{collaborator.user.name}</span>
-                              <span className="text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded">
+                              <span 
+                                className="text-base transition-colors duration-200"
+                                style={{ color: 'var(--color-text-primary)' }}
+                              >
+                                {collaborator.user.name}
+                              </span>
+                              <span 
+                                className="text-xs px-2 py-1 rounded transition-colors duration-200"
+                                style={{
+                                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                  color: '#93c5fd',
+                                }}
+                              >
                                 {collaborator.permissionLevel}
                               </span>
                             </div>
-                            <div className="text-sm text-gray-400">
+                            <div 
+                              className="text-sm transition-colors duration-200"
+                              style={{ color: 'var(--color-text-tertiary)' }}
+                            >
                               {collaborator.company.name}
                             </div>
                           </div>
                           {/* Email tooltip */}
                           <div 
-                            className="absolute left-0 top-full mt-2 px-2 py-1 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                            style={{ backgroundColor: 'var(--color-bg-primary)' }}
+                            className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                            style={{
+                              backgroundColor: 'var(--color-bg-primary)',
+                              color: 'var(--color-text-primary)',
+                            }}
                           >
                             {collaborator.user.email}
                           </div>
@@ -1118,7 +1176,12 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             {/* Personal Account Assignment */}
             {isPersonalAccount && (
               <div>
-                <h4 className="text-base font-semibold text-gray-300 mb-3">Assigned To</h4>
+                <h4 
+                  className="text-base font-semibold mb-3 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Assigned To
+                </h4>
                 {isEditing ? (
                   <div className="space-y-3">
                     <SearchableDropdown
@@ -1133,12 +1196,27 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                         <div className="flex items-center space-x-2">
                           <div className={`w-2 h-2 rounded-full ${contact.isPersonal ? 'bg-green-500' : 'bg-blue-500'}`}></div>
                           <span>{contact.name}</span>
-                          <span className="text-gray-400">({contact.email})</span>
-                          {contact.company && <span className="text-gray-500">- {contact.company}</span>}
+                          <span 
+                            className="transition-colors duration-200"
+                            style={{ color: 'var(--color-text-tertiary)' }}
+                          >
+                            ({contact.email})
+                          </span>
+                          {contact.company && (
+                            <span 
+                              className="transition-colors duration-200"
+                              style={{ color: 'var(--color-text-muted)' }}
+                            >
+                              - {contact.company}
+                            </span>
+                          )}
                         </div>
                       )}
                     />
-                    <p className="text-sm text-gray-400">
+                    <p 
+                      className="text-sm transition-colors duration-200"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                    >
                       Leave blank to assign to yourself
                     </p>
                   </div>
@@ -1147,29 +1225,61 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     {viewedTask.externalContact ? (
                       <div className="flex items-center space-x-3 group relative">
                         <div className="avatar placeholder">
-                          <div className="bg-blue-600 text-white rounded-full w-10">
+                          <div 
+                            className="text-white rounded-full w-10"
+                            style={{ backgroundColor: '#3b82f6' }}
+                          >
                             <span className="text-sm">{viewedTask.externalContact.name.charAt(0)}</span>
                           </div>
                         </div>
                         <div>
-                          <span className="text-white text-base">{viewedTask.externalContact.name}</span>
-                          <div className="text-sm text-gray-400">{viewedTask.externalContact.email}</div>
+                          <span 
+                            className="text-base transition-colors duration-200"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {viewedTask.externalContact.name}
+                          </span>
+                          <div 
+                            className="text-sm transition-colors duration-200"
+                            style={{ color: 'var(--color-text-tertiary)' }}
+                          >
+                            {viewedTask.externalContact.email}
+                          </div>
                         </div>
                         {/* Email tooltip */}
-                        <div className="absolute left-0 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap">
+                        <div 
+                          className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                          style={{
+                            backgroundColor: 'var(--color-bg-primary)',
+                            color: 'var(--color-text-primary)',
+                          }}
+                        >
                           {viewedTask.externalContact.email}
                         </div>
                       </div>
                     ) : (
                       <div className="flex items-center space-x-3 group relative">
                         <div className="avatar placeholder">
-                          <div className="bg-indigo-600 text-white rounded-full w-10">
+                          <div 
+                            className="text-white rounded-full w-10"
+                            style={{ backgroundColor: 'var(--color-primary)' }}
+                          >
                             <span className="text-sm">{user?.name?.charAt(0)}</span>
                           </div>
                         </div>
                         <div>
-                          <span className="text-white text-base">You</span>
-                          <div className="text-sm text-gray-400">{user?.email}</div>
+                          <span 
+                            className="text-base transition-colors duration-200"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            You
+                          </span>
+                          <div 
+                            className="text-sm transition-colors duration-200"
+                            style={{ color: 'var(--color-text-tertiary)' }}
+                          >
+                            {user?.email}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1181,13 +1291,33 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             {/* Parent Task */}
             {viewedTask.parentTask && (
               <div>
-                <h4 className="text-sm font-semibold text-gray-300 mb-2">Parent Task</h4>
+                <h4 
+                  className="text-sm font-semibold mb-2 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Parent Task
+                </h4>
                 <div
-                  className="bg-gray-700 border border-gray-600 rounded-lg p-2 cursor-pointer hover:bg-gray-600 transition text-sm"
+                  className="border rounded-lg p-2 cursor-pointer transition text-sm transition-colors duration-200"
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: 'var(--color-border-default)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }}
                   onClick={() => handleTaskClick(viewedTask.parentTask.id)}
                   title="Open parent task"
                 >
-                  <span className="text-white">{viewedTask.parentTask.title}</span>
+                  <span 
+                    className="transition-colors duration-200"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {viewedTask.parentTask.title}
+                  </span>
                 </div>
               </div>
             )}
@@ -1195,24 +1325,47 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             {/* Subtasks */}
             {viewedTask.subtasks && viewedTask.subtasks.length > 0 && (
               <div>
-                <h4 className="text-sm font-semibold text-gray-300 mb-2">Subtasks ({viewedTask.subtasks.length})</h4>
+                <h4 
+                  className="text-sm font-semibold mb-2 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Subtasks ({viewedTask.subtasks.length})
+                </h4>
                 <div className="space-y-1">
                   {viewedTask.subtasks.map((subtask) => (
                     <div
                       key={subtask.id}
-                      className="bg-gray-700 border border-gray-600 rounded-lg p-2 cursor-pointer hover:bg-gray-600 transition"
+                      className="border rounded-lg p-2 cursor-pointer transition transition-colors duration-200"
+                      style={{
+                        backgroundColor: 'var(--color-bg-tertiary)',
+                        borderColor: 'var(--color-border-default)',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                      }}
                       onClick={() => handleTaskClick(subtask.id)}
                       title="Open subtask"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-white text-sm">{subtask.title}</span>
+                        <span 
+                          className="text-sm transition-colors duration-200"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {subtask.title}
+                        </span>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(subtask.status)} flex items-center gap-1 w-fit`}>
                           {getStatusIcon(subtask.status)}
                           {STATUS_LABELS[subtask.status]}
                         </span>
                       </div>
                       {!isPersonalAccount && (
-                        <div className="text-gray-400 text-xs mt-0.5">
+                        <div 
+                          className="text-xs mt-0.5 transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
                           {subtask.assignee?.name}
                         </div>
                       )}
@@ -1260,8 +1413,19 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           </div>
 
         {/* RIGHT COLUMN - Comments */}
-        <div className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-          <h4 className="text-lg font-semibold text-white mb-2">Comments</h4>
+        <div 
+          className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin transition-colors duration-200"
+          style={{
+            scrollbarThumbColor: 'var(--color-scrollbar-thumb)',
+            scrollbarTrackColor: 'var(--color-scrollbar-track)',
+          }}
+        >
+          <h4 
+            className="text-lg font-semibold mb-2 transition-colors duration-200"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            Comments
+          </h4>
           <div className="overflow-y-auto pr-2">
             <CommentSection 
               taskId={viewedTask.id} 
@@ -1306,9 +1470,21 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       {/* Task Summary Modal */}
       {isSummaryModalOpen && summaryData && (
         <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 60 }}>
-          <div className="modal-box max-w-6xl max-h-[95vh] overflow-y-auto bg-gray-800 border border-gray-700">
+          <div
+            className="modal-box max-w-6xl max-h-[95vh] overflow-y-auto"
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)',
+              color: 'var(--color-text-primary)',
+            }}
+          >
             <div className="flex justify-between items-start mb-6">
-              <h3 className="text-2xl font-bold text-white">Task Summary</h3>
+              <h3
+                className="text-2xl font-bold"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                Task Summary
+              </h3>
               <IconButton
                 icon={<FaTimes />}
                 label="Close"
@@ -1323,11 +1499,22 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
               />
             </div>
             
-            <div className="space-y-6">
+              <div className="space-y-6">
               {/* AI Analysis Section */}
-              <div className="bg-gray-700 rounded-lg p-4">
-                <h4 className="text-lg font-semibold text-white mb-3">Content Summary</h4>
-                <div className="bg-gray-800 rounded p-3 text-gray-200 leading-relaxed">
+              <div
+                className="rounded-lg p-4"
+                style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+              >
+                <h4
+                  className="text-lg font-semibold mb-3"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  Content Summary
+                </h4>
+                <div
+                  className="rounded p-3 leading-relaxed"
+                  style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}
+                >
                   {summaryData.textSummary}
                 </div>
               </div>
@@ -1335,39 +1522,55 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
               {/* Task Details Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Status & Priority */}
-                <div className="bg-gray-700 rounded-lg p-4">
-                  <h4 className="text-lg font-semibold text-white mb-3">📊 Status & Priority</h4>
+                <div
+                  className="rounded-lg p-4"
+                  style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                >
+                  <h4
+                    className="text-lg font-semibold mb-3"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    📊 Status &amp; Priority
+                  </h4>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-300">Status:</span>
-                      <span className="text-white">{summaryData.status}</span>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>Status:</span>
+                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.status}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-300">Priority:</span>
-                      <span className="text-white">{summaryData.priority}</span>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>Priority:</span>
+                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.priority}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-300">Due Date:</span>
-                      <span className="text-white">{summaryData.dueDate}</span>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>Due Date:</span>
+                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.dueDate}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Assignment */}
-                <div className="bg-gray-700 rounded-lg p-4">
-                  <h4 className="text-lg font-semibold text-white mb-3">👥 Assignment</h4>
+                <div
+                  className="rounded-lg p-4"
+                  style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                >
+                  <h4
+                    className="text-lg font-semibold mb-3"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    👥 Assignment
+                  </h4>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-300">Created By:</span>
-                      <span className="text-white">{summaryData.createdBy}</span>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>Created By:</span>
+                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.createdBy}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-300">Assigned To:</span>
-                      <span className="text-white">{summaryData.assignedTo}</span>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>Assigned To:</span>
+                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.assignedTo}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-300">Created:</span>
-                      <span className="text-white">{summaryData.createdAt}</span>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>Created:</span>
+                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.createdAt}</span>
                     </div>
                   </div>
                 </div>
