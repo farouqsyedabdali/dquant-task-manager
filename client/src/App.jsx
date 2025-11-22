@@ -21,6 +21,7 @@ import TaskInvitation from './pages/TaskInvitation';
 import EmailVerification from './pages/EmailVerification';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Contacts from './pages/Contacts';
+import ColorPaletteTester from './pages/ColorPaletteTester';
 import AIModal from './components/tasks/AIModal';
 import AccessCodeModal from './components/AccessCodeModal';
 import { FaRobot } from 'react-icons/fa';
@@ -92,6 +93,9 @@ function App() {
           
           {/* Popup Route (no header/layout) */}
           <Route path="/popup" element={<TaskPopup />} />
+          
+          {/* Color Palette Tester (no auth required) */}
+          <Route path="/test" element={<ColorPaletteTester />} />
           
           {/* Protected Routes */}
           <Route
