@@ -1,3 +1,6 @@
+# Documentation (internal notes and guides)
+docs/
+
 # Desktop build artifacts
 desktop/dist/win-unpacked/
 desktop/dist/*.exe

@@ -1,32 +1,87 @@
+import { useState, useEffect } from 'react';
+import { auditAPI } from '../../services/api';
+
 const TaskUpdatesModal = ({ isOpen, onClose, task }) => {
-  if (!isOpen || !task) return null;
+  const [updates, setUpdates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Mock updates data - in production, this would come from an API
-  const updates = [
-    {
-      id: 1,
-      type: 'STATUS_CHANGE',
-      message: `Status changed from "To Do" to "In Progress"`,
-      user: task.assigner?.name || 'System',
-      timestamp: new Date(task.updatedAt),
-      icon: '🔄'
-    },
-    {
-      id: 2,
-      type: 'CREATED',
-      message: `Task created`,
-      user: task.assigner?.name || 'Unknown',
-      timestamp: new Date(task.createdAt),
-      icon: '✨'
+  useEffect(() => {
+    if (isOpen && task) {
+      fetchUpdates();
     }
-  ];
+  }, [isOpen, task]);
 
-  // Sort by most recent first
-  const sortedUpdates = updates.sort((a, b) => b.timestamp - a.timestamp);
+  const fetchUpdates = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await auditAPI.getTaskAuditLogs(task.id);
+      setUpdates(response.data.data || []);
+    } catch (err) {
+      console.error('Error fetching task updates:', err);
+      setError('Failed to load task updates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getActionIcon = (action) => {
+    const icons = {
+      TASK_CREATED: '✨',
+      TASK_UPDATED: '📝',
+      TASK_DELETED: '🗑️',
+      TASK_STATUS_CHANGED: '🔄',
+      TASK_PRIORITY_CHANGED: '⚡',
+      TASK_ASSIGNED: '👤',
+      TASK_UNASSIGNED: '👤',
+      TASK_DUE_DATE_CHANGED: '📅',
+      TASK_SHARED: '📤',
+      TASK_UNSHARED: '📥',
+      TASK_ARCHIVED: '📦',
+      TASK_UNARCHIVED: '📦',
+      COMMENT_CREATED: '💬',
+      COMMENT_UPDATED: '✏️',
+      COMMENT_DELETED: '🗑️',
+      CO_ASSIGNEE_ADDED: '👥',
+      CO_ASSIGNEE_REMOVED: '👥',
+      SUBTASK_ADDED: '➕',
+      USER_CREATED: '👤',
+      USER_UPDATED: '👤',
+      USER_DELETED: '👤',
+      USER_ROLE_CHANGED: '🔑',
+    };
+    return icons[action] || '📝';
+  };
+
+  const getActionColor = (action) => {
+    const colors = {
+      TASK_CREATED: 'text-blue-400',
+      TASK_UPDATED: 'text-gray-400',
+      TASK_DELETED: 'text-red-400',
+      TASK_STATUS_CHANGED: 'text-purple-400',
+      TASK_PRIORITY_CHANGED: 'text-orange-400',
+      TASK_ASSIGNED: 'text-green-400',
+      TASK_UNASSIGNED: 'text-gray-400',
+      TASK_DUE_DATE_CHANGED: 'text-blue-400',
+      TASK_SHARED: 'text-teal-400',
+      TASK_UNSHARED: 'text-gray-400',
+      TASK_ARCHIVED: 'text-gray-400',
+      TASK_UNARCHIVED: 'text-blue-400',
+      COMMENT_CREATED: 'text-blue-400',
+      COMMENT_UPDATED: 'text-yellow-400',
+      COMMENT_DELETED: 'text-red-400',
+      CO_ASSIGNEE_ADDED: 'text-green-400',
+      CO_ASSIGNEE_REMOVED: 'text-gray-400',
+      SUBTASK_ADDED: 'text-green-400',
+    };
+    return colors[action] || 'text-gray-400';
+  };
 
   const formatTimestamp = (date) => {
     const now = new Date();
-    const diff = now - date;
+    const updateDate = new Date(date);
+    const diff = now - updateDate;
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
@@ -35,58 +90,129 @@ const TaskUpdatesModal = ({ isOpen, onClose, task }) => {
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
+    return updateDate.toLocaleDateString();
   };
+
+  const formatDescription = (description) => {
+    // Remove timestamp from description (it's redundant with our relative time)
+    // Description format: "User did something at 11/22/2025, 3:45:00 PM"
+    return description.replace(/ at \d{1,2}\/\d{1,2}\/\d{4}, \d{1,2}:\d{2}:\d{2} (AM|PM)/, '');
+  };
+
+  if (!isOpen || !task) return null;
 
   return (
     <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 60 }}>
-      <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700">
+      <div 
+        className="modal-box max-w-2xl border" 
+        style={{
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: 'var(--color-border-default)'
+        }}
+      >
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-white">Task Updates</h3>
+          <h3 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+            Task Updates
+          </h3>
           <button
             onClick={onClose}
-            className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
+            className="btn btn-ghost btn-sm btn-circle"
+            style={{ color: 'var(--color-text-secondary)' }}
           >
             ✕
           </button>
         </div>
 
         {/* Task Info */}
-        <div className="mb-4 p-3 bg-gray-700 rounded-lg">
-          <h4 className="text-white font-semibold text-sm">{task.title}</h4>
-          <p className="text-gray-400 text-xs mt-1">
+        <div 
+          className="mb-4 p-3 rounded-lg" 
+          style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+        >
+          <h4 className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>
+            {task.title}
+          </h4>
+          <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
             Created by {task.assigner?.name} on {new Date(task.createdAt).toLocaleDateString()}
           </p>
         </div>
 
         {/* Updates Timeline */}
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {sortedUpdates.length > 0 ? (
-            sortedUpdates.map((update) => (
-              <div key={update.id} className="flex gap-3 p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
-                <div className="text-2xl">{update.icon}</div>
+        <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-thin">
+          {loading ? (
+            <div className="text-center py-8">
+              <span className="loading loading-spinner loading-md" style={{ color: 'var(--color-primary)' }}></span>
+              <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                Loading updates...
+              </p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-400">{error}</p>
+              <button
+                onClick={fetchUpdates}
+                className="mt-2 btn btn-sm"
+                style={{
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'white'
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          ) : updates.length > 0 ? (
+            updates.map((update) => (
+              <div
+                key={update.id}
+                className="flex gap-3 p-3 rounded-lg transition-colors"
+                style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                }}
+              >
+                <div className={`text-2xl ${getActionColor(update.action)}`}>
+                  {getActionIcon(update.action)}
+                </div>
                 <div className="flex-1">
-                  <p className="text-white text-sm">{update.message}</p>
+                  <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                    {formatDescription(update.description)}
+                  </p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-gray-400 text-xs">{update.user}</span>
-                    <span className="text-gray-500 text-xs">•</span>
-                    <span className="text-gray-400 text-xs">{formatTimestamp(update.timestamp)}</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                      {update.user?.name || 'Unknown User'}
+                    </span>
+                    <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>•</span>
+                    <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                      {formatTimestamp(update.createdAt)}
+                    </span>
                   </div>
                 </div>
               </div>
             ))
           ) : (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8" style={{ color: 'var(--color-text-secondary)' }}>
+              <p className="text-4xl mb-2">📝</p>
               <p>No updates yet</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                Task activity will appear here
+              </p>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="mt-4 pt-4 border-t border-gray-700">
-          <p className="text-xs text-gray-500 text-center">
-            Task activity and change history will appear here
+        <div 
+          className="mt-4 pt-4 border-t" 
+          style={{ borderColor: 'var(--color-border-default)' }}
+        >
+          <p className="text-xs text-center" style={{ color: 'var(--color-text-tertiary)' }}>
+            {updates.length > 0 
+              ? `${updates.length} update${updates.length !== 1 ? 's' : ''} total`
+              : 'All task changes and activity are tracked here'
+            }
           </p>
         </div>
       </div>
@@ -95,4 +221,3 @@ const TaskUpdatesModal = ({ isOpen, onClose, task }) => {
 };
 
 export default TaskUpdatesModal;
-

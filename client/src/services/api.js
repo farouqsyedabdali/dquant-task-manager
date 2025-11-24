@@ -139,6 +139,7 @@ export const auditAPI = {
   getAuditLogs: (params = {}) => api.get('/audit', { params }),
   getAuditLogById: (id) => api.get(`/audit/${id}`),
   getAuditStats: (params = {}) => api.get('/audit/stats/summary', { params }),
+  getTaskAuditLogs: (taskId) => api.get(`/audit/task/${taskId}`),
   exportAuditLogs: (params = {}) => api.get('/audit/export/csv', { 
     params,
     responseType: 'blob' // For file download

@@ -3,6 +3,7 @@ const {
   getAuditLogs,
   getAuditLogById,
   getAuditStats,
+  getTaskAuditLogs,
   exportAuditLogs
 } = require('../controllers/auditController');
 const auth = require('../middleware/auth');
@@ -10,7 +11,10 @@ const { adminOnly } = require('../middleware/roleCheck');
 
 const router = express.Router();
 
-// All routes require authentication and admin access
+// Get audit logs for a specific task (requires auth, not admin)
+router.get('/task/:taskId', auth, getTaskAuditLogs);
+
+// All other routes require authentication and admin access
 router.use(auth);
 router.use(adminOnly);
 

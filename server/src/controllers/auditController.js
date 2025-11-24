@@ -291,6 +291,152 @@ const getAuditStats = async (req, res) => {
 };
 
 /**
+ * Get audit logs for a specific task
+ */
+const getTaskAuditLogs = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { companyId, id: userId, role } = req.user;
+
+    // Get the task to verify access
+    const task = await prisma.task.findFirst({
+      where: {
+        id: parseInt(taskId),
+        OR: [
+          { companyId: companyId }, // User's company tasks
+          { assigneeId: userId }, // Assigned to user
+          { assignerId: userId }, // Created by user
+          { coAssignees: { some: { userId: userId } } }, // Co-assigned
+          { sharedWith: { some: { userId: userId } } }, // Shared with user
+          { collaborators: { some: { userId: userId } } } // Collaborating
+        ]
+      }
+    });
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        error: 'Task not found or access denied'
+      });
+    }
+
+    // Get audit logs for this task (all task-related actions)
+    const taskLogs = await prisma.auditLog.findMany({
+      where: {
+        entityId: parseInt(taskId),
+        entityType: 'Task',
+        companyId: companyId
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Get comment audit logs related to this task
+    // Comments store the task title in their description
+    const commentLogs = await prisma.auditLog.findMany({
+      where: {
+        entityType: 'Comment',
+        companyId: companyId,
+        description: {
+          contains: task.title,
+          mode: 'insensitive'
+        }
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Get co-assignee logs
+    const coAssigneeLogs = await prisma.auditLog.findMany({
+      where: {
+        entityType: 'TaskCoAssignee',
+        companyId: companyId,
+        description: {
+          contains: task.title,
+          mode: 'insensitive'
+        }
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Get task share logs
+    const shareLogs = await prisma.auditLog.findMany({
+      where: {
+        entityType: 'TaskShare',
+        companyId: companyId,
+        description: {
+          contains: task.title,
+          mode: 'insensitive'
+        }
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Combine all logs and sort by most recent
+    const allLogs = [...taskLogs, ...commentLogs, ...coAssigneeLogs, ...shareLogs].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    res.json({
+      success: true,
+      data: allLogs
+    });
+  } catch (error) {
+    console.error('Error fetching task audit logs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch task audit logs'
+    });
+  }
+};
+
+/**
  * Export audit logs to CSV (admin only)
  */
 const exportAuditLogs = async (req, res) => {
@@ -375,5 +521,6 @@ module.exports = {
   getAuditLogs,
   getAuditLogById,
   getAuditStats,
+  getTaskAuditLogs,
   exportAuditLogs
 };
