@@ -918,7 +918,7 @@ const updateTask = async (req, res) => {
         newValues: allowedUpdates,
         metadata: {
           changes: auditChanges.join(', '),
-          updatedBy: isAdmin ? 'admin' : isAssigner ? 'assigner' : 'assignee'
+          updatedBy: isCompanyAdmin ? 'admin' : isAssigner ? 'assigner' : 'assignee'
         }
       });
     }
@@ -1043,7 +1043,7 @@ const deleteTask = async (req, res) => {
         dueDate: task.dueDate
       },
       metadata: {
-        deletedBy: isAdmin ? 'admin' : 'assigner',
+        deletedBy: isCompanyAdmin ? 'admin' : 'assigner',
         subtasksCount: task.subtasks.length
       }
     });
