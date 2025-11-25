@@ -877,47 +877,99 @@ const updateTask = async (req, res) => {
       );
     }
 
-    // Log audit action for task update
-    const auditChanges = [];
-    if (updateData.title && updateData.title !== task.title) {
-      auditChanges.push(`title from "${task.title}" to "${updateData.title}"`);
-    }
-    if (updateData.description && updateData.description !== task.description) {
-      auditChanges.push(`description`);
-    }
-    if (updateData.priority && updateData.priority !== task.priority) {
-      auditChanges.push(`priority from "${task.priority}" to "${updateData.priority}"`);
-    }
+    // Log specific audit actions for each type of change
+    
+    // Status change
     if (updateData.status && updateData.status !== task.status) {
-      auditChanges.push(`status from "${task.status}" to "${updateData.status}"`);
+      await logAuditActionDirect(req, 'TASK_STATUS_CHANGED', 'Task', {
+        entityId: updatedTask.id,
+        taskTitle: updatedTask.title,
+        oldStatus: task.status,
+        newStatus: updateData.status,
+        metadata: {
+          updatedBy: isCompanyAdmin ? 'admin' : isAssigner ? 'assigner' : 'assignee'
+        }
+      });
+
+      // If status was changed and the user is the creator (assigner), mark as manually changed
+      if (isAssigner) {
+        await markStatusAsManuallyChanged(parseInt(id), companyId);
+      }
     }
+
+    // Priority change
+    if (updateData.priority && updateData.priority !== task.priority) {
+      await logAuditActionDirect(req, 'TASK_PRIORITY_CHANGED', 'Task', {
+        entityId: updatedTask.id,
+        taskTitle: updatedTask.title,
+        oldPriority: task.priority,
+        newPriority: updateData.priority,
+        metadata: {
+          updatedBy: isCompanyAdmin ? 'admin' : isAssigner ? 'assigner' : 'assignee'
+        }
+      });
+    }
+
+    // Assignee change
     if (updateData.assigneeId && updateData.assigneeId !== task.assigneeId) {
-      auditChanges.push(`assignee`);
+      const newAssignee = await prisma.user.findUnique({
+        where: { id: updateData.assigneeId },
+        select: { name: true }
+      });
+      
+      await logAuditActionDirect(req, 'TASK_ASSIGNED', 'Task', {
+        entityId: updatedTask.id,
+        taskTitle: updatedTask.title,
+        assigneeName: newAssignee?.name || 'Unknown User',
+        oldAssigneeId: task.assigneeId,
+        newAssigneeId: updateData.assigneeId,
+        metadata: {
+          updatedBy: isCompanyAdmin ? 'admin' : isAssigner ? 'assigner' : 'assignee'
+        }
+      });
     }
+
+    // Due date change
     if (updateData.dueDate !== undefined) {
-      auditChanges.push(`due date`);
+      const oldDate = task.dueDate ? new Date(task.dueDate).getTime() : null;
+      const newDate = updateData.dueDate ? new Date(updateData.dueDate).getTime() : null;
+      
+      if (oldDate !== newDate) {
+        await logAuditActionDirect(req, 'TASK_DUE_DATE_CHANGED', 'Task', {
+          entityId: updatedTask.id,
+          taskTitle: updatedTask.title,
+          oldDueDate: task.dueDate,
+          newDueDate: updateData.dueDate,
+          metadata: {
+            updatedBy: isCompanyAdmin ? 'admin' : isAssigner ? 'assigner' : 'assignee'
+          }
+        });
+      }
     }
 
-    // If status was changed and the user is the creator (assigner), mark as manually changed
-    if (updateData.status && updateData.status !== task.status && isAssigner) {
-      await markStatusAsManuallyChanged(parseInt(id), companyId);
-    }
-
-    if (auditChanges.length > 0) {
+    // Title change
+    if (updateData.title && updateData.title !== task.title) {
       await logAuditActionDirect(req, 'TASK_UPDATED', 'Task', {
         entityId: updatedTask.id,
         taskTitle: updatedTask.title,
-        oldValues: {
-          title: task.title,
-          description: task.description,
-          priority: task.priority,
-          status: task.status,
-          assigneeId: task.assigneeId,
-          dueDate: task.dueDate
-        },
-        newValues: allowedUpdates,
+        oldValues: { title: task.title },
+        newValues: { title: updateData.title },
         metadata: {
-          changes: auditChanges.join(', '),
+          changeType: 'title',
+          updatedBy: isCompanyAdmin ? 'admin' : isAssigner ? 'assigner' : 'assignee'
+        }
+      });
+    }
+
+    // Description change
+    if (updateData.description && updateData.description !== task.description) {
+      await logAuditActionDirect(req, 'TASK_UPDATED', 'Task', {
+        entityId: updatedTask.id,
+        taskTitle: updatedTask.title,
+        oldValues: { description: task.description },
+        newValues: { description: updateData.description },
+        metadata: {
+          changeType: 'description',
           updatedBy: isCompanyAdmin ? 'admin' : isAssigner ? 'assigner' : 'assignee'
         }
       });

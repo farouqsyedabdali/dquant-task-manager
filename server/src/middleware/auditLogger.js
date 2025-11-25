@@ -84,6 +84,11 @@ const generateDescription = (action, entityType, req, responseData, options) => 
       return `${userName} created task "${responseData?.title || 'Unknown Task'}" at ${timestamp}`;
     
     case 'TASK_UPDATED':
+      if (options.metadata?.changeType === 'title') {
+        return `${userName} changed title from "${options.oldValues?.title}" to "${options.newValues?.title}" at ${timestamp}`;
+      } else if (options.metadata?.changeType === 'description') {
+        return `${userName} updated description in "${options.taskTitle || 'Unknown Task'}" at ${timestamp}`;
+      }
       return `${userName} updated task "${options.taskTitle || responseData?.title || 'Unknown Task'}" at ${timestamp}`;
     
     case 'TASK_DELETED':
@@ -100,6 +105,11 @@ const generateDescription = (action, entityType, req, responseData, options) => 
     
     case 'TASK_UNASSIGNED':
       return `${userName} unassigned task "${options.taskTitle || 'Unknown Task'}" from ${options.assigneeName || 'Unknown User'} at ${timestamp}`;
+    
+    case 'TASK_DUE_DATE_CHANGED':
+      const oldDate = options.oldDueDate ? new Date(options.oldDueDate).toLocaleDateString() : 'No due date';
+      const newDate = options.newDueDate ? new Date(options.newDueDate).toLocaleDateString() : 'No due date';
+      return `${userName} changed due date from "${oldDate}" to "${newDate}" in "${options.taskTitle || 'Unknown Task'}" at ${timestamp}`;
     
     case 'COMMENT_CREATED':
       return `${userName} added a comment in "${options.taskTitle || 'Unknown Task'}" at ${timestamp}: "${options.commentContent || 'No content'}"`;
