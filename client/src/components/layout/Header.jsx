@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../context/authStore';
 import CalendarIcon from '../icons/CalendarIcon';
-import ThemeToggle from '../common/ThemeToggle';
 import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaExternalLinkAlt, FaUserFriends } from 'react-icons/fa';
 
 const Header = () => {
@@ -154,9 +153,6 @@ const Header = () => {
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
-            {/* Theme Toggle */}
-            <ThemeToggle />
-            
             {/* Open Popup Button */}
             <button
               onClick={handleOpenPopup}

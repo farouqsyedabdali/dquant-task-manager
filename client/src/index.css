@@ -3,22 +3,22 @@
 
 /* Theme Variables - Light Mode (Default) */
 :root {
-  /* Background Colors */
+  /* Background Colors - Darker, more visible grays */
   --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-tertiary: #f3f4f6;
-  --color-bg-quaternary: #e5e7eb;
+  --color-bg-secondary: #f5f5f5;
+  --color-bg-tertiary: #e8e8e8;
+  --color-bg-quaternary: #d4d4d4;
   
-  /* Text Colors */
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-tertiary: #9ca3af;
-  --color-text-muted: #6b7280;
+  /* Text Colors - Darker for better contrast */
+  --color-text-primary: #0a0a0a;
+  --color-text-secondary: #525252;
+  --color-text-tertiary: #737373;
+  --color-text-muted: #525252;
   
-  /* Border Colors */
-  --color-border-default: #e5e7eb;
-  --color-border-light: #d1d5db;
-  --color-border-dark: #9ca3af;
+  /* Border Colors - More visible */
+  --color-border-default: #d4d4d4;
+  --color-border-light: #e8e8e8;
+  --color-border-dark: #a3a3a3;
   
   /* Primary Colors (Indigo) */
   --color-primary: #6366f1;
@@ -36,29 +36,29 @@
   --color-surface-active: var(--color-bg-quaternary);
   
   /* Scrollbar Colors */
-  --color-scrollbar-track: #f3f4f6;
-  --color-scrollbar-thumb: #d1d5db;
-  --color-scrollbar-thumb-hover: #9ca3af;
+  --color-scrollbar-track: #e8e8e8;
+  --color-scrollbar-thumb: #d4d4d4;
+  --color-scrollbar-thumb-hover: #a3a3a3;
 }
 
-/* Theme Variables - Dark Mode (Darker Black-Gray Grayscale) */
+/* Theme Variables - Dark Mode (Default) */
 .dark {
-  /* Background Colors - Darker, more black-gray */
-  --color-bg-primary: #0a0a0a;
-  --color-bg-secondary: #141414;
-  --color-bg-tertiary: #1a1a1a;
-  --color-bg-quaternary: #242424;
+  /* Background Colors - Balanced dark with lighter, more visible grays */
+  --color-bg-primary: #1a1a1a;
+  --color-bg-secondary: #242424;
+  --color-bg-tertiary: #2e2e2e;
+  --color-bg-quaternary: #383838;
   
-  /* Text Colors */
+  /* Text Colors - Lighter for better visibility */
   --color-text-primary: #ffffff;
-  --color-text-secondary: #b3b3b3;
-  --color-text-tertiary: #808080;
-  --color-text-muted: #666666;
+  --color-text-secondary: #d4d4d4;
+  --color-text-tertiary: #a3a3a3;
+  --color-text-muted: #8a8a8a;
   
-  /* Border Colors */
-  --color-border-default: #2a2a2a;
-  --color-border-light: #333333;
-  --color-border-dark: #404040;
+  /* Border Colors - More visible */
+  --color-border-default: #404040;
+  --color-border-light: #525252;
+  --color-border-dark: #666666;
   
   /* Primary Colors (Indigo) - Slightly brighter for contrast */
   --color-primary: #6366f1;
@@ -76,9 +76,9 @@
   --color-surface-active: var(--color-bg-quaternary);
   
   /* Scrollbar Colors */
-  --color-scrollbar-track: #141414;
-  --color-scrollbar-thumb: #2a2a2a;
-  --color-scrollbar-thumb-hover: #404040;
+  --color-scrollbar-track: #242424;
+  --color-scrollbar-thumb: #404040;
+  --color-scrollbar-thumb-hover: #525252;
 }
 
 /* Map CSS Variables to Tailwind Utilities using @theme */

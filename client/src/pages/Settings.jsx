@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import useAuthStore from '../context/authStore';
 import useFontSizeStore from '../context/fontSizeStore';
+import useThemeStore from '../stores/themeStore';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import AuditLogModal from '../components/audit/AuditLogModal';
 import { feedbackAPI } from '../services/api';
+import { lightPalettes, darkPalettes } from '../config/colorPalettes';
 
 const Settings = () => {
   const { user, isAdmin, isSysAdmin, deleteCompany } = useAuthStore();
   const { fontSize, setFontSize } = useFontSizeStore();
+  const { theme, setTheme, lightPalette, darkPalette, setLightPalette, setDarkPalette } = useThemeStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAuditLog, setShowAuditLog] = useState(false);
@@ -344,32 +347,182 @@ const Settings = () => {
 
           {selectedCategory === 'preferences' && (
             <div className="space-y-8">
-              <div className="card bg-gray-800 border border-gray-700">
+              {/* Theme Selection - One Click */}
+              <div
+                className="card"
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                  borderWidth: 1,
+                }}
+              >
                 <div className="card-body">
-                  <h2 className="card-title text-xl text-white mb-6">UI Preferences</h2>
-                  <div className="space-y-6">
-                    <div>
-                      <label className="label">
-                        <span className="label-text text-gray-300">Font Size</span>
-                      </label>
-                      <div className="flex space-x-2">
-                        {['small', 'medium', 'large'].map((size) => (
+                  <h2
+                    className="card-title text-xl mb-6"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    🎨 Color Theme
+                  </h2>
+                  
+                  {/* Light Themes */}
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold mb-3 flex items-center" style={{ color: 'var(--color-text-secondary)' }}>
+                      ☀️ LIGHT THEMES
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {lightPalettes.map((palette) => {
+                        const isActive = theme === 'light' && lightPalette === palette.id;
+                        return (
                           <button
-                            key={size}
-                            onClick={() => setFontSize(size)}
-                            className={`btn btn-sm capitalize ${
-                              fontSize === size ? 'btn-primary' : 'btn-outline btn-outline-primary'
-                            }`}
+                            key={palette.id}
+                            onClick={() => {
+                              setTheme('light');
+                              setLightPalette(palette.id);
+                            }}
+                            className="text-left p-3 rounded-lg border transition-all duration-200 hover:scale-[1.02]"
+                            style={
+                              isActive
+                                ? {
+                                    backgroundColor: 'var(--color-primary)',
+                                    borderColor: 'var(--color-primary)',
+                                    color: '#ffffff',
+                                  }
+                                : {
+                                    backgroundColor: 'var(--color-bg-tertiary)',
+                                    borderColor: 'var(--color-border-default)',
+                                    color: 'var(--color-text-primary)',
+                                  }
+                            }
                           >
-                            {size}
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="font-semibold text-sm">{palette.name}</div>
+                              {isActive && <div className="text-sm">✓</div>}
+                            </div>
+                            <div className="flex space-x-1">
+                              {Object.entries(palette.colors)
+                                .slice(0, 4)
+                                .map(([key, value]) => (
+                                  <div
+                                    key={key}
+                                    className="w-5 h-5 rounded border"
+                                    style={{
+                                      backgroundColor: value,
+                                      borderColor: isActive ? '#ffffff' : 'var(--color-border-default)',
+                                    }}
+                                  />
+                                ))}
+                            </div>
                           </button>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
-                    <div className="pt-4 border-t border-gray-700">
-                      <p className="text-gray-400 text-sm">
-                        Font size changes will be applied across the entire application.
-                      </p>
+                  </div>
+
+                  {/* Dark Themes */}
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3 flex items-center" style={{ color: 'var(--color-text-secondary)' }}>
+                      🌙 DARK THEMES
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {darkPalettes.map((palette) => {
+                        const isActive = theme === 'dark' && darkPalette === palette.id;
+                        return (
+                          <button
+                            key={palette.id}
+                            onClick={() => {
+                              setTheme('dark');
+                              setDarkPalette(palette.id);
+                            }}
+                            className="text-left p-3 rounded-lg border transition-all duration-200 hover:scale-[1.02]"
+                            style={
+                              isActive
+                                ? {
+                                    backgroundColor: 'var(--color-primary)',
+                                    borderColor: 'var(--color-primary)',
+                                    color: '#ffffff',
+                                  }
+                                : {
+                                    backgroundColor: 'var(--color-bg-tertiary)',
+                                    borderColor: 'var(--color-border-default)',
+                                    color: 'var(--color-text-primary)',
+                                  }
+                            }
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="font-semibold text-sm">{palette.name}</div>
+                              {isActive && <div className="text-sm">✓</div>}
+                            </div>
+                            <div className="flex space-x-1">
+                              {Object.entries(palette.colors)
+                                .slice(0, 4)
+                                .map(([key, value]) => (
+                                  <div
+                                    key={key}
+                                    className="w-5 h-5 rounded border"
+                                    style={{
+                                      backgroundColor: value,
+                                      borderColor: isActive ? '#ffffff' : 'var(--color-border-default)',
+                                    }}
+                                  />
+                                ))}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Font Size Preferences */}
+              <div
+                className="card"
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                  borderWidth: 1,
+                }}
+              >
+                <div className="card-body">
+                  <h2
+                    className="card-title text-xl mb-6"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    🔤 Font Size
+                  </h2>
+                  <div className="space-y-4">
+                    <div className="flex space-x-3">
+                      {['small', 'medium', 'large'].map((size) => (
+                        <button
+                          key={size}
+                          onClick={() => setFontSize(size)}
+                          className="flex-1 py-3 px-4 rounded-lg border-2 transition-all duration-200 capitalize font-semibold"
+                          style={
+                            fontSize === size
+                              ? {
+                                  backgroundColor: 'var(--color-primary)',
+                                  borderColor: 'var(--color-primary)',
+                                  color: '#ffffff',
+                                }
+                              : {
+                                  backgroundColor: 'var(--color-bg-tertiary)',
+                                  borderColor: 'var(--color-border-default)',
+                                  color: 'var(--color-text-primary)',
+                                }
+                          }
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                    <div
+                      className="pt-4 border-t text-sm"
+                      style={{
+                        borderColor: 'var(--color-border-default)',
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      Font size changes will be applied across the entire application.
                     </div>
                   </div>
                 </div>
