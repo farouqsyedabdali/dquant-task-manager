@@ -558,3 +558,9 @@ export const getPaletteById = (id) => {
   return allPalettes.find(palette => palette.id === id);
 };
 
+
+
+
+
+
+
