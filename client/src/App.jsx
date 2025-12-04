@@ -23,7 +23,6 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Contacts from './pages/Contacts';
 import ColorPaletteTester from './pages/ColorPaletteTester';
 import AIModal from './components/tasks/AIModal';
-import AccessCodeModal from './components/AccessCodeModal';
 import { FaRobot } from 'react-icons/fa';
 import './App.css';
 
@@ -31,13 +30,7 @@ function App() {
   const { getMe, isAuthenticated } = useAuthStore();
   const { theme } = useThemeStore();
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
-  const [showAccessCode, setShowAccessCode] = useState(false);
   const [taskbarAction, setTaskbarAction] = useState(null);
-
-  // Always show access code modal - no session persistence
-  useEffect(() => {
-    setShowAccessCode(true);
-  }, []);
 
   useEffect(() => {
     // Check if user is authenticated and get user info
@@ -67,18 +60,10 @@ function App() {
     };
   }, []);
 
-  const handleAccessCodeVerified = () => {
-    setShowAccessCode(false);
-  };
-
   return (
     <FontSizeProvider>
       <Router>
         <div className="App min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-        {/* Access Code Modal - Show before any content if not verified */}
-        {showAccessCode && (
-          <AccessCodeModal onCodeVerified={handleAccessCodeVerified} />
-        )}
         
         <Routes>
           {/* Public Routes */}
