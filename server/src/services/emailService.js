@@ -58,7 +58,9 @@ const emailService = {
    * @param {string} params.message - Optional personal message
    */
   async sendTaskInvitation({ recipientEmail, recipientName, senderName, task, token, message }) {
-    const invitationLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/task-invitation/${token}`;
+    // Extract first URL from comma-separated CLIENT_URL list
+    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0];
+    const invitationLink = `${clientUrl}/task-invitation/${token}`;
     
     const { taskInvitationTemplate } = require('../templates/taskInvitationEmail');
     const html = taskInvitationTemplate({
@@ -192,7 +194,9 @@ const emailService = {
    * @param {number} params.taskId - Task ID
    */
   async sendTaskReminder({ recipientEmail, userName, task, taskId }) {
-    const taskLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/dashboard?taskId=${taskId}`;
+    // Extract first URL from comma-separated CLIENT_URL list
+    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0];
+    const taskLink = `${clientUrl}/dashboard?taskId=${taskId}`;
     
     const { taskReminderTemplate } = require('../templates/taskReminderEmail');
     const html = taskReminderTemplate({

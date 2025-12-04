@@ -101,7 +101,7 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
       headers: {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
+        'HTTP-Referer': (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0],
         'X-Title': process.env.SITE_NAME || 'Tialz Task Manager'
       },
       responseType: 'stream'
@@ -380,7 +380,7 @@ Output: {"title": "Update website homepage", "description": "Update the website 
       headers: {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
+        'HTTP-Referer': (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0],
         'X-Title': process.env.SITE_NAME || 'Tialz Task Manager'
       },
       responseType: 'stream'
@@ -575,7 +575,7 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
       headers: {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
+        'HTTP-Referer': (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0],
         'X-Title': process.env.SITE_NAME || 'Tialz Task Manager'
       },
       responseType: 'stream'
