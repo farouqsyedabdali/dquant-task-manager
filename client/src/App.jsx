@@ -21,6 +21,7 @@ import TaskInvitation from './pages/TaskInvitation';
 import EmailVerification from './pages/EmailVerification';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Contacts from './pages/Contacts';
+import Projects from './pages/Projects';
 import ColorPaletteTester from './pages/ColorPaletteTester';
 import AIModal from './components/tasks/AIModal';
 import { FaRobot } from 'react-icons/fa';
@@ -174,6 +175,18 @@ function App() {
           />
           
           <Route
+            path="/projects"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+                  <Header />
+                  <Projects />
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
             path="/employee"
             element={
               <ProtectedRoute allowedRoles={['EMPLOYEE']}>
@@ -193,8 +206,19 @@ function App() {
         {/* Floating AI Button - Only show when authenticated and not on popup */}
         {isAuthenticated() && window.location.pathname !== '/popup' && (
           <button
-            className="fixed bottom-6 right-6 z-50 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-4 shadow-lg flex items-center justify-center"
-            style={{ boxShadow: '0 4px 24px rgba(80, 80, 2)' }}
+            className="fixed bottom-6 right-6 z-50 text-white rounded-full p-4 shadow-lg flex items-center justify-center transition-all duration-200"
+            style={{ 
+              backgroundColor: 'var(--color-primary)',
+              boxShadow: '0 4px 24px rgba(99, 102, 241, 0.4)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.filter = 'brightness(0.9)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.filter = 'brightness(1)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
             onClick={() => setIsAIModalOpen(true)}
             title="Open AI Assistant"
           >

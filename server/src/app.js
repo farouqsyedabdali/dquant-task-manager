@@ -20,6 +20,8 @@ const superAdminRoutes = require('./routes/superAdmin')
 const securityRoutes = require('./routes/security')
 const contactRoutes = require('./routes/contacts')
 const reminderRoutes = require('./routes/reminders')
+const projectRoutes = require('./routes/projects')
+const templateRoutes = require('./routes/templates')
 
 const app = express()
 
@@ -62,6 +64,8 @@ app.use('/api/super-admin', superAdminRoutes)
 app.use('/api/security', securityRoutes)
 app.use('/api/contacts', contactRoutes)
 app.use('/api/reminders', reminderRoutes)
+app.use('/api/projects', projectRoutes)
+app.use('/api/templates', templateRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

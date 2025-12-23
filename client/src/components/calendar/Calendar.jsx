@@ -199,7 +199,13 @@ const Calendar = () => {
     monthName;
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-8">
+    <div 
+      className="border rounded-lg shadow-lg p-8 transition-colors duration-200"
+      style={{
+        backgroundColor: 'var(--color-bg-secondary)',
+        borderColor: 'var(--color-border-default)',
+      }}
+    >
       {/* Two Column Layout: Calendar Left (60%), Tasks Right (40%) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 min-h-[800px]">
         {/* Left Column - Calendar (3/5 = 60%) */}

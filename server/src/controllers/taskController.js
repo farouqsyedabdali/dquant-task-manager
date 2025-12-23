@@ -19,28 +19,33 @@ const getTasks = async (req, res) => {
     // Filter by task type
     if (type === 'assigned-to-me') {
       // Show tasks where user is lead assignee, co-assignee, shared with them, or collaborating
+      // BUT exclude draft tasks (they should only be visible to the creator)
       whereClause.OR = [
-        { assigneeId: userId }, // Include tasks assigned to them (even from other companies)
+        { AND: [{ assigneeId: userId }, { isDraft: false }] }, // Exclude drafts
         { coAssignees: { some: { userId: userId } } },
         { sharedWith: { some: { userId: userId } } },
         { collaborators: { some: { userId: userId, companyId: companyId } } }
       ];
     } else if (type === 'created-by-me') {
+      // Only show non-draft tasks they created (drafts only visible in project view)
       whereClause.assignerId = userId;
+      whereClause.isDraft = false;
     } else if (userRole === 'EMPLOYEE') {
       // Employees see tasks assigned to them, tasks they created, tasks they're co-assigned to, shared with them, or collaborating
+      // EXCLUDE ALL DRAFT TASKS - they should only be visible in project view
       whereClause.OR = [
-        { assigneeId: userId }, // Include tasks assigned to them (even from other companies)
-        { assignerId: userId },
+        { AND: [{ assigneeId: userId }, { isDraft: false }] },
+        { AND: [{ assignerId: userId }, { isDraft: false }] }, // Exclude drafts from created tasks too
         { coAssignees: { some: { userId: userId } } },
         { sharedWith: { some: { userId: userId } } },
         { collaborators: { some: { userId: userId, companyId: companyId } } }
       ];
     } else {
       // Admins see all tasks in their company OR tasks they're collaborating on OR tasks assigned to them
+      // EXCLUDE ALL DRAFT TASKS - they should only be visible in project view
       whereClause.OR = [
-        { companyId: companyId },
-        { assigneeId: userId }, // Include tasks assigned to them (even from other companies)
+        { AND: [{ companyId: companyId }, { isDraft: false }] }, // Exclude drafts from company tasks
+        { AND: [{ assigneeId: userId }, { isDraft: false }] },
         { collaborators: { some: { userId: userId, companyId: companyId } } }
       ];
     }

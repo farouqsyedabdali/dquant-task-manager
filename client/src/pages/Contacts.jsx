@@ -390,67 +390,133 @@ const AddContactModal = ({ isOpen, onClose, onSubmit }) => {
 
   return (
     <div className="modal modal-open backdrop-blur-sm">
-      <div className="modal-box bg-gray-800 border border-gray-700">
+      <div 
+        className="modal-box border transition-colors duration-200"
+        style={{
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: 'var(--color-border-default)',
+        }}
+      >
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-white">Add Contact</h3>
-          <button onClick={onClose} className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white">
+          <h3 
+            className="text-2xl font-bold transition-colors duration-200"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            Add Contact
+          </h3>
+          <button 
+            onClick={onClose} 
+            className="btn btn-ghost btn-sm btn-circle transition-colors duration-200"
+            style={{ color: 'var(--color-text-tertiary)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--color-text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--color-text-tertiary)';
+            }}
+          >
             ✕
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Name *</label>
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Name *
+            </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className={`input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full ${
+              className={`input input-bordered w-full transition-colors duration-200 ${
                 errors.name ? 'border-red-500' : ''
               }`}
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: errors.name ? undefined : 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter contact name"
             />
             {errors.name && <p className="text-red-400 text-sm mt-1">{errors.name}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Email *</label>
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Email *
+            </label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className={`input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full ${
+              className={`input input-bordered w-full transition-colors duration-200 ${
                 errors.email ? 'border-red-500' : ''
               }`}
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: errors.email ? undefined : 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter email address"
             />
             {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Company</label>
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Company
+            </label>
             <input
               type="text"
               value={formData.company}
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              className="input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full"
+              className="input input-bordered w-full transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter company name (optional)"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Phone</label>
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Phone
+            </label>
             <input
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full"
+              className="input input-bordered w-full transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter phone number (optional)"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Type</label>
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Type
+            </label>
             <div className="flex space-x-4">
               <label className="flex items-center">
                 <input
@@ -460,7 +526,12 @@ const AddContactModal = ({ isOpen, onClose, onSubmit }) => {
                   onChange={() => setFormData({ ...formData, isPersonal: true })}
                   className="radio radio-primary"
                 />
-                <span className="ml-2 text-white">Personal</span>
+                <span 
+                  className="ml-2 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  Personal
+                </span>
               </label>
               <label className="flex items-center">
                 <input
@@ -470,7 +541,12 @@ const AddContactModal = ({ isOpen, onClose, onSubmit }) => {
                   onChange={() => setFormData({ ...formData, isPersonal: false })}
                   className="radio radio-primary"
                 />
-                <span className="ml-2 text-white">Business</span>
+                <span 
+                  className="ml-2 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  Business
+                </span>
               </label>
             </div>
           </div>
@@ -479,7 +555,18 @@ const AddContactModal = ({ isOpen, onClose, onSubmit }) => {
             <button type="submit" className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0">
               Add Contact
             </button>
-            <button type="button" onClick={onClose} className="btn btn-ghost text-gray-400 hover:text-white">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="btn btn-ghost transition-colors duration-200"
+              style={{ color: 'var(--color-text-tertiary)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--color-text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--color-text-tertiary)';
+              }}
+            >
               Cancel
             </button>
           </div>
@@ -536,67 +623,133 @@ const EditContactModal = ({ isOpen, onClose, contact, onSubmit }) => {
 
   return (
     <div className="modal modal-open backdrop-blur-sm">
-      <div className="modal-box bg-gray-800 border border-gray-700">
+      <div 
+        className="modal-box border transition-colors duration-200"
+        style={{
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: 'var(--color-border-default)',
+        }}
+      >
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-white">Edit Contact</h3>
-          <button onClick={onClose} className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white">
+          <h3 
+            className="text-2xl font-bold transition-colors duration-200"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            Edit Contact
+          </h3>
+          <button 
+            onClick={onClose} 
+            className="btn btn-ghost btn-sm btn-circle transition-colors duration-200"
+            style={{ color: 'var(--color-text-tertiary)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--color-text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--color-text-tertiary)';
+            }}
+          >
             ✕
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Name *</label>
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Name *
+            </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className={`input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full ${
+              className={`input input-bordered w-full transition-colors duration-200 ${
                 errors.name ? 'border-red-500' : ''
               }`}
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: errors.name ? undefined : 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter contact name"
             />
             {errors.name && <p className="text-red-400 text-sm mt-1">{errors.name}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Email *</label>
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Email *
+            </label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className={`input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full ${
+              className={`input input-bordered w-full transition-colors duration-200 ${
                 errors.email ? 'border-red-500' : ''
               }`}
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: errors.email ? undefined : 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter email address"
             />
             {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Company</label>
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Company
+            </label>
             <input
               type="text"
               value={formData.company}
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              className="input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full"
+              className="input input-bordered w-full transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter company name (optional)"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Phone</label>
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Phone
+            </label>
             <input
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full"
+              className="input input-bordered w-full transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter phone number (optional)"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Type</label>
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Type
+            </label>
             <div className="flex space-x-4">
               <label className="flex items-center">
                 <input
@@ -606,7 +759,12 @@ const EditContactModal = ({ isOpen, onClose, contact, onSubmit }) => {
                   onChange={() => setFormData({ ...formData, isPersonal: true })}
                   className="radio radio-primary"
                 />
-                <span className="ml-2 text-white">Personal</span>
+                <span 
+                  className="ml-2 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  Personal
+                </span>
               </label>
               <label className="flex items-center">
                 <input
@@ -616,7 +774,12 @@ const EditContactModal = ({ isOpen, onClose, contact, onSubmit }) => {
                   onChange={() => setFormData({ ...formData, isPersonal: false })}
                   className="radio radio-primary"
                 />
-                <span className="ml-2 text-white">Business</span>
+                <span 
+                  className="ml-2 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  Business
+                </span>
               </label>
             </div>
           </div>
@@ -625,7 +788,18 @@ const EditContactModal = ({ isOpen, onClose, contact, onSubmit }) => {
             <button type="submit" className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0">
               Update Contact
             </button>
-            <button type="button" onClick={onClose} className="btn btn-ghost text-gray-400 hover:text-white">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="btn btn-ghost transition-colors duration-200"
+              style={{ color: 'var(--color-text-tertiary)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--color-text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--color-text-tertiary)';
+              }}
+            >
               Cancel
             </button>
           </div>

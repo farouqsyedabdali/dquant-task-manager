@@ -13,6 +13,8 @@ const TaskInvitation = () => {
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionSuccess, setActionSuccess] = useState(null);
+  const [showDeclineForm, setShowDeclineForm] = useState(false);
+  const [declineReason, setDeclineReason] = useState('');
 
   useEffect(() => {
     fetchInvitation();
@@ -64,19 +66,24 @@ const TaskInvitation = () => {
     }
   };
 
-  const handleDecline = async () => {
+  const handleDeclineClick = () => {
     if (!user) {
       // Store the token in localStorage and redirect to login
       localStorage.setItem('pendingInvitation', token);
       navigate('/login', { state: { from: `/task-invitation/${token}` } });
       return;
     }
+    setShowDeclineForm(true);
+  };
 
+  const handleDecline = async () => {
     setIsProcessing(true);
     setError('');
 
     try {
-      const response = await taskInvitationAPI.declineInvitation(token);
+      const response = await taskInvitationAPI.declineInvitation(token, {
+        reason: declineReason || 'No reason provided'
+      });
 
       if (response.data.success) {
         setActionSuccess('declined');
@@ -269,37 +276,77 @@ const TaskInvitation = () => {
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={handleDecline}
-              className="btn btn-outline btn-error flex-1 sm:flex-initial"
-              disabled={isProcessing}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Decline
-            </button>
-            <button
-              onClick={handleAccept}
-              className="btn btn-primary flex-1 sm:flex-initial"
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  Accept Task
-                </>
-              )}
-            </button>
-          </div>
+          {!showDeclineForm ? (
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={handleDeclineClick}
+                className="btn btn-outline btn-error flex-1 sm:flex-initial"
+                disabled={isProcessing}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Decline
+              </button>
+              <button
+                onClick={handleAccept}
+                className="btn btn-primary flex-1 sm:flex-initial"
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm"></span>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Accept Task
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <div className="bg-gray-700 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Why are you declining this task?
+              </h3>
+              <textarea
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                className="textarea textarea-bordered w-full h-32 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+                placeholder="Please provide a reason (optional)..."
+              />
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={handleDecline}
+                  className="btn btn-error flex-1"
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Declining...
+                    </>
+                  ) : (
+                    'Confirm Decline'
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeclineForm(false);
+                    setDeclineReason('');
+                  }}
+                  className="btn btn-ghost text-gray-400"
+                  disabled={isProcessing}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Help Text */}
           <p className="text-center text-sm text-gray-500 mt-6">

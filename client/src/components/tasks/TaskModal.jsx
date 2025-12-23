@@ -16,7 +16,7 @@ import {
   FaTimes, FaEdit, FaTrash, FaArchive, FaShareAlt, FaChartBar, 
   FaMagic, FaSave, FaPlus, FaUserPlus,
   FaCircle, FaSpinner, FaCheckCircle, FaPauseCircle, FaTimesCircle,
-  FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle
+  FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle, FaUsers, FaSitemap
 } from 'react-icons/fa';
 
 const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null }) => {
@@ -47,6 +47,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [isUpdatesModalOpen, setIsUpdatesModalOpen] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [activeTab, setActiveTab] = useState('team'); // 'team' or 'hierarchy'
   const { updateTask, isLoading, fetchTask } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
@@ -536,7 +537,23 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   if (!isOpen || !viewedTask) return null;
 
   return (
-    <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 50 }}>
+    <>
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
+      <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 50 }}>
       <div 
         className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto scrollbar-thin transition-colors duration-200"
         style={{
@@ -894,9 +911,51 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
               </div>
             </div>
 
-            {/* Assigned To & Co-Assignees - Side by side for company accounts */}
-            {!isPersonalAccount && (
-              <div className="grid grid-cols-2 gap-4">
+            {/* Tabbed Interface for Team & Hierarchy */}
+            <div className="border-t pt-4 mt-4" style={{ borderColor: 'var(--color-border-default)' }}>
+              {/* Tab Headers */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setActiveTab('team')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    activeTab === 'team'
+                      ? 'shadow-md'
+                      : 'hover:opacity-80'
+                  }`}
+                  style={{
+                    backgroundColor: activeTab === 'team' ? 'var(--color-primary)' : 'var(--color-bg-tertiary)',
+                    color: activeTab === 'team' ? 'white' : 'var(--color-text-secondary)',
+                  }}
+                >
+                  <FaUsers className="w-4 h-4" />
+                  <span>Team & Sharing</span>
+                </button>
+                
+                <button
+                  onClick={() => setActiveTab('hierarchy')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    activeTab === 'hierarchy'
+                      ? 'shadow-md'
+                      : 'hover:opacity-80'
+                  }`}
+                  style={{
+                    backgroundColor: activeTab === 'hierarchy' ? 'var(--color-primary)' : 'var(--color-bg-tertiary)',
+                    color: activeTab === 'hierarchy' ? 'white' : 'var(--color-text-secondary)',
+                  }}
+                >
+                  <FaSitemap className="w-4 h-4" />
+                  <span>Task Hierarchy</span>
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="min-h-[200px]">
+                {/* Team & Sharing Tab */}
+                {activeTab === 'team' && (
+                  <div className="space-y-4 animate-fadeIn">
+                    {/* Assigned To & Co-Assignees - Side by side for company accounts */}
+                    {!isPersonalAccount && (
+                      <div className="grid grid-cols-2 gap-4">
                 {/* Assigned To */}
                 <div>
                   <h4 
@@ -1110,282 +1169,326 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                   )}
                 </div>
 
-                {/* External Collaborators */}
-                {viewedTask.collaborators && viewedTask.collaborators.length > 0 && (
-                  <div>
-                    <h4 
-                      className="text-base font-semibold mb-3 transition-colors duration-200"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      External Collaborators
-                    </h4>
-                    <div className="space-y-3">
-                      {viewedTask.collaborators.map((collaborator) => (
-                        <div key={collaborator.id} className="flex items-center space-x-3 group relative">
-                          <div className="avatar placeholder">
-                            <div 
-                              className="text-white rounded-full w-8"
-                              style={{ backgroundColor: '#3b82f6' }}
+                        {/* External Collaborators */}
+                        {viewedTask.collaborators && viewedTask.collaborators.length > 0 && (
+                          <div>
+                            <h4 
+                              className="text-base font-semibold mb-3 transition-colors duration-200"
+                              style={{ color: 'var(--color-text-secondary)' }}
                             >
-                              <span className="text-sm">{collaborator.user.name.charAt(0)}</span>
+                              External Collaborators
+                            </h4>
+                            <div className="space-y-3">
+                              {viewedTask.collaborators.map((collaborator) => (
+                                <div key={collaborator.id} className="flex items-center space-x-3 group relative">
+                                  <div className="avatar placeholder">
+                                    <div 
+                                      className="text-white rounded-full w-8"
+                                      style={{ backgroundColor: '#3b82f6' }}
+                                    >
+                                      <span className="text-sm">{collaborator.user.name.charAt(0)}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2">
+                                      <span 
+                                        className="text-base transition-colors duration-200"
+                                        style={{ color: 'var(--color-text-primary)' }}
+                                      >
+                                        {collaborator.user.name}
+                                      </span>
+                                      <span 
+                                        className="text-xs px-2 py-1 rounded transition-colors duration-200"
+                                        style={{
+                                          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                          color: '#93c5fd',
+                                        }}
+                                      >
+                                        {collaborator.permissionLevel}
+                                      </span>
+                                    </div>
+                                    <div 
+                                      className="text-sm transition-colors duration-200"
+                                      style={{ color: 'var(--color-text-tertiary)' }}
+                                    >
+                                      {collaborator.company.name}
+                                    </div>
+                                  </div>
+                                  {/* Email tooltip */}
+                                  <div 
+                                    className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                    style={{
+                                      backgroundColor: 'var(--color-bg-primary)',
+                                      color: 'var(--color-text-primary)',
+                                    }}
+                                  >
+                                    {collaborator.user.email}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <span 
-                                className="text-base transition-colors duration-200"
-                                style={{ color: 'var(--color-text-primary)' }}
-                              >
-                                {collaborator.user.name}
-                              </span>
-                              <span 
-                                className="text-xs px-2 py-1 rounded transition-colors duration-200"
-                                style={{
-                                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                                  color: '#93c5fd',
-                                }}
-                              >
-                                {collaborator.permissionLevel}
-                              </span>
-                            </div>
-                            <div 
+                        )}
+                      </div>
+                    )}
+
+                    {/* Personal Account Assignment */}
+                    {isPersonalAccount && (
+                      <div>
+                        <h4 
+                          className="text-base font-semibold mb-3 transition-colors duration-200"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          Assigned To
+                        </h4>
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            <SearchableDropdown
+                              options={contacts}
+                              value={formData.externalContactId || ''}
+                              onChange={(value) => {
+                                setFormData(prev => ({ ...prev, externalContactId: value }));
+                              }}
+                              placeholder="Select a contact (optional)"
+                              disabled={isLoadingContacts}
+                              renderOption={(contact) => (
+                                <div className="flex items-center space-x-2">
+                                  <div className={`w-2 h-2 rounded-full ${contact.isPersonal ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                                  <span>{contact.name}</span>
+                                  <span 
+                                    className="transition-colors duration-200"
+                                    style={{ color: 'var(--color-text-tertiary)' }}
+                                  >
+                                    ({contact.email})
+                                  </span>
+                                  {contact.company && (
+                                    <span 
+                                      className="transition-colors duration-200"
+                                      style={{ color: 'var(--color-text-muted)' }}
+                                    >
+                                      - {contact.company}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            />
+                            <p 
                               className="text-sm transition-colors duration-200"
                               style={{ color: 'var(--color-text-tertiary)' }}
                             >
-                              {collaborator.company.name}
-                            </div>
+                              Leave blank to assign to yourself
+                            </p>
                           </div>
-                          {/* Email tooltip */}
-                          <div 
-                            className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                            style={{
-                              backgroundColor: 'var(--color-bg-primary)',
-                              color: 'var(--color-text-primary)',
-                            }}
-                          >
-                            {collaborator.user.email}
+                        ) : (
+                          <div className="flex items-center space-x-3">
+                            {viewedTask.externalContact ? (
+                              <div className="flex items-center space-x-3 group relative">
+                                <div className="avatar placeholder">
+                                  <div 
+                                    className="text-white rounded-full w-10"
+                                    style={{ backgroundColor: '#3b82f6' }}
+                                  >
+                                    <span className="text-sm">{viewedTask.externalContact.name.charAt(0)}</span>
+                                  </div>
+                                </div>
+                                <div>
+                                  <span 
+                                    className="text-base transition-colors duration-200"
+                                    style={{ color: 'var(--color-text-primary)' }}
+                                  >
+                                    {viewedTask.externalContact.name}
+                                  </span>
+                                  <div 
+                                    className="text-sm transition-colors duration-200"
+                                    style={{ color: 'var(--color-text-tertiary)' }}
+                                  >
+                                    {viewedTask.externalContact.email}
+                                  </div>
+                                </div>
+                                {/* Email tooltip */}
+                                <div 
+                                  className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                  style={{
+                                    backgroundColor: 'var(--color-bg-primary)',
+                                    color: 'var(--color-text-primary)',
+                                  }}
+                                >
+                                  {viewedTask.externalContact.email}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-3 group relative">
+                                <div className="avatar placeholder">
+                                  <div 
+                                    className="text-white rounded-full w-10"
+                                    style={{ backgroundColor: 'var(--color-primary)' }}
+                                  >
+                                    <span className="text-sm">{user?.name?.charAt(0)}</span>
+                                  </div>
+                                </div>
+                                <div>
+                                  <span 
+                                    className="text-base transition-colors duration-200"
+                                    style={{ color: 'var(--color-text-primary)' }}
+                                  >
+                                    You
+                                  </span>
+                                  <div 
+                                    className="text-sm transition-colors duration-200"
+                                    style={{ color: 'var(--color-text-tertiary)' }}
+                                  >
+                                    {user?.email}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Personal Account Assignment */}
-            {isPersonalAccount && (
-              <div>
-                <h4 
-                  className="text-base font-semibold mb-3 transition-colors duration-200"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Assigned To
-                </h4>
-                {isEditing ? (
-                  <div className="space-y-3">
-                    <SearchableDropdown
-                      options={contacts}
-                      value={formData.externalContactId || ''}
-                      onChange={(value) => {
-                        setFormData(prev => ({ ...prev, externalContactId: value }));
-                      }}
-                      placeholder="Select a contact (optional)"
-                      disabled={isLoadingContacts}
-                      renderOption={(contact) => (
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-2 h-2 rounded-full ${contact.isPersonal ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                          <span>{contact.name}</span>
-                          <span 
-                            className="transition-colors duration-200"
-                            style={{ color: 'var(--color-text-tertiary)' }}
-                          >
-                            ({contact.email})
-                          </span>
-                          {contact.company && (
-                            <span 
-                              className="transition-colors duration-200"
-                              style={{ color: 'var(--color-text-muted)' }}
-                            >
-                              - {contact.company}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    />
-                    <p 
-                      className="text-sm transition-colors duration-200"
-                      style={{ color: 'var(--color-text-tertiary)' }}
-                    >
-                      Leave blank to assign to yourself
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-3">
-                    {viewedTask.externalContact ? (
-                      <div className="flex items-center space-x-3 group relative">
-                        <div className="avatar placeholder">
-                          <div 
-                            className="text-white rounded-full w-10"
-                            style={{ backgroundColor: '#3b82f6' }}
-                          >
-                            <span className="text-sm">{viewedTask.externalContact.name.charAt(0)}</span>
-                          </div>
-                        </div>
-                        <div>
-                          <span 
-                            className="text-base transition-colors duration-200"
-                            style={{ color: 'var(--color-text-primary)' }}
-                          >
-                            {viewedTask.externalContact.name}
-                          </span>
-                          <div 
-                            className="text-sm transition-colors duration-200"
-                            style={{ color: 'var(--color-text-tertiary)' }}
-                          >
-                            {viewedTask.externalContact.email}
-                          </div>
-                        </div>
-                        {/* Email tooltip */}
-                        <div 
-                          className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                          style={{
-                            backgroundColor: 'var(--color-bg-primary)',
-                            color: 'var(--color-text-primary)',
-                          }}
-                        >
-                          {viewedTask.externalContact.email}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center space-x-3 group relative">
-                        <div className="avatar placeholder">
-                          <div 
-                            className="text-white rounded-full w-10"
-                            style={{ backgroundColor: 'var(--color-primary)' }}
-                          >
-                            <span className="text-sm">{user?.name?.charAt(0)}</span>
-                          </div>
-                        </div>
-                        <div>
-                          <span 
-                            className="text-base transition-colors duration-200"
-                            style={{ color: 'var(--color-text-primary)' }}
-                          >
-                            You
-                          </span>
-                          <div 
-                            className="text-sm transition-colors duration-200"
-                            style={{ color: 'var(--color-text-tertiary)' }}
-                          >
-                            {user?.email}
-                          </div>
-                        </div>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Parent Task */}
-            {viewedTask.parentTask && (
-              <div>
-                <h4 
-                  className="text-sm font-semibold mb-2 transition-colors duration-200"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Parent Task
-                </h4>
-                <div
-                  className="border rounded-lg p-2 cursor-pointer transition text-sm transition-colors duration-200"
-                  style={{
-                    backgroundColor: 'var(--color-bg-tertiary)',
-                    borderColor: 'var(--color-border-default)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                  }}
-                  onClick={() => handleTaskClick(viewedTask.parentTask.id)}
-                  title="Open parent task"
-                >
-                  <span 
-                    className="transition-colors duration-200"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    {viewedTask.parentTask.title}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Subtasks */}
-            {viewedTask.subtasks && viewedTask.subtasks.length > 0 && (
-              <div>
-                <h4 
-                  className="text-sm font-semibold mb-2 transition-colors duration-200"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Subtasks ({viewedTask.subtasks.length})
-                </h4>
-                <div className="space-y-1">
-                  {viewedTask.subtasks.map((subtask) => (
-                    <div
-                      key={subtask.id}
-                      className="border rounded-lg p-2 cursor-pointer transition transition-colors duration-200"
-                      style={{
-                        backgroundColor: 'var(--color-bg-tertiary)',
-                        borderColor: 'var(--color-border-default)',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                      }}
-                      onClick={() => handleTaskClick(subtask.id)}
-                      title="Open subtask"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span 
-                          className="text-sm transition-colors duration-200"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
-                          {subtask.title}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(subtask.status)} flex items-center gap-1 w-fit`}>
-                          {getStatusIcon(subtask.status)}
-                          {STATUS_LABELS[subtask.status]}
-                        </span>
-                      </div>
-                      {!isPersonalAccount && (
-                        <div 
-                          className="text-xs mt-0.5 transition-colors duration-200"
-                          style={{ color: 'var(--color-text-tertiary)' }}
-                        >
-                          {subtask.assignee?.name}
+                {/* Task Hierarchy Tab */}
+                {activeTab === 'hierarchy' && (
+                  <div className="animate-fadeIn">
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Parent Task */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2 h-8">
+                          <h4 
+                            className="text-sm font-semibold transition-colors duration-200"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            Parent Task
+                          </h4>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                        {viewedTask.parentTask ? (
+                          <div
+                            className="border rounded-lg p-3 cursor-pointer transition text-sm transition-colors duration-200"
+                            style={{
+                              backgroundColor: 'var(--color-bg-tertiary)',
+                              borderColor: 'var(--color-border-default)',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                            }}
+                            onClick={() => handleTaskClick(viewedTask.parentTask.id)}
+                            title="Open parent task"
+                          >
+                            <div className="flex items-center gap-2">
+                              <FaSitemap className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+                              <span 
+                                className="font-medium transition-colors duration-200"
+                                style={{ color: 'var(--color-text-primary)' }}
+                              >
+                                {viewedTask.parentTask.title}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div 
+                            className="text-center py-8 border rounded-lg transition-colors duration-200"
+                            style={{
+                              backgroundColor: 'var(--color-bg-tertiary)',
+                              borderColor: 'var(--color-border-default)',
+                              color: 'var(--color-text-tertiary)',
+                            }}
+                          >
+                            <FaSitemap className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                            <p className="text-xs">No parent task</p>
+                          </div>
+                        )}
+                      </div>
 
-            {/* Add Subtask Button (assigner or assignee only) */}
-            {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
-              <IconButton
-                icon={<FaPlus />}
-                label="Add Subtask"
-                variant="primary"
-                size="sm"
-                onClick={() => setIsAddSubtaskOpen(true)}
-                className="w-full"
-              />
-            )}
+                      {/* Subtasks */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2 h-8">
+                          <h4 
+                            className="text-sm font-semibold transition-colors duration-200"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            Subtasks {viewedTask.subtasks && viewedTask.subtasks.length > 0 && `(${viewedTask.subtasks.length})`}
+                          </h4>
+                          {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
+                            <IconButton
+                              icon={<FaPlus />}
+                              label="Add"
+                              variant="primary"
+                              size="sm"
+                              onClick={() => setIsAddSubtaskOpen(true)}
+                            />
+                          )}
+                        </div>
+                        
+                        {viewedTask.subtasks && viewedTask.subtasks.length > 0 ? (
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin">
+                            {viewedTask.subtasks.map((subtask) => (
+                              <div
+                                key={subtask.id}
+                                className="border rounded-lg p-3 cursor-pointer transition transition-colors duration-200"
+                                style={{
+                                  backgroundColor: 'var(--color-bg-tertiary)',
+                                  borderColor: 'var(--color-border-default)',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                                }}
+                                onClick={() => handleTaskClick(subtask.id)}
+                                title="Open subtask"
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <span 
+                                    className="text-sm font-medium transition-colors duration-200"
+                                    style={{ color: 'var(--color-text-primary)' }}
+                                  >
+                                    {subtask.title}
+                                  </span>
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(subtask.status)} flex items-center gap-1 w-fit`}>
+                                    {getStatusIcon(subtask.status)}
+                                    {STATUS_LABELS[subtask.status]}
+                                  </span>
+                                </div>
+                                {!isPersonalAccount && subtask.assignee && (
+                                  <div 
+                                    className="text-xs flex items-center gap-1 transition-colors duration-200"
+                                    style={{ color: 'var(--color-text-tertiary)' }}
+                                  >
+                                    <FaUsers className="w-3 h-3" />
+                                    {subtask.assignee.name}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div 
+                            className="text-center py-8 border rounded-lg transition-colors duration-200"
+                            style={{
+                              backgroundColor: 'var(--color-bg-tertiary)',
+                              borderColor: 'var(--color-border-default)',
+                              color: 'var(--color-text-tertiary)',
+                            }}
+                          >
+                            <FaSitemap className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                            <p className="text-xs">No subtasks yet</p>
+                            {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
+                              <p className="text-xs mt-1">Click "Add" to create</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
             {/* AddSubtaskModal */}
             {isAddSubtaskOpen && (
               <AddSubtaskModal
@@ -1595,6 +1698,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         </div>
       )}
     </div>
+    </>
   );
 };
 

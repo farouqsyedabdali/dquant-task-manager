@@ -147,6 +147,27 @@ const generateDescription = (action, entityType, req, responseData, options) => 
     case 'PASSWORD_CHANGED':
       return `${userName} changed their password at ${timestamp}`;
     
+    case 'PROJECT_CREATED':
+      return `${userName} created project "${options.projectName || responseData?.name || 'Unknown Project'}" at ${timestamp}`;
+    
+    case 'PROJECT_UPDATED':
+      return `${userName} updated project "${options.projectName || responseData?.name || 'Unknown Project'}" at ${timestamp}`;
+    
+    case 'PROJECT_DELETED':
+      return `${userName} deleted project "${options.projectName || 'Unknown Project'}" at ${timestamp}`;
+    
+    case 'PROJECT_MEMBER_ADDED':
+      return `${userName} added ${options.addedUserName || 'a member'} to project "${options.projectName || 'Unknown Project'}" at ${timestamp}`;
+    
+    case 'PROJECT_MEMBER_REMOVED':
+      return `${userName} removed ${options.removedUserName || 'a member'} from project "${options.projectName || 'Unknown Project'}" at ${timestamp}`;
+    
+    case 'TASK_ADDED_TO_PROJECT':
+      return `${userName} added task "${options.taskTitle || 'Unknown Task'}" to project "${options.projectName || 'Unknown Project'}" at ${timestamp}`;
+    
+    case 'TASK_REMOVED_FROM_PROJECT':
+      return `${userName} removed task "${options.taskTitle || 'Unknown Task'}" from project "${options.projectName || 'Unknown Project'}" at ${timestamp}`;
+    
     default:
       return `${userName} performed ${action} on ${entityType} at ${timestamp}`;
   }

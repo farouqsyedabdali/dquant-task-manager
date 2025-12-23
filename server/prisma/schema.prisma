@@ -20,6 +20,8 @@ model Company {
   auditLogs         AuditLog[]
   comments          Comment[]
   notifications     Notification[]
+  projects          Project[]
+  projectTemplates  ProjectTemplate[]
   tasks             Task[]
   coAssignees       TaskCoAssignee[]
   taskCollaborators TaskCollaborator[]
@@ -50,6 +52,10 @@ model User {
   receivedTaskInvitations  TaskInvitation[]   @relation("ReceivedInvitations")
   sentTaskInvitations      TaskInvitation[]   @relation("SentInvitations")
   sharedTasks              TaskShare[]
+  ownedProjects            Project[]          @relation("OwnedProjects")
+  projectMemberships       ProjectMember[]
+  projectTemplates         ProjectTemplate[]
+  templateTasks            TemplateTask[]
   company                  Company            @relation(fields: [companyId], references: [id])
 
   @@unique([email, companyId])
@@ -67,10 +73,14 @@ model Task {
   assigneeId            Int?
   assignerId            Int
   parentTaskId          Int?
+  projectId             Int?
   dueDate               DateTime?
   statusManuallyChanged Boolean            @default(false)
   archived              Boolean            @default(false)
   externalContactId     Int?
+  isDraft               Boolean            @default(false)
+  sentAt                DateTime?
+  declinedReason        String?
   comments              Comment[]
   notifications         Notification[]
   reminders             TaskReminder[]
@@ -80,10 +90,90 @@ model Task {
   externalContact       Contact?           @relation("AssignedTasks", fields: [externalContactId], references: [id])
   parentTask            Task?              @relation("SubTasks", fields: [parentTaskId], references: [id])
   subtasks              Task[]             @relation("SubTasks")
+  project               Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   coAssignees           TaskCoAssignee[]
   collaborators         TaskCollaborator[]
   invitations           TaskInvitation[]
   sharedWith            TaskShare[]
+
+  @@index([projectId])
+  @@index([isDraft])
+}
+
+model Project {
+  id          Int              @id @default(autoincrement())
+  name        String
+  description String?
+  color       String           @default("#6366f1")
+  icon        String           @default("📁")
+  template    String?
+  status      ProjectStatus    @default(ACTIVE)
+  ownerId     Int
+  companyId   Int
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  dueDate     DateTime?
+  owner       User             @relation("OwnedProjects", fields: [ownerId], references: [id])
+  company     Company          @relation(fields: [companyId], references: [id])
+  tasks       Task[]
+  members     ProjectMember[]
+
+  @@index([companyId])
+  @@index([ownerId])
+}
+
+model ProjectMember {
+  id        Int             @id @default(autoincrement())
+  projectId Int
+  userId    Int
+  role      ProjectRole     @default(MEMBER)
+  createdAt DateTime        @default(now())
+  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model ProjectTemplate {
+  id          Int            @id @default(autoincrement())
+  name        String
+  description String?
+  color       String         @default("#6366f1")
+  icon        String         @default("📁")
+  userId      Int
+  companyId   Int
+  isPersonal  Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  lastUsedAt  DateTime?
+  usageCount  Int            @default(0)
+  tasks       TemplateTask[]
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company     Company        @relation(fields: [companyId], references: [id])
+
+  @@index([userId])
+  @@index([companyId])
+}
+
+model TemplateTask {
+  id                Int              @id @default(autoincrement())
+  templateId        Int
+  title             String
+  description       String?
+  priority          Priority         @default(MEDIUM)
+  assigneeId        Int?
+  externalContactId Int?
+  daysOffset        Int              @default(0)
+  order             Int              @default(0)
+  template          ProjectTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  assignee          User?            @relation(fields: [assigneeId], references: [id])
+  externalContact   Contact?         @relation(fields: [externalContactId], references: [id])
+
+  @@index([templateId])
+  @@index([assigneeId])
+  @@index([externalContactId])
 }
 
 model Comment {
@@ -216,9 +306,10 @@ model Contact {
   isPersonal    Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignedTasks Task[]      @relation("AssignedTasks")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedTasks Task[]         @relation("AssignedTasks")
   sharedTasks   TaskShare[]
+  templateTasks TemplateTask[]
 
   @@unique([userId, email])
   @@index([userId, email])
@@ -281,6 +372,10 @@ enum NotificationType {
   TASK_INVITATION_RECEIVED
   TASK_INVITATION_ACCEPTED
   TASK_INVITATION_DECLINED
+  PROJECT_TASK_SENT
+  PROJECT_TASK_ACCEPTED
+  PROJECT_TASK_DECLINED
+  PROJECT_TASK_REASSIGNED
 }
 
 enum AuditAction {
@@ -314,4 +409,29 @@ enum AuditAction {
   CONTACT_CREATED
   CONTACT_UPDATED
   CONTACT_DELETED
+  PROJECT_CREATED
+  PROJECT_UPDATED
+  PROJECT_DELETED
+  PROJECT_MEMBER_ADDED
+  PROJECT_MEMBER_REMOVED
+  TASK_ADDED_TO_PROJECT
+  TASK_REMOVED_FROM_PROJECT
+  TEMPLATE_CREATED
+  TEMPLATE_UPDATED
+  TEMPLATE_DELETED
+  PROJECT_CREATED_FROM_TEMPLATE
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum ProjectRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
 }

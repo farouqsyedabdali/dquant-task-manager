@@ -200,4 +200,52 @@ export const contactsAPI = {
   search: (query, limit) => api.get('/contacts/search', { params: { q: query, limit } }),
 };
 
+// Projects API
+export const projectsAPI = {
+  // CRUD operations
+  getAll: (params) => api.get('/projects', { params }),
+  getById: (id) => api.get(`/projects/${id}`),
+  create: (projectData) => api.post('/projects', projectData),
+  update: (id, projectData) => api.put(`/projects/${id}`, projectData),
+  delete: (id) => api.delete(`/projects/${id}`),
+  
+  // Templates
+  getTemplates: () => api.get('/projects/templates'),
+  
+  // Members
+  addMember: (projectId, userId, role) => api.post(`/projects/${projectId}/members`, { userId, role }),
+  removeMember: (projectId, memberId) => api.delete(`/projects/${projectId}/members/${memberId}`),
+  
+  // Tasks
+  addTask: (projectId, taskData) => api.post(`/projects/${projectId}/tasks`, taskData),
+  removeTask: (projectId, taskId) => api.delete(`/projects/${projectId}/tasks/${taskId}`),
+  
+  // Send tasks
+  sendTask: (projectId, taskId, message) => api.post(`/projects/${projectId}/tasks/${taskId}/send`, { message }),
+  sendAllDraftTasks: (projectId) => api.post(`/projects/${projectId}/tasks/send-all`),
+  
+  // Reassign tasks
+  reassignTask: (projectId, taskId, assigneeData) => api.put(`/projects/${projectId}/tasks/${taskId}/reassign`, assigneeData),
+};
+
+export const templatesAPI = {
+  // Get all user templates
+  getAll: (includeCompany = true) => api.get('/templates', { params: { includeCompany } }),
+  
+  // Get a specific template
+  getById: (id) => api.get(`/templates/${id}`),
+  
+  // Create template from project
+  createFromProject: (projectId, data) => api.post(`/templates/from-project/${projectId}`, data),
+  
+  // Create project from template
+  createProjectFromTemplate: (templateId, data) => api.post(`/templates/${templateId}/create-project`, data),
+  
+  // Update template
+  update: (id, data) => api.put(`/templates/${id}`, data),
+  
+  // Delete template
+  delete: (id) => api.delete(`/templates/${id}`),
+};
+
 export default api;

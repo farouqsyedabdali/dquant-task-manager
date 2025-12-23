@@ -32,14 +32,36 @@ const IconButton = ({
     lg: iconOnly ? 'p-3' : 'px-4 py-3 text-lg'
   };
 
-  // Variant classes
-  const variantClasses = {
-    primary: 'bg-indigo-600 hover:bg-indigo-700 text-white',
-    secondary: 'bg-gray-700 hover:bg-gray-600 text-white',
-    danger: 'bg-red-600 hover:bg-red-700 text-white',
-    ghost: 'bg-transparent hover:bg-gray-700 text-gray-300 hover:text-white',
-    success: 'bg-green-600 hover:bg-green-700 text-white',
-    warning: 'bg-yellow-600 hover:bg-yellow-700 text-white'
+  // Variant classes - using inline styles for theme consistency
+  const getVariantStyles = (variant) => {
+    const styles = {
+      primary: {
+        backgroundColor: 'var(--color-primary)',
+        color: 'white',
+      },
+      secondary: {
+        backgroundColor: 'var(--color-bg-tertiary)',
+        color: 'var(--color-text-primary)',
+        border: '1px solid var(--color-border-default)',
+      },
+      danger: {
+        backgroundColor: '#dc2626',
+        color: 'white',
+      },
+      ghost: {
+        backgroundColor: 'transparent',
+        color: 'var(--color-text-secondary)',
+      },
+      success: {
+        backgroundColor: '#16a34a',
+        color: 'white',
+      },
+      warning: {
+        backgroundColor: '#ca8a04',
+        color: 'white',
+      }
+    };
+    return styles[variant] || styles.primary;
   };
 
   // Icon size based on button size
@@ -53,10 +75,9 @@ const IconButton = ({
     inline-flex items-center justify-center
     rounded-lg font-medium
     transition-all duration-200
-    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
+    focus:outline-none focus:ring-2 focus:ring-offset-2
     disabled:opacity-50 disabled:cursor-not-allowed
     ${sizeClasses[size]}
-    ${variantClasses[variant]}
     ${className}
   `.trim().replace(/\s+/g, ' ');
 
@@ -66,12 +87,38 @@ const IconButton = ({
     className: `${iconOnly ? '' : 'mr-2'} ${icon.props?.className || ''}`
   });
 
+  const variantStyles = getVariantStyles(variant);
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  // Calculate hover styles
+  const getHoverStyles = () => {
+    if (!isHovered || disabled || loading) return variantStyles;
+    
+    const hoverStyles = { ...variantStyles };
+    
+    if (variant === 'primary') {
+      hoverStyles.filter = 'brightness(0.9)';
+    } else if (variant === 'secondary') {
+      hoverStyles.backgroundColor = 'var(--color-bg-secondary)';
+    } else if (variant === 'ghost') {
+      hoverStyles.backgroundColor = 'var(--color-bg-tertiary)';
+      hoverStyles.color = 'var(--color-text-primary)';
+    } else {
+      hoverStyles.filter = 'brightness(0.9)';
+    }
+    
+    return hoverStyles;
+  };
+
   return (
     <button
       className={baseClasses}
+      style={getHoverStyles()}
       disabled={disabled || loading}
       title={iconOnly ? label : undefined}
       aria-label={label}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       {...props}
     >
       {loading ? (

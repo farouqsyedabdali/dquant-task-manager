@@ -2,10 +2,25 @@ const app = require('./src/app')
 const { startReminderScheduler } = require('./src/utils/taskReminderScheduler')
 const PORT = process.env.PORT || 3000
 
+// Helper function to mask password in database URL
+function maskDatabaseUrl(url) {
+  if (!url) return 'Not set';
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.password) {
+      urlObj.password = '****';
+    }
+    return urlObj.toString();
+  } catch {
+    return 'Invalid URL format';
+  }
+}
+
 // Test database connection on startup
 async function testDatabaseConnection() {
   try {
     console.log('🔍 Testing database connection...')
+    console.log(`🔗 Database URL: ${maskDatabaseUrl(process.env.DATABASE_URL)}`)
     const prisma = require('./src/lib/prisma')
     await prisma.$connect()
     console.log('✅ Database connection successful')

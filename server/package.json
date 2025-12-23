@@ -6,7 +6,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
     "dev": "node index.js",
-    "seed": "node src/utils/seed.js"
+    "seed": "node src/utils/seed.js",
+    "cleanup:tasks": "node scripts/cleanupOrphanedTasks.js",
+    "cleanup:tasks:interactive": "node scripts/cleanupOrphanedTasksInteractive.js"
   },
   "keywords": [],
   "author": "",

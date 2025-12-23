@@ -82,14 +82,31 @@ const AIModal = ({ isOpen, onClose }) => {
       <div className="absolute inset-0 flex items-end sm:items-center justify-center">
         <div className="w-full h-[90vh] sm:h-[80vh] sm:max-w-3xl transform transition-all duration-300 ease-out animate-[aimodal-enter_300ms_ease-out]">
           <style>{`@keyframes aimodal-enter{0%{opacity:0;transform:translateY(24px) scale(0.98)}100%{opacity:1;transform:translateY(0) scale(1)}}`}</style>
-          <div className="bg-gray-900 border border-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-full">
+          <div 
+            className="border rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-full transition-colors duration-200"
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)',
+            }}
+          >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+        <div 
+          className="flex items-center justify-between px-6 py-4 border-b transition-colors duration-200"
+          style={{ borderColor: 'var(--color-border-default)' }}
+        >
           <div className="flex items-center space-x-2">
             <FaRobot className="text-indigo-400" size={22} />
             <div>
-              <span className="text-lg font-semibold text-white">AI Assistant</span>
-              <div className="text-xs text-gray-400">
+              <span 
+                className="text-lg font-semibold transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                AI Assistant
+              </span>
+              <div 
+                className="text-xs transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
                 {user?.name} ({user?.role})
               </div>
             </div>
@@ -97,21 +114,51 @@ const AIModal = ({ isOpen, onClose }) => {
           <div className="flex items-center space-x-2">
             <button 
               onClick={clearConversation} 
-              className="text-gray-400 hover:text-white text-sm"
+              className="text-sm transition-colors duration-200"
+              style={{ color: 'var(--color-text-tertiary)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--color-text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--color-text-tertiary)';
+              }}
               title="Clear conversation"
             >
               Clear
             </button>
-            <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <button 
+              onClick={onClose} 
+              className="transition-colors duration-200"
+              style={{ color: 'var(--color-text-tertiary)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--color-text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--color-text-tertiary)';
+              }}
+            >
               <FaTimes size={20} />
             </button>
           </div>
         </div>
         {/* Conversation */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-gray-800/70" style={{ minHeight: 300 }}>
+        <div 
+          className="flex-1 overflow-y-auto px-6 py-4 space-y-4 transition-colors duration-200" 
+          style={{ 
+            minHeight: 300,
+            backgroundColor: 'var(--color-bg-tertiary)',
+          }}
+        >
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`rounded-xl px-4 py-2 max-w-[80%] text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-100'}`}>
+              <div 
+                className={`rounded-xl px-4 py-2 max-w-[80%] text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white' : ''}`}
+                style={msg.role === 'assistant' ? {
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-border-default)',
+                } : {}}
+              >
                 {msg.content}
               </div>
             </div>
@@ -121,16 +168,35 @@ const AIModal = ({ isOpen, onClose }) => {
         {/* Error */}
         {error && <div className="text-red-400 text-sm px-6">{error}</div>}
         {/* Input */}
-        <form onSubmit={handleSend} className="flex items-center px-6 py-4 border-t border-gray-800 bg-gray-900">
+        <form 
+          className="flex items-center px-6 py-4 border-t transition-colors duration-200"
+          style={{
+            borderColor: 'var(--color-border-default)',
+            backgroundColor: 'var(--color-bg-secondary)',
+          }}
+          onSubmit={handleSend}
+        >
           <textarea
-            className="flex-1 resize-none rounded-lg bg-gray-800 text-white border border-gray-700 px-3 py-3 mr-2 focus:outline-none focus:border-indigo-500"
+            className="flex-1 resize-none rounded-lg px-3 py-3 mr-2 focus:outline-none transition-colors duration-200"
+            style={{
+              backgroundColor: 'var(--color-bg-tertiary)',
+              color: 'var(--color-text-primary)',
+              borderColor: 'var(--color-border-default)',
+              border: '1px solid',
+              minHeight: 40,
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-primary)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-border-default)';
+            }}
             rows={2}
             value={input}
             onChange={e => setInput(e.target.value)}
             placeholder="Ask me anything..."
             disabled={loading}
             maxLength={500}
-            style={{ minHeight: 40 }}
           />
           <button
             type="submit"

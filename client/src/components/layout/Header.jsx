@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../context/authStore';
 import CalendarIcon from '../icons/CalendarIcon';
-import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaExternalLinkAlt, FaUserFriends } from 'react-icons/fa';
+import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaExternalLinkAlt, FaUserFriends, FaProjectDiagram } from 'react-icons/fa';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -121,6 +121,22 @@ const Header = () => {
                 </svg>
                 <span>Contacts</span>
               </button>
+              <button
+                onClick={() => handleNavigation('/projects')}
+                className="px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2 transition-colors duration-200"
+                style={{ 
+                  color: 'var(--color-text-secondary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                }}
+              >
+                <FaProjectDiagram className="w-4 h-4" />
+                <span>Projects</span>
+              </button>
               {isAdmin() && !isPersonalAccount && (
                 <button
                   onClick={() => handleNavigation('/employees')}
@@ -156,7 +172,17 @@ const Header = () => {
             {/* Open Popup Button */}
             <button
               onClick={handleOpenPopup}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
+              className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+                color: 'white',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.filter = 'brightness(0.9)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.filter = 'brightness(1)';
+              }}
             >
               <FaExternalLinkAlt className="w-4 h-4" />
               <span>Open Popup</span>
@@ -381,6 +407,20 @@ const Header = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                   <span>Contacts</span>
+                </button>
+                <button
+                  onClick={() => handleNavigation('/projects')}
+                  className="block px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = 'var(--color-text-primary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--color-text-secondary)';
+                  }}
+                >
+                  <FaProjectDiagram className="w-4 h-4" />
+                  <span>Projects</span>
                 </button>
                 {isAdmin() && !isPersonalAccount && (
                   <button

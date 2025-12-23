@@ -404,6 +404,7 @@ const taskInvitationController = {
   async declineInvitation(req, res) {
     try {
       const { token } = req.params;
+      const { reason } = req.body;
       const userId = req.user.id;
 
       const invitation = await prisma.taskInvitation.findUnique({
@@ -443,6 +444,14 @@ const taskInvitationController = {
       if (user.email.toLowerCase() !== invitation.recipientEmail.toLowerCase()) {
         return res.status(403).json({ 
           error: 'This invitation was sent to a different email address' 
+        });
+      }
+
+      // Update task with decline reason
+      if (reason) {
+        await prisma.task.update({
+          where: { id: invitation.taskId },
+          data: { declinedReason: reason }
         });
       }
 

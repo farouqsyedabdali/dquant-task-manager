@@ -15,6 +15,7 @@ const Settings = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [showOlderVersions, setShowOlderVersions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'preferences' | 'about' | 'feedback'
   
   // Feedback form state
@@ -532,11 +533,25 @@ const Settings = () => {
 
           {selectedCategory === 'feedback' && (
             <div className="space-y-8">
-              <div className="card bg-gray-800 border border-gray-700">
+              <div 
+                className="card border transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                }}
+              >
                 <div className="card-body">
-                  <h2 className="card-title text-xl text-white mb-6">💬 Send Us Feedback</h2>
+                  <h2 
+                    className="card-title text-xl mb-6 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    💬 Send Us Feedback
+                  </h2>
                   
-                  <p className="text-gray-400 mb-6">
+                  <p 
+                    className="mb-6 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
                     We'd love to hear from you! Share your thoughts, suggestions, or report any issues you've encountered.
                   </p>
 
@@ -562,13 +577,23 @@ const Settings = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="form-control">
                         <label className="label">
-                          <span className="label-text text-gray-300">Your Name *</span>
+                          <span 
+                            className="label-text transition-colors duration-200"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            Your Name *
+                          </span>
                         </label>
                         <input
                           type="text"
                           value={feedbackForm.name}
                           onChange={(e) => setFeedbackForm({ ...feedbackForm, name: e.target.value })}
-                          className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                          className="input input-bordered w-full transition-colors duration-200"
+                          style={{
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            borderColor: 'var(--color-border-default)',
+                            color: 'var(--color-text-primary)',
+                          }}
                           placeholder="John Doe"
                           required
                           disabled={isSubmittingFeedback}
@@ -577,13 +602,23 @@ const Settings = () => {
 
                       <div className="form-control">
                         <label className="label">
-                          <span className="label-text text-gray-300">Your Email *</span>
+                          <span 
+                            className="label-text transition-colors duration-200"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            Your Email *
+                          </span>
                         </label>
                         <input
                           type="email"
                           value={feedbackForm.email}
                           onChange={(e) => setFeedbackForm({ ...feedbackForm, email: e.target.value })}
-                          className="input input-bordered w-full bg-gray-700 border-gray-600 text-white"
+                          className="input input-bordered w-full transition-colors duration-200"
+                          style={{
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            borderColor: 'var(--color-border-default)',
+                            color: 'var(--color-text-primary)',
+                          }}
                           placeholder="john@example.com"
                           required
                           disabled={isSubmittingFeedback}
@@ -593,12 +628,22 @@ const Settings = () => {
 
                     <div className="form-control">
                       <label className="label">
-                        <span className="label-text text-gray-300">Your Feedback *</span>
+                        <span 
+                          className="label-text transition-colors duration-200"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          Your Feedback *
+                        </span>
                       </label>
                       <textarea
                         value={feedbackForm.feedback}
                         onChange={(e) => setFeedbackForm({ ...feedbackForm, feedback: e.target.value })}
-                        className="textarea textarea-bordered w-full bg-gray-700 border-gray-600 text-white h-40"
+                        className="textarea textarea-bordered w-full h-40 transition-colors duration-200"
+                        style={{
+                          backgroundColor: 'var(--color-bg-tertiary)',
+                          borderColor: 'var(--color-border-default)',
+                          color: 'var(--color-text-primary)',
+                        }}
                         placeholder="Tell us what you think, what features you'd like, or any issues you've encountered..."
                         required
                         minLength={10}
@@ -606,7 +651,10 @@ const Settings = () => {
                         disabled={isSubmittingFeedback}
                       />
                       <label className="label">
-                        <span className="label-text-alt text-gray-400">
+                        <span 
+                          className="label-text-alt transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
                           {feedbackForm.feedback.length}/2000 characters (min: 10)
                         </span>
                       </label>
@@ -635,12 +683,21 @@ const Settings = () => {
                     </div>
                   </form>
 
-                  <div className="mt-6 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+                  <div 
+                    className="mt-6 p-4 rounded-lg border transition-colors duration-200"
+                    style={{
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                      borderColor: 'rgba(59, 130, 246, 0.3)',
+                    }}
+                  >
                     <div className="flex">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <p className="text-sm text-gray-300">
+                      <p 
+                        className="text-sm transition-colors duration-200"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
                         Your feedback will be sent directly to our team. We read every message and use your input to improve the app!
                       </p>
                     </div>
@@ -652,10 +709,21 @@ const Settings = () => {
 
           {selectedCategory === 'about' && (
             <div className="space-y-8">
-              <div className="card bg-gray-800 border border-gray-700">
+              <div 
+                className="card border transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                }}
+              >
                 <div className="card-body">
-                  <h2 className="card-title text-xl text-white mb-6">About</h2>
-                  <div className="space-y-4 text-gray-300">
+                  <h2 
+                    className="card-title text-xl mb-6 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    About
+                  </h2>
+                  <div className="space-y-4">
                     <button
                       onClick={() => setShowChangelog(true)}
                       className="btn btn-primary w-full md:w-auto"
@@ -666,10 +734,23 @@ const Settings = () => {
                       View Changelog
                     </button>
                     <div className="pt-4">
-                      <p className="text-sm">
-                        <strong className="text-gray-200">Task Manager</strong> v0.0.5
+                      <p 
+                        className="text-sm transition-colors duration-200"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        <strong 
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          Task Manager
+                        </strong> v0.0.6
                       </p>
-                      <p className="text-sm">© 2025 Tialz. All rights reserved.</p>
+                      <p 
+                        className="text-sm transition-colors duration-200"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        © 2025 Tialz. All rights reserved.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -738,15 +819,82 @@ const Settings = () => {
       {/* Changelog Modal */}
       {showChangelog && (
         <div className="modal modal-open">
-          <div className="modal-box max-w-3xl bg-gray-800 border border-gray-700 max-h-[80vh]">
-            <h3 className="font-bold text-2xl text-white mb-6">Changelog</h3>
+          <div 
+            className="modal-box max-w-3xl border max-h-[80vh] transition-colors duration-200"
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)',
+            }}
+          >
+            <h3 
+              className="font-bold text-2xl mb-6 transition-colors duration-200"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              Changelog
+            </h3>
             
             <div className="space-y-6 overflow-y-auto pr-2" style={{ maxHeight: 'calc(80vh - 150px)' }}>
-              {/* Version 0.0.5 */}
+              {/* Version 0.0.6 */}
               <div className="border-l-4 border-green-600 pl-4">
                 <div className="flex items-center justify-between mb-2">
+                  <h4 
+                    className="text-lg font-semibold transition-colors duration-200"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    v0.0.6
+                  </h4>
+                  <span 
+                    className="text-sm transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    December 23, 2024
+                  </span>
+                </div>
+                <div 
+                  className="space-y-2 text-sm transition-colors duration-200"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  <div>
+                    <p className="font-semibold text-green-400">✨ New Features</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Project management system with templates</li>
+                      <li>Project templates for reusable workflows</li>
+                      <li>Task hierarchy visualization in modal</li>
+                      <li>Tabbed interface in Task Modal (Team & Sharing / Task Hierarchy)</li>
+                      <li>Side-by-side parent task and subtasks view</li>
+                      <li>Project member management with roles</li>
+                      <li>Draft tasks for project planning</li>
+                      <li>Task sending and reassignment within projects</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-blue-400">🔧 Improvements</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Reorganized Task Modal with cleaner layout</li>
+                      <li>Better visual hierarchy for task relationships</li>
+                      <li>Improved space utilization in modals</li>
+                      <li>Enhanced empty states with helpful messages</li>
+                      <li>Smooth tab transitions with animations</li>
+                      <li>Aligned headers and content in hierarchy view</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-purple-400">🎨 UI/UX</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Cleaner tab design without badge counters</li>
+                      <li>Better visual separation between sections</li>
+                      <li>Improved scrollable subtask lists</li>
+                      <li>Icon-based navigation for tabs</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Version 0.0.5 */}
+              <div className="border-l-4 border-blue-600 pl-4">
+                <div className="flex items-center justify-between mb-2">
                   <h4 className="text-lg font-semibold text-white">v0.0.5</h4>
-                  <span className="text-sm text-gray-400">January 22, 2025</span>
+                  <span className="text-sm text-gray-400">October 22, 2024</span>
                 </div>
                 <div className="space-y-2 text-gray-300 text-sm">
                   <div>
@@ -835,7 +983,7 @@ const Settings = () => {
               <div className="border-l-4 border-gray-600 pl-4">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-lg font-semibold text-white">v0.0.3</h4>
-                  <span className="text-sm text-gray-400">October 2, 2025</span>
+                  <span className="text-sm text-gray-400">October 2, 2024</span>
                 </div>
                 <div className="space-y-2 text-gray-300 text-sm">
                   <div>
@@ -858,71 +1006,111 @@ const Settings = () => {
                 </div>
               </div>
 
-              {/* Version 0.0.2 */}
-              <div className="border-l-4 border-gray-600 pl-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-lg font-semibold text-white">v0.0.2</h4>
-                  <span className="text-sm text-gray-400">September 2025</span>
+              {/* View More Button */}
+              {!showOlderVersions && (
+                <div className="text-center py-4">
+                  <button
+                    onClick={() => setShowOlderVersions(true)}
+                    className="btn btn-outline btn-sm text-gray-300 hover:text-white"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    View Older Versions
+                  </button>
                 </div>
-                <div className="space-y-2 text-gray-300 text-sm">
-                  <div>
-                    <p className="font-semibold text-green-400">✨ New Features</p>
-                    <ul className="list-disc list-inside ml-4 space-y-1">
-                      <li>Desktop app with auto-update functionality</li>
-                      <li>Browser extension for quick task capture</li>
-                      <li>AI-powered task assistant</li>
-                      <li>Task sharing between users</li>
-                      <li>Audit log for admin users</li>
-                      <li>Notification system</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-blue-400">🔧 Improvements</p>
-                    <ul className="list-disc list-inside ml-4 space-y-1">
-                      <li>Enhanced task filtering and sorting</li>
-                      <li>Improved calendar view</li>
-                      <li>Better mobile responsiveness</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-red-400">🐛 Bug Fixes</p>
-                    <ul className="list-disc list-inside ml-4 space-y-1">
-                      <li>Fixed task assignment issues</li>
-                      <li>Resolved date picker bugs</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              )}
 
-              {/* Version 0.0.1 */}
-              <div className="border-l-4 border-gray-600 pl-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-lg font-semibold text-white">v0.0.1</h4>
-                  <span className="text-sm text-gray-400">August 2025</span>
-                </div>
-                <div className="space-y-2 text-gray-300 text-sm">
-                  <div>
-                    <p className="font-semibold text-green-400">✨ Initial Release</p>
-                    <ul className="list-disc list-inside ml-4 space-y-1">
-                      <li>User authentication and authorization</li>
-                      <li>Company and personal account types</li>
-                      <li>Task creation, editing, and deletion</li>
-                      <li>Task assignment and priority management</li>
-                      <li>Comment system</li>
-                      <li>Calendar view</li>
-                      <li>Employee management (for company accounts)</li>
-                      <li>Role-based access control</li>
-                      <li>Dashboard with task overview</li>
-                    </ul>
+              {/* Older Versions (Hidden by default) */}
+              {showOlderVersions && (
+                <>
+                  {/* Version 0.0.2 */}
+                  <div className="border-l-4 border-gray-600 pl-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-lg font-semibold text-white">v0.0.2</h4>
+                      <span className="text-sm text-gray-400">September 2024</span>
+                    </div>
+                    <div className="space-y-2 text-gray-300 text-sm">
+                      <div>
+                        <p className="font-semibold text-green-400">✨ New Features</p>
+                        <ul className="list-disc list-inside ml-4 space-y-1">
+                          <li>Desktop app with auto-update functionality</li>
+                          <li>Browser extension for quick task capture</li>
+                          <li>AI-powered task assistant</li>
+                          <li>Task sharing between users</li>
+                          <li>Audit log for admin users</li>
+                          <li>Notification system</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-blue-400">🔧 Improvements</p>
+                        <ul className="list-disc list-inside ml-4 space-y-1">
+                          <li>Enhanced task filtering and sorting</li>
+                          <li>Improved calendar view</li>
+                          <li>Better mobile responsiveness</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-red-400">🐛 Bug Fixes</p>
+                        <ul className="list-disc list-inside ml-4 space-y-1">
+                          <li>Fixed task assignment issues</li>
+                          <li>Resolved date picker bugs</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+
+                  {/* Version 0.0.1 */}
+                  <div className="border-l-4 border-gray-600 pl-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-lg font-semibold text-white">v0.0.1</h4>
+                      <span className="text-sm text-gray-400">August 2024</span>
+                    </div>
+                    <div className="space-y-2 text-gray-300 text-sm">
+                      <div>
+                        <p className="font-semibold text-green-400">✨ Initial Release</p>
+                        <ul className="list-disc list-inside ml-4 space-y-1">
+                          <li>User authentication and authorization</li>
+                          <li>Company and personal account types</li>
+                          <li>Task creation, editing, and deletion</li>
+                          <li>Task assignment and priority management</li>
+                          <li>Comment system</li>
+                          <li>Calendar view</li>
+                          <li>Employee management (for company accounts)</li>
+                          <li>Role-based access control</li>
+                          <li>Dashboard with task overview</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hide Older Versions Button */}
+                  <div className="text-center py-4">
+                    <button
+                      onClick={() => setShowOlderVersions(false)}
+                      className="btn btn-outline btn-sm text-gray-300 hover:text-white"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
+                      </svg>
+                      Hide Older Versions
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="modal-action">
               <button
                 onClick={() => setShowChangelog(false)}
-                className="btn btn-ghost text-gray-300 hover:text-white"
+                className="btn btn-ghost transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                }}
               >
                 Close
               </button>
