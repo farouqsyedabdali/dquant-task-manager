@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { commentsAPI } from '../../services/api';
+import { commentsAPI, tasksAPI } from '../../services/api';
 import useAuthStore from '../../context/authStore';
+import useTaskStore from '../../stores/taskStore';
 import DeleteConfirmModal from '../common/DeleteConfirmModal';
 import IconButton from '../common/IconButton';
-import { FaComment, FaEdit, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
+import SearchableDropdown from '../common/SearchableDropdown';
+import { FaComment, FaEdit, FaTrash, FaSave, FaTimes, FaExchangeAlt } from 'react-icons/fa';
 
-const CommentSection = ({ taskId, task = null, extensionUpdateData = null }) => {
+const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTaskSwitch = null }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -14,8 +16,12 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null }) => 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editContent, setEditContent] = useState('');
+  const [showTaskSwitcher, setShowTaskSwitcher] = useState(false);
+  const [availableTasks, setAvailableTasks] = useState([]);
+  const [selectedTaskId, setSelectedTaskId] = useState('');
 
   const { user, isAdmin } = useAuthStore();
+  const { fetchTask } = useTaskStore();
   
   // Check if user is a company admin (same company as task)
   const isCompanyAdmin = task && user && isAdmin() && task.companyId === user.companyId;
@@ -24,11 +30,17 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null }) => 
     fetchComments();
   }, [taskId]);
 
-  // Pre-fill comment with extension update data
+  // Pre-fill comment with extension update data and check if task switcher should be shown
   useEffect(() => {
-    if (extensionUpdateData && extensionUpdateData.updateContent && extensionUpdateData.taskFound) {
+    if (extensionUpdateData && extensionUpdateData.updateContent) {
       console.log('Pre-filling comment with extension update:', extensionUpdateData);
       setNewComment(extensionUpdateData.updateContent);
+      
+      // Show task switcher if AI didn't find a task or user wants to switch
+      if (extensionUpdateData.showTaskSwitcher || !extensionUpdateData.taskFound) {
+        setShowTaskSwitcher(true);
+        fetchAvailableTasks();
+      }
       
       // Scroll to comment section to show the pre-filled update
       setTimeout(() => {
@@ -40,6 +52,32 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null }) => 
       }, 100);
     }
   }, [extensionUpdateData]);
+
+  // Fetch available tasks for task switcher
+  const fetchAvailableTasks = async () => {
+    try {
+      const response = await tasksAPI.getAll();
+      const taskOptions = response.data.map(t => ({
+        id: t.id.toString(),
+        name: `${t.title} (${t.status})`,
+        value: t.id.toString()
+      }));
+      setAvailableTasks(taskOptions);
+    } catch (error) {
+      console.error('Failed to fetch tasks for switcher:', error);
+    }
+  };
+
+  // Handle task switch
+  const handleTaskSwitch = async () => {
+    if (!selectedTaskId) return;
+    
+    const result = await fetchTask(parseInt(selectedTaskId));
+    if (result.success && result.data && onTaskSwitch) {
+      onTaskSwitch(result.data);
+      setShowTaskSwitcher(false);
+    }
+  };
 
   const fetchComments = async () => {
     try {
@@ -212,6 +250,66 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null }) => 
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Task Switcher */}
+      {showTaskSwitcher && (
+        <div 
+          className="mb-4 p-4 rounded-lg border transition-colors duration-200"
+          style={{
+            backgroundColor: 'rgba(234, 179, 8, 0.1)',
+            borderColor: 'rgba(234, 179, 8, 0.3)',
+          }}
+        >
+          <div className="flex items-start space-x-2 mb-3">
+            <FaExchangeAlt className="w-4 h-4 text-yellow-500 mt-1 flex-shrink-0" />
+            <div className="flex-1">
+              <p 
+                className="text-sm font-medium transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                {extensionUpdateData?.taskFound === false 
+                  ? 'No matching task found' 
+                  : 'Switch to a different task?'}
+              </p>
+              <p 
+                className="text-xs mt-1 transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
+                {extensionUpdateData?.taskFound === false
+                  ? 'AI couldn\'t identify a task. Please select the correct task below.'
+                  : 'Select a different task if this isn\'t the right one.'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-end space-x-2">
+            <div className="flex-1">
+              <SearchableDropdown
+                options={availableTasks}
+                value={selectedTaskId}
+                onChange={setSelectedTaskId}
+                placeholder="Select a task..."
+                renderOption={(task) => task.name}
+              />
+            </div>
+            <IconButton
+              icon={<FaExchangeAlt />}
+              label="Switch Task"
+              variant="warning"
+              size="sm"
+              onClick={handleTaskSwitch}
+              disabled={!selectedTaskId}
+            />
+            <IconButton
+              icon={<FaTimes />}
+              label="Cancel"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowTaskSwitcher(false)}
+            />
           </div>
         </div>
       )}

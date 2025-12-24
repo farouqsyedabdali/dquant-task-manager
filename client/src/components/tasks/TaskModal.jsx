@@ -1533,7 +1533,11 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             <CommentSection 
               taskId={viewedTask.id} 
               task={viewedTask}
-              extensionUpdateData={extensionUpdateData} 
+              extensionUpdateData={extensionUpdateData}
+              onTaskSwitch={(newTask) => {
+                setViewedTask(newTask);
+                setIsEditing(false);
+              }}
             />
           </div>
         </div>

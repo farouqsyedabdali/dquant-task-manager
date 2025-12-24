@@ -7,6 +7,7 @@ import { commentsAPI, taskArchiveAPI, aiAPI } from '../services/api';
 import TaskCard from '../components/tasks/TaskCard';
 import TaskList from '../components/tasks/TaskList';
 import AddTaskModal from '../components/tasks/AddTaskModal';
+import AddSubtaskModal from '../components/tasks/AddSubtaskModal';
 import TaskModal from '../components/tasks/TaskModal';
 import TaskFilters from '../components/tasks/TaskFilters';
 import ViewSwitcher from '../components/tasks/ViewSwitcher';
@@ -19,9 +20,11 @@ import { FaPlus, FaTimes } from 'react-icons/fa';
 const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isAddSubtaskModalOpen, setIsAddSubtaskModalOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState(null);
   const [extensionTaskData, setExtensionTaskData] = useState(null);
   const [extensionUpdateData, setExtensionUpdateData] = useState(null);
+  const [subtaskExtensionData, setSubtaskExtensionData] = useState(null);
   const [viewMode, setViewMode] = useState(() => {
     // Get view mode from localStorage, default to 'cards'
     return localStorage.getItem('taskViewMode') || 'cards';
@@ -438,17 +441,39 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
         setIsTaskModalOpen(true);
       }
     } else {
-      // No task found, open AddTaskModal for manual task creation
-      console.log('No matching task found, opening AddTaskModal for manual task creation');
-      setExtensionTaskData({
-        title: updateData.updateContent?.substring(0, 50) || 'Manual Task',
-        description: updateData.updateContent || 'Task created from manual input',
-        priority: 'MEDIUM',
-        dueDate: null,
-        assignee: null,
-        originalText: updateData.originalText
-      });
-      setIsAddModalOpen(true);
+      // No task found, open most recent task with update data
+      // User can switch to a different task if needed
+      console.log('No matching task found, opening most recent task for manual selection');
+      
+      // Get the most recent task (first in the list, assuming tasks are sorted by date)
+      const mostRecentTask = tasks && tasks.length > 0 ? tasks[0] : null;
+      
+      if (mostRecentTask) {
+        const result = await fetchTask(mostRecentTask.id);
+        if (result.success) {
+          setCurrentTask(result.data || mostRecentTask);
+          // Mark that no task was found so user can switch
+          setExtensionUpdateData({
+            ...updateData,
+            taskFound: false,
+            taskId: mostRecentTask.id,
+            showTaskSwitcher: true // Flag to show task switcher in CommentSection
+          });
+          setIsTaskModalOpen(true);
+        }
+      } else {
+        // No tasks available at all, create a new task
+        console.log('No tasks available, opening AddTaskModal');
+        setExtensionTaskData({
+          title: updateData.updateContent?.substring(0, 50) || 'Manual Task',
+          description: updateData.updateContent || 'Task created from manual input',
+          priority: 'MEDIUM',
+          dueDate: null,
+          assignee: null,
+          originalText: updateData.originalText
+        });
+        setIsAddModalOpen(true);
+      }
     }
   };
 
@@ -542,17 +567,17 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
         setIsTaskModalOpen(true);
       }
     } else {
-      // No task found, open AddTaskModal for manual task creation (as parent for subtask)
-      console.log('No matching task found for subtask addition, opening AddTaskModal for manual task creation');
-      setExtensionTaskData({
-        title: addSubtaskData.subtaskData?.title || addSubtaskData.updateContent?.substring(0, 50) || 'Manual Task',
-        description: addSubtaskData.subtaskData?.description || addSubtaskData.updateContent || 'Task created from manual input',
-        priority: addSubtaskData.subtaskData?.priority || 'MEDIUM',
-        dueDate: addSubtaskData.subtaskData?.dueDate || null,
-        assignee: addSubtaskData.subtaskData?.assignee || null,
-        originalText: addSubtaskData.originalText
+      // No task found, open AddSubtaskModal directly with no parent selected
+      // User will manually select the parent task
+      console.log('No matching task found for subtask addition, opening AddSubtaskModal with no parent');
+      setSubtaskExtensionData({
+        ...addSubtaskData,
+        action: 'addSubtask',
+        taskId: null, // No parent selected
+        taskFound: false,
+        subtaskData: addSubtaskData.subtaskData || null
       });
-      setIsAddModalOpen(true);
+      setIsAddSubtaskModalOpen(true);
     }
   };
 
@@ -1061,6 +1086,19 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           isOpen={isAddModalOpen}
           onClose={handleCloseAddModal}
           initialData={extensionTaskData}
+        />
+      )}
+
+      {/* Add Subtask Modal (No Parent) */}
+      {isAddSubtaskModalOpen && (
+        <AddSubtaskModal
+          isOpen={isAddSubtaskModalOpen}
+          onClose={() => {
+            setIsAddSubtaskModalOpen(false);
+            setSubtaskExtensionData(null);
+          }}
+          parentTask={null}
+          extensionUpdateData={subtaskExtensionData}
         />
       )}
 
