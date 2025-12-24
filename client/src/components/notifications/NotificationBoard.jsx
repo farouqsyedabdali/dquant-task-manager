@@ -106,7 +106,7 @@ const NotificationBoard = () => {
       {/* Notification Dropdown */}
       {isOpen && (
         <div 
-          className="absolute right-0 top-12 w-80 border rounded-lg shadow-xl z-50 transition-colors duration-200"
+          className="absolute right-0 top-12 w-80 border rounded-lg shadow-xl z-50 transition-all duration-200 animate-[slideDown_0.2s_ease-out]"
           style={{
             backgroundColor: 'var(--color-bg-secondary)',
             borderColor: 'var(--color-border-default)',

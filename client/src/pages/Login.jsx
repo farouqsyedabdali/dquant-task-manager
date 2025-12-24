@@ -111,9 +111,9 @@ const Login = () => {
         </div>
       </div>
 
-      <div className="max-w-lg w-full space-y-8">
+      <div className="max-w-lg w-full space-y-8 animate-[fadeIn_0.4s_ease-out]">
         <div
-          className="rounded-lg shadow-xl p-8"
+          className="rounded-lg shadow-xl p-8 transition-all duration-300"
           style={{
             backgroundColor: 'var(--color-bg-secondary)',
             borderColor: 'var(--color-border-default)',

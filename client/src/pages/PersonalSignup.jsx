@@ -126,7 +126,7 @@ const PersonalSignup = () => {
         </div>
       </div>
 
-      <div className="max-w-2xl w-full">
+      <div className="max-w-2xl w-full animate-[fadeIn_0.4s_ease-out]">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">
@@ -138,7 +138,7 @@ const PersonalSignup = () => {
         </div>
 
         {/* Form */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-8">
+        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-8 transition-all duration-300">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name */}
             <div>

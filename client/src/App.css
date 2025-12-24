@@ -347,3 +347,80 @@ body {
   color: #6ee7b7;
 }
 
+/* Smooth Transitions & Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes backdropFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal Animations */
+.modal-backdrop {
+  animation: backdropFade 0.2s ease-out;
+}
+
+.modal-box {
+  animation: fadeInScale 0.3s ease-out;
+}
+
+/* Dropdown Animations */
+.dropdown-content,
+.menu {
+  animation: slideDown 0.2s ease-out;
+}
+
+/* Page Content Animations */
+.page-content {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Smooth transitions for interactive elements */
+button, a, input, select, textarea {
+  transition: all 0.2s ease-in-out;
+}
+

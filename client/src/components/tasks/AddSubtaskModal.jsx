@@ -224,7 +224,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
   return createPortal(
     <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }}>
       <div
-        className="modal-box max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="modal-box max-w-2xl max-h-[90vh] overflow-y-auto transition-all duration-300"
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)',

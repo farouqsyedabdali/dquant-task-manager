@@ -133,8 +133,8 @@ const CompanySignup = () => {
         </div>
       </div>
 
-      <div className="max-w-2xl w-full space-y-8">
-        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-8">
+      <div className="max-w-2xl w-full space-y-8 animate-[fadeIn_0.4s_ease-out]">
+        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-8 transition-all duration-300">
           {/* Header */}
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-white mb-2">

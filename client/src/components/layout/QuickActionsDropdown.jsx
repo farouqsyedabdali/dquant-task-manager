@@ -259,7 +259,7 @@ const QuickActionsDropdown = () => {
       {/* Dropdown Menu */}
       {isOpen && !isProcessing && (
         <div
-          className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg border z-50 transition-colors duration-200"
+          className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg border z-50 transition-all duration-200 animate-[slideDown_0.2s_ease-out]"
           style={{
             backgroundColor: 'var(--color-bg-secondary)',
             borderColor: 'var(--color-border-default)',

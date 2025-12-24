@@ -218,7 +218,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   return (
     <div className="modal modal-open backdrop-blur-sm">
       <div 
-        className="modal-box max-w-2xl border transition-colors duration-200"
+        className="modal-box max-w-2xl border transition-all duration-300"
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)',

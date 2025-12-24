@@ -31,11 +31,11 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, taskTitle, isLoading =
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200" onClick={onClose} />
       
       {/* Modal */}
       <div 
-        className="relative border rounded-lg shadow-xl p-6 w-full max-w-md mx-4 transition-colors duration-200"
+        className="relative border rounded-lg shadow-xl p-6 w-full max-w-md mx-4 transition-all duration-300"
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)',
