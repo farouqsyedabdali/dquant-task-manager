@@ -5,11 +5,11 @@ import useAuthStore from '../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../utils/constants';
 import { commentsAPI, taskArchiveAPI, aiAPI } from '../services/api';
 import TaskCard from '../components/tasks/TaskCard';
-import TaskList from '../components/tasks/TaskList';
+// import TaskList from '../components/tasks/TaskList'; // Kept in file but not used
 import AddTaskModal from '../components/tasks/AddTaskModal';
 import TaskModal from '../components/tasks/TaskModal';
 import TaskFilters from '../components/tasks/TaskFilters';
-import ViewSwitcher from '../components/tasks/ViewSwitcher';
+// import ViewSwitcher from '../components/tasks/ViewSwitcher'; // Kept in file but not used
 import ArchiveSwitcher from '../components/tasks/ArchiveSwitcher';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import NotificationBoard from '../components/notifications/NotificationBoard';
@@ -631,10 +631,7 @@ const PersonalDashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
             <h2 className="text-xl font-semibold text-white">
               {archiveView === 'archived' ? 'Archived Tasks' : 'All Tasks'} ({filteredTasks.length})
             </h2>
-            <ViewSwitcher
-              currentView={viewMode}
-              onViewChange={handleViewModeChange}
-            />
+            {/* ViewSwitcher removed - only card view is shown */}
           </div>
           
           <div className="flex items-center space-x-4">
@@ -658,7 +655,7 @@ const PersonalDashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
               <div className="text-gray-400 text-lg mb-2">No tasks found</div>
               <p className="text-gray-500">Try adjusting your filters or create a new task.</p>
             </div>
-          ) : viewMode === 'cards' ? (
+          ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {filteredTasks.map((task) => (
                 <TaskCard
@@ -672,15 +669,6 @@ const PersonalDashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
                 />
               ))}
             </div>
-          ) : (
-            <TaskList
-              tasks={filteredTasks}
-              onStatusChange={handleStatusChange}
-              onPriorityChange={handlePriorityChange}
-              onDelete={handleDelete}
-              onArchive={handleArchiveTask}
-              onUnarchive={handleUnarchiveTask}
-            />
           )}
         </div>
       </div>
