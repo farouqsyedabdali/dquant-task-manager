@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../context/authStore';
 import CalendarIcon from '../icons/CalendarIcon';
-import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaExternalLinkAlt, FaUserFriends, FaProjectDiagram } from 'react-icons/fa';
+import QuickActionsDropdown from './QuickActionsDropdown';
+import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaUserFriends, FaProjectDiagram } from 'react-icons/fa';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -41,16 +42,10 @@ const Header = () => {
     setIsProfileDropdownOpen(!isProfileDropdownOpen);
   };
 
-  const handleOpenPopup = () => {
-    // Execute the VBS script to open the popup
-    // Since we can't directly execute VBS from the browser, we'll open the popup URL directly
-    // The VBS script is designed to open http://localhost:5173/popup in a popup window
-    window.open('/popup', '_blank', 'width=320,height=400,scrollbars=no,resizable=yes,status=no,location=no,toolbar=no,menubar=no');
-  };
 
   return (
     <header 
-      className="shadow-lg border-b transition-colors duration-200"
+      className="fixed top-0 left-0 right-0 z-50 shadow-lg border-b transition-colors duration-200"
       style={{
         backgroundColor: 'var(--color-bg-secondary)',
         borderColor: 'var(--color-border-default)',
@@ -155,38 +150,13 @@ const Header = () => {
                   <span>Employees</span>
                 </button>
               )}
-              {isSuperAdmin() && (
-                <button
-                  onClick={() => handleNavigation('/super-admin')}
-                  className="text-red-400 hover:text-red-300 px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
-                >
-                  <span>🔴</span>
-                  <span>Super Admin</span>
-                </button>
-              )}
             </nav>
           </div>
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
-            {/* Open Popup Button */}
-            <button
-              onClick={handleOpenPopup}
-              className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2"
-              style={{
-                backgroundColor: 'var(--color-primary)',
-                color: 'white',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.filter = 'brightness(0.9)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.filter = 'brightness(1)';
-              }}
-            >
-              <FaExternalLinkAlt className="w-4 h-4" />
-              <span>Open Popup</span>
-            </button>
+            {/* Quick Actions Dropdown */}
+            <QuickActionsDropdown />
 
             {/* Profile Dropdown */}
             <div className="relative" ref={profileDropdownRef}>

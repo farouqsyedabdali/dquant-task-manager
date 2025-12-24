@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import useFontSizeStore from '../context/fontSizeStore';
 import useThemeStore from '../stores/themeStore';
@@ -8,7 +9,7 @@ import { feedbackAPI } from '../services/api';
 import { lightPalettes, darkPalettes } from '../config/colorPalettes';
 
 const Settings = () => {
-  const { user, isAdmin, isSysAdmin, deleteCompany } = useAuthStore();
+  const { user, isAdmin, isSysAdmin, isSuperAdmin, deleteCompany } = useAuthStore();
   const { fontSize, setFontSize } = useFontSizeStore();
   const { theme, setTheme, lightPalette, darkPalette, setLightPalette, setDarkPalette } = useThemeStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -16,7 +17,8 @@ const Settings = () => {
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   const [showOlderVersions, setShowOlderVersions] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'preferences' | 'about' | 'feedback'
+  const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'preferences' | 'about' | 'feedback' | 'admin-tools'
+  const navigate = useNavigate();
   
   // Feedback form state
   const [feedbackForm, setFeedbackForm] = useState({
@@ -117,7 +119,8 @@ const Settings = () => {
                 { id: 'account', label: 'Account' },
                 { id: 'preferences', label: 'Preferences' },
                 { id: 'feedback', label: 'Feedback' },
-                { id: 'about', label: 'About' }
+                { id: 'about', label: 'About' },
+                ...(isSuperAdmin() ? [{ id: 'admin-tools', label: '🔴 Admin Tools' }] : [])
               ].map((item) => (
                 <button
                   key={item.id}
@@ -751,6 +754,86 @@ const Settings = () => {
                       >
                         © 2025 Tialz. All rights reserved.
                       </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedCategory === 'admin-tools' && isSuperAdmin() && (
+            <div className="space-y-8">
+              <div 
+                className="card border transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                }}
+              >
+                <div className="card-body">
+                  <h2 
+                    className="card-title text-xl mb-6 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    🔴 Admin Tools
+                  </h2>
+                  <p 
+                    className="mb-6 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Super Admin controls for managing the entire system.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => navigate('/super-admin')}
+                      className="btn w-full md:w-auto transition-colors duration-200"
+                      style={{
+                        backgroundColor: '#dc2626',
+                        color: 'white',
+                        borderColor: '#dc2626',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#b91c1c';
+                        e.currentTarget.style.borderColor = '#b91c1c';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#dc2626';
+                        e.currentTarget.style.borderColor = '#dc2626';
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      Open Super Admin Dashboard
+                    </button>
+                    
+                    <div 
+                      className="mt-6 p-4 rounded-lg border transition-colors duration-200"
+                      style={{
+                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                        borderColor: 'rgba(220, 38, 38, 0.3)',
+                      }}
+                    >
+                      <div className="flex">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                          <p 
+                            className="text-sm font-medium transition-colors duration-200"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            Warning: Super Admin Access
+                          </p>
+                          <p 
+                            className="text-sm mt-1 transition-colors duration-200"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            This dashboard provides system-wide administrative controls. Use with caution.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

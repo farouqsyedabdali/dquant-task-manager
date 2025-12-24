@@ -90,7 +90,9 @@ function App() {
               <ProtectedRoute>
                 <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
-                  <Dashboard taskbarAction={taskbarAction} onTaskbarActionHandled={() => setTaskbarAction(null)} />
+                  <div className="pt-16">
+                    <Dashboard taskbarAction={taskbarAction} onTaskbarActionHandled={() => setTaskbarAction(null)} />
+                  </div>
                 </div>
               </ProtectedRoute>
             }
@@ -123,7 +125,9 @@ function App() {
               <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
                 <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
-                  <Employees />
+                  <div className="pt-16">
+                    <Employees />
+                  </div>
                 </div>
               </ProtectedRoute>
             }
@@ -144,7 +148,9 @@ function App() {
               <ProtectedRoute>
                 <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
-                  <Settings />
+                  <div className="pt-16">
+                    <Settings />
+                  </div>
                 </div>
               </ProtectedRoute>
             }
@@ -156,7 +162,9 @@ function App() {
               <ProtectedRoute>
                 <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
-                  <Calendar />
+                  <div className="pt-16">
+                    <Calendar />
+                  </div>
                 </div>
               </ProtectedRoute>
             }
@@ -168,7 +176,9 @@ function App() {
               <ProtectedRoute>
                 <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
-                  <Contacts />
+                  <div className="pt-16">
+                    <Contacts />
+                  </div>
                 </div>
               </ProtectedRoute>
             }
@@ -180,7 +190,9 @@ function App() {
               <ProtectedRoute>
                 <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
-                  <Projects />
+                  <div className="pt-16">
+                    <Projects />
+                  </div>
                 </div>
               </ProtectedRoute>
             }
@@ -192,7 +204,9 @@ function App() {
               <ProtectedRoute allowedRoles={['EMPLOYEE']}>
                 <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                   <Header />
-                  <Dashboard />
+                  <div className="pt-16">
+                    <Dashboard />
+                  </div>
                 </div>
               </ProtectedRoute>
             }
