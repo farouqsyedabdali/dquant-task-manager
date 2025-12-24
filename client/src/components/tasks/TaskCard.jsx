@@ -142,12 +142,10 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
             )}
           </div>
           <div className="flex items-center space-x-2">
-            <span className={`status-badge uppercase ${getStatusColor(task.status)} flex items-center gap-1.5`}>
-              {getStatusIcon(task.status)}
+            <span className={`status-badge uppercase ${getStatusColor(task.status)}`}>
               {STATUS_LABELS[task.status]}
             </span>
-            <span className={`status-badge uppercase ${getPriorityColor(task.priority)} flex items-center gap-1.5`}>
-              {getPriorityIcon(task.priority)}
+            <span className={`status-badge uppercase ${getPriorityColor(task.priority)}`}>
               {PRIORITY_LABELS[task.priority]}
             </span>
           </div>

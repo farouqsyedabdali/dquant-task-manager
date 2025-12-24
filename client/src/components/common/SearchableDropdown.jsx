@@ -67,38 +67,99 @@ const SearchableDropdown = ({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full text-left px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed ${error ? 'border-red-500' : ''}`}
+        className="w-full text-left px-3 py-2 rounded-lg focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+        style={{
+          backgroundColor: 'var(--color-bg-tertiary)',
+          borderColor: error ? 'var(--color-danger)' : 'var(--color-border-default)',
+          color: 'var(--color-text-primary)',
+          borderWidth: '1px',
+          borderStyle: 'solid',
+        }}
+        onFocus={(e) => {
+          if (!error) {
+            e.currentTarget.style.borderColor = 'var(--color-primary)';
+            e.currentTarget.style.boxShadow = '0 0 0 1px var(--color-primary)';
+          }
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = error ? 'var(--color-danger)' : 'var(--color-border-default)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
       >
         {selectedOption ? (
           <span>{renderOption(selectedOption)}</span>
         ) : (
-          <span className="text-gray-400">{placeholder}</span>
+          <span style={{ color: 'var(--color-text-tertiary)' }}>{placeholder}</span>
         )}
         <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" style={{ color: 'var(--color-text-tertiary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </span>
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-hidden">
+        <div 
+          className="absolute z-50 w-full mt-1 rounded-lg shadow-lg max-h-60 overflow-hidden transition-all duration-200"
+          style={{
+            backgroundColor: 'var(--color-bg-secondary)',
+            borderColor: 'var(--color-border-default)',
+            borderWidth: '1px',
+            borderStyle: 'solid',
+          }}
+        >
           {/* Search Input */}
-          <div className="p-2 border-b border-gray-600">
+          <div 
+            className="p-2"
+            style={{
+              borderBottomColor: 'var(--color-border-default)',
+              borderBottomWidth: '1px',
+              borderBottomStyle: 'solid',
+            }}
+          >
             <input
               type="text"
               placeholder="Search employees..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white placeholder-gray-400 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-1 transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-primary)';
+                e.currentTarget.style.boxShadow = '0 0 0 1px var(--color-primary)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
               autoFocus
             />
+            <style>{`
+              input::placeholder {
+                color: var(--color-text-tertiary) !important;
+              }
+            `}</style>
           </div>
 
           {/* Options List */}
-          <div className="max-h-48 overflow-y-auto">
+          <div 
+            className="max-h-48 overflow-y-auto"
+            style={{
+              scrollbarThumbColor: 'var(--color-scrollbar-thumb)',
+              scrollbarTrackColor: 'var(--color-scrollbar-track)',
+            }}
+          >
             {filteredOptions.length === 0 ? (
-              <div className="px-3 py-2 text-gray-400 text-sm">
+              <div 
+                className="px-3 py-2 text-sm transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
                 No employees found
               </div>
             ) : (
@@ -112,7 +173,16 @@ const SearchableDropdown = ({
                     {/* Recent Employees Section */}
                     {recentOptions.length > 0 && searchTerm.trim() === '' && (
                       <>
-                        <div className="px-3 py-2 text-xs font-semibold text-indigo-400 bg-gray-800 border-b border-gray-600">
+                        <div 
+                          className="px-3 py-2 text-xs font-semibold transition-colors duration-200"
+                          style={{
+                            color: 'var(--color-primary)',
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            borderBottomColor: 'var(--color-border-default)',
+                            borderBottomWidth: '1px',
+                            borderBottomStyle: 'solid',
+                          }}
+                        >
                           Recent
                         </div>
                         {recentOptions.map((option) => (
@@ -120,13 +190,34 @@ const SearchableDropdown = ({
                             key={option.id}
                             type="button"
                             onClick={() => handleSelect(option)}
-                            className="w-full text-left px-3 py-2 text-white hover:bg-gray-600 focus:bg-gray-600 focus:outline-none"
+                            className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
+                            style={{
+                              color: 'var(--color-text-primary)',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
+                            onFocus={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                            }}
                           >
                             {renderOption(option)}
                           </button>
                         ))}
                         {otherOptions.length > 0 && (
-                          <div className="px-3 py-2 text-xs font-semibold text-gray-400 bg-gray-800 border-b border-gray-600">
+                          <div 
+                            className="px-3 py-2 text-xs font-semibold transition-colors duration-200"
+                            style={{
+                              color: 'var(--color-text-tertiary)',
+                              backgroundColor: 'var(--color-bg-tertiary)',
+                              borderBottomColor: 'var(--color-border-default)',
+                              borderBottomWidth: '1px',
+                              borderBottomStyle: 'solid',
+                            }}
+                          >
                             All Employees
                           </div>
                         )}
@@ -139,7 +230,19 @@ const SearchableDropdown = ({
                         key={option.id}
                         type="button"
                         onClick={() => handleSelect(option)}
-                        className="w-full text-left px-3 py-2 text-white hover:bg-gray-600 focus:bg-gray-600 focus:outline-none"
+                        className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
+                        style={{
+                          color: 'var(--color-text-primary)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                        }}
                       >
                         {renderOption(option)}
                       </button>

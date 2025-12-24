@@ -534,7 +534,6 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                     >
                       {/* Task Name Column */}
                       <div className="col-span-5 flex items-center space-x-3">
-                        <span className="text-2xl">{getTaskStatusIcon(task)}</span>
                         <div className="flex-1 min-w-0">
                           <p 
                             className={`font-medium truncate ${task.status === 'COMPLETED' ? 'line-through opacity-60' : ''}`}

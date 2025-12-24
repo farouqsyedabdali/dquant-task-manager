@@ -1,4 +1,5 @@
 import React from 'react';
+import Tooltip from './Tooltip';
 
 /**
  * IconButton - A reusable button component that supports icons with optional text
@@ -110,12 +111,11 @@ const IconButton = ({
     return hoverStyles;
   };
 
-  return (
+  const button = (
     <button
       className={baseClasses}
       style={getHoverStyles()}
       disabled={disabled || loading}
-      title={iconOnly ? label : undefined}
       aria-label={label}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -131,6 +131,17 @@ const IconButton = ({
       )}
     </button>
   );
+
+  // Wrap with tooltip if iconOnly
+  if (iconOnly && label) {
+    return (
+      <Tooltip content={label} position="top">
+        {button}
+      </Tooltip>
+    );
+  }
+
+  return button;
 };
 
 export default IconButton;

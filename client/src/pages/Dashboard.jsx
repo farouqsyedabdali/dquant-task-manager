@@ -9,6 +9,7 @@ import TaskList from '../components/tasks/TaskList';
 import AddTaskModal from '../components/tasks/AddTaskModal';
 import AddSubtaskModal from '../components/tasks/AddSubtaskModal';
 import TaskModal from '../components/tasks/TaskModal';
+import TaskSelectionModal from '../components/tasks/TaskSelectionModal';
 import TaskFilters from '../components/tasks/TaskFilters';
 import ViewSwitcher from '../components/tasks/ViewSwitcher';
 import ArchiveSwitcher from '../components/tasks/ArchiveSwitcher';
@@ -21,10 +22,12 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isAddSubtaskModalOpen, setIsAddSubtaskModalOpen] = useState(false);
+  const [isTaskSelectionModalOpen, setIsTaskSelectionModalOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState(null);
   const [extensionTaskData, setExtensionTaskData] = useState(null);
   const [extensionUpdateData, setExtensionUpdateData] = useState(null);
   const [subtaskExtensionData, setSubtaskExtensionData] = useState(null);
+  const [pendingUpdateData, setPendingUpdateData] = useState(null);
   const [viewMode, setViewMode] = useState(() => {
     // Get view mode from localStorage, default to 'cards'
     return localStorage.getItem('taskViewMode') || 'cards';
@@ -441,39 +444,33 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
         setIsTaskModalOpen(true);
       }
     } else {
-      // No task found, open most recent task with update data
-      // User can switch to a different task if needed
-      console.log('No matching task found, opening most recent task for manual selection');
-      
-      // Get the most recent task (first in the list, assuming tasks are sorted by date)
-      const mostRecentTask = tasks && tasks.length > 0 ? tasks[0] : null;
-      
-      if (mostRecentTask) {
-        const result = await fetchTask(mostRecentTask.id);
-        if (result.success) {
-          setCurrentTask(result.data || mostRecentTask);
-          // Mark that no task was found so user can switch
-          setExtensionUpdateData({
-            ...updateData,
-            taskFound: false,
-            taskId: mostRecentTask.id,
-            showTaskSwitcher: true // Flag to show task switcher in CommentSection
-          });
-          setIsTaskModalOpen(true);
-        }
-      } else {
-        // No tasks available at all, create a new task
-        console.log('No tasks available, opening AddTaskModal');
-        setExtensionTaskData({
-          title: updateData.updateContent?.substring(0, 50) || 'Manual Task',
-          description: updateData.updateContent || 'Task created from manual input',
-          priority: 'MEDIUM',
-          dueDate: null,
-          assignee: null,
-          originalText: updateData.originalText
-        });
-        setIsAddModalOpen(true);
-      }
+      // No task found, open task selection modal
+      console.log('No matching task found, opening task selection modal');
+      setPendingUpdateData(updateData);
+      setIsTaskSelectionModalOpen(true);
+    }
+  };
+
+  // Handle task selection from TaskSelectionModal
+  const handleTaskSelected = async (selectedTask) => {
+    console.log('Task selected for update:', selectedTask);
+    
+    // Fetch the full task data
+    const result = await fetchTask(selectedTask.id);
+    if (result.success) {
+      setCurrentTask(result.data || selectedTask);
+      // Set update data with the selected task and pre-filled comment
+      setExtensionUpdateData({
+        ...pendingUpdateData,
+        taskFound: true,
+        taskId: selectedTask.id,
+        updateContent: pendingUpdateData?.updateContent || pendingUpdateData?.originalText || ''
+      });
+      setIsTaskModalOpen(true);
+      setIsTaskSelectionModalOpen(false);
+      setPendingUpdateData(null);
+    } else {
+      console.error('Failed to fetch selected task');
     }
   };
 
@@ -1099,6 +1096,19 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           }}
           parentTask={null}
           extensionUpdateData={subtaskExtensionData}
+        />
+      )}
+
+      {/* Task Selection Modal (when AI can't find task) */}
+      {isTaskSelectionModalOpen && (
+        <TaskSelectionModal
+          isOpen={isTaskSelectionModalOpen}
+          onClose={() => {
+            setIsTaskSelectionModalOpen(false);
+            setPendingUpdateData(null);
+          }}
+          onSelectTask={handleTaskSelected}
+          updateContent={pendingUpdateData?.updateContent || pendingUpdateData?.originalText || ''}
         />
       )}
 

@@ -30,17 +30,14 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTas
     fetchComments();
   }, [taskId]);
 
-  // Pre-fill comment with extension update data and check if task switcher should be shown
+  // Pre-fill comment with extension update data
   useEffect(() => {
     if (extensionUpdateData && extensionUpdateData.updateContent) {
       console.log('Pre-filling comment with extension update:', extensionUpdateData);
       setNewComment(extensionUpdateData.updateContent);
       
-      // Show task switcher if AI didn't find a task or user wants to switch
-      if (extensionUpdateData.showTaskSwitcher || !extensionUpdateData.taskFound) {
-        setShowTaskSwitcher(true);
-        fetchAvailableTasks();
-      }
+      // Note: Task switcher is no longer used for update flow
+      // Task selection now happens in TaskSelectionModal before opening TaskModal
       
       // Scroll to comment section to show the pre-filled update
       setTimeout(() => {
@@ -203,116 +200,28 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTas
             borderColor: 'rgba(99, 102, 241, 0.3)',
           }}
         >
-          <div className="flex items-start space-x-2">
+          <div className="flex items-center space-x-2">
             <div 
-              className="mt-0.5 transition-colors duration-200"
+              className="flex-shrink-0 transition-colors duration-200"
               style={{ color: 'var(--color-primary-light)' }}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
             </div>
-            <div>
-              <h5 
-                className="text-sm font-medium mb-1 transition-colors duration-200"
-                style={{ color: 'var(--color-primary-light)' }}
-              >
-                ✨ AI-Generated Update ({extensionUpdateData.updateType?.toUpperCase()})
-              </h5>
+            <div className="flex-1">
               <p 
                 className="text-xs transition-colors duration-200"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                {extensionUpdateData.reasoning}
+                AI can make mistakes. Please double-check the information.
               </p>
-              {extensionUpdateData.suggestedActions && extensionUpdateData.suggestedActions.length > 0 && (
-                <div className="mt-2">
-                  <p 
-                    className="text-xs transition-colors duration-200"
-                    style={{ color: 'var(--color-text-tertiary)' }}
-                  >
-                    Suggested actions:
-                  </p>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {extensionUpdateData.suggestedActions.map((action, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2 py-1 rounded text-xs transition-colors duration-200"
-                        style={{
-                          backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                          color: 'var(--color-primary-light)',
-                        }}
-                      >
-                        {action.replace(/_/g, ' ')}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
       )}
       
-      {/* Task Switcher */}
-      {showTaskSwitcher && (
-        <div 
-          className="mb-4 p-4 rounded-lg border transition-colors duration-200"
-          style={{
-            backgroundColor: 'rgba(234, 179, 8, 0.1)',
-            borderColor: 'rgba(234, 179, 8, 0.3)',
-          }}
-        >
-          <div className="flex items-start space-x-2 mb-3">
-            <FaExchangeAlt className="w-4 h-4 text-yellow-500 mt-1 flex-shrink-0" />
-            <div className="flex-1">
-              <p 
-                className="text-sm font-medium transition-colors duration-200"
-                style={{ color: 'var(--color-text-primary)' }}
-              >
-                {extensionUpdateData?.taskFound === false 
-                  ? 'No matching task found' 
-                  : 'Switch to a different task?'}
-              </p>
-              <p 
-                className="text-xs mt-1 transition-colors duration-200"
-                style={{ color: 'var(--color-text-tertiary)' }}
-              >
-                {extensionUpdateData?.taskFound === false
-                  ? 'AI couldn\'t identify a task. Please select the correct task below.'
-                  : 'Select a different task if this isn\'t the right one.'}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-end space-x-2">
-            <div className="flex-1">
-              <SearchableDropdown
-                options={availableTasks}
-                value={selectedTaskId}
-                onChange={setSelectedTaskId}
-                placeholder="Select a task..."
-                renderOption={(task) => task.name}
-              />
-            </div>
-            <IconButton
-              icon={<FaExchangeAlt />}
-              label="Switch Task"
-              variant="warning"
-              size="sm"
-              onClick={handleTaskSwitch}
-              disabled={!selectedTaskId}
-            />
-            <IconButton
-              icon={<FaTimes />}
-              label="Cancel"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowTaskSwitcher(false)}
-            />
-          </div>
-        </div>
-      )}
+      {/* Task Switcher - Removed: Task selection now happens in TaskSelectionModal before opening TaskModal */}
       
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>

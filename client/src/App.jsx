@@ -24,14 +24,17 @@ import Contacts from './pages/Contacts';
 import Projects from './pages/Projects';
 import ColorPaletteTester from './pages/ColorPaletteTester';
 import AIModal from './components/tasks/AIModal';
+import ToastContainer from './components/common/ToastContainer';
+import { ToastProvider, useToastContext } from './context/ToastContext';
 import { FaRobot } from 'react-icons/fa';
 import './App.css';
 
-function App() {
+function AppContent() {
   const { getMe, isAuthenticated } = useAuthStore();
   const { theme } = useThemeStore();
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [taskbarAction, setTaskbarAction] = useState(null);
+  const { toasts, hideToast } = useToastContext();
 
   useEffect(() => {
     // Check if user is authenticated and get user info
@@ -244,9 +247,20 @@ function App() {
         {isAIModalOpen && (
           <AIModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} />
         )}
+
+        {/* Toast Container */}
+        <ToastContainer toasts={toasts} onClose={hideToast} />
       </div>
     </Router>
     </FontSizeProvider>
+  );
+}
+
+function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
 

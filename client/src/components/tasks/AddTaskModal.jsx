@@ -7,6 +7,7 @@ import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
 import { usersAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
 import IconButton from '../common/IconButton';
+import DatePicker from '../common/DatePicker';
 import { FaTimes, FaPlus, FaSave } from 'react-icons/fa';
 
 const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
@@ -364,23 +365,18 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
             >
               Due Date (Optional)
             </label>
-            <input
-              type="datetime-local"
-              name="dueDate"
-              value={formData.dueDate}
-              onChange={handleChange}
-              className="input w-full transition-colors duration-200"
-              style={{
-                backgroundColor: 'var(--color-bg-tertiary)',
-                borderColor: 'var(--color-border-default)',
-                color: 'var(--color-text-primary)',
+            <DatePicker
+              value={formData.dueDate || ''}
+              onChange={(e) => {
+                handleChange({
+                  target: {
+                    name: 'dueDate',
+                    value: e.target.value
+                  }
+                });
               }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-primary)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-border-default)';
-              }}
+              placeholder="Select due date and time"
+              showTime={true}
             />
           </div>
 

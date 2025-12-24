@@ -6,6 +6,7 @@ import useAuthStore from '../../context/authStore';
 import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
 import { usersAPI, tasksAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
+import DatePicker from '../common/DatePicker';
 
 const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
@@ -387,19 +388,33 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
           {/* Due Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Due Date
             </label>
-            <input
-              type="datetime-local"
-              name="dueDate"
-              value={formData.dueDate}
-              onChange={handleChange}
-              className="input bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
-              min={new Date().toISOString().slice(0, 16)}
+            <DatePicker
+              value={formData.dueDate || ''}
+              onChange={(e) => {
+                handleChange({
+                  target: {
+                    name: 'dueDate',
+                    value: e.target.value
+                  }
+                });
+              }}
+              placeholder="Select due date and time"
+              showTime={true}
+              min={new Date().toISOString()}
             />
             {errors.dueDate && (
-              <p className="text-red-400 text-sm mt-1">{errors.dueDate}</p>
+              <p 
+                className="text-sm mt-1 transition-colors duration-200"
+                style={{ color: 'var(--color-danger)' }}
+              >
+                {errors.dueDate}
+              </p>
             )}
           </div>
 
