@@ -4,6 +4,7 @@ import useAuthStore from '../../context/authStore';
 import AddProjectTaskModal from './AddProjectTaskModal';
 import TaskModal from '../tasks/TaskModal';
 import SaveAsTemplateModal from './SaveAsTemplateModal';
+import EditProjectModal from './EditProjectModal';
 
 const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onProjectDeleted }) => {
   const [project, setProject] = useState(null);
@@ -21,6 +22,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const [selectedTask, setSelectedTask] = useState(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const [reassignForm, setReassignForm] = useState({
     assignmentType: 'internal',
@@ -280,6 +282,30 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
     }
   };
 
+  const handleUncomplete = async () => {
+    try {
+      await projectsAPI.update(projectId, { status: 'ACTIVE' });
+      await fetchProject();
+      setSuccessMessage('Project uncompleted!');
+      if (onProjectUpdated) {
+        const response = await projectsAPI.getById(projectId);
+        onProjectUpdated(response.data);
+      }
+    } catch (err) {
+      console.error('Error uncompleting project:', err);
+      setError(err.response?.data?.error || 'Failed to uncomplete project');
+    }
+  };
+
+  const handleProjectEdited = async (updatedProject) => {
+    await fetchProject();
+    setSuccessMessage('Project updated successfully!');
+    if (onProjectUpdated) {
+      onProjectUpdated(updatedProject);
+    }
+    setIsEditModalOpen(false);
+  };
+
   const getTaskStatusIcon = (task) => {
     if (task.isDraft) return '📝';
     if (task.status === 'COMPLETED') return '✓';
@@ -478,14 +504,37 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                   </>
                 )}
 
-                {project.canManage && project.status !== 'COMPLETED' && (
-                  <button
-                    onClick={handleMarkComplete}
-                    className="btn btn-outline btn-sm"
-                    style={{ borderColor: 'var(--color-border-default)', color: 'var(--color-text-secondary)' }}
-                  >
-                    Mark Complete
-                  </button>
+                {project.canManage && (
+                  <>
+                    <button
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="btn btn-outline btn-sm"
+                      style={{ borderColor: 'var(--color-border-default)', color: 'var(--color-text-secondary)' }}
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit Project
+                    </button>
+                    {project.status !== 'COMPLETED' && (
+                      <button
+                        onClick={handleMarkComplete}
+                        className="btn btn-outline btn-sm"
+                        style={{ borderColor: 'var(--color-border-default)', color: 'var(--color-text-secondary)' }}
+                      >
+                        Mark Complete
+                      </button>
+                    )}
+                    {project.status === 'COMPLETED' && (
+                      <button
+                        onClick={handleUncomplete}
+                        className="btn btn-outline btn-sm"
+                        style={{ borderColor: 'var(--color-border-default)', color: 'var(--color-text-secondary)' }}
+                      >
+                        Uncomplete
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -881,6 +930,16 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
           onClose={() => setShowSaveTemplateModal(false)}
           projectName={project?.name}
           onSave={handleSaveAsTemplate}
+        />
+      )}
+
+      {/* Edit Project Modal */}
+      {isEditModalOpen && project && (
+        <EditProjectModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          project={project}
+          onProjectUpdated={handleProjectEdited}
         />
       )}
     </div>
