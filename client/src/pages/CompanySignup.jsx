@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import PasswordStrengthIndicator from '../components/common/PasswordStrengthIndicator';
 import { validatePassword } from '../utils/passwordValidation';
@@ -19,13 +19,24 @@ const CompanySignup = () => {
   
   const { registerCompany, error, clearError, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [urlError, setUrlError] = useState('');
 
   useEffect(() => {
     if (isAuthenticated()) {
       navigate('/dashboard');
     }
     clearError();
-  }, [isAuthenticated, navigate, clearError]);
+    
+    // Check for error in URL params
+    const params = new URLSearchParams(location.search);
+    const errorParam = params.get('error');
+    if (errorParam) {
+      setUrlError(errorParam);
+      // Clear from URL
+      navigate(location.pathname, { replace: true });
+    }
+  }, [isAuthenticated, navigate, clearError, location]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -52,9 +63,9 @@ const CompanySignup = () => {
     }
     
     if (!formData.companyEmail.trim()) {
-      newErrors.companyEmail = 'Company email is required';
+      newErrors.companyEmail = 'Contact email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.companyEmail)) {
-      newErrors.companyEmail = 'Company email is invalid';
+      newErrors.companyEmail = 'Contact email is invalid';
     }
     
     // Admin validation
@@ -121,37 +132,76 @@ const CompanySignup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ backgroundColor: 'var(--color-bg-primary)' }}
+    >
       {/* Company Branding */}
       <div className="absolute top-6 left-6 flex items-center space-x-3">
-        <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold text-lg">CN</span>
+        <div 
+          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          style={{ 
+            background: 'linear-gradient(to right, var(--color-primary), #9333ea)'
+          }}
+        >
+          <span 
+            className="font-bold text-lg"
+            style={{ color: 'white' }}
+          >
+            CN
+          </span>
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">Tialz</h1>
-          <p className="text-gray-400 text-sm">Task Manager</p>
+          <h1 
+            className="text-2xl font-bold"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            Tialz
+          </h1>
+          <p 
+            className="text-sm"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            Task Manager
+          </p>
         </div>
       </div>
 
       <div className="max-w-2xl w-full space-y-8 animate-[fadeIn_0.4s_ease-out]">
-        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-8 transition-all duration-300">
+        <div 
+          className="border rounded-lg shadow-xl p-8 transition-all duration-300"
+          style={{ 
+            backgroundColor: 'var(--color-bg-secondary)',
+            borderColor: 'var(--color-border-default)'
+          }}
+        >
           {/* Header */}
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">
+            <h2 
+              className="text-3xl font-bold mb-2"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               Create Your Company
             </h2>
-            <p className="text-gray-400">
+            <p style={{ color: 'var(--color-text-secondary)' }}>
               Set up your company workspace and create your System Administrator account
             </p>
           </div>
 
           {/* Error Alert */}
-          {error && (
-            <div className="alert bg-red-900 border-red-700 text-red-200 mb-6">
+          {(error || urlError) && (
+            <div 
+              className="alert mb-6"
+              style={{ 
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                borderColor: '#ef4444',
+                color: '#fca5a5'
+              }}
+            >
               <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>{error}</span>
+              <span>{error || urlError}</span>
             </div>
           )}
 
@@ -159,12 +209,22 @@ const CompanySignup = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Company Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white border-b border-gray-700 pb-2">
+              <h3 
+                className="text-lg font-semibold pb-2 border-b"
+                style={{ 
+                  color: 'var(--color-text-primary)',
+                  borderColor: 'var(--color-border-light)'
+                }}
+              >
                 Company Information
               </h3>
               
               <div>
-                <label htmlFor="companyName" className="block text-sm font-medium text-gray-300 mb-2">
+                <label 
+                  htmlFor="companyName" 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
                   Company Name *
                 </label>
                 <input
@@ -174,7 +234,12 @@ const CompanySignup = () => {
                   required
                   value={formData.companyName}
                   onChange={handleChange}
-                  className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.companyName ? 'border-red-500' : ''}`}
+                  className={`input w-full ${errors.companyName ? 'border-red-500' : ''}`}
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: errors.companyName ? '#ef4444' : 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
                   placeholder="Enter company name"
                 />
                 {errors.companyName && (
@@ -183,8 +248,12 @@ const CompanySignup = () => {
               </div>
 
               <div>
-                <label htmlFor="companyEmail" className="block text-sm font-medium text-gray-300 mb-2">
-                  Company Email *
+                <label 
+                  htmlFor="companyEmail" 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Contact Email *
                 </label>
                 <input
                   id="companyEmail"
@@ -193,8 +262,13 @@ const CompanySignup = () => {
                   required
                   value={formData.companyEmail}
                   onChange={handleChange}
-                  className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.companyEmail ? 'border-red-500' : ''}`}
-                  placeholder="company@example.com"
+                  className={`input w-full ${errors.companyEmail ? 'border-red-500' : ''}`}
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: errors.companyEmail ? '#ef4444' : 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                  placeholder="contact@example.com"
                 />
                 {errors.companyEmail && (
                   <p className="text-red-400 text-sm mt-1">{errors.companyEmail}</p>
@@ -204,12 +278,22 @@ const CompanySignup = () => {
 
             {/* System Administrator Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white border-b border-gray-700 pb-2">
+              <h3 
+                className="text-lg font-semibold pb-2 border-b"
+                style={{ 
+                  color: 'var(--color-text-primary)',
+                  borderColor: 'var(--color-border-light)'
+                }}
+              >
                 System Administrator Account
               </h3>
               
               <div>
-                <label htmlFor="adminName" className="block text-sm font-medium text-gray-300 mb-2">
+                <label 
+                  htmlFor="adminName" 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
                   System Administrator Name *
                 </label>
                 <input
@@ -219,7 +303,12 @@ const CompanySignup = () => {
                   required
                   value={formData.adminName}
                   onChange={handleChange}
-                  className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.adminName ? 'border-red-500' : ''}`}
+                  className={`input w-full ${errors.adminName ? 'border-red-500' : ''}`}
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: errors.adminName ? '#ef4444' : 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
                   placeholder="Enter admin name"
                 />
                 {errors.adminName && (
@@ -228,7 +317,11 @@ const CompanySignup = () => {
               </div>
 
               <div>
-                <label htmlFor="adminEmail" className="block text-sm font-medium text-gray-300 mb-2">
+                <label 
+                  htmlFor="adminEmail" 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
                   System Administrator Email *
                 </label>
                 <input
@@ -238,7 +331,12 @@ const CompanySignup = () => {
                   required
                   value={formData.adminEmail}
                   onChange={handleChange}
-                  className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.adminEmail ? 'border-red-500' : ''}`}
+                  className={`input w-full ${errors.adminEmail ? 'border-red-500' : ''}`}
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: errors.adminEmail ? '#ef4444' : 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
                   placeholder="admin@example.com"
                 />
                 {errors.adminEmail && (
@@ -248,11 +346,21 @@ const CompanySignup = () => {
 
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <label htmlFor="password" className="text-sm font-medium text-gray-300">
+                  <label 
+                    htmlFor="password" 
+                    className="text-sm font-medium"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
                     Password *
                   </label>
                   <div className="tooltip tooltip-right" data-tip="Password Requirements:&#10;• At least 6 characters&#10;• One uppercase letter (A-Z)&#10;• One lowercase letter (a-z)&#10;• One number (0-9)&#10;• One special character (!@#$%^&*)">
-                    <svg className="w-4 h-4 text-gray-400 hover:text-gray-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg 
+                      className="w-4 h-4 cursor-help" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
@@ -264,7 +372,12 @@ const CompanySignup = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.password ? 'border-red-500' : ''}`}
+                  className={`input w-full ${errors.password ? 'border-red-500' : ''}`}
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: errors.password ? '#ef4444' : 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
                   placeholder="Enter password"
                 />
                 {errors.password && (
@@ -276,7 +389,11 @@ const CompanySignup = () => {
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+                <label 
+                  htmlFor="confirmPassword" 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
                   Confirm Password *
                 </label>
                 <input
@@ -286,7 +403,12 @@ const CompanySignup = () => {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                  className={`input w-full ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: errors.confirmPassword ? '#ef4444' : 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
                   placeholder="Confirm password"
                 />
                 {errors.confirmPassword && (
@@ -304,15 +426,33 @@ const CompanySignup = () => {
                   type="checkbox"
                   checked={formData.acceptTerms}
                   onChange={handleChange}
-                  className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="mt-1 h-4 w-4 rounded"
+                  style={{
+                    accentColor: 'var(--color-primary)',
+                    borderColor: 'var(--color-border-default)'
+                  }}
                 />
-                <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-300">
+                <label 
+                  htmlFor="acceptTerms" 
+                  className="ml-2 block text-sm"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
                   I agree to the{' '}
-                  <a href="#" className="text-indigo-400 hover:text-indigo-300">
+                  <a 
+                    href="#" 
+                    style={{ color: 'var(--color-primary)' }}
+                    onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                  >
                     Terms of Service
                   </a>{' '}
                   and{' '}
-                  <a href="#" className="text-indigo-400 hover:text-indigo-300">
+                  <a 
+                    href="#" 
+                    style={{ color: 'var(--color-primary)' }}
+                    onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                  >
                     Privacy Policy
                   </a>
                 </label>
@@ -325,7 +465,13 @@ const CompanySignup = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 w-full"
+              className="btn border-0 w-full"
+              style={{ 
+                backgroundColor: 'var(--color-primary)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+              onMouseLeave={(e) => e.target.style.opacity = '1'}
             >
               {isLoading ? (
                 <>
@@ -340,9 +486,15 @@ const CompanySignup = () => {
 
           {/* Login Link */}
           <div className="mt-6 text-center">
-            <p className="text-gray-400">
+            <p style={{ color: 'var(--color-text-secondary)' }}>
               Already have an account?{' '}
-              <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-medium">
+              <Link 
+                to="/login" 
+                className="font-medium"
+                style={{ color: 'var(--color-primary)' }}
+                onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                onMouseLeave={(e) => e.target.style.opacity = '1'}
+              >
                 Sign in
               </Link>
             </p>

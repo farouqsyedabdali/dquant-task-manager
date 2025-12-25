@@ -845,18 +845,33 @@ const Settings = () => {
 
       {/* Delete Company Modal */}
       {showDeleteModal && (
-        <div className="modal modal-open">
-          <div className="modal-box bg-gray-800 border border-gray-700">
-            <h3 className="font-bold text-lg text-white mb-4">
+        <div className="modal modal-open backdrop-blur-sm animate-fadeIn">
+          <div 
+            className="modal-box border"
+            style={{ 
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)'
+            }}
+          >
+            <h3 
+              className="font-bold text-lg mb-4"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               {isPersonalAccount ? 'Delete Account' : 'Delete Company'}
             </h3>
-            <p className="text-gray-300 mb-6">
+            <p 
+              className="mb-6"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               {isPersonalAccount 
                 ? 'Are you sure you want to delete your personal account? This action will permanently delete:'
                 : 'Are you sure you want to delete your company? This action will permanently delete:'
               }
             </p>
-            <ul className="text-gray-300 mb-6 list-disc list-inside space-y-1">
+            <ul 
+              className="mb-6 list-disc list-inside space-y-1"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               <li>All tasks and projects</li>
               {!isPersonalAccount && <li>All employees and their data</li>}
               <li>All comments and activity</li>
@@ -869,15 +884,22 @@ const Settings = () => {
             <div className="modal-action">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="btn btn-ghost text-gray-300 hover:text-white"
+                className="btn btn-ghost"
+                style={{ color: 'var(--color-text-secondary)' }}
                 disabled={isDeleting}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDeleteCompany}
-                className="btn btn-error bg-red-600 hover:bg-red-700 text-white border-0"
+                className="btn border-0"
+                style={{ 
+                  backgroundColor: '#ef4444',
+                  color: 'white'
+                }}
                 disabled={isDeleting}
+                onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                onMouseLeave={(e) => e.target.style.opacity = '1'}
               >
                 {isDeleting ? (
                   <>
@@ -1107,65 +1129,65 @@ const Settings = () => {
               {/* Older Versions (Hidden by default) */}
               {showOlderVersions && (
                 <>
-                  {/* Version 0.0.2 */}
-                  <div className="border-l-4 border-gray-600 pl-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-lg font-semibold text-white">v0.0.2</h4>
+              {/* Version 0.0.2 */}
+              <div className="border-l-4 border-gray-600 pl-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-lg font-semibold text-white">v0.0.2</h4>
                       <span className="text-sm text-gray-400">September 2024</span>
-                    </div>
-                    <div className="space-y-2 text-gray-300 text-sm">
-                      <div>
-                        <p className="font-semibold text-green-400">✨ New Features</p>
-                        <ul className="list-disc list-inside ml-4 space-y-1">
-                          <li>Desktop app with auto-update functionality</li>
-                          <li>Browser extension for quick task capture</li>
-                          <li>AI-powered task assistant</li>
-                          <li>Task sharing between users</li>
-                          <li>Audit log for admin users</li>
-                          <li>Notification system</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-blue-400">🔧 Improvements</p>
-                        <ul className="list-disc list-inside ml-4 space-y-1">
-                          <li>Enhanced task filtering and sorting</li>
-                          <li>Improved calendar view</li>
-                          <li>Better mobile responsiveness</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-red-400">🐛 Bug Fixes</p>
-                        <ul className="list-disc list-inside ml-4 space-y-1">
-                          <li>Fixed task assignment issues</li>
-                          <li>Resolved date picker bugs</li>
-                        </ul>
-                      </div>
-                    </div>
+                </div>
+                <div className="space-y-2 text-gray-300 text-sm">
+                  <div>
+                    <p className="font-semibold text-green-400">✨ New Features</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Desktop app with auto-update functionality</li>
+                      <li>Browser extension for quick task capture</li>
+                      <li>AI-powered task assistant</li>
+                      <li>Task sharing between users</li>
+                      <li>Audit log for admin users</li>
+                      <li>Notification system</li>
+                    </ul>
                   </div>
+                  <div>
+                    <p className="font-semibold text-blue-400">🔧 Improvements</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Enhanced task filtering and sorting</li>
+                      <li>Improved calendar view</li>
+                      <li>Better mobile responsiveness</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-red-400">🐛 Bug Fixes</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Fixed task assignment issues</li>
+                      <li>Resolved date picker bugs</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
 
-                  {/* Version 0.0.1 */}
-                  <div className="border-l-4 border-gray-600 pl-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-lg font-semibold text-white">v0.0.1</h4>
+              {/* Version 0.0.1 */}
+              <div className="border-l-4 border-gray-600 pl-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-lg font-semibold text-white">v0.0.1</h4>
                       <span className="text-sm text-gray-400">August 2024</span>
-                    </div>
-                    <div className="space-y-2 text-gray-300 text-sm">
-                      <div>
-                        <p className="font-semibold text-green-400">✨ Initial Release</p>
-                        <ul className="list-disc list-inside ml-4 space-y-1">
-                          <li>User authentication and authorization</li>
-                          <li>Company and personal account types</li>
-                          <li>Task creation, editing, and deletion</li>
-                          <li>Task assignment and priority management</li>
-                          <li>Comment system</li>
-                          <li>Calendar view</li>
-                          <li>Employee management (for company accounts)</li>
-                          <li>Role-based access control</li>
-                          <li>Dashboard with task overview</li>
-                        </ul>
-                      </div>
-                    </div>
+                </div>
+                <div className="space-y-2 text-gray-300 text-sm">
+                  <div>
+                    <p className="font-semibold text-green-400">✨ Initial Release</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>User authentication and authorization</li>
+                      <li>Company and personal account types</li>
+                      <li>Task creation, editing, and deletion</li>
+                      <li>Task assignment and priority management</li>
+                      <li>Comment system</li>
+                      <li>Calendar view</li>
+                      <li>Employee management (for company accounts)</li>
+                      <li>Role-based access control</li>
+                      <li>Dashboard with task overview</li>
+                    </ul>
                   </div>
+                </div>
+              </div>
 
                   {/* Hide Older Versions Button */}
                   <div className="text-center py-4">

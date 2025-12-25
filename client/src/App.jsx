@@ -23,6 +23,7 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Contacts from './pages/Contacts';
 import Projects from './pages/Projects';
 import ColorPaletteTester from './pages/ColorPaletteTester';
+import GoogleCallback from './pages/GoogleCallback';
 import AIModal from './components/tasks/AIModal';
 import ToastContainer from './components/common/ToastContainer';
 import { ToastProvider, useToastContext } from './context/ToastContext';
@@ -77,6 +78,7 @@ function AppContent() {
           <Route path="/signup" element={<SignupOptions />} />
           <Route path="/company-signup" element={<CompanySignup />} />
           <Route path="/personal-signup" element={<PersonalSignup />} />
+          <Route path="/auth/google/callback" element={<GoogleCallback />} />
           <Route path="/task-invitation/:token" element={<TaskInvitation />} />
           <Route path="/verify-email" element={<EmailVerification />} />
           

@@ -159,6 +159,16 @@ const useAuthStore = create((set, get) => ({
 
   clearError: () => set({ error: null }),
 
+  setAuth: ({ token, user }) => {
+    if (token) {
+      localStorage.setItem('token', token);
+    }
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+    set({ token, user, error: null });
+  },
+
   isAuthenticated: () => {
     const { token, user } = get();
     

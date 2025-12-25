@@ -163,7 +163,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal modal-open backdrop-blur-sm">
+    <div className="modal modal-open backdrop-blur-sm animate-fadeIn">
       <div 
         className="modal-box max-w-3xl border"
         style={{ 
@@ -589,7 +589,13 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                 <button
                   type="submit"
                   disabled={isLoading || !formData.name.trim()}
-                  className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
+                  className="btn border-0"
+                  style={{ 
+                    backgroundColor: 'var(--color-primary)',
+                    color: 'white'
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                  onMouseLeave={(e) => e.target.style.opacity = '1'}
                 >
                   {isLoading ? (
                     <>

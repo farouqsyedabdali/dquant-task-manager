@@ -145,25 +145,41 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
   if (!isOpen || !employee) return null;
 
   return (
-    <div className="modal modal-open backdrop-blur-sm">
-      <div className="modal-box max-w-2xl bg-gray-800 border border-gray-700">
+    <div className="modal modal-open backdrop-blur-sm animate-fadeIn">
+      <div 
+        className="modal-box max-w-2xl border"
+        style={{ 
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: 'var(--color-border-default)'
+        }}
+      >
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-white">
+          <h3 
+            className="text-2xl font-bold"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
             {isEditing ? 'Edit Employee' : 'Employee Details'}
           </h3>
           <div className="flex items-center space-x-2">
             {!isEditing && isSysAdmin() && (
               <button
                 onClick={handleEdit}
-                className="btn btn-sm bg-blue-600 hover:bg-blue-700 text-white border-0"
+                className="btn btn-sm border-0"
+                style={{ 
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'white'
+                }}
+                onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                onMouseLeave={(e) => e.target.style.opacity = '1'}
               >
                 Edit
               </button>
             )}
             <button
               onClick={handleClose}
-              className="btn btn-ghost btn-sm text-gray-400 hover:text-white"
+              className="btn btn-ghost btn-sm"
+              style={{ color: 'var(--color-text-tertiary)' }}
             >
               ✕
             </button>
@@ -175,13 +191,21 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
           {/* Basic Info */}
           <div className="flex items-center space-x-4">
             <div className="avatar placeholder">
-              <div className="bg-indigo-600 text-white rounded-full w-16">
+              <div 
+                className="text-white rounded-full w-16"
+                style={{ backgroundColor: 'var(--color-primary)' }}
+              >
                 <span className="text-2xl">{formData.name.charAt(0)}</span>
               </div>
             </div>
             <div>
-              <h4 className="text-xl font-semibold text-white">{formData.name}</h4>
-              <p className="text-gray-400">{formData.email}</p>
+              <h4 
+                className="text-xl font-semibold"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                {formData.name}
+              </h4>
+              <p style={{ color: 'var(--color-text-secondary)' }}>{formData.email}</p>
             </div>
           </div>
 
@@ -189,21 +213,44 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Personal Info */}
             <div className="space-y-4">
-              <h5 className="text-lg font-semibold text-white border-b border-gray-700 pb-2">Personal Information</h5>
+              <h5 
+                className="text-lg font-semibold pb-2 border-b"
+                style={{ 
+                  color: 'var(--color-text-primary)',
+                  borderColor: 'var(--color-border-light)'
+                }}
+              >
+                Personal Information
+              </h5>
               
               <div>
-                <label className="text-sm font-medium text-gray-400">Full Name</label>
+                <label 
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Full Name
+                </label>
                 {isEditing ? (
                   <input
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full mt-1 focus:border-indigo-500 focus:ring-indigo-500 ${errors.name ? 'border-red-500' : ''}`}
+                    className={`input w-full mt-1 ${errors.name ? 'border-red-500' : ''}`}
+                    style={{
+                      backgroundColor: 'var(--color-bg-tertiary)',
+                      borderColor: errors.name ? '#ef4444' : 'var(--color-border-default)',
+                      color: 'var(--color-text-primary)',
+                    }}
                     placeholder="Enter employee name"
                   />
                 ) : (
-                  <p className="text-white mt-1">{formData.name}</p>
+                  <p 
+                    className="mt-1"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {formData.name}
+                  </p>
                 )}
                 {isEditing && errors.name && (
                   <p className="text-red-400 text-sm mt-1">{errors.name}</p>
@@ -211,18 +258,33 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-400">Email Address</label>
+                <label 
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Email Address
+                </label>
                 {isEditing ? (
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full mt-1 focus:border-indigo-500 focus:ring-indigo-500 ${errors.email ? 'border-red-500' : ''}`}
+                    className={`input w-full mt-1 ${errors.email ? 'border-red-500' : ''}`}
+                    style={{
+                      backgroundColor: 'var(--color-bg-tertiary)',
+                      borderColor: errors.email ? '#ef4444' : 'var(--color-border-default)',
+                      color: 'var(--color-text-primary)',
+                    }}
                     placeholder="Enter employee email"
                   />
                 ) : (
-                  <p className="text-white mt-1">{formData.email}</p>
+                  <p 
+                    className="mt-1"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {formData.email}
+                  </p>
                 )}
                 {isEditing && errors.email && (
                   <p className="text-red-400 text-sm mt-1">{errors.email}</p>
@@ -230,13 +292,23 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-400">Role</label>
+                <label 
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Role
+                </label>
                 {isEditing ? (
                   <select
                     name="role"
                     value={formData.role}
                     onChange={handleChange}
-                    className="select bg-gray-700 border-gray-600 text-white w-full mt-1 focus:border-indigo-500 focus:ring-indigo-500"
+                    className="select w-full mt-1"
+                    style={{
+                      backgroundColor: 'var(--color-bg-tertiary)',
+                      borderColor: 'var(--color-border-default)',
+                      color: 'var(--color-text-primary)',
+                    }}
                   >
                     <option value="EMPLOYEE">Employee</option>
                     <option value="ADMIN">Admin</option>
@@ -260,8 +332,16 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-400">Date Joined</label>
-                <p className="text-white mt-1">
+                <label 
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Date Joined
+                </label>
+                <p 
+                  className="mt-1"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
                   {new Date(employee.createdAt).toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric',
@@ -276,38 +356,97 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
           </div>
 
                      {/* Task Statistics */}
-           <div className="border-t border-gray-700 pt-6">
-             <h5 className="text-lg font-semibold text-white mb-4">Task Statistics</h5>
+           <div 
+             className="border-t pt-6"
+             style={{ borderColor: 'var(--color-border-light)' }}
+           >
+             <h5 
+               className="text-lg font-semibold mb-4"
+               style={{ color: 'var(--color-text-primary)' }}
+             >
+               Task Statistics
+             </h5>
              {isLoadingStats ? (
                <div className="flex justify-center py-8">
-                 <span className="loading loading-spinner loading-md text-indigo-500"></span>
+                 <span 
+                   className="loading loading-spinner loading-md"
+                   style={{ color: 'var(--color-primary)' }}
+                 ></span>
                </div>
              ) : (
                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                 <div className="text-center p-4 bg-gray-700 rounded-lg">
-                   <div className="text-2xl font-bold text-indigo-400">{taskStats.assigned}</div>
-                   <div className="text-sm text-gray-400">Assigned</div>
+                 <div 
+                   className="text-center p-4 rounded-lg"
+                   style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                 >
+                   <div 
+                     className="text-2xl font-bold"
+                     style={{ color: 'var(--color-primary)' }}
+                   >
+                     {taskStats.assigned}
+                   </div>
+                   <div 
+                     className="text-sm"
+                     style={{ color: 'var(--color-text-secondary)' }}
+                   >
+                     Assigned
+                   </div>
                  </div>
-                 <div className="text-center p-4 bg-gray-700 rounded-lg">
+                 <div 
+                   className="text-center p-4 rounded-lg"
+                   style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                 >
                    <div className="text-2xl font-bold text-green-400">{taskStats.completed}</div>
-                   <div className="text-sm text-gray-400">Completed</div>
+                   <div 
+                     className="text-sm"
+                     style={{ color: 'var(--color-text-secondary)' }}
+                   >
+                     Completed
+                   </div>
                  </div>
-                 <div className="text-center p-4 bg-gray-700 rounded-lg">
+                 <div 
+                   className="text-center p-4 rounded-lg"
+                   style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                 >
                    <div className="text-2xl font-bold text-yellow-400">{taskStats.inProgress}</div>
-                   <div className="text-sm text-gray-400">In Progress</div>
+                   <div 
+                     className="text-sm"
+                     style={{ color: 'var(--color-text-secondary)' }}
+                   >
+                     In Progress
+                   </div>
                  </div>
-                 <div className="text-center p-4 bg-gray-700 rounded-lg">
+                 <div 
+                   className="text-center p-4 rounded-lg"
+                   style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                 >
                    <div className="text-2xl font-bold text-orange-400">{taskStats.onHold}</div>
-                   <div className="text-sm text-gray-400">On Hold</div>
+                   <div 
+                     className="text-sm"
+                     style={{ color: 'var(--color-text-secondary)' }}
+                   >
+                     On Hold
+                   </div>
                  </div>
-                 <div className="text-center p-4 bg-gray-700 rounded-lg">
+                 <div 
+                   className="text-center p-4 rounded-lg"
+                   style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                 >
                    <div className="text-2xl font-bold text-red-400">{taskStats.cancelled}</div>
-                   <div className="text-sm text-gray-400">Cancelled</div>
+                   <div 
+                     className="text-sm"
+                     style={{ color: 'var(--color-text-secondary)' }}
+                   >
+                     Cancelled
+                   </div>
                  </div>
                </div>
              )}
              {!isLoadingStats && taskStats.assigned === 0 && (
-               <p className="text-xs text-gray-500 mt-2 text-center">
+               <p 
+                 className="text-xs mt-2 text-center"
+                 style={{ color: 'var(--color-text-muted)' }}
+               >
                  No tasks assigned to this employee yet
                </p>
              )}
@@ -315,19 +454,34 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
         </div>
 
                        {/* Footer */}
-               <div className="flex justify-end mt-8 pt-6 border-t border-gray-700">
+               <div 
+                 className="flex justify-end mt-8 pt-6 border-t"
+                 style={{ borderColor: 'var(--color-border-light)' }}
+               >
                  {isEditing ? (
                    <div className="flex space-x-3">
                      <button
                        onClick={handleCancel}
-                       className="btn bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+                       className="btn border-0"
+                       style={{ 
+                         backgroundColor: 'var(--color-bg-tertiary)',
+                         color: 'var(--color-text-primary)'
+                       }}
+                       onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                       onMouseLeave={(e) => e.target.style.opacity = '1'}
                      >
                        Cancel
                      </button>
                      <button
                        onClick={handleSubmit}
                        disabled={isLoading}
-                       className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
+                       className="btn border-0"
+                       style={{ 
+                         backgroundColor: 'var(--color-primary)',
+                         color: 'white'
+                       }}
+                       onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                       onMouseLeave={(e) => e.target.style.opacity = '1'}
                      >
                        {isLoading ? (
                          <>
@@ -342,7 +496,13 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
                  ) : (
                    <button
                      onClick={handleClose}
-                     className="btn bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+                     className="btn border-0"
+                     style={{ 
+                       backgroundColor: 'var(--color-bg-tertiary)',
+                       color: 'var(--color-text-primary)'
+                     }}
+                     onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                     onMouseLeave={(e) => e.target.style.opacity = '1'}
                    >
                      Close
                    </button>

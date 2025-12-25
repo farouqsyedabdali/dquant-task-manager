@@ -164,12 +164,34 @@ const AuditLogModal = ({ isOpen, onClose }) => {
 
   if (!isAdmin) {
     return (
-      <div className="modal modal-open">
-        <div className="modal-box bg-gray-800 border border-gray-700">
-          <h3 className="font-bold text-lg text-white mb-4">Access Denied</h3>
-          <p className="text-gray-300">You don't have permission to view audit logs.</p>
+      <div className="modal modal-open backdrop-blur-sm animate-fadeIn">
+        <div 
+          className="modal-box border"
+          style={{ 
+            backgroundColor: 'var(--color-bg-secondary)',
+            borderColor: 'var(--color-border-default)'
+          }}
+        >
+          <h3 
+            className="font-bold text-lg mb-4"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            Access Denied
+          </h3>
+          <p style={{ color: 'var(--color-text-secondary)' }}>
+            You don't have permission to view audit logs.
+          </p>
           <div className="modal-action">
-            <button className="btn btn-primary" onClick={onClose}>Close</button>
+            <button 
+              className="btn border-0"
+              style={{ 
+                backgroundColor: 'var(--color-primary)',
+                color: 'white'
+              }}
+              onClick={onClose}
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>
@@ -177,25 +199,48 @@ const AuditLogModal = ({ isOpen, onClose }) => {
   }
 
   return (
-    <div className="modal modal-open">
-      <div className="modal-box bg-gray-800 border border-gray-700 max-w-6xl">
+    <div className="modal modal-open backdrop-blur-sm animate-fadeIn">
+      <div 
+        className="modal-box max-w-6xl border"
+        style={{ 
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: 'var(--color-border-default)'
+        }}
+      >
         <div className="flex justify-between items-center mb-6">
-          <h3 className="font-bold text-xl text-white">Audit Log</h3>
+          <h3 
+            className="font-bold text-xl"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            Audit Log
+          </h3>
           <div className="flex space-x-2">
             <button
               className="btn btn-sm btn-outline"
+              style={{ 
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-secondary)'
+              }}
               onClick={() => setShowFilters(!showFilters)}
             >
               {showFilters ? 'Hide Filters' : 'Show Filters'}
             </button>
             <button
-              className="btn btn-sm btn-primary"
+              className="btn btn-sm border-0"
+              style={{ 
+                backgroundColor: 'var(--color-primary)',
+                color: 'white'
+              }}
               onClick={handleExport}
               disabled={loading}
             >
               Export CSV
             </button>
-            <button className="btn btn-sm btn-ghost" onClick={onClose}>
+            <button 
+              className="btn btn-sm btn-ghost"
+              style={{ color: 'var(--color-text-tertiary)' }}
+              onClick={onClose}
+            >
               ✕
             </button>
           </div>
@@ -203,15 +248,28 @@ const AuditLogModal = ({ isOpen, onClose }) => {
 
         {/* Filters */}
         {showFilters && (
-          <div className="bg-gray-700 p-4 rounded-lg mb-6">
+          <div 
+            className="p-4 rounded-lg mb-6"
+            style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="label">
-                  <span className="label-text text-white">Search</span>
+                  <span 
+                    className="label-text"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    Search
+                  </span>
                 </label>
                 <input
                   type="text"
-                  className="input input-bordered w-full bg-gray-600 text-white"
+                  className="input input-bordered w-full"
+                  style={{
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
                   placeholder="Search descriptions..."
                   value={filters.search}
                   onChange={(e) => handleFilterChange('search', e.target.value)}
@@ -220,10 +278,20 @@ const AuditLogModal = ({ isOpen, onClose }) => {
               
               <div>
                 <label className="label">
-                  <span className="label-text text-white">Action</span>
+                  <span 
+                    className="label-text"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    Action
+                  </span>
                 </label>
                 <select
-                  className="select select-bordered w-full bg-gray-600 text-white"
+                  className="select select-bordered w-full"
+                  style={{
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
                   value={filters.action}
                   onChange={(e) => handleFilterChange('action', e.target.value)}
                 >
@@ -247,10 +315,20 @@ const AuditLogModal = ({ isOpen, onClose }) => {
 
               <div>
                 <label className="label">
-                  <span className="label-text text-white">Entity Type</span>
+                  <span 
+                    className="label-text"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    Entity Type
+                  </span>
                 </label>
                 <select
-                  className="select select-bordered w-full bg-gray-600 text-white"
+                  className="select select-bordered w-full"
+                  style={{
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
                   value={filters.entityType}
                   onChange={(e) => handleFilterChange('entityType', e.target.value)}
                 >
@@ -264,11 +342,21 @@ const AuditLogModal = ({ isOpen, onClose }) => {
 
               <div>
                 <label className="label">
-                  <span className="label-text text-white">Start Date</span>
+                  <span 
+                    className="label-text"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    Start Date
+                  </span>
                 </label>
                 <input
                   type="date"
-                  className="input input-bordered w-full bg-gray-600 text-white"
+                  className="input input-bordered w-full"
+                  style={{
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
                   value={filters.startDate}
                   onChange={(e) => handleFilterChange('startDate', e.target.value)}
                 />
@@ -276,11 +364,21 @@ const AuditLogModal = ({ isOpen, onClose }) => {
 
               <div>
                 <label className="label">
-                  <span className="label-text text-white">End Date</span>
+                  <span 
+                    className="label-text"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    End Date
+                  </span>
                 </label>
                 <input
                   type="date"
-                  className="input input-bordered w-full bg-gray-600 text-white"
+                  className="input input-bordered w-full"
+                  style={{
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
                   value={filters.endDate}
                   onChange={(e) => handleFilterChange('endDate', e.target.value)}
                 />
@@ -289,6 +387,10 @@ const AuditLogModal = ({ isOpen, onClose }) => {
               <div className="flex items-end">
                 <button
                   className="btn btn-sm btn-outline"
+                  style={{ 
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-secondary)'
+                  }}
                   onClick={clearFilters}
                 >
                   Clear Filters
@@ -300,11 +402,26 @@ const AuditLogModal = ({ isOpen, onClose }) => {
 
         {/* Stats */}
         {stats.length > 0 && (
-          <div className="bg-gray-700 p-4 rounded-lg mb-6">
-            <h4 className="text-white font-semibold mb-3">Action Summary (Last 30 Days)</h4>
+          <div 
+            className="p-4 rounded-lg mb-6"
+            style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+          >
+            <h4 
+              className="font-semibold mb-3"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              Action Summary (Last 30 Days)
+            </h4>
             <div className="flex flex-wrap gap-2">
               {stats.slice(0, 10).map((stat, index) => (
-                <div key={index} className="badge badge-outline">
+                <div 
+                  key={index} 
+                  className="badge badge-outline"
+                  style={{ 
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-secondary)'
+                  }}
+                >
                   {stat.action.replace(/_/g, ' ')}: {stat.count}
                 </div>
               ))}
@@ -330,31 +447,50 @@ const AuditLogModal = ({ isOpen, onClose }) => {
         {!loading && !error && (
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {auditLogs.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div 
+                className="text-center py-8"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 No audit logs found
               </div>
             ) : (
               auditLogs.map((log) => (
-                <div key={log.id} className="bg-gray-700 p-4 rounded-lg">
+                <div 
+                  key={log.id} 
+                  className="p-4 rounded-lg"
+                  style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center space-x-2">
                       <span className={`font-semibold ${getActionColor(log.action)}`}>
                         {log.action.replace(/_/g, ' ')}
                       </span>
-                      <span className="text-gray-400 text-sm">
+                      <span 
+                        className="text-sm"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
                         by {log.user.name}
                       </span>
                     </div>
-                    <span className="text-gray-400 text-sm">
+                    <span 
+                      className="text-sm"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
                       {formatDate(log.createdAt)}
                     </span>
                   </div>
                   
-                  <p className="text-gray-300 text-sm mb-2">
+                  <p 
+                    className="text-sm mb-2"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
                     {log.description}
                   </p>
                   
-                  <div className="flex items-center space-x-4 text-xs text-gray-400">
+                  <div 
+                    className="flex items-center space-x-4 text-xs"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
                     <span>Entity: {log.entityType}</span>
                     {log.entityId && <span>ID: {log.entityId}</span>}
                     <span>Role: {log.user.role}</span>
@@ -370,18 +506,26 @@ const AuditLogModal = ({ isOpen, onClose }) => {
           <div className="flex justify-center items-center space-x-2 mt-6">
             <button
               className="btn btn-sm btn-outline"
+              style={{ 
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-secondary)'
+              }}
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={pagination.page === 1}
             >
               Previous
             </button>
             
-            <span className="text-gray-300">
+            <span style={{ color: 'var(--color-text-primary)' }}>
               Page {pagination.page} of {pagination.pages} ({pagination.total} total)
             </span>
             
             <button
               className="btn btn-sm btn-outline"
+              style={{ 
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-secondary)'
+              }}
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={pagination.page === pagination.pages}
             >

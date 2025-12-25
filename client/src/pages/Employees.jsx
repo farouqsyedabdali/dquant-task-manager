@@ -287,7 +287,13 @@ const Employees = () => {
             </div>
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
+              className="btn border-0"
+              style={{ 
+                backgroundColor: 'var(--color-primary)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+              onMouseLeave={(e) => e.target.style.opacity = '1'}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -524,20 +530,35 @@ const Employees = () => {
 
       {/* CSV Import Modal */}
       {isCsvImportModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-4xl bg-gray-800 border border-gray-700">
+        <div className="modal modal-open backdrop-blur-sm animate-fadeIn">
+          <div 
+            className="modal-box max-w-4xl border"
+            style={{ 
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)'
+            }}
+          >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-white">Bulk Import Employees</h3>
+              <h3 
+                className="text-2xl font-bold"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                Bulk Import Employees
+              </h3>
               <button
                 onClick={() => setIsCsvImportModalOpen(false)}
-                className="btn btn-ghost btn-sm text-gray-400 hover:text-white"
+                className="btn btn-ghost btn-sm"
+                style={{ color: 'var(--color-text-tertiary)' }}
               >
                 ✕
               </button>
             </div>
 
             <div className="mb-6">
-              <p className="text-gray-400 text-sm mb-4">
+              <p 
+                className="text-sm mb-4"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Import multiple employees from a CSV file. The file should have columns: name, email, role (optional, defaults to EMPLOYEE). 
                 <br />
                 <span className="text-yellow-400">Note: Imported employees will have randomly generated passwords. They should reset their password on first login.</span>
@@ -560,7 +581,10 @@ const Employees = () => {
               </div>
               
               <div className="flex items-center">
-                <div className="text-sm text-gray-400">
+                <div 
+                  className="text-sm"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
                   <p><strong>CSV Format:</strong></p>
                   <p>name,email,role</p>
                   <p>John Doe,john@example.com,EMPLOYEE</p>
@@ -590,7 +614,11 @@ const Employees = () => {
             <div className="flex justify-end space-x-3">
               <button
                 onClick={downloadCSVTemplate}
-                className="btn btn-outline border-gray-600 text-gray-300 hover:bg-gray-700"
+                className="btn btn-outline"
+                style={{ 
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-secondary)'
+                }}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -599,7 +627,11 @@ const Employees = () => {
               </button>
               <button
                 onClick={() => setIsCsvImportModalOpen(false)}
-                className="btn bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+                className="btn border-0"
+                style={{ 
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  color: 'var(--color-text-primary)'
+                }}
               >
                 Close
               </button>

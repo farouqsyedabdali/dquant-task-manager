@@ -38,7 +38,8 @@ const login = async (req, res) => {
           password: true,
           role: true,
           companyId: true,
-          isEmailVerified: true
+          isEmailVerified: true,
+          authProvider: true
         }
       });
     } else {
@@ -52,7 +53,8 @@ const login = async (req, res) => {
           password: true,
           role: true,
           companyId: true,
-          isEmailVerified: true
+          isEmailVerified: true,
+          authProvider: true
         }
       });
     }
@@ -71,9 +73,22 @@ const login = async (req, res) => {
       isEmailVerified: user.isEmailVerified
     });
 
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      console.log('❌ INVALID PASSWORD for user:', user.email);
+    // Check if user uses Google auth
+    if (user.authProvider === 'google' && !user.password) {
+      return res.status(401).json({ 
+        error: 'This account uses Google Sign-In. Please sign in with Google.',
+        requiresGoogleAuth: true
+      });
+    }
+
+    // Check password only if user has password
+    if (user.password) {
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        console.log('❌ INVALID PASSWORD for user:', user.email);
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+    } else {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 

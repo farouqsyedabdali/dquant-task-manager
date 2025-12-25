@@ -20,7 +20,7 @@ const PersonalSignup = () => {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/personal-dashboard');
+      navigate('/dashboard');
     }
     clearError();
   }, [isAuthenticated, navigate, clearError]);
@@ -114,35 +114,99 @@ const PersonalSignup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ backgroundColor: 'var(--color-bg-primary)' }}
+    >
       {/* Company Branding */}
       <div className="absolute top-6 left-6 flex items-center space-x-3">
-        <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold text-lg">CN</span>
+        <div 
+          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          style={{ 
+            background: 'linear-gradient(to right, var(--color-primary), #9333ea)'
+          }}
+        >
+          <span 
+            className="font-bold text-lg"
+            style={{ color: 'white' }}
+          >
+            CN
+          </span>
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">Tialz</h1>
-          <p className="text-gray-400 text-sm">Task Manager</p>
+          <h1 
+            className="text-2xl font-bold"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            Tialz
+          </h1>
+          <p 
+            className="text-sm"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            Task Manager
+          </p>
         </div>
       </div>
 
       <div className="max-w-2xl w-full animate-[fadeIn_0.4s_ease-out]">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 
+            className="text-3xl font-bold mb-2"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
             Create Personal Account
           </h1>
-          <p className="text-gray-400">
+          <p style={{ color: 'var(--color-text-secondary)' }}>
             Start managing your personal tasks with full control
           </p>
         </div>
 
         {/* Form */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-8 transition-all duration-300">
+        <div 
+          className="border rounded-lg shadow-lg p-8 transition-all duration-300"
+          style={{ 
+            backgroundColor: 'var(--color-bg-secondary)',
+            borderColor: 'var(--color-border-default)'
+          }}
+        >
+          {/* Google Sign-Up Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const API_BASE_URL = import.meta.env.VITE_API_URL || 
+                (import.meta.env.MODE === 'production' 
+                  ? 'https://dquant-task-manager-production.up.railway.app/api' 
+                  : 'http://localhost:3000/api');
+              window.location.href = `${API_BASE_URL}/auth/google?signupType=personal`;
+            }}
+            className="btn border-0 w-full mb-6"
+            style={{ 
+              backgroundColor: '#4285F4',
+              color: 'white'
+            }}
+            onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+            onMouseLeave={(e) => e.target.style.opacity = '1'}
+          >
+            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Sign up with Google
+          </button>
+
+          <div className="divider" style={{ color: 'var(--color-text-tertiary)' }}>OR</div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Full Name *
               </label>
               <input
@@ -150,9 +214,12 @@ const PersonalSignup = () => {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${
-                  errors.name ? 'border-red-500' : ''
-                }`}
+                className={`input w-full ${errors.name ? 'border-red-500' : ''}`}
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: errors.name ? '#ef4444' : 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
                 placeholder="Enter your full name"
               />
               {errors.name && (
@@ -162,7 +229,10 @@ const PersonalSignup = () => {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Email Address *
               </label>
               <input
@@ -170,9 +240,12 @@ const PersonalSignup = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${
-                  errors.email ? 'border-red-500' : ''
-                }`}
+                className={`input w-full ${errors.email ? 'border-red-500' : ''}`}
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: errors.email ? '#ef4444' : 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
                 placeholder="Enter your email address"
               />
               {errors.email && (
@@ -183,11 +256,20 @@ const PersonalSignup = () => {
             {/* Password */}
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <label className="text-sm font-medium text-gray-300">
+                <label 
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
                   Password *
                 </label>
                 <div className="tooltip tooltip-right" data-tip="Password Requirements:&#10;• At least 6 characters&#10;• One uppercase letter (A-Z)&#10;• One lowercase letter (a-z)&#10;• One number (0-9)&#10;• One special character (!@#$%^&*)">
-                  <svg className="w-4 h-4 text-gray-400 hover:text-gray-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg 
+                    className="w-4 h-4 cursor-help" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
@@ -197,9 +279,12 @@ const PersonalSignup = () => {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${
-                  errors.password ? 'border-red-500' : ''
-                }`}
+                className={`input w-full ${errors.password ? 'border-red-500' : ''}`}
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: errors.password ? '#ef4444' : 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
                 placeholder="Create a password"
               />
               {errors.password && (
@@ -212,7 +297,10 @@ const PersonalSignup = () => {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Confirm Password *
               </label>
               <input
@@ -220,9 +308,12 @@ const PersonalSignup = () => {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${
-                  errors.confirmPassword ? 'border-red-500' : ''
-                }`}
+                className={`input w-full ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: errors.confirmPassword ? '#ef4444' : 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
                 placeholder="Confirm your password"
               />
               {errors.confirmPassword && (
@@ -238,17 +329,32 @@ const PersonalSignup = () => {
                   name="acceptTerms"
                   checked={formData.acceptTerms}
                   onChange={handleChange}
-                  className={`checkbox mt-1 bg-gray-700 border-gray-600 checked:bg-indigo-600 checked:border-indigo-600 ${
-                    errors.acceptTerms ? 'checkbox-error' : ''
-                  }`}
+                  className={`checkbox mt-1 ${errors.acceptTerms ? 'checkbox-error' : ''}`}
+                  style={{
+                    accentColor: 'var(--color-primary)',
+                    borderColor: 'var(--color-border-default)'
+                  }}
                 />
-                <span className="text-sm text-gray-300">
+                <span 
+                  className="text-sm"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
                   I agree to the{' '}
-                  <Link to="/terms" className="text-indigo-400 hover:text-indigo-300">
+                  <Link 
+                    to="/terms" 
+                    style={{ color: 'var(--color-primary)' }}
+                    onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                  >
                     Terms of Service
                   </Link>{' '}
                   and{' '}
-                  <Link to="/privacy" className="text-indigo-400 hover:text-indigo-300">
+                  <Link 
+                    to="/privacy" 
+                    style={{ color: 'var(--color-primary)' }}
+                    onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                  >
                     Privacy Policy
                   </Link>
                 </span>
@@ -260,14 +366,26 @@ const PersonalSignup = () => {
 
             {/* Submit Error */}
             {errors.submit && (
-              <div className="bg-red-900/20 border border-red-500 rounded-lg p-4">
+              <div 
+                className="border rounded-lg p-4"
+                style={{ 
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  borderColor: '#ef4444'
+                }}
+              >
                 <p className="text-red-400 text-sm">{errors.submit}</p>
               </div>
             )}
 
             {/* Global Error */}
             {error && (
-              <div className="bg-red-900/20 border border-red-500 rounded-lg p-4">
+              <div 
+                className="border rounded-lg p-4"
+                style={{ 
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  borderColor: '#ef4444'
+                }}
+              >
                 <p className="text-red-400 text-sm">{error}</p>
               </div>
             )}
@@ -276,7 +394,13 @@ const PersonalSignup = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 w-full py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn border-0 w-full py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ 
+                backgroundColor: 'var(--color-primary)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => !isLoading && (e.target.style.opacity = '0.9')}
+              onMouseLeave={(e) => !isLoading && (e.target.style.opacity = '1')}
             >
               {isLoading ? (
                 <>
@@ -291,15 +415,33 @@ const PersonalSignup = () => {
 
           {/* Footer */}
           <div className="mt-6 text-center">
-            <p className="text-gray-400 text-sm">
+            <p 
+              className="text-sm"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Already have an account?{' '}
-              <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-medium">
+              <Link 
+                to="/login" 
+                className="font-medium"
+                style={{ color: 'var(--color-primary)' }}
+                onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                onMouseLeave={(e) => e.target.style.opacity = '1'}
+              >
                 Sign in here
               </Link>
             </p>
-            <p className="text-gray-500 text-sm mt-2">
+            <p 
+              className="text-sm mt-2"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
               Want to create a company account instead?{' '}
-              <Link to="/company-signup" className="text-indigo-400 hover:text-indigo-300 font-medium">
+              <Link 
+                to="/company-signup" 
+                className="font-medium"
+                style={{ color: 'var(--color-primary)' }}
+                onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                onMouseLeave={(e) => e.target.style.opacity = '1'}
+              >
                 Company Signup
               </Link>
             </p>

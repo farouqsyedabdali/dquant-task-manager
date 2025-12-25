@@ -98,16 +98,26 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal modal-open backdrop-blur-sm">
-      <div className="modal-box max-w-md bg-gray-800 border border-gray-700">
+    <div className="modal modal-open backdrop-blur-sm animate-fadeIn">
+      <div 
+        className="modal-box max-w-md border"
+        style={{ 
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: 'var(--color-border-default)'
+        }}
+      >
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-white">
+          <h3 
+            className="text-2xl font-bold"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
             Add New Employee
           </h3>
           <button
             onClick={handleClose}
-            className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
+            className="btn btn-ghost btn-sm btn-circle"
+            style={{ color: 'var(--color-text-tertiary)' }}
           >
             ✕
           </button>
@@ -117,7 +127,10 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Name *
             </label>
             <input
@@ -125,7 +138,12 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.name ? 'border-red-500' : ''}`}
+              className={`input w-full ${errors.name ? 'border-red-500' : ''}`}
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: errors.name ? '#ef4444' : 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter employee name"
             />
             {errors.name && (
@@ -135,7 +153,10 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Email *
             </label>
             <input
@@ -143,7 +164,12 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.email ? 'border-red-500' : ''}`}
+              className={`input w-full ${errors.email ? 'border-red-500' : ''}`}
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: errors.email ? '#ef4444' : 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter employee email"
             />
             {errors.email && (
@@ -153,26 +179,40 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
 
           {/* Role Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Role *
             </label>
             <select
               name="role"
               value={formData.role}
               onChange={handleChange}
-              className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+              className="select w-full"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
             >
               <option value="EMPLOYEE">Employee</option>
               <option value="ADMIN">Admin</option>
             </select>
-            <p className="text-gray-500 text-xs mt-1">
+            <p 
+              className="text-xs mt-1"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
               Admins can manage employees and tasks
             </p>
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Password *
             </label>
             <input
@@ -180,7 +220,12 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.password ? 'border-red-500' : ''}`}
+              className={`input w-full ${errors.password ? 'border-red-500' : ''}`}
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: errors.password ? '#ef4444' : 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Enter password"
             />
             {errors.password && (
@@ -190,7 +235,10 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
 
           {/* Confirm Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Confirm Password *
             </label>
             <input
@@ -198,7 +246,12 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+              className={`input w-full ${errors.confirmPassword ? 'border-red-500' : ''}`}
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: errors.confirmPassword ? '#ef4444' : 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
               placeholder="Confirm password"
             />
             {errors.confirmPassword && (
@@ -211,14 +264,26 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={handleClose}
-              className="btn bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+              className="btn border-0"
+              style={{ 
+                backgroundColor: 'var(--color-bg-tertiary)',
+                color: 'var(--color-text-primary)'
+              }}
+              onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+              onMouseLeave={(e) => e.target.style.opacity = '1'}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
+              className="btn border-0"
+              style={{ 
+                backgroundColor: 'var(--color-primary)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+              onMouseLeave={(e) => e.target.style.opacity = '1'}
             >
               {isLoading ? (
                 <>
