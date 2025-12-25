@@ -1,5 +1,5 @@
 const express = require('express');
-const { login, register, registerCompany, registerPersonal, deleteCompany, getMe, forgotPassword, verifyPasswordResetCode, resetPasswordWithCode } = require('../controllers/authController');
+const { login, register, registerCompany, registerPersonal, deleteCompany, getMe, updateAutoArchivePeriod, forgotPassword, verifyPasswordResetCode, resetPasswordWithCode } = require('../controllers/authController');
 const { initiateGoogleAuth, handleGoogleCallback } = require('../controllers/googleAuthController');
 const auth = require('../middleware/auth');
 const { adminOnly, sysAdminOnly } = require('../middleware/roleCheck');
@@ -23,6 +23,7 @@ router.post('/reset-password-with-code', resetPasswordWithCode);
 
 // Protected routes
 router.get('/me', auth, getMe);
+router.put('/company/auto-archive', auth, updateAutoArchivePeriod); // Update auto-archive period
 router.delete('/company', auth, sysAdminOnly, deleteCompany); // Only SYSDMIN can delete company
 
 module.exports = router; 

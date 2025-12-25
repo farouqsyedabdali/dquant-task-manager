@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import useFontSizeStore from '../context/fontSizeStore';
 import useThemeStore from '../stores/themeStore';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import AuditLogModal from '../components/audit/AuditLogModal';
-import { feedbackAPI } from '../services/api';
+import { feedbackAPI, authAPI } from '../services/api';
 import { lightPalettes, darkPalettes } from '../config/colorPalettes';
 
 const Settings = () => {
@@ -29,9 +29,17 @@ const Settings = () => {
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [feedbackError, setFeedbackError] = useState('');
+  const [autoArchivePeriod, setAutoArchivePeriod] = useState(user?.autoArchivePeriod || null);
+  const [isUpdatingAutoArchive, setIsUpdatingAutoArchive] = useState(false);
+  const [autoArchiveSuccess, setAutoArchiveSuccess] = useState(false);
   
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
+
+  // Update autoArchivePeriod when user data changes
+  useEffect(() => {
+    setAutoArchivePeriod(user?.autoArchivePeriod || null);
+  }, [user?.autoArchivePeriod]);
 
 
   const confirmDeleteCompany = async () => {
@@ -531,6 +539,134 @@ const Settings = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Auto-Archive Settings */}
+              {(isAdmin() || isSysAdmin()) && (
+                <div
+                  className="card"
+                  style={{
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    borderColor: 'var(--color-border-default)',
+                    borderWidth: 1,
+                  }}
+                >
+                  <div className="card-body">
+                    <h2
+                      className="card-title text-xl mb-6"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      📦 Auto-Archive Tasks
+                    </h2>
+                    <div className="space-y-4">
+                      <p
+                        className="text-sm"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        Automatically archive tasks that are past their due date by the selected period.
+                      </p>
+                      
+                      {autoArchiveSuccess && (
+                        <div className="alert alert-success">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Auto-archive setting updated successfully!</span>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          onClick={async () => {
+                            setIsUpdatingAutoArchive(true);
+                            setAutoArchiveSuccess(false);
+                            try {
+                              await authAPI.updateAutoArchivePeriod(null);
+                              setAutoArchivePeriod(null);
+                              setAutoArchiveSuccess(true);
+                              setTimeout(() => setAutoArchiveSuccess(false), 3000);
+                              // Refresh user data
+                              const { getMe } = useAuthStore.getState();
+                              await getMe();
+                            } catch (error) {
+                              console.error('Error updating auto-archive period:', error);
+                            } finally {
+                              setIsUpdatingAutoArchive(false);
+                            }
+                          }}
+                          className="px-4 py-2 rounded-lg border-2 transition-all duration-200 font-semibold"
+                          style={
+                            autoArchivePeriod === null
+                              ? {
+                                  backgroundColor: 'var(--color-primary)',
+                                  borderColor: 'var(--color-primary)',
+                                  color: '#ffffff',
+                                }
+                              : {
+                                  backgroundColor: 'var(--color-bg-tertiary)',
+                                  borderColor: 'var(--color-border-default)',
+                                  color: 'var(--color-text-primary)',
+                                }
+                          }
+                          disabled={isUpdatingAutoArchive}
+                        >
+                          Disabled
+                        </button>
+                        {[3, 6, 9, 12].map((months) => (
+                          <button
+                            key={months}
+                            onClick={async () => {
+                              setIsUpdatingAutoArchive(true);
+                              setAutoArchiveSuccess(false);
+                              try {
+                                await authAPI.updateAutoArchivePeriod(months);
+                                setAutoArchivePeriod(months);
+                                setAutoArchiveSuccess(true);
+                                setTimeout(() => setAutoArchiveSuccess(false), 3000);
+                                // Refresh user data
+                                const { getMe } = useAuthStore.getState();
+                                await getMe();
+                              } catch (error) {
+                                console.error('Error updating auto-archive period:', error);
+                              } finally {
+                                setIsUpdatingAutoArchive(false);
+                              }
+                            }}
+                            className="px-4 py-2 rounded-lg border-2 transition-all duration-200 font-semibold"
+                            style={
+                              autoArchivePeriod === months
+                                ? {
+                                    backgroundColor: 'var(--color-primary)',
+                                    borderColor: 'var(--color-primary)',
+                                    color: '#ffffff',
+                                  }
+                                : {
+                                    backgroundColor: 'var(--color-bg-tertiary)',
+                                    borderColor: 'var(--color-border-default)',
+                                    color: 'var(--color-text-primary)',
+                                  }
+                            }
+                            disabled={isUpdatingAutoArchive}
+                          >
+                            {months} {months === 1 ? 'Month' : 'Months'}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      <div
+                        className="pt-4 border-t text-sm"
+                        style={{
+                          borderColor: 'var(--color-border-default)',
+                          color: 'var(--color-text-secondary)',
+                        }}
+                      >
+                        {autoArchivePeriod 
+                          ? `Tasks that are ${autoArchivePeriod} months past their due date will be automatically archived.`
+                          : 'Auto-archiving is disabled. Tasks will not be automatically archived.'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

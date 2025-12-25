@@ -1,5 +1,6 @@
 const app = require('./src/app')
 const { startReminderScheduler } = require('./src/utils/taskReminderScheduler')
+const { startAutoArchiveScheduler } = require('./src/utils/autoArchiveScheduler')
 const PORT = process.env.PORT || 3000
 
 // Helper function to mask password in database URL
@@ -46,6 +47,9 @@ async function startServer() {
     
     // Start the task reminder scheduler
     startReminderScheduler()
+    
+    // Start the auto-archive scheduler
+    startAutoArchiveScheduler()
   })
 }
 

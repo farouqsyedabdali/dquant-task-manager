@@ -15,6 +15,7 @@ model Company {
   googleId          String?            @unique
   authProvider      String             @default("email")
   subscriptionPlan  String             @default("free")
+  autoArchivePeriod Int?               // Months after due date to auto-archive (3, 6, 9, 12)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   markedForDeletion Boolean            @default(false)

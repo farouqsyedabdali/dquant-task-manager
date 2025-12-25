@@ -225,11 +225,43 @@ const getMe = async (req, res) => {
     const userWithCompany = {
       ...req.user,
       companyName: req.user.company?.name,
-      isPersonal: req.user.company?.isPersonal || false
+      isPersonal: req.user.company?.isPersonal || false,
+      autoArchivePeriod: req.user.company?.autoArchivePeriod || null
     };
     res.json({ user: userWithCompany });
   } catch (error) {
     console.error('Get me error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const updateAutoArchivePeriod = async (req, res) => {
+  try {
+    const { companyId } = req.user;
+    const { autoArchivePeriod } = req.body;
+
+    // Validate autoArchivePeriod (must be 3, 6, 9, 12, or null)
+    if (autoArchivePeriod !== null && ![3, 6, 9, 12].includes(autoArchivePeriod)) {
+      return res.status(400).json({ error: 'Auto archive period must be 3, 6, 9, or 12 months, or null to disable' });
+    }
+
+    // Check if user is SYSDMIN or ADMIN
+    if (req.user.role !== 'SYSDMIN' && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only administrators can update auto-archive settings' });
+    }
+
+    // Update company autoArchivePeriod
+    const updatedCompany = await prisma.company.update({
+      where: { id: companyId },
+      data: { autoArchivePeriod }
+    });
+
+    res.json({ 
+      message: 'Auto-archive period updated successfully',
+      autoArchivePeriod: updatedCompany.autoArchivePeriod
+    });
+  } catch (error) {
+    console.error('Update auto-archive period error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -665,6 +697,7 @@ module.exports = {
   registerPersonal,
   deleteCompany,
   getMe,
+  updateAutoArchivePeriod,
   forgotPassword,
   verifyPasswordResetCode,
   resetPasswordWithCode

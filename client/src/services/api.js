@@ -55,6 +55,7 @@ export const authAPI = {
   registerPersonal: (personalData) => api.post('/auth/register-personal', personalData),
   deleteCompany: () => api.delete('/auth/company'),
   getMe: () => api.get('/auth/me'),
+  updateAutoArchivePeriod: (autoArchivePeriod) => api.put('/auth/company/auto-archive', { autoArchivePeriod }),
   sendVerificationEmail: (email) => api.post('/email-verification/send', email),
   verifyEmail: (token) => api.post('/email-verification/verify', token),
   checkVerificationStatus: (email) => api.get(`/email-verification/status?email=${email}`),
