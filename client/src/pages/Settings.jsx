@@ -29,16 +29,15 @@ const Settings = () => {
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [feedbackError, setFeedbackError] = useState('');
-  const [autoArchivePeriod, setAutoArchivePeriod] = useState(user?.autoArchivePeriod || null);
+  const [autoArchivePeriod, setAutoArchivePeriod] = useState(user?.autoArchivePeriod ?? 12);
   const [isUpdatingAutoArchive, setIsUpdatingAutoArchive] = useState(false);
-  const [autoArchiveSuccess, setAutoArchiveSuccess] = useState(false);
   
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
 
   // Update autoArchivePeriod when user data changes
   useEffect(() => {
-    setAutoArchivePeriod(user?.autoArchivePeriod || null);
+    setAutoArchivePeriod(user?.autoArchivePeriod ?? 12);
   }, [user?.autoArchivePeriod]);
 
 
@@ -564,64 +563,16 @@ const Settings = () => {
                       >
                         Automatically archive tasks that are past their due date by the selected period.
                       </p>
-                      
-                      {autoArchiveSuccess && (
-                        <div className="alert alert-success">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>Auto-archive setting updated successfully!</span>
-                        </div>
-                      )}
 
                       <div className="flex flex-wrap gap-3">
-                        <button
-                          onClick={async () => {
-                            setIsUpdatingAutoArchive(true);
-                            setAutoArchiveSuccess(false);
-                            try {
-                              await authAPI.updateAutoArchivePeriod(null);
-                              setAutoArchivePeriod(null);
-                              setAutoArchiveSuccess(true);
-                              setTimeout(() => setAutoArchiveSuccess(false), 3000);
-                              // Refresh user data
-                              const { getMe } = useAuthStore.getState();
-                              await getMe();
-                            } catch (error) {
-                              console.error('Error updating auto-archive period:', error);
-                            } finally {
-                              setIsUpdatingAutoArchive(false);
-                            }
-                          }}
-                          className="px-4 py-2 rounded-lg border-2 transition-all duration-200 font-semibold"
-                          style={
-                            autoArchivePeriod === null
-                              ? {
-                                  backgroundColor: 'var(--color-primary)',
-                                  borderColor: 'var(--color-primary)',
-                                  color: '#ffffff',
-                                }
-                              : {
-                                  backgroundColor: 'var(--color-bg-tertiary)',
-                                  borderColor: 'var(--color-border-default)',
-                                  color: 'var(--color-text-primary)',
-                                }
-                          }
-                          disabled={isUpdatingAutoArchive}
-                        >
-                          Disabled
-                        </button>
-                        {[3, 6, 9, 12].map((months) => (
+                        {[3, 6, 12].map((months) => (
                           <button
                             key={months}
                             onClick={async () => {
                               setIsUpdatingAutoArchive(true);
-                              setAutoArchiveSuccess(false);
                               try {
                                 await authAPI.updateAutoArchivePeriod(months);
                                 setAutoArchivePeriod(months);
-                                setAutoArchiveSuccess(true);
-                                setTimeout(() => setAutoArchiveSuccess(false), 3000);
                                 // Refresh user data
                                 const { getMe } = useAuthStore.getState();
                                 await getMe();
@@ -659,9 +610,7 @@ const Settings = () => {
                           color: 'var(--color-text-secondary)',
                         }}
                       >
-                        {autoArchivePeriod 
-                          ? `Tasks that are ${autoArchivePeriod} months past their due date will be automatically archived.`
-                          : 'Auto-archiving is disabled. Tasks will not be automatically archived.'}
+                        {`Tasks that are ${autoArchivePeriod} months past their due date will be automatically archived.`}
                       </div>
                     </div>
                   </div>

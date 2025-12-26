@@ -281,6 +281,43 @@ const deleteCompany = async (req, res) => {
 
     // Delete all data associated with the company
     await prisma.$transaction(async (tx) => {
+      // Delete all notifications (must be first - has foreign key constraint)
+      await tx.notification.deleteMany({
+        where: { companyId }
+      });
+
+      // Delete all task shares
+      await tx.taskShare.deleteMany({
+        where: { companyId }
+      });
+
+      // Delete all task collaborators
+      await tx.taskCollaborator.deleteMany({
+        where: { companyId }
+      });
+
+      // Delete all task co-assignees
+      await tx.taskCoAssignee.deleteMany({
+        where: { companyId }
+      });
+
+      // Delete all template tasks (before deleting project templates)
+      await tx.templateTask.deleteMany({
+        where: {
+          template: { companyId }
+        }
+      });
+
+      // Delete all project templates
+      await tx.projectTemplate.deleteMany({
+        where: { companyId }
+      });
+
+      // Delete all projects (project members will cascade delete)
+      await tx.project.deleteMany({
+        where: { companyId }
+      });
+
       // Delete all comments
       await tx.comment.deleteMany({
         where: { companyId }
@@ -296,7 +333,7 @@ const deleteCompany = async (req, res) => {
         where: { companyId }
       });
 
-      // Delete the company
+      // Delete the company (audit logs will cascade delete)
       await tx.company.delete({
         where: { id: companyId }
       });
@@ -344,7 +381,8 @@ const registerCompany = async (req, res) => {
         name,
         email,
         passwordHash: hashedPassword,
-        subscriptionPlan: 'free'
+        subscriptionPlan: 'free',
+        autoArchivePeriod: 12
       }
     });
 
@@ -444,7 +482,8 @@ const registerPersonal = async (req, res) => {
           name: `${name}'s Personal Tasks`,
           email: email.toLowerCase(),
           passwordHash: '', // Personal companies don't need a password
-          isPersonal: true
+          isPersonal: true,
+          autoArchivePeriod: 12
         }
       });
 

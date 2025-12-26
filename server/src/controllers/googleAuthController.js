@@ -117,7 +117,8 @@ const handleGoogleCallback = async (req, res) => {
           passwordHash: null,
           googleId: googleUser.googleId,
           authProvider: 'google',
-          isPersonal: true
+          isPersonal: true,
+          autoArchivePeriod: 12
         }
       });
 
@@ -155,7 +156,8 @@ const handleGoogleCallback = async (req, res) => {
           passwordHash: null,
           googleId: googleUser.googleId,
           authProvider: 'google',
-          isPersonal: true
+          isPersonal: true,
+          autoArchivePeriod: 12
         }
       });
 
