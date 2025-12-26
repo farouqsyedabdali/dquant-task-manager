@@ -1,14 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useTaskStore from '../../stores/taskStore';
 import TaskCard from '../tasks/TaskCard';
-import TaskList from '../tasks/TaskList';
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
-  const [viewMode, setViewMode] = useState('cards');
   const [calendarView, setCalendarView] = useState('month'); // 'month' or 'week'
   const [timeFormat, setTimeFormat] = useState('12'); // '12' or '24'
+  const [statusFilter, setStatusFilter] = useState(''); // Filter by status (comma-separated)
   const { tasks } = useTaskStore();
 
   // Get current month's start and end dates
@@ -98,6 +97,91 @@ const Calendar = () => {
     return days;
   };
 
+  // Sort tasks by status order: TODO, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED
+  const sortTasksByStatus = (taskList) => {
+    const statusOrder = ['TODO', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'];
+    return [...taskList].sort((a, b) => {
+      const aIndex = statusOrder.indexOf(a.status);
+      const bIndex = statusOrder.indexOf(b.status);
+      return aIndex - bIndex;
+    });
+  };
+
+  // Get status-based colors for tasks in calendar
+  const getStatusColors = (status, isOverdue = false) => {
+    // If overdue, use red colors
+    if (isOverdue) {
+      return {
+        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+        color: '#fca5a5'
+      };
+    }
+
+    // Otherwise, use status-based colors
+    switch (status) {
+      case 'TODO':
+        return {
+          backgroundColor: 'rgba(156, 163, 175, 0.2)', // gray-400 with opacity
+          color: '#9ca3af' // gray-400
+        };
+      case 'IN_PROGRESS':
+        return {
+          backgroundColor: 'rgba(59, 130, 246, 0.2)', // blue-500 with opacity
+          color: '#3b82f6' // blue-500
+        };
+      case 'ON_HOLD':
+        return {
+          backgroundColor: 'rgba(245, 158, 11, 0.2)', // amber-500 with opacity
+          color: '#f59e0b' // amber-500
+        };
+      case 'COMPLETED':
+        return {
+          backgroundColor: 'rgba(16, 185, 129, 0.2)', // green-500 with opacity
+          color: '#10b981' // green-500
+        };
+      case 'CANCELLED':
+        return {
+          backgroundColor: 'rgba(239, 68, 68, 0.2)', // red-500 with opacity
+          color: '#ef4444' // red-500
+        };
+      default:
+        return {
+          backgroundColor: 'rgba(99, 102, 241, 0.2)', // indigo with opacity
+          color: 'var(--color-primary)'
+        };
+    }
+  };
+
+  // Handle filter card click
+  const handleFilterClick = (status) => {
+    if (status === 'total') {
+      // Clear all status filters to show all tasks
+      setStatusFilter('');
+    } else {
+      // Toggle status in the filter
+      const statusArray = statusFilter ? statusFilter.split(',').map(s => s.trim()) : [];
+      
+      if (statusArray.includes(status)) {
+        // Remove status from filter
+        const newStatusArray = statusArray.filter(s => s !== status);
+        setStatusFilter(newStatusArray.join(','));
+      } else {
+        // Add status to filter
+        const newStatusArray = [...statusArray, status];
+        setStatusFilter(newStatusArray.join(','));
+      }
+    }
+  };
+
+  // Apply status filter to tasks
+  const applyStatusFilter = (taskList) => {
+    if (!statusFilter || statusFilter === '') {
+      return taskList;
+    }
+    const statusArray = statusFilter.split(',').map(s => s.trim());
+    return taskList.filter(task => statusArray.includes(task.status));
+  };
+
   // Get tasks due on a specific date
   const getTasksForDate = (date) => {
     if (!tasks || tasks.length === 0) return [];
@@ -106,11 +190,14 @@ const Calendar = () => {
     const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
     const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
-    return tasks.filter(task => {
+    const filteredTasks = tasks.filter(task => {
       if (!task.dueDate) return false;
       const taskDate = new Date(task.dueDate);
       return taskDate >= startOfDay && taskDate < endOfDay;
     });
+
+    const sortedTasks = sortTasksByStatus(filteredTasks);
+    return applyStatusFilter(sortedTasks);
   };
 
   // Get overdue tasks for a specific date (only show on their original due date)
@@ -121,12 +208,14 @@ const Calendar = () => {
     const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
     const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
-    return tasks.filter(task => {
+    const overdueTasks = tasks.filter(task => {
       if (!task.dueDate || task.status === 'COMPLETED') return false;
       const taskDate = new Date(task.dueDate);
       // Only show overdue tasks on their original due date
       return taskDate >= startOfDay && taskDate < endOfDay && taskDate < new Date();
     });
+
+    return applyStatusFilter(overdueTasks);
   };
 
   // Get tasks for a specific time slot on a specific date
@@ -198,86 +287,277 @@ const Calendar = () => {
     `${weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : 
     monthName;
 
+  // Handle ESC key to close panel
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && selectedDate) {
+        setSelectedDate(null);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [selectedDate]);
+
+  // Add/remove class to body when panel is open for header blur effect
+  useEffect(() => {
+    if (selectedDate) {
+      document.body.classList.add('calendar-panel-open');
+    } else {
+      document.body.classList.remove('calendar-panel-open');
+    }
+    return () => {
+      document.body.classList.remove('calendar-panel-open');
+    };
+  }, [selectedDate]);
+
   return (
-    <div 
-      className="border rounded-lg shadow-lg p-8 transition-colors duration-200"
-      style={{
-        backgroundColor: 'var(--color-bg-secondary)',
-        borderColor: 'var(--color-border-default)',
-      }}
-    >
-      {/* Two Column Layout: Calendar Left (60%), Tasks Right (40%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 min-h-[800px]">
-        {/* Left Column - Calendar (3/5 = 60%) */}
-        <div className="flex flex-col lg:col-span-3">
-          {/* Calendar Header */}
-          <div className="flex items-center justify-between mb-6">
-            {/* View Switcher */}
-            <div className="btn-group">
-              <button
-                onClick={() => setCalendarView('month')}
-                className={`btn btn-sm ${calendarView === 'month' ? 'btn-active' : 'btn-ghost'}`}
-              >
-                Month
-              </button>
-              <button
-                onClick={() => setCalendarView('week')}
-                className={`btn btn-sm ${calendarView === 'week' ? 'btn-active' : 'btn-ghost'}`}
-              >
-                Week
-              </button>
-            </div>
-
-            {/* Time Format Switcher (only show in week view) */}
-            {calendarView === 'week' && (
-              <div className="btn-group">
-                <button
-                  onClick={() => setTimeFormat('12')}
-                  className={`btn btn-sm ${timeFormat === '12' ? 'btn-active' : 'btn-ghost'}`}
-                >
-                  12h
-                </button>
-                <button
-                  onClick={() => setTimeFormat('24')}
-                  className={`btn btn-sm ${timeFormat === '24' ? 'btn-active' : 'btn-ghost'}`}
-                >
-                  24h
-                </button>
-              </div>
-            )}
-
+    <div className="relative w-full">
+      {/* Full Screen Calendar */}
+      <div className="flex flex-col w-full">
+        {/* First Line: Month/Week Switcher, Filters, Today Button */}
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          {/* View Switcher */}
+          <div className="btn-group">
             <button
-              onClick={goToToday}
-              className="btn btn-primary btn-sm"
+              onClick={() => setCalendarView('month')}
+              className={`btn btn-sm ${calendarView === 'month' ? 'btn-active' : 'btn-ghost'}`}
             >
-              Today
+              Month
+            </button>
+            <button
+              onClick={() => setCalendarView('week')}
+              className={`btn btn-sm ${calendarView === 'week' ? 'btn-active' : 'btn-ghost'}`}
+            >
+              Week
             </button>
           </div>
 
-          {/* Month/Week Navigation */}
-          <div className="flex items-center justify-center space-x-3 mb-4">
+          {/* Filter Buttons */}
+          <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => handleFilterClick('total')}
+            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200 ${
+              !statusFilter || statusFilter === '' ? '' : ''
+            }`}
+            style={{
+              backgroundColor: (!statusFilter || statusFilter === '') 
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: (!statusFilter || statusFilter === '') 
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: (!statusFilter || statusFilter === '') 
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (statusFilter && statusFilter !== '') {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (statusFilter && statusFilter !== '') {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            📋 All
+          </button>
+          <button
+            onClick={() => handleFilterClick('TODO')}
+            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200`}
+            style={{
+              backgroundColor: statusFilter && statusFilter.split(',').includes('TODO')
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: statusFilter && statusFilter.split(',').includes('TODO')
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: statusFilter && statusFilter.split(',').includes('TODO')
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('TODO')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('TODO')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            ⏳ To Do
+          </button>
+          <button
+            onClick={() => handleFilterClick('IN_PROGRESS')}
+            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200`}
+            style={{
+              backgroundColor: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('IN_PROGRESS')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('IN_PROGRESS')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            🔄 In Progress
+          </button>
+          <button
+            onClick={() => handleFilterClick('ON_HOLD')}
+            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200`}
+            style={{
+              backgroundColor: statusFilter && statusFilter.split(',').includes('ON_HOLD')
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: statusFilter && statusFilter.split(',').includes('ON_HOLD')
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: statusFilter && statusFilter.split(',').includes('ON_HOLD')
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('ON_HOLD')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('ON_HOLD')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            ⏸️ On Hold
+          </button>
+          <button
+            onClick={() => handleFilterClick('COMPLETED')}
+            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200`}
+            style={{
+              backgroundColor: statusFilter && statusFilter.split(',').includes('COMPLETED')
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: statusFilter && statusFilter.split(',').includes('COMPLETED')
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: statusFilter && statusFilter.split(',').includes('COMPLETED')
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('COMPLETED')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('COMPLETED')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            ✅ Completed
+          </button>
+          <button
+            onClick={() => handleFilterClick('CANCELLED')}
+            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200`}
+            style={{
+              backgroundColor: statusFilter && statusFilter.split(',').includes('CANCELLED')
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: statusFilter && statusFilter.split(',').includes('CANCELLED')
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: statusFilter && statusFilter.split(',').includes('CANCELLED')
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('CANCELLED')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('CANCELLED')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            ❌ Cancelled
+          </button>
+          </div>
+
+          <button
+            onClick={goToToday}
+            className="btn btn-primary btn-sm"
+          >
+            Today
+          </button>
+        </div>
+
+        {/* Second Line: 12/24h Switcher and Month Name */}
+        <div className="flex items-center justify-between mb-4 relative">
+          {/* Time Format Switcher (only show in week view) */}
+          {calendarView === 'week' && (
+            <div className="btn-group">
+              <button
+                onClick={() => setTimeFormat('12')}
+                className={`btn btn-sm ${timeFormat === '12' ? 'btn-active' : 'btn-ghost'}`}
+              >
+                12h
+              </button>
+              <button
+                onClick={() => setTimeFormat('24')}
+                className={`btn btn-sm ${timeFormat === '24' ? 'btn-active' : 'btn-ghost'}`}
+              >
+                24h
+              </button>
+            </div>
+          )}
+
+          {/* Month/Week Navigation - Centered */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center space-x-3">
             <button
               onClick={goToPrevious}
-              className="btn btn-ghost btn-sm text-gray-300 hover:text-white"
+              className="btn btn-ghost btn-sm"
+              style={{ color: 'var(--color-text-primary)' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             
-            <h3 className="text-xl font-semibold text-white min-w-[200px] text-center">
+            <h3 
+              className="text-xl font-semibold min-w-[200px] text-center"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
               {weekRange}
             </h3>
             
             <button
               onClick={goToNext}
-              className="btn btn-ghost btn-sm text-gray-300 hover:text-white"
+              className="btn btn-ghost btn-sm"
+              style={{ color: 'var(--color-text-primary)' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </div>
+        </div>
 
           {/* Calendar Grid */}
           {calendarView === 'month' ? (
@@ -285,7 +565,10 @@ const Calendar = () => {
               {/* Day Headers */}
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                 <div key={day} className="p-4 text-center">
-                  <div className="text-base font-semibold text-gray-400 uppercase tracking-wide">
+                  <div 
+                    className="text-base font-semibold uppercase tracking-wide"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
                     {day}
                   </div>
                 </div>
@@ -301,36 +584,68 @@ const Calendar = () => {
                 return (
                   <div
                     key={index}
-                    className={`min-h-[110px] p-3 border border-gray-700 hover:bg-gray-700 transition-colors cursor-pointer rounded ${
-                      !isCurrentMonthDate ? 'bg-gray-900 text-gray-600' : 'bg-gray-800'
-                    } ${
+                    className={`min-h-[110px] p-3 border transition-colors cursor-pointer rounded ${
                       selectedDate && date.toDateString() === selectedDate.toDateString()
-                        ? 'ring-2 ring-indigo-500'
+                        ? 'ring-2'
                         : ''
                     }`}
+                    style={{
+                      backgroundColor: !isCurrentMonthDate 
+                        ? 'var(--color-bg-tertiary)' 
+                        : 'var(--color-bg-primary)',
+                      borderColor: 'var(--color-border-default)',
+                      color: !isCurrentMonthDate 
+                        ? 'var(--color-text-tertiary)' 
+                        : 'var(--color-text-primary)',
+                      ...(selectedDate && date.toDateString() === selectedDate.toDateString() ? {
+                        ringColor: 'var(--color-primary)',
+                        ringWidth: '2px'
+                      } : {})
+                    }}
+                    onMouseEnter={(e) => {
+                      if (isCurrentMonthDate) {
+                        e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (isCurrentMonthDate) {
+                        e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                      }
+                    }}
                     onClick={() => setSelectedDate(date)}
                   >
                     {/* Date Number */}
                     <div className="flex items-center justify-between mb-2">
-                      <span className={`text-base font-semibold ${
-                        isTodayDate 
-                          ? 'bg-indigo-600 text-white rounded-full w-7 h-7 flex items-center justify-center'
-                          : isCurrentMonthDate 
-                            ? 'text-white' 
-                            : 'text-gray-600'
-                      }`}>
+                      <span 
+                        className={`text-base font-semibold rounded-full w-7 h-7 flex items-center justify-center ${
+                          isTodayDate ? '' : ''
+                        }`}
+                        style={isTodayDate ? {
+                          backgroundColor: 'var(--color-primary)',
+                          color: '#ffffff'
+                        } : {
+                          color: isCurrentMonthDate 
+                            ? 'var(--color-text-primary)' 
+                            : 'var(--color-text-tertiary)'
+                        }}
+                      >
                         {date.getDate()}
                       </span>
                      
-                     {/* Task Indicators */}
+                     {/* Task Count Badge */}
                      {(overdueTasks.length > 0 || tasksForDate.length > 0) && (
-                       <div className="flex items-center space-x-1">
-                         {overdueTasks.length > 0 && (
-                           <div className="w-3 h-3 bg-red-500 rounded-full" title={`${overdueTasks.length} overdue task(s)`}></div>
-                         )}
-                         {overdueTasks.length === 0 && tasksForDate.length > 0 && (
-                           <div className="w-3 h-3 bg-indigo-500 rounded-full" title={`${tasksForDate.length} task(s) due`}></div>
-                         )}
+                       <div 
+                         className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold"
+                         style={overdueTasks.length > 0 ? {
+                           backgroundColor: '#ef4444',
+                           color: '#ffffff'
+                         } : {
+                           backgroundColor: 'var(--color-primary)',
+                           color: '#ffffff'
+                         }}
+                         title={`${overdueTasks.length + tasksForDate.length} task(s)`}
+                       >
+                         {overdueTasks.length + tasksForDate.length}
                        </div>
                      )}
                    </div>
@@ -338,24 +653,31 @@ const Calendar = () => {
                    {/* Task Preview */}
                    {isCurrentMonthDate && (tasksForDate.length > 0 || overdueTasks.length > 0) && (
                      <div className="space-y-1.5">
-                       {/* Overdue Tasks */}
-                       {overdueTasks.slice(0, 2).map((task, taskIndex) => (
-                         <div key={`overdue-${taskIndex}`} className="text-xs bg-red-900 text-red-200 px-2 py-1 rounded truncate">
-                           {task.title}
-                         </div>
-                       ))}
-                       
-                       {/* Due Today Tasks (only show if no overdue tasks, to avoid duplication) */}
-                       {overdueTasks.length === 0 && tasksForDate.slice(0, 2).map((task, taskIndex) => (
-                         <div key={`due-${taskIndex}`} className="text-xs bg-indigo-900 text-indigo-200 px-2 py-1 rounded truncate">
-                           {task.title}
-                         </div>
-                       ))}
+                       {/* Combine and sort all tasks by status */}
+                       {(() => {
+                         const allTasks = sortTasksByStatus([...overdueTasks, ...tasksForDate]);
+                         return allTasks.slice(0, 2).map((task, taskIndex) => {
+                           const isOverdue = overdueTasks.some(t => t.id === task.id);
+                           const statusColors = getStatusColors(task.status, isOverdue);
+                           return (
+                             <div 
+                               key={`task-${taskIndex}`} 
+                               className="text-xs px-2 py-1 rounded truncate"
+                               style={statusColors}
+                             >
+                               {task.title}
+                             </div>
+                           );
+                         });
+                       })()}
                        
                        {/* Show count if more tasks */}
-                       {(overdueTasks.length + tasksForDate.length) > 4 && (
-                         <div className="text-xs text-gray-400 text-center mt-1">
-                           +{(overdueTasks.length + tasksForDate.length) - 4} more
+                       {(overdueTasks.length + tasksForDate.length) > 2 && (
+                         <div 
+                           className="text-xs text-center mt-1"
+                           style={{ color: 'var(--color-text-secondary)' }}
+                         >
+                           +{(overdueTasks.length + tasksForDate.length) - 2} more
                          </div>
                        )}
                      </div>
@@ -366,21 +688,59 @@ const Calendar = () => {
             </div>
           ) : (
             /* Weekly View */
-            <div className="border border-gray-700 rounded-lg overflow-hidden">
+            <div 
+              className="border rounded-lg overflow-hidden"
+              style={{ borderColor: 'var(--color-border-default)' }}
+            >
               {/* Week Header */}
-              <div className="grid grid-cols-8 bg-gray-700">
-                <div className="p-3 border-r border-gray-600"></div>
+              <div 
+                className="grid grid-cols-8"
+                style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+              >
+                <div 
+                  className="p-3 border-r"
+                  style={{ borderColor: 'var(--color-border-default)' }}
+                ></div>
                 {weekDays.map((day, index) => {
                   const isTodayDate = isToday(day);
+                  const tasksForDay = getTasksForDate(day);
+                  const overdueTasksForDay = getOverdueTasksForDate(day);
+                  const totalTasks = tasksForDay.length + overdueTasksForDay.length;
+                  
                   return (
-                    <div key={index} className="p-3 text-center border-r border-gray-600 last:border-r-0">
-                      <div className="text-sm font-semibold text-gray-300 uppercase tracking-wide">
+                    <div 
+                      key={index} 
+                      className="p-3 text-center border-r last:border-r-0"
+                      style={{ borderColor: 'var(--color-border-default)' }}
+                    >
+                      <div 
+                        className="text-sm font-semibold uppercase tracking-wide"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
                         {day.toLocaleDateString('en-US', { weekday: 'short' })}
                       </div>
-                      <div className={`text-lg font-bold mt-1 ${
-                        isTodayDate ? 'text-indigo-400' : 'text-white'
-                      }`}>
-                        {day.getDate()}
+                      <div className="flex items-center justify-center gap-2 mt-1">
+                        <div 
+                          className="text-lg font-bold"
+                          style={{ color: isTodayDate ? 'var(--color-primary)' : 'var(--color-text-primary)' }}
+                        >
+                          {day.getDate()}
+                        </div>
+                        {totalTasks > 0 && (
+                          <div 
+                            className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold"
+                            style={overdueTasksForDay.length > 0 ? {
+                              backgroundColor: '#ef4444',
+                              color: '#ffffff'
+                            } : {
+                              backgroundColor: 'var(--color-primary)',
+                              color: '#ffffff'
+                            }}
+                            title={`${totalTasks} task${totalTasks !== 1 ? 's' : ''}`}
+                          >
+                            {totalTasks}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -396,12 +756,22 @@ const Calendar = () => {
                   return (
                     <div key={slotIndex} className="grid grid-cols-8">
                       {/* Time Column */}
-                      <div className={`p-2 border-r border-gray-600 bg-gray-800 ${
-                        isHour ? 'border-b-2 border-gray-500' : 'border-b border-gray-700'
-                      }`}>
-                        <div className={`text-xs font-medium text-gray-300 ${
-                          isHour ? 'font-bold' : ''
-                        }`}>
+                      <div 
+                        className={`p-2 border-r ${
+                          isHour ? 'border-b-2' : 'border-b'
+                        }`}
+                        style={{
+                          borderColor: isHour 
+                            ? 'var(--color-border-default)' 
+                            : 'var(--color-border-default)',
+                          backgroundColor: 'var(--color-bg-tertiary)',
+                          borderBottomWidth: isHour ? '2px' : '1px'
+                        }}
+                      >
+                        <div 
+                          className={`text-xs font-medium ${isHour ? 'font-bold' : ''}`}
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
                           {formatTime(timeSlot)}
                         </div>
                       </div>
@@ -414,11 +784,24 @@ const Calendar = () => {
                         return (
                           <div
                             key={dayIndex}
-                            className={`p-1 border-r border-gray-600 last:border-r-0 cursor-pointer hover:bg-gray-700 transition-colors ${
-                              isHour ? 'border-b-2 border-gray-500' : 'border-b border-gray-700'
-                            } ${
-                              isTodayDate ? 'bg-gray-750' : 'bg-gray-800'
+                            className={`p-1 border-r last:border-r-0 cursor-pointer transition-colors ${
+                              isHour ? 'border-b-2' : 'border-b'
                             }`}
+                            style={{
+                              borderColor: 'var(--color-border-default)',
+                              backgroundColor: isTodayDate 
+                                ? 'var(--color-bg-tertiary)' 
+                                : 'var(--color-bg-secondary)',
+                              borderBottomWidth: isHour ? '2px' : '1px'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = isTodayDate 
+                                ? 'var(--color-bg-tertiary)' 
+                                : 'var(--color-bg-secondary)';
+                            }}
                             onClick={() => setSelectedDate(day)}
                           >
                             {/* Task Items in Time Slot */}
@@ -440,7 +823,10 @@ const Calendar = () => {
                             
                             {/* Show more indicator */}
                             {tasksForSlot.length > 2 && (
-                              <div className="text-xs text-gray-400 text-center">
+                              <div 
+                                className="text-xs text-center"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                              >
                                 +{tasksForSlot.length - 2} more
                               </div>
                             )}
@@ -453,178 +839,266 @@ const Calendar = () => {
               </div>
             </div>
           )}
-
-          {/* Legend */}
-          <div className="mt-8 pt-6 border-t border-gray-700">
-            <div className="flex flex-col space-y-4 text-base">
-              <div className="flex items-center space-x-3">
-                <div className="w-4 h-4 bg-indigo-500 rounded-full"></div>
-                <span className="text-gray-300">Tasks Due</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                <span className="text-gray-300">Overdue</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                  {new Date().getDate()}
-                </div>
-                <span className="text-gray-300">Today</span>
-              </div>
-              
-              {/* Weekly View Legend */}
-              {calendarView === 'week' && (
-                <>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 bg-red-900 rounded"></div>
-                    <span className="text-gray-300">Urgent Priority</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 bg-orange-900 rounded"></div>
-                    <span className="text-gray-300">High Priority</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 bg-indigo-900 rounded"></div>
-                    <span className="text-gray-300">Medium/Low Priority</span>
-                  </div>
-                  <div className="text-sm text-gray-400 mt-2">
-                    <div>• Thick lines indicate full hours</div>
-                    <div>• Thin lines indicate half hours</div>
-                    <div>• Click on any time slot to select that day</div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
         </div>
 
-        {/* Right Column - Task Cards (2/5 = 40%) */}
-        <div className="flex flex-col lg:col-span-2">
-          {/* View Mode Selector */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white">Tasks</h2>
-            <div className="btn-group">
-              <button
-                onClick={() => setViewMode('cards')}
-                className={`btn btn-sm ${viewMode === 'cards' ? 'btn-active' : 'btn-ghost'}`}
-              >
-                Cards
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`btn btn-sm ${viewMode === 'list' ? 'btn-active' : 'btn-ghost'}`}
-              >
-                List
-              </button>
-            </div>
-          </div>
-
-          {/* Selected Date Info */}
-          {selectedDate ? (
-            <div className="p-4 bg-gray-700 rounded-lg border border-gray-600 overflow-y-auto max-h-[calc(100vh-16rem)]">
-          <h4 className="text-lg font-semibold text-white mb-3">
-            {selectedDate.toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-          </h4>
+      {/* Slide-in Panel */}
+      {selectedDate && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-500 ease-out"
+            onClick={() => setSelectedDate(null)}
+          />
           
-          <div className="space-y-3">
-            {/* Overdue Tasks */}
-            {(() => {
-              const overdueTasks = getOverdueTasksForDate(selectedDate);
-              if (overdueTasks.length === 0) return null;
-              
-              return (
-                <div>
-                  <h5 className="text-red-400 font-medium mb-2">Overdue Tasks ({overdueTasks.length})</h5>
-                  {viewMode === 'cards' ? (
-                    <div className="space-y-4">
-                      {overdueTasks.map((task) => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          onStatusChange={() => {}}
-                          onPriorityChange={() => {}}
-                          onDelete={() => {}}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <TaskList
-                      tasks={overdueTasks}
-                      onStatusChange={() => {}}
-                      onPriorityChange={() => {}}
-                      onDelete={() => {}}
-                    />
-                  )}
-                </div>
-              );
-            })()}
-
-                         {/* Tasks Due Today */}
-             {(() => {
-               const tasksForDate = getTasksForDate(selectedDate);
-               if (tasksForDate.length === 0) return null;
-               
-               return (
-                 <div>
-                   <h5 className="text-indigo-400 font-medium mb-2">Tasks Due ({tasksForDate.length})</h5>
-                   {viewMode === 'cards' ? (
-                     <div className="space-y-4">
-                       {tasksForDate.map((task) => (
-                         <TaskCard
-                           key={task.id}
-                           task={task}
-                           onStatusChange={() => {}}
-                           onPriorityChange={() => {}}
-                           onDelete={() => {}}
-                         />
-                       ))}
-                     </div>
-                   ) : (
-                     <TaskList
-                       tasks={tasksForDate}
-                       onStatusChange={() => {}}
-                       onPriorityChange={() => {}}
-                       onDelete={() => {}}
-                     />
-                   )}
-                 </div>
-               );
-             })()}
-
-            {/* No Tasks */}
-            {(() => {
-              const overdueTasks = getOverdueTasksForDate(selectedDate);
-              const tasksForDate = getTasksForDate(selectedDate);
-              
-              if (overdueTasks.length === 0 && tasksForDate.length === 0) {
-                return (
-                  <div className="text-gray-400 text-center py-4">
-                    No tasks scheduled for this date
-                  </div>
-                );
+          {/* Slide-in Panel */}
+          <div
+            className="fixed top-0 right-0 h-full w-full max-w-md z-50"
+            style={{
+              boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.3)',
+              animation: 'slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+              transform: 'translateX(0)'
+            }}
+          >
+            <style>{`
+              @keyframes slideInRight {
+                from {
+                  transform: translateX(100%);
+                  opacity: 0;
+                }
+                to {
+                  transform: translateX(0);
+                  opacity: 1;
+                }
               }
-              return null;
-            })()}
+            `}</style>
+            <div
+              className="h-full overflow-y-auto"
+              style={{
+                backgroundColor: 'var(--color-bg-secondary)',
+                borderLeft: '1px solid var(--color-border-default)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Panel Header */}
+              <div
+                className="sticky top-0 z-10 flex items-center justify-between p-6 border-b"
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)'
+                }}
+              >
+                <div>
+                  <h3
+                    className="text-xl font-bold"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {selectedDate.toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </h3>
+                  <p
+                    className="text-sm mt-1"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    {(() => {
+                      const overdueTasks = getOverdueTasksForDate(selectedDate);
+                      const tasksForDate = getTasksForDate(selectedDate);
+                      const total = overdueTasks.length + tasksForDate.length;
+                      return `${total} task${total !== 1 ? 's' : ''}`;
+                    })()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedDate(null)}
+                  className="btn btn-ghost btn-sm btn-circle"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Panel Content */}
+              <div className="p-6">
+                {/* Tasks List */}
+                <div className="space-y-3">
+                  {(() => {
+                    const overdueTasks = getOverdueTasksForDate(selectedDate);
+                    const tasksForDate = getTasksForDate(selectedDate);
+
+                    // Group tasks by status
+                    const tasksByStatus = {
+                      overdue: sortTasksByStatus(overdueTasks),
+                      todo: sortTasksByStatus(tasksForDate.filter(t => t.status === 'TODO')),
+                      inProgress: sortTasksByStatus(tasksForDate.filter(t => t.status === 'IN_PROGRESS')),
+                      onHold: sortTasksByStatus(tasksForDate.filter(t => t.status === 'ON_HOLD')),
+                      completed: sortTasksByStatus(tasksForDate.filter(t => t.status === 'COMPLETED')),
+                      cancelled: sortTasksByStatus(tasksForDate.filter(t => t.status === 'CANCELLED'))
+                    };
+
+                    const hasAnyTasks = Object.values(tasksByStatus).some(arr => arr.length > 0);
+                    if (!hasAnyTasks) {
+                      return (
+                        <div
+                          className="text-center py-12"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          <p className="text-lg mb-2">No tasks scheduled</p>
+                          <p className="text-sm">Click a time slot to create a task</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        {/* Overdue Tasks */}
+                        {tasksByStatus.overdue.length > 0 && (
+                          <div>
+                            <h5
+                              className="font-medium mb-2"
+                              style={{ color: '#ef4444' }}
+                            >
+                              Overdue ({tasksByStatus.overdue.length})
+                            </h5>
+                            <div className="space-y-4">
+                              {tasksByStatus.overdue.map((task) => (
+                                <TaskCard
+                                  key={task.id}
+                                  task={task}
+                                  onStatusChange={() => {}}
+                                  onPriorityChange={() => {}}
+                                  onDelete={() => {}}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* TODO Tasks */}
+                        {tasksByStatus.todo.length > 0 && (
+                          <div>
+                            <h5
+                              className="font-medium mb-2"
+                              style={{ color: 'var(--color-primary)' }}
+                            >
+                              To Do ({tasksByStatus.todo.length})
+                            </h5>
+                            <div className="space-y-4">
+                              {tasksByStatus.todo.map((task) => (
+                                <TaskCard
+                                  key={task.id}
+                                  task={task}
+                                  onStatusChange={() => {}}
+                                  onPriorityChange={() => {}}
+                                  onDelete={() => {}}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* In Progress Tasks */}
+                        {tasksByStatus.inProgress.length > 0 && (
+                          <div>
+                            <h5
+                              className="font-medium mb-2"
+                              style={{ color: 'var(--color-primary)' }}
+                            >
+                              In Progress ({tasksByStatus.inProgress.length})
+                            </h5>
+                            <div className="space-y-4">
+                              {tasksByStatus.inProgress.map((task) => (
+                                <TaskCard
+                                  key={task.id}
+                                  task={task}
+                                  onStatusChange={() => {}}
+                                  onPriorityChange={() => {}}
+                                  onDelete={() => {}}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* On Hold Tasks */}
+                        {tasksByStatus.onHold.length > 0 && (
+                          <div>
+                            <h5
+                              className="font-medium mb-2"
+                              style={{ color: 'var(--color-primary)' }}
+                            >
+                              On Hold ({tasksByStatus.onHold.length})
+                            </h5>
+                            <div className="space-y-4">
+                              {tasksByStatus.onHold.map((task) => (
+                                <TaskCard
+                                  key={task.id}
+                                  task={task}
+                                  onStatusChange={() => {}}
+                                  onPriorityChange={() => {}}
+                                  onDelete={() => {}}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Completed Tasks */}
+                        {tasksByStatus.completed.length > 0 && (
+                          <div>
+                            <h5
+                              className="font-medium mb-2"
+                              style={{ color: 'var(--color-primary)' }}
+                            >
+                              Completed ({tasksByStatus.completed.length})
+                            </h5>
+                            <div className="space-y-4">
+                              {tasksByStatus.completed.map((task) => (
+                                <TaskCard
+                                  key={task.id}
+                                  task={task}
+                                  onStatusChange={() => {}}
+                                  onPriorityChange={() => {}}
+                                  onDelete={() => {}}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Cancelled Tasks */}
+                        {tasksByStatus.cancelled.length > 0 && (
+                          <div>
+                            <h5
+                              className="font-medium mb-2"
+                              style={{ color: 'var(--color-primary)' }}
+                            >
+                              Cancelled ({tasksByStatus.cancelled.length})
+                            </h5>
+                            <div className="space-y-4">
+                              {tasksByStatus.cancelled.map((task) => (
+                                <TaskCard
+                                  key={task.id}
+                                  task={task}
+                                  onStatusChange={() => {}}
+                                  onPriorityChange={() => {}}
+                                  onDelete={() => {}}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="p-8 bg-gray-700 rounded-lg border border-gray-600 h-full flex items-center justify-center">
-              <div className="text-center">
-                <svg className="w-16 h-16 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <p className="text-gray-400 text-lg">Select a date to view tasks</p>
-                <p className="text-gray-500 text-sm mt-2">Click on any date in the calendar</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

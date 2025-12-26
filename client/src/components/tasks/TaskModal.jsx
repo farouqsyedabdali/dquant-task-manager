@@ -1,16 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import useTaskStore from '../../stores/taskStore';
 import useAuthStore from '../../context/authStore';
 import useUserStore from '../../stores/userStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
 import CommentSection from '../comments/CommentSection';
 import AddSubtaskModal from './AddSubtaskModal';
-import AddTeamMemberModal from './AddTeamMemberModal';
 import DeleteConfirmModal from '../common/DeleteConfirmModal';
 import TaskShareModal from './TaskShareModal';
 import TaskUpdatesModal from './TaskUpdatesModal';
 import SearchableDropdown from '../common/SearchableDropdown';
-import DatePicker from '../common/DatePicker';
 import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
 import useContactStore from '../../stores/contactStore';
 import IconButton from '../common/IconButton';
@@ -34,7 +33,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [isEditing, setIsEditing] = useState(false);
   const [errors, setErrors] = useState({});
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
-  const [isAddTeamMemberModalOpen, setIsAddTeamMemberModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [viewedTask, setViewedTask] = useState(task); // local state for current viewed task
@@ -43,6 +41,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [coAssignees, setCoAssignees] = useState([]);
   const [isLoadingCoAssignees, setIsLoadingCoAssignees] = useState(false);
   const [isAddingCoAssignee, setIsAddingCoAssignee] = useState(false);
+  const [selectedCoAssigneeId, setSelectedCoAssigneeId] = useState('');
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
@@ -127,204 +126,30 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     }
   }, [isOpen, task, fetchCoAssignees, isPersonalAccount]);
 
-  const handleAddCoAssignee = async (userId) => {
-    if (!userId || !viewedTask?.id) return;
+  const handleAddCoAssignee = async () => {
+    if (!selectedCoAssigneeId || !viewedTask?.id) return;
 
     try {
       setIsAddingCoAssignee(true);
-      const response = await tasksAPI.addCoAssignee(viewedTask.id, userId);
+      const response = await tasksAPI.addCoAssignee(viewedTask.id, selectedCoAssigneeId);
       
       // Add to co-assignees list
       setCoAssignees(prev => [...prev, response.data]);
       
       // Track as recent employee
-      const selectedUser = users.find(u => u.id.toString() === userId.toString());
+      const selectedUser = users.find(u => u.id.toString() === selectedCoAssigneeId);
       if (selectedUser) {
         addToRecentEmployees(selectedUser);
       }
+      
+      setSelectedCoAssigneeId('');
     } catch (error) {
       console.error('Error adding co-assignee:', error);
       alert(error.response?.data?.error || 'Failed to add co-assignee');
-      throw error; // Re-throw so modal can handle it
     } finally {
       setIsAddingCoAssignee(false);
     }
   };
-
-  // Helper function to merge and deduplicate team members
-  const getUnifiedTeamMembers = useCallback(() => {
-    const membersMap = new Map(); // key: userId or email, value: member object
-
-    // Priority order: Lead > Co-Assignee > Internal Commenter > External Commenter > Internal Viewer > External Viewer
-    const rolePriority = {
-      'lead': 6,
-      'co-assignee': 5,
-      'internal-commenter': 4,
-      'external-commenter': 3,
-      'internal-viewer': 2,
-      'external-viewer': 1,
-    };
-
-    // Add Lead Assignee (highest priority)
-    if (viewedTask.assignee) {
-      const key = viewedTask.assignee.id?.toString() || viewedTask.assignee.email;
-      if (key) {
-        membersMap.set(key, {
-          id: `lead-${viewedTask.assignee.id}`,
-          user: viewedTask.assignee,
-          role: 'lead',
-          roleLabel: 'Lead Assignee',
-          priority: rolePriority['lead'],
-          avatarColor: 'var(--color-primary)',
-          badgeColor: 'rgba(99, 102, 241, 0.2)',
-          badgeTextColor: 'var(--color-primary)',
-          isLead: true,
-        });
-      }
-    }
-
-    // Add Co-Assignees
-    coAssignees.forEach(coAssignee => {
-      if (!coAssignee.user) return;
-      const key = coAssignee.user.id?.toString() || coAssignee.user.email;
-      if (key && !membersMap.has(key)) {
-        membersMap.set(key, {
-          id: `co-${coAssignee.id}`,
-          user: coAssignee.user,
-          role: 'co-assignee',
-          roleLabel: 'Co-Assignee',
-          priority: rolePriority['co-assignee'],
-          avatarColor: '#10b981',
-          badgeColor: 'rgba(16, 185, 129, 0.2)',
-          badgeTextColor: '#10b981',
-          coAssigneeId: coAssignee.id,
-          userId: coAssignee.userId,
-        });
-      }
-    });
-
-    // Add Shared With (internal and external)
-    if (viewedTask.sharedWith) {
-      viewedTask.sharedWith.forEach(share => {
-        if (!share.user && !share.contact && !share.email) return;
-        
-        const key = share.user?.id?.toString() || share.contact?.id?.toString() || share.email;
-        if (!key) return;
-
-        // Skip if already added as Lead or Co-Assignee (don't downgrade)
-        if (membersMap.has(key)) {
-          const existing = membersMap.get(key);
-          // Don't update if already Lead or Co-Assignee (highest priority roles)
-          if (existing.role === 'lead' || existing.role === 'co-assignee') {
-            return; // Skip this share entry
-          }
-          // Only update if new role has higher priority than existing
-          const isCommenter = share.permissionLevel === 'COMMENTER';
-          const isExternal = share.isExternal || share.contact || share.email;
-          const newRole = isExternal 
-            ? (isCommenter ? 'external-commenter' : 'external-viewer')
-            : (isCommenter ? 'internal-commenter' : 'internal-viewer');
-          
-          if (rolePriority[newRole] > existing.priority) {
-            membersMap.set(key, {
-              ...existing,
-              role: newRole,
-              roleLabel: isExternal 
-                ? (isCommenter ? 'External Commenter' : 'External Viewer')
-                : (isCommenter ? 'Internal Commenter' : 'Internal Viewer'),
-              priority: rolePriority[newRole],
-              avatarColor: isExternal ? '#3b82f6' : '#8b5cf6',
-              badgeColor: isExternal 
-                ? 'rgba(59, 130, 246, 0.2)' 
-                : 'rgba(139, 92, 246, 0.2)',
-              badgeTextColor: isExternal ? '#3b82f6' : '#8b5cf6',
-              shareId: share.id,
-            });
-          }
-        } else {
-          const isCommenter = share.permissionLevel === 'COMMENTER';
-          const isExternal = share.isExternal || share.contact || share.email;
-          const role = isExternal 
-            ? (isCommenter ? 'external-commenter' : 'external-viewer')
-            : (isCommenter ? 'internal-commenter' : 'internal-viewer');
-          
-          // Create user object from share data
-          const userObj = share.user || {
-            id: share.contact?.id || share.email,
-            name: share.contact?.name || share.email?.split('@')[0] || 'Unknown',
-            email: share.contact?.email || share.email,
-          };
-
-          membersMap.set(key, {
-            id: `share-${share.id}`,
-            user: userObj,
-            role: role,
-            roleLabel: isExternal 
-              ? (isCommenter ? 'External Commenter' : 'External Viewer')
-              : (isCommenter ? 'Internal Commenter' : 'Internal Viewer'),
-            priority: rolePriority[role],
-            avatarColor: isExternal ? '#3b82f6' : '#8b5cf6',
-            badgeColor: isExternal 
-              ? 'rgba(59, 130, 246, 0.2)' 
-              : 'rgba(139, 92, 246, 0.2)',
-            badgeTextColor: isExternal ? '#3b82f6' : '#8b5cf6',
-            shareId: share.id,
-          });
-        }
-      });
-    }
-
-    // Add External Collaborators (from collaborators table)
-    if (viewedTask.collaborators) {
-      viewedTask.collaborators.forEach(collaborator => {
-        if (!collaborator.user) return;
-        const key = collaborator.user.id?.toString() || collaborator.user.email;
-        if (!key) return;
-
-        // Skip if already added with higher priority (don't downgrade Lead or Co-Assignee)
-        if (membersMap.has(key)) {
-          const existing = membersMap.get(key);
-          // Don't update if already Lead or Co-Assignee (highest priority roles)
-          if (existing.role === 'lead' || existing.role === 'co-assignee') {
-            return; // Skip this collaborator entry
-          }
-          const isCommenter = collaborator.permissionLevel === 'COMMENT' || collaborator.permissionLevel === 'COMMENTER';
-          const newRole = isCommenter ? 'external-commenter' : 'external-viewer';
-          
-          if (rolePriority[newRole] > existing.priority) {
-            membersMap.set(key, {
-              ...existing,
-              role: newRole,
-              roleLabel: isCommenter ? 'External Commenter' : 'External Viewer',
-              priority: rolePriority[newRole],
-              avatarColor: '#3b82f6',
-              badgeColor: 'rgba(59, 130, 246, 0.2)',
-              badgeTextColor: '#3b82f6',
-              collaboratorId: collaborator.id,
-            });
-          }
-        } else {
-          const isCommenter = collaborator.permissionLevel === 'COMMENT' || collaborator.permissionLevel === 'COMMENTER';
-          const role = isCommenter ? 'external-commenter' : 'external-viewer';
-          
-          membersMap.set(key, {
-            id: `collab-${collaborator.id}`,
-            user: collaborator.user,
-            role: role,
-            roleLabel: isCommenter ? 'External Commenter' : 'External Viewer',
-            priority: rolePriority[role],
-            avatarColor: '#3b82f6',
-            badgeColor: 'rgba(59, 130, 246, 0.2)',
-            badgeTextColor: '#3b82f6',
-            collaboratorId: collaborator.id,
-          });
-        }
-      });
-    }
-
-    // Convert map to array and sort by priority (highest first)
-    return Array.from(membersMap.values()).sort((a, b) => b.priority - a.priority);
-  }, [viewedTask, coAssignees]);
 
   const handleRemoveCoAssignee = async (userId) => {
     if (!viewedTask?.id) return;
@@ -712,7 +537,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   if (!isOpen || !viewedTask) return null;
 
-  return (
+  const modalContent = (
     <>
       <style>{`
         @keyframes fadeIn {
@@ -729,7 +554,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           animation: fadeIn 0.3s ease-out;
         }
       `}</style>
-      <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 50 }}>
+      <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 60 }}>
       <div 
         className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto scrollbar-thin transition-colors duration-200"
         style={{
@@ -982,7 +807,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     ))}
                   </select>
                 ) : (
-                  <span className={`px-3 py-2 rounded-full text-sm font-medium uppercase ${getStatusColor(viewedTask.status)} w-fit`}>
+                  <span className={`px-3 py-2 rounded-full text-sm font-medium capitalize ${getStatusColor(viewedTask.status)} flex items-center gap-1.5 w-fit`}>
+                    {getStatusIcon(viewedTask.status)}
                     {STATUS_LABELS[viewedTask.status]}
                   </span>
                 )}
@@ -1019,7 +845,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     ))}
                   </select>
                 ) : (
-                  <span className={`px-3 py-2 rounded-full text-sm font-medium uppercase ${getPriorityColor(viewedTask.priority)} w-fit`}>
+                  <span className={`px-3 py-2 rounded-full text-sm font-medium capitalize ${getPriorityColor(viewedTask.priority)} flex items-center gap-1.5 w-fit`}>
+                    {getPriorityIcon(viewedTask.priority)}
                     {PRIORITY_LABELS[viewedTask.priority]}
                   </span>
                 )}
@@ -1034,18 +861,23 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                   Due Date
                 </h4>
                 {isEditing ? (
-                  <DatePicker
-                    value={formData.dueDate || ''}
-                    onChange={(e) => {
-                      handleChange({
-                        target: {
-                          name: 'dueDate',
-                          value: e.target.value
-                        }
-                      });
+                  <input
+                    type="datetime-local"
+                    name="dueDate"
+                    value={formData.dueDate}
+                    onChange={handleChange}
+                    className="input w-full transition-colors duration-200"
+                    style={{
+                      backgroundColor: 'var(--color-bg-tertiary)',
+                      borderColor: 'var(--color-border-default)',
+                      color: 'var(--color-text-primary)',
                     }}
-                    placeholder="Select due date and time"
-                    showTime={true}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--color-primary)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                    }}
                   />
                 ) : (
                   <div className="flex flex-col">
@@ -1122,146 +954,280 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                 {/* Team & Sharing Tab */}
                 {activeTab === 'team' && (
                   <div className="space-y-4 animate-fadeIn">
-                    {/* Unified Team Members Section */}
+                    {/* Assigned To & Co-Assignees - Side by side for company accounts */}
                     {!isPersonalAccount && (
-                      <div>
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 
-                            className="text-base font-semibold transition-colors duration-200"
-                            style={{ color: 'var(--color-text-secondary)' }}
+                      <div className="grid grid-cols-2 gap-4">
+                {/* Assigned To */}
+                <div>
+                  <h4 
+                    className="text-base font-semibold mb-3 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Assigned To
+                  </h4>
+                  {isEditing ? (
+                    <SearchableDropdown
+                      options={users}
+                      value={formData.assigneeId}
+                      onChange={(value) => {
+                        setFormData(prev => ({ ...prev, assigneeId: value }));
+                        const selectedEmployee = users.find(user => user.id.toString() === value);
+                        if (selectedEmployee) {
+                          addToRecentEmployees(selectedEmployee);
+                        }
+                      }}
+                      placeholder="Select an employee"
+                      disabled={isLoadingUsers}
+                      recentEmployees={recentEmployees}
+                    />
+                  ) : (
+                    <div className="flex items-center space-x-3">
+                      {viewedTask.assignee ? (
+                        <div className="flex items-center space-x-3 group relative">
+                          <div className="avatar placeholder">
+                            <div 
+                              className="text-white rounded-full w-10"
+                              style={{ backgroundColor: 'var(--color-primary)' }}
+                            >
+                              <span className="text-sm">{viewedTask.assignee.name.charAt(0)}</span>
+                            </div>
+                          </div>
+                          <div>
+                            <span 
+                              className="text-base transition-colors duration-200"
+                              style={{ color: 'var(--color-text-primary)' }}
+                            >
+                              {viewedTask.assignee.name}
+                            </span>
+                          </div>
+                          {/* Email tooltip */}
+                          <div 
+                            className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                            style={{
+                              backgroundColor: 'var(--color-bg-primary)',
+                              color: 'var(--color-text-primary)',
+                            }}
                           >
-                            Team Members
-                          </h4>
-                          {/* Add Team Member Button - Only show if user is lead assignee */}
-                          {viewedTask?.assigneeId === user?.id && !isEditing && (
-                            <IconButton
-                              icon={<FaUserPlus />}
-                              label="Add Team Member"
-                              variant="primary"
-                              size="sm"
-                              onClick={() => setIsAddTeamMemberModalOpen(true)}
-                            />
-                          )}
+                            {viewedTask.assignee.email}
+                          </div>
                         </div>
+                      ) : (
+                        <span 
+                          className="text-base transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          Unassigned
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-                        {/* Lead Assignee - Editable in edit mode */}
-                        {isEditing ? (
-                          <div className="mb-4">
-                            <label 
-                              className="block text-sm font-medium mb-2 transition-colors duration-200"
+                {/* Co-Assignees */}
+                <div>
+                  <h4 
+                    className="text-base font-semibold mb-3 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Co-Assignees
+                  </h4>
+                  
+                  {/* Check if current user is the lead assignee */}
+                  {viewedTask?.assigneeId === user?.id ? (
+                    <div className="space-y-2">
+                      {/* Add Co-Assignee Section */}
+                      <div className="flex space-x-1">
+                        <div className="flex-1">
+                          <SearchableDropdown
+                            options={users.filter(u => 
+                              u.id !== viewedTask.assigneeId && 
+                              !coAssignees.some(co => co.userId === u.id)
+                            )}
+                            value={selectedCoAssigneeId}
+                            onChange={setSelectedCoAssigneeId}
+                            placeholder="Add..."
+                            disabled={isLoadingUsers}
+                            recentEmployees={recentEmployees}
+                          />
+                        </div>
+                        <IconButton
+                          icon={<FaUserPlus />}
+                          label="Add Co-Assignee"
+                          variant="primary"
+                          size="sm"
+                          onClick={handleAddCoAssignee}
+                          disabled={!selectedCoAssigneeId || isAddingCoAssignee}
+                          loading={isAddingCoAssignee}
+                        />
+                      </div>
+                      
+                      {/* Co-Assignees List */}
+                      {isLoadingCoAssignees ? (
+                        <div className="flex justify-center py-2">
+                          <span className="loading loading-spinner loading-sm"></span>
+                        </div>
+                      ) : coAssignees.length > 0 ? (
+                        <div className="space-y-3">
+                          {coAssignees.map((coAssignee) => (
+                            <div key={coAssignee.id} className="flex items-center justify-between gap-3 group relative">
+                              <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                <div className="avatar placeholder flex-shrink-0">
+                                  <div 
+                                    className="text-white rounded-full w-8"
+                                    style={{ backgroundColor: '#10b981' }}
+                                  >
+                                    <span className="text-sm">{coAssignee.user.name.charAt(0)}</span>
+                                  </div>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span 
+                                    className="text-base block truncate transition-colors duration-200"
+                                    style={{ color: 'var(--color-text-primary)' }}
+                                  >
+                                    {coAssignee.user.name}
+                                  </span>
+                                </div>
+                                {/* Email tooltip */}
+                                <div 
+                                  className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                  style={{
+                                    backgroundColor: 'var(--color-bg-primary)',
+                                    color: 'var(--color-text-primary)',
+                                  }}
+                                >
+                                  {coAssignee.user.email}
+                                </div>
+                              </div>
+                              <IconButton
+                                icon={<FaTimes />}
+                                label="Remove co-assignee"
+                                iconOnly={true}
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleRemoveCoAssignee(coAssignee.userId)}
+                                className="!p-1 !w-6 !h-6 !min-h-0"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p 
+                          className="text-sm transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          No co-assignees
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      {isLoadingCoAssignees ? (
+                        <div className="flex justify-center py-2">
+                          <span className="loading loading-spinner loading-sm"></span>
+                        </div>
+                      ) : coAssignees.length > 0 ? (
+                        <div className="space-y-3">
+                          {coAssignees.map((coAssignee) => (
+                            <div key={coAssignee.id} className="flex items-center space-x-3 group relative">
+                              <div className="avatar placeholder">
+                                <div 
+                                  className="text-white rounded-full w-8"
+                                  style={{ backgroundColor: '#10b981' }}
+                                >
+                                  <span className="text-sm">{coAssignee.user.name.charAt(0)}</span>
+                                </div>
+                              </div>
+                              <div>
+                                <span 
+                                  className="text-base transition-colors duration-200"
+                                  style={{ color: 'var(--color-text-primary)' }}
+                                >
+                                  {coAssignee.user.name}
+                                </span>
+                              </div>
+                              {/* Email tooltip */}
+                              <div 
+                                className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                style={{
+                                  backgroundColor: 'var(--color-bg-primary)',
+                                  color: 'var(--color-text-primary)',
+                                }}
+                              >
+                                {coAssignee.user.email}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p 
+                          className="text-sm transition-colors duration-200"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                        >
+                          No co-assignees
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                        {/* External Collaborators */}
+                        {viewedTask.collaborators && viewedTask.collaborators.length > 0 && (
+                          <div>
+                            <h4 
+                              className="text-base font-semibold mb-3 transition-colors duration-200"
                               style={{ color: 'var(--color-text-secondary)' }}
                             >
-                              Lead Assignee
-                            </label>
-                            <SearchableDropdown
-                              options={users}
-                              value={formData.assigneeId}
-                              onChange={(value) => {
-                                setFormData(prev => ({ ...prev, assigneeId: value }));
-                                const selectedEmployee = users.find(user => user.id.toString() === value);
-                                if (selectedEmployee) {
-                                  addToRecentEmployees(selectedEmployee);
-                                }
-                              }}
-                              placeholder="Select an employee"
-                              disabled={isLoadingUsers}
-                              recentEmployees={recentEmployees}
-                            />
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            {/* Loading State */}
-                            {isLoadingCoAssignees ? (
-                              <div className="flex justify-center py-4">
-                                <span className="loading loading-spinner loading-sm"></span>
-                              </div>
-                            ) : (
-                              <>
-                                {/* Unified Team Members List */}
-                                {(() => {
-                                  const unifiedMembers = getUnifiedTeamMembers();
-                                  
-                                  if (unifiedMembers.length === 0) {
-                                    return (
-                                      <div className="p-6 rounded-lg text-center"
+                              External Collaborators
+                            </h4>
+                            <div className="space-y-3">
+                              {viewedTask.collaborators.map((collaborator) => (
+                                <div key={collaborator.id} className="flex items-center space-x-3 group relative">
+                                  <div className="avatar placeholder">
+                                    <div 
+                                      className="text-white rounded-full w-8"
+                                      style={{ backgroundColor: '#3b82f6' }}
+                                    >
+                                      <span className="text-sm">{collaborator.user.name.charAt(0)}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2">
+                                      <span 
+                                        className="text-base transition-colors duration-200"
+                                        style={{ color: 'var(--color-text-primary)' }}
+                                      >
+                                        {collaborator.user.name}
+                                      </span>
+                                      <span 
+                                        className="text-xs px-2 py-1 rounded transition-colors duration-200"
                                         style={{
-                                          backgroundColor: 'var(--color-bg-tertiary)',
-                                          color: 'var(--color-text-tertiary)',
+                                          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                          color: '#93c5fd',
                                         }}
                                       >
-                                        <span className="text-sm">No team members assigned</span>
-                                      </div>
-                                    );
-                                  }
-
-                                  return unifiedMembers.map((member) => (
-                                    <div 
-                                      key={member.id} 
-                                      className="flex items-center justify-between p-3 rounded-lg group relative transition-colors duration-200"
-                                      style={{
-                                        backgroundColor: 'var(--color-bg-tertiary)',
-                                      }}
-                                    >
-                                      <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                        <div className="avatar placeholder flex-shrink-0">
-                                          <div 
-                                            className="text-white rounded-full w-10"
-                                            style={{ backgroundColor: member.avatarColor }}
-                                          >
-                                            <span className="text-sm font-semibold">
-                                              {member.user?.name?.charAt(0)?.toUpperCase() || '?'}
-                                            </span>
-                                          </div>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-2">
-                                            <span 
-                                              className="text-base block truncate transition-colors duration-200"
-                                              style={{ color: 'var(--color-text-primary)' }}
-                                            >
-                                              {member.user?.name || 'Unknown User'}
-                                            </span>
-                                            <span 
-                                              className="px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0"
-                                              style={{
-                                                backgroundColor: member.badgeColor,
-                                                color: member.badgeTextColor,
-                                              }}
-                                            >
-                                              {member.roleLabel}
-                                            </span>
-                                          </div>
-                                        </div>
-                                        {/* Email tooltip */}
-                                        {member.user?.email && (
-                                          <div 
-                                            className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                                            style={{
-                                              backgroundColor: 'var(--color-bg-primary)',
-                                              color: 'var(--color-text-primary)',
-                                            }}
-                                          >
-                                            {member.user.email}
-                                          </div>
-                                        )}
-                                      </div>
-                                      {/* Remove button for co-assignees (only if user is lead assignee) */}
-                                      {member.role === 'co-assignee' && viewedTask?.assigneeId === user?.id && (
-                                        <IconButton
-                                          icon={<FaTimes />}
-                                          label="Remove co-assignee"
-                                          iconOnly={true}
-                                          variant="danger"
-                                          size="sm"
-                                          onClick={() => handleRemoveCoAssignee(member.userId)}
-                                          className="!p-1.5 !w-7 !h-7 !min-h-0 flex-shrink-0"
-                                        />
-                                      )}
+                                        {collaborator.permissionLevel}
+                                      </span>
                                     </div>
-                                  ));
-                                })()}
-                              </>
-                            )}
+                                    <div 
+                                      className="text-sm transition-colors duration-200"
+                                      style={{ color: 'var(--color-text-tertiary)' }}
+                                    >
+                                      {collaborator.company.name}
+                                    </div>
+                                  </div>
+                                  {/* Email tooltip */}
+                                  <div 
+                                    className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                    style={{
+                                      backgroundColor: 'var(--color-bg-primary)',
+                                      color: 'var(--color-text-primary)',
+                                    }}
+                                  >
+                                    {collaborator.user.email}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1485,7 +1451,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                   >
                                     {subtask.title}
                                   </span>
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${getStatusColor(subtask.status)} w-fit`}>
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(subtask.status)} flex items-center gap-1 w-fit`}>
+                                    {getStatusIcon(subtask.status)}
                                     {STATUS_LABELS[subtask.status]}
                                   </span>
                                 </div>
@@ -1533,20 +1500,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
               />
             )}
 
-            {/* AddTeamMemberModal */}
-            {isAddTeamMemberModalOpen && (
-              <AddTeamMemberModal
-                isOpen={isAddTeamMemberModalOpen}
-                onClose={() => setIsAddTeamMemberModalOpen(false)}
-                onAdd={handleAddCoAssignee}
-                excludeUserIds={[
-                  viewedTask?.assigneeId,
-                  ...coAssignees.map(co => co.userId)
-                ].filter(Boolean)}
-                taskId={viewedTask?.id}
-              />
-            )}
-
             {/* Save Button */}
             {isEditing && (
               <div className="pt-4">
@@ -1581,11 +1534,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             <CommentSection 
               taskId={viewedTask.id} 
               task={viewedTask}
-              extensionUpdateData={extensionUpdateData}
-              onTaskSwitch={(newTask) => {
-                setViewedTask(newTask);
-                setIsEditing(false);
-              }}
+              extensionUpdateData={extensionUpdateData} 
             />
           </div>
         </div>
@@ -1752,6 +1701,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     </div>
     </>
   );
+
+  // Render modal using portal to ensure it's outside any parent containers
+  return createPortal(modalContent, document.body);
 };
 
 export default TaskModal; 

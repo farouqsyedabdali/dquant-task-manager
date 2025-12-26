@@ -43,12 +43,48 @@ const Header = () => {
   };
 
 
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  // Listen for body class changes to detect panel open state
+  useEffect(() => {
+    const checkPanelState = () => {
+      setIsPanelOpen(document.body.classList.contains('calendar-panel-open'));
+    };
+    
+    // Initial check
+    checkPanelState();
+    
+    // Create observer to watch for class changes
+    const observer = new MutationObserver(checkPanelState);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    // Also check periodically as fallback
+    const interval = setInterval(checkPanelState, 100);
+    
+    return () => {
+      observer.disconnect();
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <header 
-      className="fixed top-0 left-0 right-0 z-50 shadow-lg border-b transition-colors duration-200"
+      className={`fixed top-0 left-0 right-0 z-50 shadow-lg border-b transition-all duration-300 ${
+        isPanelOpen ? 'backdrop-blur-md' : ''
+      }`}
       style={{
-        backgroundColor: 'var(--color-bg-secondary)',
+        backgroundColor: isPanelOpen 
+          ? 'var(--color-bg-secondary)' 
+          : 'var(--color-bg-secondary)',
         borderColor: 'var(--color-border-default)',
+        ...(isPanelOpen && {
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          opacity: 0.9
+        })
       }}
     >
       <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8">
