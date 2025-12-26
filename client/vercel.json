@@ -6,6 +6,10 @@
   "devCommand": "npm run dev",
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://dquant-task-manager-production.up.railway.app/api/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
