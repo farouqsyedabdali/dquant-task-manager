@@ -112,8 +112,8 @@ const Calendar = () => {
     // If overdue, use red colors
     if (isOverdue) {
       return {
-        backgroundColor: 'rgba(239, 68, 68, 0.2)',
-        color: '#fca5a5'
+        backgroundColor: '#ef4444', // red-500 (solid status color)
+        color: '#ffffff' // white text for contrast
       };
     }
 
@@ -121,33 +121,33 @@ const Calendar = () => {
     switch (status) {
       case 'TODO':
         return {
-          backgroundColor: 'rgba(156, 163, 175, 0.2)', // gray-400 with opacity
-          color: '#9ca3af' // gray-400
+          backgroundColor: '#9ca3af', // gray-400 (solid status color)
+          color: '#ffffff' // white text for contrast
         };
       case 'IN_PROGRESS':
         return {
-          backgroundColor: 'rgba(59, 130, 246, 0.2)', // blue-500 with opacity
-          color: '#3b82f6' // blue-500
+          backgroundColor: '#3b82f6', // blue-500 (solid status color)
+          color: '#ffffff' // white text for contrast
         };
       case 'ON_HOLD':
         return {
-          backgroundColor: 'rgba(245, 158, 11, 0.2)', // amber-500 with opacity
-          color: '#f59e0b' // amber-500
+          backgroundColor: '#f59e0b', // amber-500 (solid status color)
+          color: '#ffffff' // white text for contrast
         };
       case 'COMPLETED':
         return {
-          backgroundColor: 'rgba(16, 185, 129, 0.2)', // green-500 with opacity
-          color: '#10b981' // green-500
+          backgroundColor: '#10b981', // green-500 (solid status color)
+          color: '#ffffff' // white text for contrast
         };
       case 'CANCELLED':
         return {
-          backgroundColor: 'rgba(239, 68, 68, 0.2)', // red-500 with opacity
-          color: '#ef4444' // red-500
+          backgroundColor: '#ef4444', // red-500 (solid status color)
+          color: '#ffffff' // white text for contrast
         };
       default:
         return {
-          backgroundColor: 'rgba(99, 102, 241, 0.2)', // indigo with opacity
-          color: 'var(--color-primary)'
+          backgroundColor: 'var(--color-primary)', // indigo (solid status color)
+          color: '#ffffff' // white text for contrast
         };
     }
   };
@@ -825,21 +825,23 @@ const Calendar = () => {
                             onClick={() => setSelectedDate(day)}
                           >
                             {/* Task Items in Time Slot */}
-                            {tasksForSlot.slice(0, 2).map((task, taskIndex) => (
-                              <div
-                                key={taskIndex}
-                                className={`text-xs px-2 py-1 rounded mb-1 truncate ${
-                                  task.priority === 'URGENT' 
-                                    ? 'bg-red-900 text-red-200' 
-                                    : task.priority === 'HIGH'
-                                    ? 'bg-orange-900 text-orange-200'
-                                    : 'bg-indigo-900 text-indigo-200'
-                                }`}
-                                title={task.title}
-                              >
-                                {task.title}
-                              </div>
-                            ))}
+                            {tasksForSlot.slice(0, 2).map((task, taskIndex) => {
+                              // Check if task is overdue
+                              const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
+                              const isOverdue = taskDueDate && taskDueDate < new Date() && task.status !== 'COMPLETED' && task.status !== 'CANCELLED';
+                              const statusColors = getStatusColors(task.status, isOverdue);
+                              
+                              return (
+                                <div
+                                  key={taskIndex}
+                                  className="text-xs px-2 py-1 rounded mb-1 truncate"
+                                  style={statusColors}
+                                  title={task.title}
+                                >
+                                  {task.title}
+                                </div>
+                              );
+                            })}
                             
                             {/* Show more indicator */}
                             {tasksForSlot.length > 2 && (
