@@ -314,247 +314,253 @@ const Calendar = () => {
     <div className="relative w-full">
       {/* Full Screen Calendar */}
       <div className="flex flex-col w-full">
-        {/* First Line: Month/Week Switcher, Filters, Today Button */}
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          {/* View Switcher */}
-          <div className="btn-group">
-            <button
-              onClick={() => setCalendarView('month')}
-              className={`btn btn-sm ${calendarView === 'month' ? 'btn-active' : 'btn-ghost'}`}
-            >
-              Month
-            </button>
-            <button
-              onClick={() => setCalendarView('week')}
-              className={`btn btn-sm ${calendarView === 'week' ? 'btn-active' : 'btn-ghost'}`}
-            >
-              Week
-            </button>
-          </div>
-
-          {/* Filter Buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
+        {/* Month/Week Navigation - Outside the box */}
+        <div className="flex items-center justify-center mb-6">
           <button
-            onClick={() => handleFilterClick('total')}
-            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200 ${
-              !statusFilter || statusFilter === '' ? '' : ''
-            }`}
-            style={{
-              backgroundColor: (!statusFilter || statusFilter === '') 
-                ? 'var(--color-bg-tertiary)' 
-                : 'var(--color-bg-secondary)',
-              borderColor: (!statusFilter || statusFilter === '') 
-                ? 'var(--color-primary)' 
-                : 'var(--color-border-default)',
-              color: (!statusFilter || statusFilter === '') 
-                ? 'var(--color-primary)' 
-                : 'var(--color-text-primary)'
-            }}
-            onMouseEnter={(e) => {
-              if (statusFilter && statusFilter !== '') {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (statusFilter && statusFilter !== '') {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-              }
-            }}
+            onClick={goToPrevious}
+            className="btn btn-ghost"
+            style={{ color: 'var(--color-text-primary)' }}
           >
-            📋 All
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
-          <button
-            onClick={() => handleFilterClick('TODO')}
-            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200`}
-            style={{
-              backgroundColor: statusFilter && statusFilter.split(',').includes('TODO')
-                ? 'var(--color-bg-tertiary)' 
-                : 'var(--color-bg-secondary)',
-              borderColor: statusFilter && statusFilter.split(',').includes('TODO')
-                ? 'var(--color-primary)' 
-                : 'var(--color-border-default)',
-              color: statusFilter && statusFilter.split(',').includes('TODO')
-                ? 'var(--color-primary)' 
-                : 'var(--color-text-primary)'
-            }}
-            onMouseEnter={(e) => {
-              if (!statusFilter || !statusFilter.split(',').includes('TODO')) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!statusFilter || !statusFilter.split(',').includes('TODO')) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-              }
-            }}
+          
+          <h3 
+            className="text-2xl font-semibold min-w-[250px] text-center mx-4"
+            style={{ color: 'var(--color-text-primary)' }}
           >
-            ⏳ To Do
-          </button>
+            {weekRange}
+          </h3>
+          
           <button
-            onClick={() => handleFilterClick('IN_PROGRESS')}
-            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200`}
-            style={{
-              backgroundColor: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
-                ? 'var(--color-bg-tertiary)' 
-                : 'var(--color-bg-secondary)',
-              borderColor: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
-                ? 'var(--color-primary)' 
-                : 'var(--color-border-default)',
-              color: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
-                ? 'var(--color-primary)' 
-                : 'var(--color-text-primary)'
-            }}
-            onMouseEnter={(e) => {
-              if (!statusFilter || !statusFilter.split(',').includes('IN_PROGRESS')) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!statusFilter || !statusFilter.split(',').includes('IN_PROGRESS')) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-              }
-            }}
+            onClick={goToNext}
+            className="btn btn-ghost"
+            style={{ color: 'var(--color-text-primary)' }}
           >
-            🔄 In Progress
-          </button>
-          <button
-            onClick={() => handleFilterClick('ON_HOLD')}
-            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200`}
-            style={{
-              backgroundColor: statusFilter && statusFilter.split(',').includes('ON_HOLD')
-                ? 'var(--color-bg-tertiary)' 
-                : 'var(--color-bg-secondary)',
-              borderColor: statusFilter && statusFilter.split(',').includes('ON_HOLD')
-                ? 'var(--color-primary)' 
-                : 'var(--color-border-default)',
-              color: statusFilter && statusFilter.split(',').includes('ON_HOLD')
-                ? 'var(--color-primary)' 
-                : 'var(--color-text-primary)'
-            }}
-            onMouseEnter={(e) => {
-              if (!statusFilter || !statusFilter.split(',').includes('ON_HOLD')) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!statusFilter || !statusFilter.split(',').includes('ON_HOLD')) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-              }
-            }}
-          >
-            ⏸️ On Hold
-          </button>
-          <button
-            onClick={() => handleFilterClick('COMPLETED')}
-            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200`}
-            style={{
-              backgroundColor: statusFilter && statusFilter.split(',').includes('COMPLETED')
-                ? 'var(--color-bg-tertiary)' 
-                : 'var(--color-bg-secondary)',
-              borderColor: statusFilter && statusFilter.split(',').includes('COMPLETED')
-                ? 'var(--color-primary)' 
-                : 'var(--color-border-default)',
-              color: statusFilter && statusFilter.split(',').includes('COMPLETED')
-                ? 'var(--color-primary)' 
-                : 'var(--color-text-primary)'
-            }}
-            onMouseEnter={(e) => {
-              if (!statusFilter || !statusFilter.split(',').includes('COMPLETED')) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!statusFilter || !statusFilter.split(',').includes('COMPLETED')) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-              }
-            }}
-          >
-            ✅ Completed
-          </button>
-          <button
-            onClick={() => handleFilterClick('CANCELLED')}
-            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all duration-200`}
-            style={{
-              backgroundColor: statusFilter && statusFilter.split(',').includes('CANCELLED')
-                ? 'var(--color-bg-tertiary)' 
-                : 'var(--color-bg-secondary)',
-              borderColor: statusFilter && statusFilter.split(',').includes('CANCELLED')
-                ? 'var(--color-primary)' 
-                : 'var(--color-border-default)',
-              color: statusFilter && statusFilter.split(',').includes('CANCELLED')
-                ? 'var(--color-primary)' 
-                : 'var(--color-text-primary)'
-            }}
-            onMouseEnter={(e) => {
-              if (!statusFilter || !statusFilter.split(',').includes('CANCELLED')) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!statusFilter || !statusFilter.split(',').includes('CANCELLED')) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-              }
-            }}
-          >
-            ❌ Cancelled
-          </button>
-          </div>
-
-          <button
-            onClick={goToToday}
-            className="btn btn-primary btn-sm"
-          >
-            Today
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         </div>
 
-        {/* Second Line: 12/24h Switcher and Month Name */}
-        <div className="flex items-center justify-between mb-4 relative">
-          {/* Time Format Switcher (only show in week view) */}
-          {calendarView === 'week' && (
+        {/* Controls Box - Similar to Dashboard */}
+        <div 
+          className="border rounded-lg shadow-lg p-6 mb-6 transition-colors duration-200"
+          style={{
+            backgroundColor: 'var(--color-bg-secondary)',
+            borderColor: 'var(--color-border-default)',
+          }}
+        >
+          {/* Controls Row: Month/Week Switcher, Filters, Time Format, Today Button */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            {/* View Switcher */}
             <div className="btn-group">
               <button
-                onClick={() => setTimeFormat('12')}
-                className={`btn btn-sm ${timeFormat === '12' ? 'btn-active' : 'btn-ghost'}`}
+                onClick={() => setCalendarView('month')}
+                className={`btn ${calendarView === 'month' ? 'btn-active' : 'btn-ghost'}`}
               >
-                12h
+                Month
               </button>
               <button
-                onClick={() => setTimeFormat('24')}
-                className={`btn btn-sm ${timeFormat === '24' ? 'btn-active' : 'btn-ghost'}`}
+                onClick={() => setCalendarView('week')}
+                className={`btn ${calendarView === 'week' ? 'btn-active' : 'btn-ghost'}`}
               >
-                24h
+                Week
               </button>
             </div>
-          )}
 
-          {/* Month/Week Navigation - Centered */}
-          <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center space-x-3">
+            {/* Filter Buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={goToPrevious}
-              className="btn btn-ghost btn-sm"
-              style={{ color: 'var(--color-text-primary)' }}
+              onClick={() => handleFilterClick('total')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200 ${
+                !statusFilter || statusFilter === '' ? '' : ''
+              }`}
+              style={{
+                backgroundColor: (!statusFilter || statusFilter === '') 
+                  ? 'var(--color-bg-tertiary)' 
+                  : 'var(--color-bg-secondary)',
+                borderColor: (!statusFilter || statusFilter === '') 
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-border-default)',
+                color: (!statusFilter || statusFilter === '') 
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-text-primary)'
+              }}
+              onMouseEnter={(e) => {
+                if (statusFilter && statusFilter !== '') {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (statusFilter && statusFilter !== '') {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                }
+              }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              📋 All
             </button>
-            
-            <h3 
-              className="text-xl font-semibold min-w-[200px] text-center"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
-              {weekRange}
-            </h3>
-            
             <button
-              onClick={goToNext}
-              className="btn btn-ghost btn-sm"
-              style={{ color: 'var(--color-text-primary)' }}
+              onClick={() => handleFilterClick('TODO')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
+              style={{
+                backgroundColor: statusFilter && statusFilter.split(',').includes('TODO')
+                  ? 'var(--color-bg-tertiary)' 
+                  : 'var(--color-bg-secondary)',
+                borderColor: statusFilter && statusFilter.split(',').includes('TODO')
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-border-default)',
+                color: statusFilter && statusFilter.split(',').includes('TODO')
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-text-primary)'
+              }}
+              onMouseEnter={(e) => {
+                if (!statusFilter || !statusFilter.split(',').includes('TODO')) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!statusFilter || !statusFilter.split(',').includes('TODO')) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                }
+              }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              ⏳ To Do
+            </button>
+            <button
+              onClick={() => handleFilterClick('IN_PROGRESS')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
+              style={{
+                backgroundColor: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
+                  ? 'var(--color-bg-tertiary)' 
+                  : 'var(--color-bg-secondary)',
+                borderColor: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-border-default)',
+                color: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-text-primary)'
+              }}
+              onMouseEnter={(e) => {
+                if (!statusFilter || !statusFilter.split(',').includes('IN_PROGRESS')) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!statusFilter || !statusFilter.split(',').includes('IN_PROGRESS')) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                }
+              }}
+            >
+              🔄 In Progress
+            </button>
+            <button
+              onClick={() => handleFilterClick('ON_HOLD')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
+              style={{
+                backgroundColor: statusFilter && statusFilter.split(',').includes('ON_HOLD')
+                  ? 'var(--color-bg-tertiary)' 
+                  : 'var(--color-bg-secondary)',
+                borderColor: statusFilter && statusFilter.split(',').includes('ON_HOLD')
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-border-default)',
+                color: statusFilter && statusFilter.split(',').includes('ON_HOLD')
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-text-primary)'
+              }}
+              onMouseEnter={(e) => {
+                if (!statusFilter || !statusFilter.split(',').includes('ON_HOLD')) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!statusFilter || !statusFilter.split(',').includes('ON_HOLD')) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                }
+              }}
+            >
+              ⏸️ On Hold
+            </button>
+            <button
+              onClick={() => handleFilterClick('COMPLETED')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
+              style={{
+                backgroundColor: statusFilter && statusFilter.split(',').includes('COMPLETED')
+                  ? 'var(--color-bg-tertiary)' 
+                  : 'var(--color-bg-secondary)',
+                borderColor: statusFilter && statusFilter.split(',').includes('COMPLETED')
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-border-default)',
+                color: statusFilter && statusFilter.split(',').includes('COMPLETED')
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-text-primary)'
+              }}
+              onMouseEnter={(e) => {
+                if (!statusFilter || !statusFilter.split(',').includes('COMPLETED')) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!statusFilter || !statusFilter.split(',').includes('COMPLETED')) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                }
+              }}
+            >
+              ✅ Completed
+            </button>
+            <button
+              onClick={() => handleFilterClick('CANCELLED')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
+              style={{
+                backgroundColor: statusFilter && statusFilter.split(',').includes('CANCELLED')
+                  ? 'var(--color-bg-tertiary)' 
+                  : 'var(--color-bg-secondary)',
+                borderColor: statusFilter && statusFilter.split(',').includes('CANCELLED')
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-border-default)',
+                color: statusFilter && statusFilter.split(',').includes('CANCELLED')
+                  ? 'var(--color-primary)' 
+                  : 'var(--color-text-primary)'
+              }}
+              onMouseEnter={(e) => {
+                if (!statusFilter || !statusFilter.split(',').includes('CANCELLED')) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!statusFilter || !statusFilter.split(',').includes('CANCELLED')) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                }
+              }}
+            >
+              ❌ Cancelled
+            </button>
+            </div>
+
+            {/* Time Format Switcher (only show in week view) */}
+            {calendarView === 'week' && (
+              <div className="btn-group">
+                <button
+                  onClick={() => setTimeFormat('12')}
+                  className={`btn ${timeFormat === '12' ? 'btn-active' : 'btn-ghost'}`}
+                >
+                  12h
+                </button>
+                <button
+                  onClick={() => setTimeFormat('24')}
+                  className={`btn ${timeFormat === '24' ? 'btn-active' : 'btn-ghost'}`}
+                >
+                  24h
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={goToToday}
+              className="btn btn-primary"
+            >
+              Today
             </button>
           </div>
         </div>
@@ -694,11 +700,17 @@ const Calendar = () => {
             >
               {/* Week Header */}
               <div 
-                className="grid grid-cols-8"
-                style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                className="grid"
+                style={{ 
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  gridTemplateColumns: '120px repeat(7, minmax(0, 1fr))',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  paddingRight: '15px' // Account for scrollbar width
+                }}
               >
                 <div 
-                  className="p-3 border-r"
+                  className="p-2 border-r box-border"
                   style={{ borderColor: 'var(--color-border-default)' }}
                 ></div>
                 {weekDays.map((day, index) => {
@@ -710,7 +722,7 @@ const Calendar = () => {
                   return (
                     <div 
                       key={index} 
-                      className="p-3 text-center border-r last:border-r-0"
+                      className="p-1 text-center border-r last:border-r-0 box-border overflow-hidden"
                       style={{ borderColor: 'var(--color-border-default)' }}
                     >
                       <div 
@@ -748,16 +760,23 @@ const Calendar = () => {
               </div>
 
               {/* Time Slots Grid */}
-              <div className="max-h-[600px] overflow-y-auto">
+              <div className="max-h-[600px] overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
                 {timeSlots.map((timeSlot, slotIndex) => {
                   const isHour = timeSlot.getMinutes() === 0;
                   const isHalfHour = timeSlot.getMinutes() === 30;
                   
                   return (
-                    <div key={slotIndex} className="grid grid-cols-8">
+                    <div 
+                      key={slotIndex} 
+                      className="grid"
+                      style={{ 
+                        gridTemplateColumns: '120px repeat(7, minmax(0, 1fr))',
+                        width: '100%'
+                      }}
+                    >
                       {/* Time Column */}
                       <div 
-                        className={`p-2 border-r ${
+                        className={`p-2 border-r box-border ${
                           isHour ? 'border-b-2' : 'border-b'
                         }`}
                         style={{
@@ -784,7 +803,7 @@ const Calendar = () => {
                         return (
                           <div
                             key={dayIndex}
-                            className={`p-1 border-r last:border-r-0 cursor-pointer transition-colors ${
+                            className={`p-1 border-r last:border-r-0 cursor-pointer transition-colors box-border overflow-hidden ${
                               isHour ? 'border-b-2' : 'border-b'
                             }`}
                             style={{
@@ -792,7 +811,8 @@ const Calendar = () => {
                               backgroundColor: isTodayDate 
                                 ? 'var(--color-bg-tertiary)' 
                                 : 'var(--color-bg-secondary)',
-                              borderBottomWidth: isHour ? '2px' : '1px'
+                              borderBottomWidth: isHour ? '2px' : '1px',
+                              minWidth: 0
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';

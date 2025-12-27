@@ -310,3 +310,4 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
 export default EditProjectModal;
 
 
+

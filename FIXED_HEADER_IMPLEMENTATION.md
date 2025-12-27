@@ -52,3 +52,4 @@ Made the header fixed to the top of the screen so it remains visible while scrol
 5. Ensure modals appear above the fixed header
 
 
+
