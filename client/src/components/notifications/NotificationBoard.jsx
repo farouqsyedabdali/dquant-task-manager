@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useNotificationStore from '../../stores/notificationStore';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -14,6 +15,7 @@ const NotificationBoard = () => {
   } = useNotificationStore();
   
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchNotifications();
@@ -68,8 +70,24 @@ const NotificationBoard = () => {
     if (!notification.isRead) {
       await markAsRead(notification.id);
     }
-    // TODO: Navigate to the specific task
-    // For now, just close the notification board
+    
+    // If notification has a task, open it
+    const taskId = notification.task?.id || notification.taskId;
+    if (taskId) {
+      // Dispatch custom event to open task modal
+      const event = new CustomEvent('openTaskFromNotification', {
+        detail: { taskId }
+      });
+      window.dispatchEvent(event);
+      
+      // Navigate to dashboard if not already there
+      const currentPath = window.location.pathname;
+      if (!currentPath.includes('/dashboard')) {
+        navigate('/dashboard');
+      }
+    }
+    
+    // Close the notification board
     setIsOpen(false);
   };
 
@@ -192,9 +210,12 @@ const NotificationBoard = () => {
                         <h4 
                           className="text-sm font-medium transition-colors duration-200"
                           style={{ 
-                            color: !notification.isRead 
-                              ? 'var(--color-text-primary)' 
-                              : 'var(--color-text-secondary)' 
+                            color: (notification.task?.id || notification.taskId)
+                              ? 'var(--color-primary)'
+                              : (!notification.isRead 
+                                ? 'var(--color-text-primary)' 
+                                : 'var(--color-text-secondary)'),
+                            textDecoration: (notification.task?.id || notification.taskId) ? 'underline' : 'none'
                           }}
                         >
                           {notification.title}
@@ -208,7 +229,10 @@ const NotificationBoard = () => {
                       </div>
                       <p 
                         className="text-sm mt-1 transition-colors duration-200"
-                        style={{ color: 'var(--color-text-tertiary)' }}
+                        style={{ 
+                          color: 'var(--color-text-tertiary)',
+                          textDecoration: notification.task && notification.task.id ? 'none' : 'none'
+                        }}
                       >
                         {notification.message}
                       </p>
@@ -219,12 +243,24 @@ const NotificationBoard = () => {
                         >
                           {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                         </span>
-                        {notification.task && (
+                        {(notification.task?.id || notification.taskId) && (
                           <span 
-                            className="text-xs transition-colors duration-200"
-                            style={{ color: '#60a5fa' }}
+                            className="text-xs transition-colors duration-200 underline truncate max-w-[150px]"
+                            style={{ 
+                              color: 'var(--color-primary)',
+                              cursor: 'pointer',
+                              display: 'inline-block'
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleNotificationClick(notification);
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.textDecoration = 'underline';
+                            }}
+                            title={notification.task?.title || 'Task'}
                           >
-                            Task #{notification.task.id}
+                            {notification.task?.title || `Task #${notification.task?.id || notification.taskId}`}
                           </span>
                         )}
                       </div>

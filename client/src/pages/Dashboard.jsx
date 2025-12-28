@@ -133,6 +133,32 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
     }
   }, [fetchTasks, archiveView]);
 
+  // Handle opening task from notification click
+  useEffect(() => {
+    const handleOpenTaskFromNotification = async (event) => {
+      const { taskId } = event.detail;
+      if (taskId) {
+        try {
+          const result = await fetchTask(parseInt(taskId));
+          if (result.success && result.data) {
+            setCurrentTask(result.data);
+            setIsTaskModalOpen(true);
+            console.log('Dashboard: Opened task modal from notification:', result.data.title);
+          } else {
+            console.error('Dashboard: Failed to fetch task with ID:', taskId);
+          }
+        } catch (error) {
+          console.error('Dashboard: Error fetching task from notification:', error);
+        }
+      }
+    };
+
+    window.addEventListener('openTaskFromNotification', handleOpenTaskFromNotification);
+    return () => {
+      window.removeEventListener('openTaskFromNotification', handleOpenTaskFromNotification);
+    };
+  }, [fetchTask]);
+
   // Handle URL parameters for task data and updates from browser extension
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);

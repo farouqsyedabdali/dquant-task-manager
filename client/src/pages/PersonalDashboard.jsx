@@ -66,6 +66,32 @@ const PersonalDashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
     }
   }, [archiveView]);
 
+  // Handle opening task from notification click
+  useEffect(() => {
+    const handleOpenTaskFromNotification = async (event) => {
+      const { taskId } = event.detail;
+      if (taskId) {
+        try {
+          const result = await fetchTask(parseInt(taskId));
+          if (result.success && result.data) {
+            setCurrentTask(result.data);
+            setIsTaskModalOpen(true);
+            console.log('PersonalDashboard: Opened task modal from notification:', result.data.title);
+          } else {
+            console.error('PersonalDashboard: Failed to fetch task with ID:', taskId);
+          }
+        } catch (error) {
+          console.error('PersonalDashboard: Error fetching task from notification:', error);
+        }
+      }
+    };
+
+    window.addEventListener('openTaskFromNotification', handleOpenTaskFromNotification);
+    return () => {
+      window.removeEventListener('openTaskFromNotification', handleOpenTaskFromNotification);
+    };
+  }, [fetchTask]);
+
   // Handle extension messages
   useEffect(() => {
     const handleMessage = (event) => {

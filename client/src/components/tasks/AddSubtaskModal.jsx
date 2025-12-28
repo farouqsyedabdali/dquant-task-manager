@@ -273,9 +273,16 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
               </span>
             </p>
           </div>
-          <button
-            onClick={handleClose}
-            className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
+          <button 
+            onClick={handleClose} 
+            className="btn btn-ghost btn-sm btn-circle transition-colors duration-200"
+            style={{ color: 'var(--color-text-tertiary)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--color-text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--color-text-tertiary)';
+            }}
           >
             ✕
           </button>
@@ -342,7 +349,10 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Description ({formData.description.length}/300)
             </label>
             <textarea
@@ -351,7 +361,18 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
               onChange={handleChange}
               maxLength={300}
               rows={4}
-              className="textarea bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500"
+              className="textarea w-full transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-primary)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border-default)';
+              }}
               placeholder="Enter subtask description"
             />
             {errors.description && (
@@ -363,14 +384,28 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
           <div className="grid grid-cols-2 gap-4">
             {/* Priority */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Priority
               </label>
               <select
                 name="priority"
                 value={formData.priority}
                 onChange={handleChange}
-                className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+                className="select w-full transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                }}
               >
                 {PRIORITY_OPTIONS.map(({ value, label }) => (
                   <option key={value} value={value}>{label}</option>
@@ -420,7 +455,10 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
           {/* Assign To */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              className="block text-sm font-medium mb-2 transition-colors duration-200"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
               Assign To *
             </label>
             <SearchableDropdown
@@ -443,7 +481,12 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
               <p className="text-red-400 text-sm mt-1">{errors.assigneeId}</p>
             )}
             {isLoadingUsers && (
-              <p className="text-sm text-gray-400 mt-1">Loading employees...</p>
+              <p 
+                className="text-sm mt-1 transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
+                Loading employees...
+              </p>
             )}
           </div>
 
@@ -452,7 +495,18 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
             <button
               type="button"
               onClick={handleClose}
-              className="btn bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+              className="btn transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-quaternary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }}
             >
               Cancel
             </button>

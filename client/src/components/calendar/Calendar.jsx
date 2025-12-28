@@ -37,10 +37,19 @@ const Calendar = () => {
     return end;
   };
 
-  // Generate time slots for weekly view (every 30 minutes from 6 AM to 11 PM)
+  // Generate time slots for weekly view (every 30 minutes from 6 AM to 5:30 AM next day - full 24 hours)
   const generateTimeSlots = () => {
     const slots = [];
+    // From 6:00 AM to 11:30 PM (hour 6 to hour 23)
     for (let hour = 6; hour <= 23; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const time = new Date();
+        time.setHours(hour, minute, 0, 0);
+        slots.push(time);
+      }
+    }
+    // From 12:00 AM (midnight) to 5:30 AM (hour 0 to hour 5)
+    for (let hour = 0; hour <= 5; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const time = new Date();
         time.setHours(hour, minute, 0, 0);
