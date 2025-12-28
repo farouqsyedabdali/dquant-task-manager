@@ -651,15 +651,19 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
 
   // Helper function to create a comprehensive task summary
   const createTaskSummary = async (task) => {
-    const formatDate = (dateString) => {
+    const formatDate = (dateString, taskStatus) => {
       if (!dateString) return 'No due date set';
       const date = new Date(dateString);
       const now = new Date();
       const diffTime = date.getTime() - now.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
-      if (diffDays < 0) {
+      // Only show "Overdue" if task status is TODO or IN_PROGRESS
+      if (diffDays < 0 && (taskStatus === 'TODO' || taskStatus === 'IN_PROGRESS')) {
         return `Overdue by ${Math.abs(diffDays)} day(s)`;
+      } else if (diffDays < 0) {
+        // For other statuses, just show the date without "Overdue"
+        return new Date(dateString).toLocaleDateString();
       } else if (diffDays === 0) {
         return 'Due today';
       } else if (diffDays === 1) {
@@ -710,7 +714,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
       textSummary: textSummary,
       status: `${getStatusEmoji(task.status)} ${task.status.replace('_', ' ')}`,
       priority: `${getPriorityEmoji(task.priority)} ${task.priority}`,
-      dueDate: formatDate(task.dueDate),
+      dueDate: formatDate(task.dueDate, task.status),
       createdBy: task.assigner?.name || 'Unknown',
       assignedTo: task.assignedTo?.name || 'Unassigned',
       createdAt: new Date(task.createdAt).toLocaleDateString('en-US', {
@@ -929,7 +933,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
                   ? 'Manage your personal tasks and stay organized'
                   : isAdmin() 
                     ? 'Manage all tasks and team assignments' 
-                    : 'View and update your assigned tasks'
+                    : ''
                 }
               </p>
             </div>

@@ -62,13 +62,20 @@ const emailService = {
     const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0];
     const invitationLink = `${clientUrl}/task-invitation/${token}`;
     
+    // Check if recipient is a registered user
+    const prisma = require('../lib/prisma');
+    const isRegisteredUser = await prisma.user.findFirst({
+      where: { email: recipientEmail.toLowerCase() }
+    }) !== null;
+    
     const { taskInvitationTemplate } = require('../templates/taskInvitationEmail');
     const html = taskInvitationTemplate({
       recipientName,
       senderName,
       task,
       invitationLink,
-      message
+      message,
+      isRegisteredUser
     });
 
     try {

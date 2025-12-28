@@ -64,15 +64,36 @@ const ResetPasswordModal = ({ isOpen, onClose, employee }) => {
 
   return (
     <div className="modal modal-open backdrop-blur-sm">
-      <div className="modal-box bg-gray-800 border border-gray-700">
+      <div 
+        className="modal-box"
+        style={{
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: 'var(--color-border-default)',
+          borderWidth: 1,
+        }}
+      >
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-white">
+          <h3 
+            className="text-2xl font-bold"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
             Reset Password for {employee.name}
           </h3>
           <button
             onClick={handleClose}
             disabled={isLoading}
-            className="btn btn-ghost btn-sm text-gray-400 hover:text-white disabled:opacity-50"
+            className="btn btn-ghost btn-sm transition-colors duration-200 disabled:opacity-50"
+            style={{ 
+              color: 'var(--color-text-secondary)',
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.color = 'var(--color-text-primary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--color-text-secondary)';
+            }}
           >
             ✕
           </button>
@@ -80,25 +101,59 @@ const ResetPasswordModal = ({ isOpen, onClose, employee }) => {
 
         {success ? (
           <div className="text-center py-8">
-            <div className="text-green-400 text-6xl mb-4">✓</div>
-            <h4 className="text-xl font-semibold text-white mb-2">Password Reset Successfully!</h4>
-            <p className="text-gray-400">
+            <div 
+              className="text-6xl mb-4"
+              style={{ color: '#10b981' }}
+            >
+              ✓
+            </div>
+            <h4 
+              className="text-xl font-semibold mb-2"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              Password Reset Successfully!
+            </h4>
+            <p style={{ color: 'var(--color-text-secondary)' }}>
               The password for {employee.name} has been reset successfully.
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="bg-gray-700 rounded-lg p-4 mb-6">
+            <div 
+              className="rounded-lg p-4 mb-6"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+              }}
+            >
               <div className="flex items-center space-x-3">
                 <div className="avatar placeholder">
-                  <div className="bg-indigo-600 text-white rounded-full w-12">
+                  <div 
+                    className="rounded-full w-12"
+                    style={{
+                      backgroundColor: 'var(--color-primary)',
+                      color: '#ffffff',
+                    }}
+                  >
                     <span className="text-lg">{employee.name.charAt(0)}</span>
                   </div>
                 </div>
                 <div>
-                  <div className="font-medium text-white">{employee.name}</div>
-                  <div className="text-gray-400 text-sm">{employee.email}</div>
-                  <div className="text-gray-500 text-xs">
+                  <div 
+                    className="font-medium"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {employee.name}
+                  </div>
+                  <div 
+                    className="text-sm"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    {employee.email}
+                  </div>
+                  <div 
+                    className="text-xs"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
                     {employee.role === 'SYSDMIN' ? 'System Administrator' : 
                      employee.role === 'ADMIN' ? 'Admin' : 'Employee'}
                   </div>
@@ -106,15 +161,36 @@ const ResetPasswordModal = ({ isOpen, onClose, employee }) => {
               </div>
             </div>
 
+            <style>{`
+              #reset-password-new::placeholder,
+              #reset-password-confirm::placeholder {
+                color: var(--color-text-tertiary);
+              }
+            `}</style>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 New Password
               </label>
               <input
+                id="reset-password-new"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-indigo-500 w-full"
+                className="input input-bordered w-full transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                }}
                 placeholder="Enter new password (min 6 characters)"
                 disabled={isLoading}
                 required
@@ -122,14 +198,29 @@ const ResetPasswordModal = ({ isOpen, onClose, employee }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Confirm New Password
               </label>
               <input
+                id="reset-password-confirm"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-indigo-500 w-full"
+                className="input input-bordered w-full transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                }}
                 placeholder="Confirm new password"
                 disabled={isLoading}
                 required
@@ -150,14 +241,39 @@ const ResetPasswordModal = ({ isOpen, onClose, employee }) => {
                 type="button"
                 onClick={handleClose}
                 disabled={isLoading}
-                className="btn bg-gray-700 hover:bg-gray-600 text-white border-gray-600 disabled:opacity-50"
+                className="btn transition-colors duration-200 disabled:opacity-50"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isLoading) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isLoading || !newPassword || !confirmPassword}
-                className="btn bg-red-600 hover:bg-red-700 text-white border-0 disabled:opacity-50"
+                className="btn border-0 transition-colors duration-200 disabled:opacity-50"
+                style={{
+                  backgroundColor: '#ef4444',
+                  color: '#ffffff',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isLoading && newPassword && confirmPassword) {
+                    e.currentTarget.style.backgroundColor = '#dc2626';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ef4444';
+                }}
               >
                 {isLoading ? (
                   <>

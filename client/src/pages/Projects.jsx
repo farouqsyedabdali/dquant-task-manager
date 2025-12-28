@@ -94,7 +94,7 @@ const Projects = () => {
             className="text-3xl font-bold mb-2"
             style={{ color: 'var(--color-text-primary)' }}
           >
-            Projects
+            Projects and Events
           </h1>
           <p style={{ color: 'var(--color-text-secondary)' }}>
             Organize your work with projects containing multiple tasks
@@ -130,7 +130,7 @@ const Projects = () => {
               color: 'var(--color-text-primary)',
             }}
           >
-            <option value="ALL">All Projects</option>
+            <option value="ALL">All Projects and Events</option>
             <option value="ACTIVE">Active</option>
             <option value="ON_HOLD">On Hold</option>
             <option value="COMPLETED">Completed</option>

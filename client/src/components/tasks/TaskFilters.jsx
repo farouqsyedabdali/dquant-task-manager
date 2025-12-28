@@ -84,7 +84,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
             }}
           >
             <option value="">All Statuses</option>
-            <option value="TODO,IN_PROGRESS">Active Tasks (To Do + In Progress)</option>
+            <option value="TODO,IN_PROGRESS">Tasks on Hand (To Do and In Progress)</option>
             {STATUS_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>
                 {label}
@@ -191,6 +191,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
               <option value="shared">Shared with me</option>
               <option value="assigned">Assigned to me</option>
               <option value="created">Created by me</option>
+              <option value="projects">Projects and Events only</option>
             </select>
           </div>
         )}
@@ -310,7 +311,8 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
             <div className="status-badge bg-green-600 text-white gap-2 border-0 flex items-center">
               Type: {filters.taskType === 'shared' ? 'Shared with me' :
                      filters.taskType === 'assigned' ? 'Assigned to me' :
-                     filters.taskType === 'created' ? 'Created by me' : filters.taskType}
+                     filters.taskType === 'created' ? 'Created by me' :
+                     filters.taskType === 'projects' ? 'Projects and Events only' : filters.taskType}
               <IconButton
                 icon={<FaTimes />}
                 label="Remove task type filter"

@@ -152,7 +152,18 @@ const useAuthStore = create((set, get) => ({
       return { success: true };
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Failed to get user info';
-      set({ error: errorMessage, isLoading: false });
+      
+      // If token is invalid/expired (401 or 403), clear auth
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('rememberMe');
+        localStorage.removeItem('tokenExpiry');
+        set({ user: null, token: null, error: null, isLoading: false });
+      } else {
+        set({ error: errorMessage, isLoading: false });
+      }
+      
       return { success: false, error: errorMessage };
     }
   },

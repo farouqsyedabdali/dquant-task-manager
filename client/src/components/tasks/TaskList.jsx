@@ -107,7 +107,7 @@ const TaskList = ({ tasks, onStatusChange, onPriorityChange, onDelete, onArchive
                                   }`}>
                                     {new Date(task.dueDate).toLocaleDateString()}
                                   </span>
-                                  {new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED' && (
+                                  {new Date(task.dueDate) < new Date() && (task.status === 'TODO' || task.status === 'IN_PROGRESS') && (
                                     <span className="status-badge-sm priority-urgent">Overdue</span>
                                   )}
                                 </div>

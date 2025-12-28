@@ -223,7 +223,7 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTas
       
       {/* Task Switcher - Removed: Task selection now happens in TaskSelectionModal before opening TaskModal */}
       
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-1">
         <div>
           <textarea
             value={newComment}

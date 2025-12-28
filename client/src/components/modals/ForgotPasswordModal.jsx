@@ -111,16 +111,35 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
 
   return (
     <div className="modal modal-open backdrop-blur-sm">
-      <div className="modal-box bg-gray-800 border border-gray-700 max-w-md">
+      <div 
+        className="modal-box max-w-md"
+        style={{
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: 'var(--color-border-default)',
+          borderWidth: 1,
+        }}
+      >
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-white">
+          <h3 
+            className="text-2xl font-bold"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
             {step === 1 && 'Forgot Password'}
             {step === 2 && 'Enter Verification Code'}
             {step === 3 && 'Create New Password'}
           </h3>
           <button
             onClick={handleClose}
-            className="btn btn-ghost btn-sm btn-circle text-gray-400 hover:text-white"
+            className="btn btn-ghost btn-sm btn-circle transition-colors duration-200"
+            style={{ 
+              color: 'var(--color-text-secondary)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--color-text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--color-text-secondary)';
+            }}
           >
             ✕
           </button>
@@ -129,15 +148,35 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
         {/* Step 1: Email */}
         {step === 1 && (
           <form onSubmit={handleSendCode} className="space-y-4">
+            <style>{`
+              #forgot-password-email::placeholder {
+                color: var(--color-text-tertiary);
+              }
+            `}</style>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Email Address
               </label>
               <input
+                id="forgot-password-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-indigo-500 w-full"
+                className="input input-bordered w-full transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                }}
                 placeholder="Enter your email address"
                 disabled={isLoading}
                 required
@@ -165,7 +204,17 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
             <div className="modal-action">
               <button
                 type="submit"
-                className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
+                className="btn border-0 transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-primary)',
+                  color: '#ffffff',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
                 disabled={isLoading}
               >
                 {isLoading ? 'Sending...' : 'Send Code'}
@@ -173,7 +222,16 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
               <button
                 type="button"
                 onClick={handleClose}
-                className="btn btn-ghost text-gray-400 hover:text-white"
+                className="btn btn-ghost transition-colors duration-200"
+                style={{ 
+                  color: 'var(--color-text-secondary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                }}
                 disabled={isLoading}
               >
                 Cancel
@@ -185,21 +243,41 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
         {/* Step 2: Verification Code */}
         {step === 2 && (
           <form onSubmit={handleVerifyCode} className="space-y-4">
+            <style>{`
+              #forgot-password-code::placeholder {
+                color: var(--color-text-tertiary);
+              }
+            `}</style>
             <div className="text-center mb-4">
-              <p className="text-gray-300">
-                We've sent a 6-digit verification code to <strong>{email}</strong>
+              <p style={{ color: 'var(--color-text-secondary)' }}>
+                We've sent a 6-digit verification code to <strong style={{ color: 'var(--color-text-primary)' }}>{email}</strong>
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Verification Code
               </label>
               <input
+                id="forgot-password-code"
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                className="input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-indigo-500 w-full text-center text-2xl tracking-widest"
+                className="input input-bordered w-full text-center text-2xl tracking-widest transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                }}
                 placeholder="000000"
                 disabled={isLoading}
                 maxLength={6}
@@ -228,7 +306,17 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
             <div className="modal-action">
               <button
                 type="submit"
-                className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
+                className="btn border-0 transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-primary)',
+                  color: '#ffffff',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
                 disabled={isLoading || code.length !== 6}
               >
                 {isLoading ? 'Verifying...' : 'Verify Code'}
@@ -236,7 +324,16 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="btn btn-ghost text-gray-400 hover:text-white"
+                className="btn btn-ghost transition-colors duration-200"
+                style={{ 
+                  color: 'var(--color-text-secondary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                }}
                 disabled={isLoading}
               >
                 Back
@@ -248,21 +345,42 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
         {/* Step 3: New Password */}
         {step === 3 && (
           <form onSubmit={handleResetPassword} className="space-y-4">
+            <style>{`
+              #forgot-password-new::placeholder,
+              #forgot-password-confirm::placeholder {
+                color: var(--color-text-tertiary);
+              }
+            `}</style>
             <div className="text-center mb-4">
-              <p className="text-gray-300">
-                Create a new password for <strong>{email}</strong>
+              <p style={{ color: 'var(--color-text-secondary)' }}>
+                Create a new password for <strong style={{ color: 'var(--color-text-primary)' }}>{email}</strong>
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 New Password
               </label>
               <input
+                id="forgot-password-new"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-indigo-500 w-full"
+                className="input input-bordered w-full transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                }}
                 placeholder="Enter new password (min 6 characters)"
                 disabled={isLoading}
                 required
@@ -270,14 +388,29 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Confirm New Password
               </label>
               <input
+                id="forgot-password-confirm"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="input input-bordered bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-indigo-500 w-full"
+                className="input input-bordered w-full transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                }}
                 placeholder="Confirm new password"
                 disabled={isLoading}
                 required
@@ -305,7 +438,17 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
             <div className="modal-action">
               <button
                 type="submit"
-                className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
+                className="btn border-0 transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-primary)',
+                  color: '#ffffff',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
                 disabled={isLoading}
               >
                 {isLoading ? 'Resetting...' : 'Reset Password'}
@@ -313,7 +456,16 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="btn btn-ghost text-gray-400 hover:text-white"
+                className="btn btn-ghost transition-colors duration-200"
+                style={{ 
+                  color: 'var(--color-text-secondary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                }}
                 disabled={isLoading}
               >
                 Back
@@ -328,9 +480,12 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
             {[1, 2, 3].map((stepNumber) => (
               <div
                 key={stepNumber}
-                className={`w-3 h-3 rounded-full ${
-                  step >= stepNumber ? 'bg-indigo-500' : 'bg-gray-600'
-                }`}
+                className="w-3 h-3 rounded-full transition-colors duration-200"
+                style={{
+                  backgroundColor: step >= stepNumber 
+                    ? 'var(--color-primary)' 
+                    : 'var(--color-border-default)'
+                }}
               />
             ))}
           </div>

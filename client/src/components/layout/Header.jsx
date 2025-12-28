@@ -166,7 +166,7 @@ const Header = () => {
                 }}
               >
                 <FaProjectDiagram className="w-4 h-4" />
-                <span>Projects</span>
+                <span>Projects and Events</span>
               </button>
               {isAdmin() && !isPersonalAccount && (
                 <button
@@ -426,7 +426,7 @@ const Header = () => {
                   }}
                 >
                   <FaProjectDiagram className="w-4 h-4" />
-                  <span>Projects</span>
+                  <span>Projects and Events</span>
                 </button>
                 {isAdmin() && !isPersonalAccount && (
                   <button

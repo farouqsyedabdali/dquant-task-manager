@@ -115,9 +115,9 @@ function setupTaskbarContextMenu() {
         }
       },
       {
-        label: '📝 Update Task',
+        label: '📝 Add Update',
         click: () => {
-          console.log('📝 Update Task clicked from application menu');
+          console.log('📝 Add Update clicked from application menu');
           handleTaskbarAction('update-task');
         }
       },
@@ -149,7 +149,7 @@ function setupTaskbarContextMenu() {
     app.setJumpList([
       {
         type: 'custom',
-        name: 'Quick Actions',
+        name: 'AI Actions',
         items: [
           {
             type: 'task',
@@ -162,8 +162,8 @@ function setupTaskbarContextMenu() {
           },
           {
             type: 'task',
-            title: 'Update Task',
-            description: 'Update an existing task',
+            title: 'Add Update',
+            description: 'Add update to existing task',
             program: process.execPath,
             args: '--update-task',
             iconPath: path.join(__dirname, '..', 'main', 'icon.ico'),
@@ -295,7 +295,7 @@ if (!gotTheLock) {
       console.log('🆕 Jump list: Create Task action detected');
       handleTaskbarAction('create-task');
     } else if (commandLine.includes('--update-task')) {
-      console.log('📝 Jump list: Update Task action detected');
+      console.log('📝 Jump list: Add Update action detected');
       handleTaskbarAction('update-task');
     } else if (commandLine.includes('--add-subtask')) {
       console.log('➕ Jump list: Add Subtask action detected');
@@ -328,7 +328,7 @@ if (!gotTheLock) {
       console.log('🆕 First launch: Create Task action detected');
       handleTaskbarAction('create-task');
     } else if (args.includes('--update-task')) {
-      console.log('📝 First launch: Update Task action detected');
+      console.log('📝 First launch: Add Update action detected');
       handleTaskbarAction('update-task');
     } else if (args.includes('--add-subtask')) {
       console.log('➕ First launch: Add Subtask action detected');

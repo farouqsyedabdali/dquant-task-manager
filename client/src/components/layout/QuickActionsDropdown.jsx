@@ -250,7 +250,7 @@ const QuickActionsDropdown = () => {
         ) : (
           <>
             <FaLayerGroup className="w-4 h-4" />
-            <span>Quick Actions</span>
+            <span>AI Actions</span>
             <FaChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
           </>
         )}
@@ -304,7 +304,7 @@ const QuickActionsDropdown = () => {
             >
               <FaEdit className="w-4 h-4 text-blue-500" />
               <div>
-                <div className="font-medium">Update Task</div>
+                <div className="font-medium">Add Update</div>
                 <div 
                   className="text-xs transition-colors duration-200"
                   style={{ color: 'var(--color-text-tertiary)' }}

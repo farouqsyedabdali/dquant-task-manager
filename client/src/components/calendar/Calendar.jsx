@@ -209,7 +209,9 @@ const Calendar = () => {
     const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
     const overdueTasks = tasks.filter(task => {
-      if (!task.dueDate || task.status === 'COMPLETED') return false;
+      if (!task.dueDate) return false;
+      // Only consider tasks as overdue if status is TODO or IN_PROGRESS
+      if (task.status !== 'TODO' && task.status !== 'IN_PROGRESS') return false;
       const taskDate = new Date(task.dueDate);
       // Only show overdue tasks on their original due date
       return taskDate >= startOfDay && taskDate < endOfDay && taskDate < new Date();
@@ -354,207 +356,207 @@ const Calendar = () => {
         >
           {/* Controls Row: Month/Week Switcher, Filters, Time Format, Today Button */}
           <div className="flex items-center justify-between flex-wrap gap-3">
-            {/* View Switcher */}
+          {/* View Switcher */}
+          <div className="btn-group">
+            <button
+              onClick={() => setCalendarView('month')}
+                className={`btn ${calendarView === 'month' ? 'btn-active' : 'btn-ghost'}`}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => setCalendarView('week')}
+                className={`btn ${calendarView === 'week' ? 'btn-active' : 'btn-ghost'}`}
+            >
+              Week
+            </button>
+          </div>
+
+          {/* Filter Buttons */}
+          <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => handleFilterClick('total')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200 ${
+              !statusFilter || statusFilter === '' ? '' : ''
+            }`}
+            style={{
+              backgroundColor: (!statusFilter || statusFilter === '') 
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: (!statusFilter || statusFilter === '') 
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: (!statusFilter || statusFilter === '') 
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (statusFilter && statusFilter !== '') {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (statusFilter && statusFilter !== '') {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            📋 All
+          </button>
+          <button
+            onClick={() => handleFilterClick('TODO')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
+            style={{
+              backgroundColor: statusFilter && statusFilter.split(',').includes('TODO')
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: statusFilter && statusFilter.split(',').includes('TODO')
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: statusFilter && statusFilter.split(',').includes('TODO')
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('TODO')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('TODO')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            ⏳ To Do
+          </button>
+          <button
+            onClick={() => handleFilterClick('IN_PROGRESS')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
+            style={{
+              backgroundColor: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('IN_PROGRESS')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('IN_PROGRESS')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            🔄 In Progress
+          </button>
+          <button
+            onClick={() => handleFilterClick('ON_HOLD')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
+            style={{
+              backgroundColor: statusFilter && statusFilter.split(',').includes('ON_HOLD')
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: statusFilter && statusFilter.split(',').includes('ON_HOLD')
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: statusFilter && statusFilter.split(',').includes('ON_HOLD')
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('ON_HOLD')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('ON_HOLD')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            ⏸️ On Hold
+          </button>
+          <button
+            onClick={() => handleFilterClick('COMPLETED')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
+            style={{
+              backgroundColor: statusFilter && statusFilter.split(',').includes('COMPLETED')
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: statusFilter && statusFilter.split(',').includes('COMPLETED')
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: statusFilter && statusFilter.split(',').includes('COMPLETED')
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('COMPLETED')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('COMPLETED')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            ✅ Completed
+          </button>
+          <button
+            onClick={() => handleFilterClick('CANCELLED')}
+              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
+            style={{
+              backgroundColor: statusFilter && statusFilter.split(',').includes('CANCELLED')
+                ? 'var(--color-bg-tertiary)' 
+                : 'var(--color-bg-secondary)',
+              borderColor: statusFilter && statusFilter.split(',').includes('CANCELLED')
+                ? 'var(--color-primary)' 
+                : 'var(--color-border-default)',
+              color: statusFilter && statusFilter.split(',').includes('CANCELLED')
+                ? 'var(--color-primary)' 
+                : 'var(--color-text-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('CANCELLED')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!statusFilter || !statusFilter.split(',').includes('CANCELLED')) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+          >
+            ❌ Cancelled
+          </button>
+          </div>
+
+          {/* Time Format Switcher (only show in week view) */}
+          {calendarView === 'week' && (
             <div className="btn-group">
               <button
-                onClick={() => setCalendarView('month')}
-                className={`btn ${calendarView === 'month' ? 'btn-active' : 'btn-ghost'}`}
+                onClick={() => setTimeFormat('12')}
+                  className={`btn ${timeFormat === '12' ? 'btn-active' : 'btn-ghost'}`}
               >
-                Month
+                12h
               </button>
               <button
-                onClick={() => setCalendarView('week')}
-                className={`btn ${calendarView === 'week' ? 'btn-active' : 'btn-ghost'}`}
+                onClick={() => setTimeFormat('24')}
+                  className={`btn ${timeFormat === '24' ? 'btn-active' : 'btn-ghost'}`}
               >
-                Week
+                24h
               </button>
             </div>
-
-            {/* Filter Buttons */}
-            <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => handleFilterClick('total')}
-              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200 ${
-                !statusFilter || statusFilter === '' ? '' : ''
-              }`}
-              style={{
-                backgroundColor: (!statusFilter || statusFilter === '') 
-                  ? 'var(--color-bg-tertiary)' 
-                  : 'var(--color-bg-secondary)',
-                borderColor: (!statusFilter || statusFilter === '') 
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-border-default)',
-                color: (!statusFilter || statusFilter === '') 
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-text-primary)'
-              }}
-              onMouseEnter={(e) => {
-                if (statusFilter && statusFilter !== '') {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (statusFilter && statusFilter !== '') {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                }
-              }}
-            >
-              📋 All
-            </button>
-            <button
-              onClick={() => handleFilterClick('TODO')}
-              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
-              style={{
-                backgroundColor: statusFilter && statusFilter.split(',').includes('TODO')
-                  ? 'var(--color-bg-tertiary)' 
-                  : 'var(--color-bg-secondary)',
-                borderColor: statusFilter && statusFilter.split(',').includes('TODO')
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-border-default)',
-                color: statusFilter && statusFilter.split(',').includes('TODO')
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-text-primary)'
-              }}
-              onMouseEnter={(e) => {
-                if (!statusFilter || !statusFilter.split(',').includes('TODO')) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!statusFilter || !statusFilter.split(',').includes('TODO')) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                }
-              }}
-            >
-              ⏳ To Do
-            </button>
-            <button
-              onClick={() => handleFilterClick('IN_PROGRESS')}
-              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
-              style={{
-                backgroundColor: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
-                  ? 'var(--color-bg-tertiary)' 
-                  : 'var(--color-bg-secondary)',
-                borderColor: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-border-default)',
-                color: statusFilter && statusFilter.split(',').includes('IN_PROGRESS')
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-text-primary)'
-              }}
-              onMouseEnter={(e) => {
-                if (!statusFilter || !statusFilter.split(',').includes('IN_PROGRESS')) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!statusFilter || !statusFilter.split(',').includes('IN_PROGRESS')) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                }
-              }}
-            >
-              🔄 In Progress
-            </button>
-            <button
-              onClick={() => handleFilterClick('ON_HOLD')}
-              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
-              style={{
-                backgroundColor: statusFilter && statusFilter.split(',').includes('ON_HOLD')
-                  ? 'var(--color-bg-tertiary)' 
-                  : 'var(--color-bg-secondary)',
-                borderColor: statusFilter && statusFilter.split(',').includes('ON_HOLD')
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-border-default)',
-                color: statusFilter && statusFilter.split(',').includes('ON_HOLD')
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-text-primary)'
-              }}
-              onMouseEnter={(e) => {
-                if (!statusFilter || !statusFilter.split(',').includes('ON_HOLD')) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!statusFilter || !statusFilter.split(',').includes('ON_HOLD')) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                }
-              }}
-            >
-              ⏸️ On Hold
-            </button>
-            <button
-              onClick={() => handleFilterClick('COMPLETED')}
-              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
-              style={{
-                backgroundColor: statusFilter && statusFilter.split(',').includes('COMPLETED')
-                  ? 'var(--color-bg-tertiary)' 
-                  : 'var(--color-bg-secondary)',
-                borderColor: statusFilter && statusFilter.split(',').includes('COMPLETED')
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-border-default)',
-                color: statusFilter && statusFilter.split(',').includes('COMPLETED')
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-text-primary)'
-              }}
-              onMouseEnter={(e) => {
-                if (!statusFilter || !statusFilter.split(',').includes('COMPLETED')) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!statusFilter || !statusFilter.split(',').includes('COMPLETED')) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                }
-              }}
-            >
-              ✅ Completed
-            </button>
-            <button
-              onClick={() => handleFilterClick('CANCELLED')}
-              className={`px-4 py-2 rounded-lg border text-base font-medium transition-all duration-200`}
-              style={{
-                backgroundColor: statusFilter && statusFilter.split(',').includes('CANCELLED')
-                  ? 'var(--color-bg-tertiary)' 
-                  : 'var(--color-bg-secondary)',
-                borderColor: statusFilter && statusFilter.split(',').includes('CANCELLED')
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-border-default)',
-                color: statusFilter && statusFilter.split(',').includes('CANCELLED')
-                  ? 'var(--color-primary)' 
-                  : 'var(--color-text-primary)'
-              }}
-              onMouseEnter={(e) => {
-                if (!statusFilter || !statusFilter.split(',').includes('CANCELLED')) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!statusFilter || !statusFilter.split(',').includes('CANCELLED')) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                }
-              }}
-            >
-              ❌ Cancelled
-            </button>
-            </div>
-
-            {/* Time Format Switcher (only show in week view) */}
-            {calendarView === 'week' && (
-              <div className="btn-group">
-                <button
-                  onClick={() => setTimeFormat('12')}
-                  className={`btn ${timeFormat === '12' ? 'btn-active' : 'btn-ghost'}`}
-                >
-                  12h
-                </button>
-                <button
-                  onClick={() => setTimeFormat('24')}
-                  className={`btn ${timeFormat === '24' ? 'btn-active' : 'btn-ghost'}`}
-                >
-                  24h
-                </button>
-              </div>
-            )}
+          )}
 
             <button
               onClick={goToToday}
@@ -826,20 +828,20 @@ const Calendar = () => {
                           >
                             {/* Task Items in Time Slot */}
                             {tasksForSlot.slice(0, 2).map((task, taskIndex) => {
-                              // Check if task is overdue
+                              // Check if task is overdue (only for TODO or IN_PROGRESS)
                               const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
-                              const isOverdue = taskDueDate && taskDueDate < new Date() && task.status !== 'COMPLETED' && task.status !== 'CANCELLED';
+                              const isOverdue = taskDueDate && taskDueDate < new Date() && (task.status === 'TODO' || task.status === 'IN_PROGRESS');
                               const statusColors = getStatusColors(task.status, isOverdue);
                               
                               return (
-                                <div
-                                  key={taskIndex}
+                              <div
+                                key={taskIndex}
                                   className="text-xs px-2 py-1 rounded mb-1 truncate"
                                   style={statusColors}
-                                  title={task.title}
-                                >
-                                  {task.title}
-                                </div>
+                                title={task.title}
+                              >
+                                {task.title}
+                              </div>
                               );
                             })}
                             

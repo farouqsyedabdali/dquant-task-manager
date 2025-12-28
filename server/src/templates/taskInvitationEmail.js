@@ -1,6 +1,6 @@
 const { format } = require('date-fns');
 
-const taskInvitationTemplate = ({ recipientName, senderName, task, invitationLink, message }) => {
+const taskInvitationTemplate = ({ recipientName, senderName, task, invitationLink, message, isRegisteredUser = false }) => {
   const priorityColors = {
     LOW: '#3b82f6',
     MEDIUM: '#f59e0b',
@@ -236,7 +236,7 @@ const taskInvitationTemplate = ({ recipientName, senderName, task, invitationLin
           <!-- CTA Button -->
           <div class="button-container">
             <a href="${invitationLink}" class="cta-button">
-              View Task & Respond
+              ${isRegisteredUser ? 'View Task & Respond' : 'Join for Free to accept'}
             </a>
           </div>
 

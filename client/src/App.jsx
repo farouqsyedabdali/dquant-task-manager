@@ -28,6 +28,7 @@ import AIModal from './components/tasks/AIModal';
 import ToastContainer from './components/common/ToastContainer';
 import { ToastProvider, useToastContext } from './context/ToastContext';
 import { FaRobot } from 'react-icons/fa';
+import AuthRedirect from './components/AuthRedirect';
 import './App.css';
 
 function AppContent() {
@@ -72,7 +73,7 @@ function AppContent() {
         
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<AuthRedirect />} />
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignupOptions />} />
@@ -217,9 +218,8 @@ function AppContent() {
             }
           />
           
-          {/* Default redirect */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {/* Default redirect for unknown routes */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
 
         {/* Floating AI Button - Only show when authenticated and not on popup */}

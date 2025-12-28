@@ -193,20 +193,45 @@ const Login = () => {
           <div className="divider" style={{ color: 'var(--color-text-tertiary)' }}>OR</div>
 
           {/* Login Form */}
+          <style>{`
+            #login-email-input::placeholder,
+            #login-password-input::placeholder {
+              color: var(--color-text-tertiary);
+            }
+          `}</style>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                htmlFor="email" 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Your Email Address
               </label>
               <input
-                id="email"
+                id="login-email-input"
                 name="email"
                 type="email"
                 autoComplete="email"
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.email ? 'border-red-500' : ''}`}
+                className={`input w-full transition-colors duration-200 ${errors.email ? 'border-red-500' : ''}`}
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: errors.email ? '#ef4444' : 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                onFocus={(e) => {
+                  if (!errors.email) {
+                    e.currentTarget.style.borderColor = 'var(--color-primary)';
+                  }
+                }}
+                onBlur={(e) => {
+                  if (!errors.email) {
+                    e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                  }
+                }}
                 placeholder="Enter your email"
               />
               {errors.email && (
@@ -215,18 +240,37 @@ const Login = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+              <label 
+                htmlFor="password" 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Password
               </label>
               <input
-                id="password"
+                id="login-password-input"
                 name="password"
                 type="password"
                 autoComplete="current-password"
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className={`input bg-gray-700 border-gray-600 text-white placeholder-gray-400 w-full focus:border-indigo-500 focus:ring-indigo-500 ${errors.password ? 'border-red-500' : ''}`}
+                className={`input w-full transition-colors duration-200 ${errors.password ? 'border-red-500' : ''}`}
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: errors.password ? '#ef4444' : 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                onFocus={(e) => {
+                  if (!errors.password) {
+                    e.currentTarget.style.borderColor = 'var(--color-primary)';
+                  }
+                }}
+                onBlur={(e) => {
+                  if (!errors.password) {
+                    e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                  }
+                }}
                 placeholder="Enter your password"
               />
               {errors.password && (
@@ -242,16 +286,32 @@ const Login = () => {
                   name="rememberMe"
                   checked={formData.rememberMe}
                   onChange={handleChange}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 rounded"
+                  style={{
+                    accentColor: 'var(--color-primary)',
+                    borderColor: 'var(--color-border-default)',
+                  }}
                 />
-                <span className="ml-2 text-sm text-gray-300">
+                <span 
+                  className="ml-2 text-sm transition-colors duration-200"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
                   Remember me for 30 days
                 </span>
               </label>
               <button
                 type="button"
                 onClick={() => setIsForgotPasswordModalOpen(true)}
-                className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+                className="text-sm font-medium transition-colors duration-200"
+                style={{ 
+                  color: 'var(--color-primary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
               >
                 Forgot password?
               </button>
@@ -275,9 +335,19 @@ const Login = () => {
 
           {/* Signup Link */}
           <div className="mt-6 text-center">
-            <p className="text-gray-400">
+            <p style={{ color: 'var(--color-text-secondary)' }}>
               Don't have an account?{' '}
-              <Link to="/signup" className="text-indigo-400 hover:text-indigo-300 font-medium">
+              <Link 
+                to="/signup" 
+                className="font-medium transition-colors duration-200"
+                style={{ color: 'var(--color-primary)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
                 Sign up now
               </Link>
             </p>

@@ -242,6 +242,11 @@ const useTaskStore = create((set, get) => ({
               task.assignerId === user.id
             );
             break;
+          case 'projects':
+            filteredTasks = filteredTasks.filter(task => 
+              task.projectId !== null && task.projectId !== undefined
+            );
+            break;
         }
       }
     }
@@ -254,7 +259,9 @@ const useTaskStore = create((set, get) => ({
       switch (filters.dueDateFilter) {
         case 'overdue':
           filteredTasks = filteredTasks.filter(task => 
-            task.dueDate && new Date(task.dueDate) < today && task.status !== 'COMPLETED'
+            task.dueDate && 
+            new Date(task.dueDate) < today && 
+            (task.status === 'TODO' || task.status === 'IN_PROGRESS')
           );
           break;
         case 'due-today':

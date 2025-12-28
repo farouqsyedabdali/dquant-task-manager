@@ -9,7 +9,8 @@ const SearchableDropdown = ({
   error = false,
   className = "",
   renderOption = (option) => `${option.name} (${option.email})`,
-  recentEmployees = [] // New prop for recent employees
+  recentEmployees = [], // New prop for recent employees
+  getOptionValue = (option) => option.id?.toString() // Custom value getter
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,7 +23,7 @@ const SearchableDropdown = ({
     const recentOptions = options.filter(option => recentIds.includes(option.id));
     const otherOptions = options.filter(option => !recentIds.includes(option.id));
     setFilteredOptions([...recentOptions, ...otherOptions]);
-  }, [options, recentEmployees]);
+  }, [options, recentEmployees, getOptionValue]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -45,21 +46,23 @@ const SearchableDropdown = ({
       const otherOptions = options.filter(option => !recentIds.includes(option.id));
       setFilteredOptions([...recentOptions, ...otherOptions]);
     } else {
-      const filtered = options.filter(option => 
-        option.name.toLowerCase().includes(term.toLowerCase()) ||
-        option.email.toLowerCase().includes(term.toLowerCase())
-      );
+      const filtered = options.filter(option => {
+        const name = option.displayName || option.name || '';
+        const email = option.email || '';
+        return name.toLowerCase().includes(term.toLowerCase()) ||
+               email.toLowerCase().includes(term.toLowerCase());
+      });
       setFilteredOptions(filtered);
     }
   };
 
   const handleSelect = (option) => {
-    onChange(option.id.toString());
+    onChange(getOptionValue(option));
     setIsOpen(false);
     setSearchTerm('');
   };
 
-  const selectedOption = options.find(opt => opt.id.toString() === value);
+  const selectedOption = options.find(opt => getOptionValue(opt) === value);
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>

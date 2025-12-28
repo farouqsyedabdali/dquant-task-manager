@@ -108,13 +108,13 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
     <>
       <div 
         className={`task-card border rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-          task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED'
+          task.dueDate && new Date(task.dueDate) < new Date() && (task.status === 'TODO' || task.status === 'IN_PROGRESS')
             ? 'border-red-500 border-2'
             : ''
         }`}
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
-          borderColor: task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED' 
+          borderColor: task.dueDate && new Date(task.dueDate) < new Date() && (task.status === 'TODO' || task.status === 'IN_PROGRESS')
             ? '#ef4444' 
             : 'var(--color-border-default)',
         }}
@@ -299,18 +299,18 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
               <div className="flex items-center space-x-2">
                 <span 
                   className={`text-sm transition-colors duration-200 ${
-                    new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED'
+                    new Date(task.dueDate) < new Date() && (task.status === 'TODO' || task.status === 'IN_PROGRESS')
                       ? 'text-red-400 font-medium'
                       : ''
                   }`}
-                  style={new Date(task.dueDate) >= new Date() || task.status === 'COMPLETED' 
+                  style={new Date(task.dueDate) >= new Date() || (task.status !== 'TODO' && task.status !== 'IN_PROGRESS')
                     ? { color: 'var(--color-text-primary)' }
                     : {}
                   }
                 >
                   {new Date(task.dueDate).toLocaleDateString()}
                 </span>
-                {new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED' && (
+                {new Date(task.dueDate) < new Date() && (task.status === 'TODO' || task.status === 'IN_PROGRESS') && (
                   <span className="status-badge-sm priority-urgent">Overdue</span>
                 )}
               </div>
