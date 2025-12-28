@@ -686,6 +686,30 @@ const projectController = {
           return res.status(400).json({ error: 'Task title is required' });
         }
 
+        // Validate due date is required and in the future
+        if (!dueDate) {
+          return res.status(400).json({ error: 'Due date is required' });
+        }
+
+        // If only date is provided (no time), set default time to 11:59 PM
+        let finalDueDate = dueDate;
+        if (typeof dueDate === 'string' && !dueDate.includes('T')) {
+          // Date only format (YYYY-MM-DD), add 11:59 PM
+          finalDueDate = `${dueDate}T23:59:00`;
+        } else if (typeof dueDate === 'string' && dueDate.includes('T') && !dueDate.includes(':')) {
+          // Date with T but no time (YYYY-MM-DDT), add 11:59 PM
+          finalDueDate = `${dueDate}23:59:00`;
+        }
+
+        const dueDateObj = new Date(finalDueDate);
+        const now = new Date();
+        if (isNaN(dueDateObj.getTime())) {
+          return res.status(400).json({ error: 'Invalid due date format' });
+        }
+        if (dueDateObj <= now) {
+          return res.status(400).json({ error: 'Due date must be in the future' });
+        }
+
         task = await prisma.task.create({
           data: {
             title,
@@ -695,7 +719,7 @@ const projectController = {
             projectId: parseInt(id),
             assignerId: userId,
             assigneeId: assigneeId || null,
-            dueDate: dueDate ? new Date(dueDate) : null,
+            dueDate: new Date(finalDueDate), // Required, already validated with default 11:59 PM if needed
             isDraft: true,
             companyId
           },

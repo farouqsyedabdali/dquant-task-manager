@@ -385,6 +385,28 @@ const taskInvitationController = {
         });
       }
 
+      // Automatically add sender to receiver's contact list if not already a contact
+      if (invitation.sender) {
+        const existingContact = await prisma.contact.findFirst({
+          where: {
+            userId: userId,
+            email: invitation.sender.email.toLowerCase()
+          }
+        });
+
+        if (!existingContact) {
+          // Create contact for the sender
+          await prisma.contact.create({
+            data: {
+              userId: userId,
+              name: invitation.sender.name,
+              email: invitation.sender.email.toLowerCase(),
+              isPersonal: true // Default to personal contact
+            }
+          });
+        }
+      }
+
       res.json({
         success: true,
         message: 'Task invitation accepted successfully. You are now collaborating on this task.',

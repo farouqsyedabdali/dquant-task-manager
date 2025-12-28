@@ -61,8 +61,11 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   // Check if current user is viewing a shared task (view-only access)
   const isSharedTask = viewedTask?.sharedWith?.some(share => share.userId === user?.id);
   
-  // Check if current user can share (lead assignee or assigner)
-  const canShare = viewedTask?.assigneeId === user?.id || viewedTask?.assignerId === user?.id;
+  // Check if current user can share (lead assignee, assigner, admin, or sysadmin)
+  const canShare = viewedTask?.assigneeId === user?.id || 
+                   viewedTask?.assignerId === user?.id || 
+                   (isAdmin() && viewedTask?.companyId === user?.companyId) || 
+                   user?.role === 'SYSDMIN';
   
   // Check if user can archive/unarchive this task
   const canArchive = !isSharedTask && (

@@ -202,6 +202,92 @@ const deleteContact = async (req, res) => {
       return res.status(404).json({ error: 'Contact not found' });
     }
 
+    // Check if there are any common tasks between the user and this contact
+    // A common task is any task where both the user and contact are involved
+    
+    // Get all task IDs where the user is involved
+    const userTasksAsAssignee = await prisma.task.findMany({
+      where: { assigneeId: userId },
+      select: { id: true }
+    });
+    
+    const userTasksAsCoAssignee = await prisma.taskCoAssignee.findMany({
+      where: { userId: userId },
+      select: { taskId: true }
+    });
+    
+    const userTasksAsShared = await prisma.taskShare.findMany({
+      where: { userId: userId },
+      select: { taskId: true }
+    });
+    
+    const allUserTaskIds = [
+      ...userTasksAsAssignee.map(t => t.id),
+      ...userTasksAsCoAssignee.map(t => t.taskId),
+      ...userTasksAsShared.map(t => t.taskId)
+    ];
+    
+    if (allUserTaskIds.length === 0) {
+      // User has no tasks, safe to delete contact
+    } else {
+      // Check if contact is involved in any of the user's tasks
+      // Case 1: Contact is externalContactId in any of user's tasks
+      const tasksWithContactAsExternal = await prisma.task.findFirst({
+        where: {
+          id: { in: allUserTaskIds },
+          externalContactId: parseInt(id)
+        }
+      });
+      
+      // Case 2: Contact is in TaskShare for any of user's tasks
+      const tasksWithContactShared = await prisma.taskShare.findFirst({
+        where: {
+          taskId: { in: allUserTaskIds },
+          contactId: parseInt(id)
+        }
+      });
+      
+      // Case 3: Check if contact email matches a registered user
+      const contactUser = await prisma.user.findFirst({
+        where: {
+          email: contact.email.toLowerCase()
+        }
+      });
+      
+      let tasksWithContactUser = null;
+      if (contactUser) {
+        // Check if contact-user is involved in any of user's tasks
+        tasksWithContactUser = await prisma.task.findFirst({
+          where: {
+            id: { in: allUserTaskIds },
+            OR: [
+              { assigneeId: contactUser.id },
+              {
+                coAssignees: {
+                  some: {
+                    userId: contactUser.id
+                  }
+                }
+              },
+              {
+                shares: {
+                  some: {
+                    userId: contactUser.id
+                  }
+                }
+              }
+            ]
+          }
+        });
+      }
+      
+      if (tasksWithContactAsExternal || tasksWithContactShared || tasksWithContactUser) {
+        return res.status(400).json({ 
+          error: 'Cannot delete contact. You have tasks in common with this contact. Please delete all common tasks before removing the contact.' 
+        });
+      }
+    }
+
     // Delete the contact
     await prisma.contact.delete({
       where: { id: parseInt(id) }

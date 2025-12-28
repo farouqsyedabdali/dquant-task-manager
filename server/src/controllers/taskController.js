@@ -481,6 +481,30 @@ const createTask = async (req, res) => {
       return res.status(400).json({ error: 'Title is required' });
     }
 
+    // Validate due date is required and in the future
+    if (!dueDate) {
+      return res.status(400).json({ error: 'Due date is required' });
+    }
+
+    // If only date is provided (no time), set default time to 11:59 PM
+    let finalDueDate = dueDate;
+    if (typeof dueDate === 'string' && !dueDate.includes('T')) {
+      // Date only format (YYYY-MM-DD), add 11:59 PM
+      finalDueDate = `${dueDate}T23:59:00`;
+    } else if (typeof dueDate === 'string' && dueDate.includes('T') && !dueDate.includes(':')) {
+      // Date with T but no time (YYYY-MM-DDT), add 11:59 PM
+      finalDueDate = `${dueDate}23:59:00`;
+    }
+
+    const dueDateObj = new Date(finalDueDate);
+    const now = new Date();
+    if (isNaN(dueDateObj.getTime())) {
+      return res.status(400).json({ error: 'Invalid due date format' });
+    }
+    if (dueDateObj <= now) {
+      return res.status(400).json({ error: 'Due date must be in the future' });
+    }
+
     // For personal accounts, allow tasks without assignee (self-assigned)
     // For company accounts, require either assigneeId or externalContactId
     if (!req.user.isPersonal) {
@@ -551,7 +575,7 @@ const createTask = async (req, res) => {
         assigneeId: assigneeId ? parseInt(assigneeId) : null,
         externalContactId: externalContactId ? parseInt(externalContactId) : null,
         parentTaskId: parentTaskId ? parseInt(parentTaskId) : null,
-        dueDate: dueDate ? new Date(dueDate) : null,
+        dueDate: new Date(finalDueDate), // Required, already validated with default 11:59 PM if needed
         companyId
       },
       include: {

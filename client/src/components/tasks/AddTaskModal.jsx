@@ -160,6 +160,25 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
       newErrors.description = 'Description must be 300 characters or less';
     }
     
+    // Validate due date is required and in the future
+    if (!formData.dueDate || !formData.dueDate.trim()) {
+      newErrors.dueDate = 'Due date is required';
+    } else {
+      // If only date is provided (no time), set default time to 11:59 PM for validation
+      let dateToCheck = formData.dueDate;
+      if (!dateToCheck.includes('T') || (dateToCheck.includes('T') && !dateToCheck.includes(':'))) {
+        // Date only, add 11:59 PM
+        const datePart = dateToCheck.split('T')[0];
+        dateToCheck = `${datePart}T23:59:00`;
+      }
+      
+      const selectedDate = new Date(dateToCheck);
+      const now = new Date();
+      if (selectedDate <= now) {
+        newErrors.dueDate = 'Due date must be in the future';
+      }
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -180,7 +199,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
        externalContactId: isPersonalAccount 
          ? (formData.externalContactId ? parseInt(formData.externalContactId) : null)
          : (assignmentType === 'external' ? parseInt(formData.externalContactId) : null),
-       dueDate: formData.dueDate || null
+       dueDate: formData.dueDate // Required, already validated
      };
 
 
@@ -239,7 +258,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                 className="text-sm mt-1 transition-colors duration-200"
                 style={{ color: 'var(--color-primary-light)' }}
               >
-                ✨ Task details extracted from browser extension
+                Information filled by AI may be incorrect. Please double-check before saving.
               </p>
             )}
           </div>
@@ -326,58 +345,71 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
             )}
           </div>
 
-          {/* Priority */}
-          <div>
-            <label 
-              className="block text-sm font-medium mb-2 transition-colors duration-200"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Priority
-            </label>
-            <select
-              name="priority"
-              value={formData.priority}
-              onChange={handleChange}
-              className="select w-full transition-colors duration-200"
-              style={{
-                backgroundColor: 'var(--color-bg-tertiary)',
-                borderColor: 'var(--color-border-default)',
-                color: 'var(--color-text-primary)',
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-primary)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-border-default)';
-              }}
-            >
-              {PRIORITY_OPTIONS.map(({ value, label }) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </div>
+          {/* Priority and Due Date - Same Line */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Priority */}
+            <div>
+              <label 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Priority
+              </label>
+              <select
+                name="priority"
+                value={formData.priority}
+                onChange={handleChange}
+                className="select w-full transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                }}
+              >
+                {PRIORITY_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
 
-          {/* Due Date */}
-          <div>
-            <label 
-              className="block text-sm font-medium mb-2 transition-colors duration-200"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Due Date (Optional)
-            </label>
-            <DatePicker
-              value={formData.dueDate || ''}
-              onChange={(e) => {
-                handleChange({
-                  target: {
-                    name: 'dueDate',
-                    value: e.target.value
+            {/* Due Date */}
+            <div>
+              <label 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Due Date *
+              </label>
+              <DatePicker
+                value={formData.dueDate || ''}
+                onChange={(e) => {
+                  handleChange({
+                    target: {
+                      name: 'dueDate',
+                      value: e.target.value
+                    }
+                  });
+                  // Clear error when user selects a date
+                  if (errors.dueDate) {
+                    setErrors(prev => ({ ...prev, dueDate: '' }));
                   }
-                });
-              }}
-              placeholder="Select due date and time"
-              showTime={true}
-            />
+                }}
+                placeholder="Select due date"
+                showTime={false}
+                timeOptional={true}
+                className={errors.dueDate ? 'border-red-500' : ''}
+                style={errors.dueDate ? { borderColor: '#ef4444' } : {}}
+              />
+              {errors.dueDate && (
+                <p className="text-red-400 text-sm mt-1">{errors.dueDate}</p>
+              )}
+            </div>
           </div>
 
            {/* Assignment Type - Only show for company accounts */}

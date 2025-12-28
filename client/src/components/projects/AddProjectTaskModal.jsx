@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usersAPI, contactsAPI } from '../../services/api';
+import DatePicker from '../common/DatePicker';
 
 const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
   const [step, setStep] = useState(1);
@@ -217,18 +218,14 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
 
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-                  Due Date
+                  Due Date *
                 </label>
-                <input
-                  type="date"
-                  value={formData.dueDate}
+                <DatePicker
+                  value={formData.dueDate || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-                  className="input input-bordered w-full"
-                  style={{
-                    backgroundColor: 'var(--color-bg-tertiary)',
-                    borderColor: 'var(--color-border-default)',
-                    color: 'var(--color-text-primary)',
-                  }}
+                  placeholder="Select due date"
+                  showTime={false}
+                  timeOptional={true}
                 />
               </div>
             </div>

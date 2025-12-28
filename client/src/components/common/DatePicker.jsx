@@ -10,6 +10,7 @@ import { FaCalendar } from 'react-icons/fa';
  * @param {string} props.placeholder - Placeholder text
  * @param {boolean} props.disabled - Disabled state
  * @param {boolean} props.showTime - Show time picker (default: true)
+ * @param {boolean} props.timeOptional - Make time optional with checkbox (default: false)
  * @param {string} props.min - Minimum date (ISO string)
  * @param {string} props.max - Maximum date (ISO string)
  * @param {string} props.className - Additional CSS classes
@@ -20,18 +21,27 @@ const DatePicker = ({
   placeholder = 'Select date and time',
   disabled = false,
   showTime = true,
+  timeOptional = false,
   min = null,
   max = null,
   className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [localValue, setLocalValue] = useState(value || '');
+  const [includeTime, setIncludeTime] = useState(false);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
     setLocalValue(value || '');
-  }, [value]);
+    // If timeOptional and value exists, check if it has time component
+    if (timeOptional && value) {
+      const date = new Date(value);
+      // Check if time is not 11:59 PM (23:59)
+      const hasCustomTime = !(date.getHours() === 23 && date.getMinutes() === 59);
+      setIncludeTime(hasCustomTime);
+    }
+  }, [value, timeOptional]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -77,13 +87,6 @@ const DatePicker = ({
     }
   };
 
-  const handleInputChange = (e) => {
-    const newValue = e.target.value;
-    setLocalValue(newValue);
-    if (onChange) {
-      onChange(e);
-    }
-  };
 
   const handleCalendarClick = () => {
     if (!disabled) {
@@ -94,45 +97,106 @@ const DatePicker = ({
     }
   };
 
-  const formatForInput = (dateString) => {
+  const formatForInput = (dateString, showTimeInput = true) => {
     if (!dateString) return '';
     
     // If already in datetime-local format, return as is
     if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dateString)) {
-      return dateString.slice(0, 16); // Ensure it's exactly YYYY-MM-DDTHH:mm
+      if (showTimeInput) {
+        return dateString.slice(0, 16); // Ensure it's exactly YYYY-MM-DDTHH:mm
+      } else {
+        return dateString.slice(0, 10); // Just date YYYY-MM-DD
+      }
     }
     
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return '';
       
-      // Format as datetime-local (YYYY-MM-DDTHH:mm)
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
       
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
+      if (showTimeInput) {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      } else {
+        return `${year}-${month}-${day}`;
+      }
     } catch (e) {
       return '';
     }
   };
 
-  const inputValue = formatForInput(localValue);
+  const handleDateChange = (e) => {
+    const newValue = e.target.value;
+    let finalValue = newValue;
+    
+    // If timeOptional and includeTime is false, set time to 11:59 PM
+    if (timeOptional && !includeTime && newValue) {
+      // Convert date-only to datetime with 11:59 PM
+      finalValue = `${newValue}T23:59`;
+    }
+    
+    setLocalValue(finalValue);
+    if (onChange) {
+      onChange({
+        target: {
+          name: e.target.name,
+          value: finalValue
+        }
+      });
+    }
+  };
+
+  const handleTimeToggle = (e) => {
+    const checked = e.target.checked;
+    setIncludeTime(checked);
+    
+    if (localValue) {
+      let newValue = localValue;
+      const date = new Date(localValue);
+      
+      if (!checked) {
+        // Set to 11:59 PM
+        date.setHours(23, 59, 0, 0);
+        newValue = date.toISOString();
+      } else {
+        // Keep current time or set to current time if it was 11:59 PM
+        if (date.getHours() === 23 && date.getMinutes() === 59) {
+          const now = new Date();
+          date.setHours(now.getHours(), now.getMinutes(), 0, 0);
+          newValue = date.toISOString();
+        }
+      }
+      
+      setLocalValue(newValue);
+      if (onChange) {
+        onChange({
+          target: {
+            name: 'dueDate',
+            value: newValue
+          }
+        });
+      }
+    }
+  };
+
+  const inputValue = formatForInput(localValue, timeOptional ? includeTime : showTime);
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       <div className="relative">
         <input
           ref={inputRef}
-          type={showTime ? 'datetime-local' : 'date'}
+          type={timeOptional ? (includeTime ? 'datetime-local' : 'date') : (showTime ? 'datetime-local' : 'date')}
           value={inputValue}
-          onChange={handleInputChange}
+          onChange={handleDateChange}
           placeholder={placeholder}
           disabled={disabled}
-          min={min ? formatForInput(min) : undefined}
-          max={max ? formatForInput(max) : undefined}
+          min={min ? (timeOptional && !includeTime ? min.split('T')[0] : formatForInput(min, timeOptional ? includeTime : showTime)) : undefined}
+          max={max ? (timeOptional && !includeTime ? max.split('T')[0] : formatForInput(max, timeOptional ? includeTime : showTime)) : undefined}
           className="input w-full transition-colors duration-200 pr-10"
           style={{
             backgroundColor: 'var(--color-bg-tertiary)',
@@ -158,14 +222,26 @@ const DatePicker = ({
         </button>
       </div>
       
-      {/* Display formatted value below input */}
-      {localValue && (
-        <p 
-          className="text-xs mt-1 transition-colors duration-200"
-          style={{ color: 'var(--color-text-tertiary)' }}
-        >
-          {formatDateForDisplay(localValue)}
-        </p>
+      {/* Time Optional Checkbox */}
+      {timeOptional && (
+        <label className="flex items-center mt-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={includeTime}
+            onChange={handleTimeToggle}
+            disabled={disabled}
+            className="checkbox checkbox-sm mr-2"
+            style={{
+              accentColor: 'var(--color-primary)'
+            }}
+          />
+          <span 
+            className="text-sm transition-colors duration-200"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            Set specific time
+          </span>
+        </label>
       )}
     </div>
   );

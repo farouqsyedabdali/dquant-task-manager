@@ -168,6 +168,25 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
       newErrors.description = 'Description must be 300 characters or less';
     }
     
+    // Validate due date is required and in the future
+    if (!formData.dueDate || !formData.dueDate.trim()) {
+      newErrors.dueDate = 'Due date is required';
+    } else {
+      // If only date is provided (no time), set default time to 11:59 PM for validation
+      let dateToCheck = formData.dueDate;
+      if (!dateToCheck.includes('T') || (dateToCheck.includes('T') && !dateToCheck.includes(':'))) {
+        // Date only, add 11:59 PM
+        const datePart = dateToCheck.split('T')[0];
+        dateToCheck = `${datePart}T23:59:00`;
+      }
+      
+      const selectedDate = new Date(dateToCheck);
+      const now = new Date();
+      if (selectedDate <= now) {
+        newErrors.dueDate = 'Due date must be in the future';
+      }
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -188,7 +207,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
     const createData = {
       ...formData,
       assigneeId: parseInt(formData.assigneeId),
-      dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : null
+      dueDate: formData.dueDate // Required, already validated
     };
 
     const result = await createSubtask(parseInt(selectedParentId), createData);
@@ -340,21 +359,63 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
             )}
           </div>
 
-          {/* Priority */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Priority
-            </label>
-            <select
-              name="priority"
-              value={formData.priority}
-              onChange={handleChange}
-              className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
-            >
-              {PRIORITY_OPTIONS.map(({ value, label }) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
+          {/* Priority and Due Date - Same Line */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Priority */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Priority
+              </label>
+              <select
+                name="priority"
+                value={formData.priority}
+                onChange={handleChange}
+                className="select bg-gray-700 border-gray-600 text-white w-full focus:border-indigo-500 focus:ring-indigo-500"
+              >
+                {PRIORITY_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Due Date */}
+            <div>
+              <label 
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Due Date *
+              </label>
+              <DatePicker
+                value={formData.dueDate || ''}
+                onChange={(e) => {
+                  handleChange({
+                    target: {
+                      name: 'dueDate',
+                      value: e.target.value
+                    }
+                  });
+                  // Clear error when user selects a date
+                  if (errors.dueDate) {
+                    setErrors(prev => ({ ...prev, dueDate: '' }));
+                  }
+                }}
+                placeholder="Select due date"
+                showTime={false}
+                timeOptional={true}
+                min={new Date().toISOString()}
+                className={errors.dueDate ? 'border-red-500' : ''}
+                style={errors.dueDate ? { borderColor: '#ef4444' } : {}}
+              />
+              {errors.dueDate && (
+                <p 
+                  className="text-sm mt-1 transition-colors duration-200"
+                  style={{ color: 'var(--color-danger)' }}
+                >
+                  {errors.dueDate}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Assign To */}
@@ -383,38 +444,6 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
             )}
             {isLoadingUsers && (
               <p className="text-sm text-gray-400 mt-1">Loading employees...</p>
-            )}
-          </div>
-
-          {/* Due Date */}
-          <div>
-            <label 
-              className="block text-sm font-medium mb-2 transition-colors duration-200"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Due Date
-            </label>
-            <DatePicker
-              value={formData.dueDate || ''}
-              onChange={(e) => {
-                handleChange({
-                  target: {
-                    name: 'dueDate',
-                    value: e.target.value
-                  }
-                });
-              }}
-              placeholder="Select due date and time"
-              showTime={true}
-              min={new Date().toISOString()}
-            />
-            {errors.dueDate && (
-              <p 
-                className="text-sm mt-1 transition-colors duration-200"
-                style={{ color: 'var(--color-danger)' }}
-              >
-                {errors.dueDate}
-              </p>
             )}
           </div>
 
