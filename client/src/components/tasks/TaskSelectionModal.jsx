@@ -4,7 +4,7 @@ import SearchableDropdown from '../common/SearchableDropdown';
 import IconButton from '../common/IconButton';
 import { FaTimes, FaCheck } from 'react-icons/fa';
 
-const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '' }) => {
+const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '', suggestedTaskId = null }) => {
   const [tasks, setTasks] = useState([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState('');
@@ -13,9 +13,12 @@ const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '' 
   useEffect(() => {
     if (isOpen) {
       fetchTasks();
-      setSelectedTaskId('');
+      // Reset selection when modal opens (will be set after tasks load if suggestedTaskId exists)
+      if (!suggestedTaskId) {
+        setSelectedTaskId('');
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, suggestedTaskId]);
 
   const fetchTasks = async () => {
     setIsLoadingTasks(true);
@@ -24,6 +27,14 @@ const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '' 
       // Filter out completed tasks - only show live (not completed) tasks
       const liveTasks = response.data.filter(task => task.status !== 'COMPLETED');
       setTasks(liveTasks);
+      
+      // Set suggested task after tasks are loaded
+      if (suggestedTaskId) {
+        const suggestedTask = liveTasks.find(t => t.id.toString() === suggestedTaskId.toString());
+        if (suggestedTask) {
+          setSelectedTaskId(suggestedTaskId.toString());
+        }
+      }
     } catch (error) {
       console.error('Error fetching tasks:', error);
     } finally {
@@ -81,7 +92,9 @@ const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '' 
               className="text-sm mt-1 transition-colors duration-200"
               style={{ color: 'var(--color-text-tertiary)' }}
             >
-              AI couldn't find a matching task. Please select the task you want to update.
+              {suggestedTaskId 
+                ? 'AI found a matching task (pre-selected). You can change it if needed.'
+                : 'AI couldn\'t find a matching task. Please select the task you want to update.'}
             </p>
           </div>
           <IconButton
@@ -103,6 +116,17 @@ const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '' 
               style={{ color: 'var(--color-text-secondary)' }}
             >
               Select Task
+              {suggestedTaskId && selectedTaskId === suggestedTaskId.toString() && (
+                <span 
+                  className="ml-2 text-xs px-2 py-1 rounded"
+                  style={{ 
+                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                    color: 'var(--color-primary)'
+                  }}
+                >
+                  AI Suggested
+                </span>
+              )}
             </label>
             <div className="min-h-[300px]">
               <SearchableDropdown

@@ -456,25 +456,10 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   const handleTaskUpdate = async (updateData) => {
     console.log('Processing task update:', updateData);
     
-    if (updateData.taskFound && updateData.taskId) {
-      // Fetch the specific task to update
-      const result = await fetchTask(updateData.taskId);
-      if (result.success) {
-        setCurrentTask(result.data || tasks.find(t => t.id === updateData.taskId));
-        setExtensionUpdateData(updateData);
-        setIsTaskModalOpen(true);
-      } else {
-        console.error('Failed to fetch task for update');
-        // Still open modal with the update data for manual handling
-        setExtensionUpdateData(updateData);
-        setIsTaskModalOpen(true);
-      }
-    } else {
-      // No task found, open task selection modal
-      console.log('No matching task found, opening task selection modal');
-      setPendingUpdateData(updateData);
-      setIsTaskSelectionModalOpen(true);
-    }
+    // Always show task selection modal to allow user to confirm or change AI's suggestion
+    console.log('Opening task selection modal for update');
+    setPendingUpdateData(updateData);
+    setIsTaskSelectionModalOpen(true);
   };
 
   // Handle task selection from TaskSelectionModal
@@ -1127,6 +1112,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           }}
           onSelectTask={handleTaskSelected}
           updateContent={pendingUpdateData?.updateContent || pendingUpdateData?.originalText || ''}
+          suggestedTaskId={pendingUpdateData?.taskFound && pendingUpdateData?.taskId ? pendingUpdateData.taskId : null}
         />
       )}
 
