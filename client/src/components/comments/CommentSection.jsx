@@ -291,13 +291,33 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTas
             >
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center space-x-2">
-                  <div className="avatar placeholder">
-                    <div 
-                      className="text-white rounded-full w-6"
-                      style={{ backgroundColor: 'var(--color-primary)' }}
+                  <div 
+                    className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ 
+                      backgroundColor: 'var(--color-primary)',
+                      width: '24px',
+                      height: '24px',
+                      minWidth: '24px',
+                      minHeight: '24px',
+                      maxWidth: '24px',
+                      maxHeight: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      lineHeight: '1'
+                    }}
+                  >
+                    <span 
+                      className="text-xs"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: '1'
+                      }}
                     >
-                      <span className="text-xs">{comment.author.name.charAt(0)}</span>
-                    </div>
+                      {comment.author.name.charAt(0)}
+                    </span>
                   </div>
                   <div>
                     <p 

@@ -220,19 +220,33 @@ const Header = () => {
                     </p>
                   )}
                 </div>
-                <div className="avatar placeholder">
-                  <div 
-                    className="text-white rounded-full w-10 transition-colors duration-200"
-                    style={{ backgroundColor: 'var(--color-primary)' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--color-primary-hover)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+                <div 
+                  className="text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors duration-200"
+                  style={{ 
+                    backgroundColor: 'var(--color-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: '1'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-primary-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+                  }}
+                >
+                  <span 
+                    className="text-sm font-medium"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      lineHeight: '1'
                     }}
                   >
-                    <span className="text-sm font-medium">{user?.name?.charAt(0)}</span>
-                  </div>
+                    {user?.name?.charAt(0)}
+                  </span>
                 </div>
                 <svg 
                   className="w-4 h-4 transition-colors duration-200" 
@@ -259,13 +273,33 @@ const Header = () => {
                     style={{ borderColor: 'var(--color-border-default)' }}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="avatar placeholder">
-                        <div 
-                          className="text-white rounded-full w-12"
-                          style={{ backgroundColor: 'var(--color-primary)' }}
+                      <div 
+                        className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ 
+                          backgroundColor: 'var(--color-primary)',
+                          width: '48px',
+                          height: '48px',
+                          minWidth: '48px',
+                          minHeight: '48px',
+                          maxWidth: '48px',
+                          maxHeight: '48px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          lineHeight: '1'
+                        }}
+                      >
+                        <span 
+                          className="text-lg font-bold"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            lineHeight: '1'
+                          }}
                         >
-                          <span className="text-lg font-bold">{user?.name?.charAt(0)}</span>
-                        </div>
+                          {user?.name?.charAt(0)}
+                        </span>
                       </div>
                       <div>
                         <p 
@@ -451,13 +485,33 @@ const Header = () => {
                 style={{ borderColor: 'var(--color-border-default)' }}
               >
                 <div className="flex items-center space-x-3 px-3 py-2">
-                  <div className="avatar placeholder">
-                    <div 
-                      className="text-white rounded-full w-8"
-                      style={{ backgroundColor: 'var(--color-primary)' }}
+                  <div 
+                    className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ 
+                      backgroundColor: 'var(--color-primary)',
+                      width: '32px',
+                      height: '32px',
+                      minWidth: '32px',
+                      minHeight: '32px',
+                      maxWidth: '32px',
+                      maxHeight: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      lineHeight: '1'
+                    }}
+                  >
+                    <span 
+                      className="text-xs"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: '1'
+                      }}
                     >
-                      <span className="text-xs">{user?.name?.charAt(0)}</span>
-                    </div>
+                      {user?.name?.charAt(0)}
+                    </span>
                   </div>
                   <div>
                     <p 

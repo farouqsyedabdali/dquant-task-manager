@@ -165,13 +165,27 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
                 </span>
                 {task.assignee ? (
                   <div className="flex items-center space-x-2">
-                    <div className="avatar placeholder">
-                      <div 
-                        className="text-white rounded-full w-6"
-                        style={{ backgroundColor: 'var(--color-primary)' }}
+                    <div 
+                      className="text-white rounded-full w-6 h-6 flex items-center justify-center"
+                      style={{ 
+                        backgroundColor: 'var(--color-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: '1'
+                      }}
+                    >
+                      <span 
+                        className="text-xs"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          lineHeight: '1'
+                        }}
                       >
-                        <span className="text-xs">{task.assignee.name.charAt(0)}</span>
-                      </div>
+                        {task.assignee.name.charAt(0)}
+                      </span>
                     </div>
                     <span 
                       className="text-sm transition-colors duration-200"
@@ -202,13 +216,27 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
                   <div className="flex flex-wrap gap-1">
                     {(showAllCoAssignees ? task.coAssignees : task.coAssignees.slice(0, 5)).map((coAssignee) => (
                       <div key={coAssignee.id} className="flex items-center space-x-1">
-                        <div className="avatar placeholder">
-                          <div 
-                            className="text-white rounded-full w-5"
-                            style={{ backgroundColor: '#10b981' }}
+                        <div 
+                          className="text-white rounded-full w-5 h-5 flex items-center justify-center"
+                          style={{ 
+                            backgroundColor: '#10b981',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            lineHeight: '1'
+                          }}
+                        >
+                          <span 
+                            className="text-xs"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              lineHeight: '1'
+                            }}
                           >
-                            <span className="text-xs">{coAssignee.user.name.charAt(0)}</span>
-                          </div>
+                            {coAssignee.user.name.charAt(0)}
+                          </span>
                         </div>
                         <span 
                           className="text-xs transition-colors duration-200"

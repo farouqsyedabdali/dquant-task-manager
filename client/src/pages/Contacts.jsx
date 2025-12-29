@@ -217,12 +217,32 @@ const Contacts = () => {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <div className="avatar placeholder">
-                      <div className={`rounded-full w-12 ${contact.isPersonal ? 'bg-green-600' : 'bg-blue-600'}`}>
-                        <span className="text-white text-lg">
-                          {contact.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
+                    <div 
+                      className={`rounded-full flex items-center justify-center flex-shrink-0 ${contact.isPersonal ? 'bg-green-600' : 'bg-blue-600'}`}
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        minWidth: '48px',
+                        minHeight: '48px',
+                        maxWidth: '48px',
+                        maxHeight: '48px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: '1'
+                      }}
+                    >
+                      <span 
+                        className="text-white text-lg"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          lineHeight: '1'
+                        }}
+                      >
+                        {contact.name.charAt(0).toUpperCase()}
+                      </span>
                     </div>
                     <div>
                       <h3

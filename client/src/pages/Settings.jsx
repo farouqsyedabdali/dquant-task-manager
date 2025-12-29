@@ -174,10 +174,32 @@ const Settings = () => {
                   </h2>
                   <div className="space-y-6">
                     <div className="flex items-center space-x-4">
-                      <div className="avatar placeholder">
-                        <div className="bg-indigo-600 text-white rounded-full w-20">
-                          <span className="text-2xl font-bold">{user?.name?.charAt(0)}</span>
-                        </div>
+                      <div 
+                        className="bg-indigo-600 text-white rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          minWidth: '80px',
+                          minHeight: '80px',
+                          maxWidth: '80px',
+                          maxHeight: '80px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          lineHeight: '1'
+                        }}
+                      >
+                        <span 
+                          className="text-2xl font-bold"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            lineHeight: '1'
+                          }}
+                        >
+                          {user?.name?.charAt(0)}
+                        </span>
                       </div>
                       <div>
                         <h3

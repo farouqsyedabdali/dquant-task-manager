@@ -881,7 +881,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                   className="text-base font-semibold mb-3 transition-colors duration-200"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  Due Date <span className="text-error">*</span>
+                  Due Date
                 </h4>
                 {isEditing ? (
                   <div>
@@ -1024,14 +1024,34 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           {viewedTask.assignee && (
                             <div className="flex items-center justify-between gap-3 group relative">
                               <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                <div className="avatar placeholder flex-shrink-0">
-                            <div 
-                                    className="text-white rounded-full w-8"
-                              style={{ backgroundColor: 'var(--color-primary)' }}
-                            >
-                              <span className="text-sm">{viewedTask.assignee.name.charAt(0)}</span>
-                            </div>
-                          </div>
+                                <div 
+                                  className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ 
+                                    backgroundColor: 'var(--color-primary)',
+                                    width: '32px',
+                                    height: '32px',
+                                    minWidth: '32px',
+                                    minHeight: '32px',
+                                    maxWidth: '32px',
+                                    maxHeight: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    lineHeight: '1'
+                                  }}
+                                >
+                                  <span 
+                                    className="text-sm"
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1'
+                                    }}
+                                  >
+                                    {viewedTask.assignee.name.charAt(0)}
+                                  </span>
+                                </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                             <span 
@@ -1074,13 +1094,33 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             coAssignees.map((coAssignee) => (
                             <div key={coAssignee.id} className="flex items-center justify-between gap-3 group relative">
                               <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                <div className="avatar placeholder flex-shrink-0">
-                                  <div 
-                                    className="text-white rounded-full w-8"
-                                    style={{ backgroundColor: '#10b981' }}
+                                <div 
+                                  className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ 
+                                    backgroundColor: '#10b981',
+                                    width: '32px',
+                                    height: '32px',
+                                    minWidth: '32px',
+                                    minHeight: '32px',
+                                    maxWidth: '32px',
+                                    maxHeight: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    lineHeight: '1'
+                                  }}
+                                >
+                                  <span 
+                                    className="text-sm"
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1'
+                                    }}
                                   >
-                                    <span className="text-sm">{coAssignee.user.name.charAt(0)}</span>
-                                  </div>
+                                    {coAssignee.user.name.charAt(0)}
+                                  </span>
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
@@ -1134,14 +1174,34 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           {viewedTask.collaborators && viewedTask.collaborators.map((collaborator) => (
                             <div key={collaborator.id} className="flex items-center justify-between gap-3 group relative">
                               <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                <div className="avatar placeholder flex-shrink-0">
                                 <div 
-                                  className="text-white rounded-full w-8"
-                                    style={{ backgroundColor: '#3b82f6' }}
+                                  className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ 
+                                    backgroundColor: '#3b82f6',
+                                    width: '32px',
+                                    height: '32px',
+                                    minWidth: '32px',
+                                    minHeight: '32px',
+                                    maxWidth: '32px',
+                                    maxHeight: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    lineHeight: '1'
+                                  }}
                                 >
-                                    <span className="text-sm">{collaborator.user.name.charAt(0)}</span>
+                                  <span 
+                                    className="text-sm"
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1'
+                                    }}
+                                  >
+                                    {collaborator.user.name.charAt(0)}
+                                  </span>
                                 </div>
-                              </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                 <span 
@@ -1187,13 +1247,33 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             return (
                               <div key={share.id} className="flex items-center justify-between gap-3 group relative">
                                 <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                  <div className="avatar placeholder flex-shrink-0">
-                                    <div 
-                                      className="text-white rounded-full w-8"
-                                      style={{ backgroundColor: '#8b5cf6' }}
+                                  <div 
+                                    className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                                    style={{ 
+                                      backgroundColor: '#8b5cf6',
+                                      width: '32px',
+                                      height: '32px',
+                                      minWidth: '32px',
+                                      minHeight: '32px',
+                                      maxWidth: '32px',
+                                      maxHeight: '32px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1'
+                                    }}
+                                  >
+                                    <span 
+                                      className="text-sm"
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: '1'
+                                      }}
                                     >
-                                      <span className="text-sm">{share.user?.name?.charAt(0) || '?'}</span>
-                                    </div>
+                                      {share.user?.name?.charAt(0) || '?'}
+                                    </span>
                                   </div>
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
@@ -1329,13 +1409,33 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             <div className="space-y-2">
                             {viewedTask.externalContact ? (
                               <div className="flex items-center space-x-3 group relative">
-                                <div className="avatar placeholder">
-                                  <div 
-                                      className="text-white rounded-full w-8"
-                                    style={{ backgroundColor: '#3b82f6' }}
+                                <div 
+                                  className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ 
+                                    backgroundColor: '#3b82f6',
+                                    width: '32px',
+                                    height: '32px',
+                                    minWidth: '32px',
+                                    minHeight: '32px',
+                                    maxWidth: '32px',
+                                    maxHeight: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    lineHeight: '1'
+                                  }}
+                                >
+                                  <span 
+                                    className="text-sm"
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1'
+                                    }}
                                   >
-                                    <span className="text-sm">{viewedTask.externalContact.name.charAt(0)}</span>
-                                  </div>
+                                    {viewedTask.externalContact.name.charAt(0)}
+                                  </span>
                                 </div>
                                   <div className="flex items-center gap-2">
                                   <span 
@@ -1367,13 +1467,33 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                               </div>
                             ) : (
                               <div className="flex items-center space-x-3 group relative">
-                                <div className="avatar placeholder">
-                                  <div 
-                                      className="text-white rounded-full w-8"
-                                    style={{ backgroundColor: 'var(--color-primary)' }}
+                                <div 
+                                  className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ 
+                                    backgroundColor: 'var(--color-primary)',
+                                    width: '32px',
+                                    height: '32px',
+                                    minWidth: '32px',
+                                    minHeight: '32px',
+                                    maxWidth: '32px',
+                                    maxHeight: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    lineHeight: '1'
+                                  }}
+                                >
+                                  <span 
+                                    className="text-sm"
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1'
+                                    }}
                                   >
-                                    <span className="text-sm">{user?.name?.charAt(0)}</span>
-                                  </div>
+                                    {user?.name?.charAt(0)}
+                                  </span>
                                 </div>
                                   <div className="flex items-center gap-2">
                                   <span 

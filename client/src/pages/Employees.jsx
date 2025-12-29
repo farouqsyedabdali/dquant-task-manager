@@ -464,15 +464,33 @@ const Employees = () => {
                     >
                       <td className="py-4">
                         <div className="flex items-center space-x-3">
-                          <div className="avatar placeholder">
-                            <div 
-                              className="rounded-full w-10 text-white"
-                              style={{ 
-                                backgroundColor: 'var(--color-primary)',
+                          <div 
+                            className="rounded-full text-white flex items-center justify-center flex-shrink-0"
+                            style={{ 
+                              backgroundColor: 'var(--color-primary)',
+                              width: '40px',
+                              height: '40px',
+                              minWidth: '40px',
+                              minHeight: '40px',
+                              maxWidth: '40px',
+                              maxHeight: '40px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              lineHeight: '1'
+                            }}
+                          >
+                            <span 
+                              className="text-sm"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                lineHeight: '1'
                               }}
                             >
-                              <span className="text-sm">{employee.name.charAt(0)}</span>
-                            </div>
+                              {employee.name.charAt(0)}
+                            </span>
                           </div>
                           <div>
                             <div
