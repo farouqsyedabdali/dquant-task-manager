@@ -74,9 +74,8 @@ const Employees = () => {
     }
   };
 
-  // Filter out the current user and apply search
+  // Apply search filter (include all users including current user)
   const filteredUsers = users.filter(u => 
-    u.id !== user?.id && 
     (u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
      u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
      u.role.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -278,10 +277,16 @@ const Employees = () => {
         <div className="mb-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-white">
+              <h1 
+                className="text-3xl font-bold"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
                 Employee Management
               </h1>
-              <p className="text-gray-400 mt-2">
+              <p 
+                className="mt-2"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
                 Manage employees in your company
               </p>
             </div>
@@ -338,7 +343,13 @@ const Employees = () => {
                     color: 'var(--color-text-primary)',
                   }}
                 />
-                <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg 
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5" 
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
@@ -365,7 +376,7 @@ const Employees = () => {
             className="mt-4 text-sm"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            Showing {filteredUsers.length} of {users.filter(u => u.id !== user?.id).length} employees
+            Showing {filteredUsers.length} of {users.length} employees
           </div>
         </div>
 
@@ -389,7 +400,10 @@ const Employees = () => {
           
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
-              <span className="loading loading-spinner loading-lg text-indigo-500"></span>
+              <span 
+                className="loading loading-spinner loading-lg"
+                style={{ color: 'var(--color-primary)' }}
+              ></span>
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="text-center py-12">
@@ -451,7 +465,12 @@ const Employees = () => {
                       <td className="py-4">
                         <div className="flex items-center space-x-3">
                           <div className="avatar placeholder">
-                            <div className="bg-indigo-600 text-white rounded-full w-10">
+                            <div 
+                              className="rounded-full w-10 text-white"
+                              style={{ 
+                                backgroundColor: 'var(--color-primary)',
+                              }}
+                            >
                               <span className="text-sm">{employee.name.charAt(0)}</span>
                             </div>
                           </div>
