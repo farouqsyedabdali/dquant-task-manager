@@ -508,6 +508,10 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         return 'bg-blue-600 text-blue-200';
       case 'COMPLETED':
         return 'bg-green-600 text-green-200';
+      case 'ON_HOLD':
+        return 'bg-yellow-600 text-yellow-200';
+      case 'CANCELLED':
+        return 'bg-red-600 text-red-200';
       default:
         return 'bg-gray-600 text-gray-200';
     }
