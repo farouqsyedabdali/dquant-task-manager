@@ -456,10 +456,26 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   const handleTaskUpdate = async (updateData) => {
     console.log('Processing task update:', updateData);
     
-    // Always show task selection modal to allow user to confirm or change AI's suggestion
-    console.log('Opening task selection modal for update');
-    setPendingUpdateData(updateData);
-    setIsTaskSelectionModalOpen(true);
+    if (updateData.taskFound && updateData.taskId) {
+      // AI found a task - open TaskModal directly
+      console.log('AI found task, opening TaskModal directly');
+      const result = await fetchTask(updateData.taskId);
+      if (result.success) {
+        setCurrentTask(result.data || tasks.find(t => t.id === updateData.taskId));
+        setExtensionUpdateData(updateData);
+        setIsTaskModalOpen(true);
+      } else {
+        console.error('Failed to fetch task for update');
+        // Fallback to task selection modal
+        setPendingUpdateData(updateData);
+        setIsTaskSelectionModalOpen(true);
+      }
+    } else {
+      // AI didn't find a task - show task selection modal
+      console.log('AI didn\'t find task, opening task selection modal');
+      setPendingUpdateData(updateData);
+      setIsTaskSelectionModalOpen(true);
+    }
   };
 
   // Handle task selection from TaskSelectionModal
@@ -483,6 +499,19 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
     } else {
       console.error('Failed to fetch selected task');
     }
+  };
+
+  // Handle task switch from TaskModal (when user wants to change AI's suggestion)
+  const handleTaskSwitch = () => {
+    console.log('Opening task selection modal to switch task');
+    // Store current extensionUpdateData as pending so user can select a different task
+    // Include current task ID as suggested so it's pre-selected
+    setPendingUpdateData({
+      ...extensionUpdateData,
+      taskId: currentTask?.id || extensionUpdateData?.taskId,
+      taskFound: true
+    });
+    setIsTaskSelectionModalOpen(true);
   };
 
   // Function to handle task completion from extension
@@ -1128,6 +1157,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           onArchive={handleArchiveTask}
           onUnarchive={handleUnarchiveTask}
           extensionUpdateData={extensionUpdateData}
+          onTaskSwitch={extensionUpdateData?.taskFound ? handleTaskSwitch : null}
         />
       )}
 

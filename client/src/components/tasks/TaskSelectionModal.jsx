@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { tasksAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
 import IconButton from '../common/IconButton';
+import { STATUS_LABELS } from '../../utils/constants';
 import { FaTimes, FaCheck } from 'react-icons/fa';
 
 const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '', suggestedTaskId = null }) => {
@@ -24,9 +25,11 @@ const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '',
     setIsLoadingTasks(true);
     try {
       const response = await tasksAPI.getAll();
-      // Filter out completed tasks - only show live (not completed) tasks
-      const liveTasks = response.data.filter(task => task.status !== 'COMPLETED');
-      setTasks(liveTasks);
+      // Only show TODO and IN_PROGRESS tasks
+      const activeTasks = response.data.filter(task => 
+        task.status === 'TODO' || task.status === 'IN_PROGRESS'
+      );
+      setTasks(activeTasks);
       
       // Set suggested task after tasks are loaded
       if (suggestedTaskId) {
@@ -64,7 +67,9 @@ const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '',
 
   const taskOptions = tasks.map(task => ({
     id: task.id.toString(),
-    name: `${task.title} (${task.status})`,
+    name: task.status && STATUS_LABELS[task.status] 
+      ? `${task.title} (${STATUS_LABELS[task.status]})` 
+      : task.title,
     value: task.id.toString()
   }));
 

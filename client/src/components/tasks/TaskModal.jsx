@@ -21,7 +21,7 @@ import {
   FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle, FaUsers, FaSitemap
 } from 'react-icons/fa';
 
-const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null }) => {
+const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null, onTaskSwitch = null }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -992,40 +992,10 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     {/* Unified People List */}
                     {!isPersonalAccount ? (
                 <div>
-                        {/* Header with Add Button */}
-                        <div className="flex items-center justify-between mb-3">
-                  <h4 
-                            className="text-base font-semibold transition-colors duration-200"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                            People
-                  </h4>
-                          {/* Add Person Button - Only show if user is lead assignee */}
-                          {viewedTask?.assigneeId === user?.id && !isEditing && (
-                            <button
-                              onClick={() => setIsAddTeamMemberModalOpen(true)}
-                              className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200"
-                              style={{
-                                backgroundColor: 'var(--color-primary)',
-                                color: 'white',
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'scale(1.1)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'scale(1)';
-                              }}
-                              title="Add person to task"
-                            >
-                              <FaPlus className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-
                         {/* Unified List */}
                         <div className="space-y-2">
                           {/* Lead Assignee */}
-                          {viewedTask.assignee && (
+                          {viewedTask.assignee ? (
                             <div className="flex items-center justify-between gap-3 group relative">
                               <div className="flex items-center space-x-3 flex-1 min-w-0">
                                 <div 
@@ -1085,9 +1055,52 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           >
                             {viewedTask.assignee.email}
                           </div>
-                        </div>
-                    </div>
-                  )}
+                              </div>
+                              {/* Add Person Button - Only show if user is lead assignee */}
+                              {viewedTask?.assigneeId === user?.id && !isEditing && (
+                                <button
+                                  onClick={() => setIsAddTeamMemberModalOpen(true)}
+                                  className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0"
+                                  style={{
+                                    backgroundColor: 'var(--color-primary)',
+                                    color: 'white',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1.1)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                  }}
+                                  title="Add person to task"
+                                >
+                                  <FaPlus className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            /* No assignee - show Add button on its own row */
+                            viewedTask?.assigneeId === user?.id && !isEditing && (
+                              <div className="flex items-center justify-end">
+                                <button
+                                  onClick={() => setIsAddTeamMemberModalOpen(true)}
+                                  className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0"
+                                  style={{
+                                    backgroundColor: 'var(--color-primary)',
+                                    color: 'white',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1.1)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                  }}
+                                  title="Add person to task"
+                                >
+                                  <FaPlus className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )
+                          )}
 
                 {/* Co-Assignees */}
                       {isLoadingCoAssignees ? (
@@ -1404,12 +1417,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           </div>
                         ) : (
                           <div>
-                            <h4 
-                              className="text-base font-semibold mb-3 transition-colors duration-200"
-                              style={{ color: 'var(--color-text-secondary)' }}
-                            >
-                              People
-                            </h4>
                             <div className="space-y-2">
                             {viewedTask.externalContact ? (
                               <div className="flex items-center space-x-3 group relative">
@@ -1709,7 +1716,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             <CommentSection 
               taskId={viewedTask.id} 
               task={viewedTask}
-              extensionUpdateData={extensionUpdateData} 
+              extensionUpdateData={extensionUpdateData}
+              onTaskSwitch={onTaskSwitch}
             />
           </div>
         </div>
