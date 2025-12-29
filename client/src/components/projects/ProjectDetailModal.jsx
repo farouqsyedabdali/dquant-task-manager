@@ -700,7 +700,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                           // Show formatted date for sent tasks
                           <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                             {task.dueDate 
-                              ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                              ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                               : '—'}
                           </p>
                         )}

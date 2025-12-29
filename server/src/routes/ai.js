@@ -200,14 +200,30 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
             priority = upper;
           }
         }
-        // Parse due date if provided
-        let dueDate = null;
-        if (command.dueDate && typeof command.dueDate === 'string') {
-          const parsed = new Date(command.dueDate);
-          if (!isNaN(parsed.getTime())) {
-            dueDate = parsed;
-          }
+        // Validate due date is required
+        if (!command.dueDate || typeof command.dueDate !== 'string') {
+          return `⚠️ Due date is required. Please provide a due date in the format YYYY-MM-DD or YYYY-MM-DDTHH:mm`;
         }
+
+        // Parse and validate due date
+        let finalDueDate = command.dueDate;
+        if (!finalDueDate.includes('T')) {
+          // Date only format (YYYY-MM-DD), add 11:59 PM
+          finalDueDate = `${finalDueDate}T23:59:00`;
+        } else if (finalDueDate.includes('T') && !finalDueDate.includes(':')) {
+          // Date with T but no time (YYYY-MM-DDT), add 11:59 PM
+          finalDueDate = `${finalDueDate}23:59:00`;
+        }
+
+        const dueDateObj = new Date(finalDueDate);
+        const now = new Date();
+        if (isNaN(dueDateObj.getTime())) {
+          return `⚠️ Invalid due date format. Please use YYYY-MM-DD or YYYY-MM-DDTHH:mm format.`;
+        }
+        if (dueDateObj <= now) {
+          return `⚠️ Due date must be in the future. Please provide a future date.`;
+        }
+
         // Create the task
         const newTask = await prisma.task.create({
           data: {
@@ -216,7 +232,7 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
             priority,
             assignerId: userId,
             assigneeId: assigneeId || userId,
-            dueDate,
+            dueDate: dueDateObj,
             companyId
           }
         });
@@ -428,23 +444,36 @@ Output: {"title": "Update website homepage", "description": "Update the website 
                   const taskData = JSON.parse(jsonMatch[0]);
                   
                   // Validate and clean the extracted data
+                  // If no due date provided, set to 7 days from now as default
+                  let dueDate = taskData.dueDate;
+                  if (!dueDate) {
+                    const defaultDate = new Date();
+                    defaultDate.setDate(defaultDate.getDate() + 7);
+                    defaultDate.setHours(23, 59, 0, 0);
+                    dueDate = defaultDate.toISOString().slice(0, 16);
+                  }
+
                   const cleanedTask = {
                     title: (taskData.title || '').substring(0, 50),
                     description: (taskData.description || '').substring(0, 300),
                     priority: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(taskData.priority) ? taskData.priority : 'MEDIUM',
-                    dueDate: taskData.dueDate || null,
+                    dueDate: dueDate,
                     assignee: taskData.assignee || null
                   };
                   
                   res.json({ success: true, taskData: cleanedTask });
                   resolve();
                 } else {
-                  // Fallback: create basic task from the text
+                  // Fallback: create basic task from the text with default due date (7 days from now)
+                  const defaultDate = new Date();
+                  defaultDate.setDate(defaultDate.getDate() + 7);
+                  defaultDate.setHours(23, 59, 0, 0);
+                  
                   const fallbackTask = {
                     title: text.substring(0, 50),
                     description: `Task extracted from: ${text.substring(0, 250)}`,
                     priority: 'MEDIUM',
-                    dueDate: null,
+                    dueDate: defaultDate.toISOString().slice(0, 16),
                     assignee: null
                   };
                   res.json({ success: true, taskData: fallbackTask });

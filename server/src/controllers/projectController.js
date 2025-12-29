@@ -256,6 +256,20 @@ const projectController = {
         return res.status(400).json({ error: 'Project name is required' });
       }
 
+      // Validate due date is required and in the future
+      if (!dueDate) {
+        return res.status(400).json({ error: 'Due date is required' });
+      }
+
+      const dueDateObj = new Date(dueDate);
+      const now = new Date();
+      if (isNaN(dueDateObj.getTime())) {
+        return res.status(400).json({ error: 'Invalid due date format' });
+      }
+      if (dueDateObj <= now) {
+        return res.status(400).json({ error: 'Due date must be in the future' });
+      }
+
       // Get template data if specified
       const templateData = template ? PROJECT_TEMPLATES[template] : null;
 
@@ -266,7 +280,7 @@ const projectController = {
           color: color || (templateData ? templateData.color : '#6366f1'),
           icon: icon || (templateData ? templateData.icon : '📁'),
           template: template || null,
-          dueDate: dueDate ? new Date(dueDate) : null,
+          dueDate: new Date(dueDate),
           ownerId: userId,
           companyId
         },
@@ -361,6 +375,29 @@ const projectController = {
         return res.status(403).json({ error: 'Only the project owner can update this project' });
       }
 
+      // Validate due date if provided
+      let finalDueDate = project.dueDate; // Keep existing if not updating
+      if (dueDate !== undefined) {
+        if (!dueDate) {
+          return res.status(400).json({ error: 'Due date is required' });
+        }
+
+        const dueDateObj = new Date(dueDate);
+        const now = new Date();
+        if (isNaN(dueDateObj.getTime())) {
+          return res.status(400).json({ error: 'Invalid due date format' });
+        }
+        if (dueDateObj <= now) {
+          return res.status(400).json({ error: 'Due date must be in the future' });
+        }
+        finalDueDate = new Date(dueDate);
+      } else {
+        // If due date is not being updated, ensure existing project has a due date
+        if (!project.dueDate) {
+          return res.status(400).json({ error: 'Project must have a due date. Please provide one.' });
+        }
+      }
+
       const updatedProject = await prisma.project.update({
         where: { id: parseInt(id) },
         data: {
@@ -369,7 +406,7 @@ const projectController = {
           ...(color && { color }),
           ...(icon && { icon }),
           ...(status && { status }),
-          ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null })
+          dueDate: finalDueDate
         },
         include: {
           owner: {
@@ -638,7 +675,7 @@ const projectController = {
     try {
       const { id } = req.params;
       const { companyId, id: userId } = req.user;
-      const { taskId, title, description, priority, assigneeId, dueDate } = req.body;
+      const { taskId, title, description, priority, assigneeId, externalContactId, dueDate } = req.body;
 
       const project = await prisma.project.findFirst({
         where: { id: parseInt(id), companyId }
@@ -710,6 +747,16 @@ const projectController = {
           return res.status(400).json({ error: 'Due date must be in the future' });
         }
 
+        // Validate that either assigneeId or externalContactId is provided
+        if (!assigneeId && !externalContactId) {
+          return res.status(400).json({ error: 'Either assignee or external contact is required' });
+        }
+
+        // Cannot assign to both internal user and external contact
+        if (assigneeId && externalContactId) {
+          return res.status(400).json({ error: 'Cannot assign to both internal user and external contact' });
+        }
+
         task = await prisma.task.create({
           data: {
             title,
@@ -718,7 +765,8 @@ const projectController = {
             status: 'TODO',
             projectId: parseInt(id),
             assignerId: userId,
-            assigneeId: assigneeId || null,
+            assigneeId: assigneeId ? parseInt(assigneeId) : null,
+            externalContactId: externalContactId ? parseInt(externalContactId) : null,
             dueDate: new Date(finalDueDate), // Required, already validated with default 11:59 PM if needed
             isDraft: true,
             companyId
@@ -898,6 +946,23 @@ const projectController = {
         return res.status(404).json({ error: 'Draft task not found' });
       }
 
+      // Validate that task has an assignee (either internal or external)
+      if (!task.assigneeId && !task.externalContactId) {
+        return res.status(400).json({ error: 'Task must have an assignee before it can be sent' });
+      }
+
+      // Validate that task has a due date
+      if (!task.dueDate) {
+        return res.status(400).json({ error: 'Task must have a due date before it can be sent' });
+      }
+
+      // Validate due date is in the future
+      const dueDateObj = new Date(task.dueDate);
+      const now = new Date();
+      if (dueDateObj <= now) {
+        return res.status(400).json({ error: 'Task due date must be in the future before it can be sent' });
+      }
+
       // Update task to mark as sent
       const updatedTask = await prisma.task.update({
         where: { id: parseInt(taskId) },
@@ -1025,6 +1090,27 @@ const projectController = {
 
       if (draftTasks.length === 0) {
         return res.status(400).json({ error: 'No draft tasks to send' });
+      }
+
+      // Validate all tasks have assignees and valid due dates
+      const now = new Date();
+      for (const task of draftTasks) {
+        if (!task.assigneeId && !task.externalContactId) {
+          return res.status(400).json({ 
+            error: `Task "${task.title}" must have an assignee before it can be sent` 
+          });
+        }
+        if (!task.dueDate) {
+          return res.status(400).json({ 
+            error: `Task "${task.title}" must have a due date before it can be sent` 
+          });
+        }
+        const dueDateObj = new Date(task.dueDate);
+        if (dueDateObj <= now) {
+          return res.status(400).json({ 
+            error: `Task "${task.title}" due date must be in the future before it can be sent` 
+          });
+        }
       }
 
       const emailService = require('../services/emailService');

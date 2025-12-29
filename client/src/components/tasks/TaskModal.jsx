@@ -237,6 +237,27 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       newErrors.description = 'Description must be 300 characters or less';
     }
     
+    // Validate due date is required and in the future
+    if (!formData.dueDate || !formData.dueDate.trim()) {
+      newErrors.dueDate = 'Due date is required';
+    } else {
+      // If only date is provided (no time), set default time to 11:59 PM for validation
+      let dateToCheck = formData.dueDate;
+      if (!dateToCheck.includes('T') || (dateToCheck.includes('T') && !dateToCheck.includes(':'))) {
+        // Date only, add 11:59 PM
+        const datePart = dateToCheck.split('T')[0];
+        dateToCheck = `${datePart}T23:59:00`;
+      }
+      
+      const selectedDate = new Date(dateToCheck);
+      const now = new Date();
+      if (isNaN(selectedDate.getTime())) {
+        newErrors.dueDate = 'Invalid due date format';
+      } else if (selectedDate <= now) {
+        newErrors.dueDate = 'Due date must be in the future';
+      }
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -253,7 +274,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       ...formData,
       assigneeId: formData.assigneeId ? parseInt(formData.assigneeId) : null,
       externalContactId: formData.externalContactId ? parseInt(formData.externalContactId) : null,
-      dueDate: formData.dueDate || null
+      dueDate: formData.dueDate // Required, already validated
     };
 
     const result = await updateTask(viewedTask.id, updateData);
@@ -860,27 +881,36 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                   className="text-base font-semibold mb-3 transition-colors duration-200"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  Due Date
+                  Due Date <span className="text-error">*</span>
                 </h4>
                 {isEditing ? (
-                  <input
-                    type="datetime-local"
-                    name="dueDate"
-                    value={formData.dueDate}
-                    onChange={handleChange}
-                    className="input w-full transition-colors duration-200"
-                    style={{
-                      backgroundColor: 'var(--color-bg-tertiary)',
-                      borderColor: 'var(--color-border-default)',
-                      color: 'var(--color-text-primary)',
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-primary)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                    }}
-                  />
+                  <div>
+                    <input
+                      type="datetime-local"
+                      name="dueDate"
+                      value={formData.dueDate}
+                      onChange={handleChange}
+                      className={`input w-full transition-colors duration-200 ${errors.dueDate ? 'input-error' : ''}`}
+                      style={{
+                        backgroundColor: 'var(--color-bg-tertiary)',
+                        borderColor: errors.dueDate ? '#ef4444' : 'var(--color-border-default)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                      required
+                      min={new Date().toISOString().slice(0, 16)}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-primary)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-border-default)';
+                      }}
+                    />
+                    {errors.dueDate && (
+                      <label className="label">
+                        <span className="label-text-alt text-error">{errors.dueDate}</span>
+                      </label>
+                    )}
+                  </div>
                 ) : (
                   <div className="flex flex-col">
                     {viewedTask.dueDate ? (
@@ -903,10 +933,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                       </>
                     ) : (
                       <span 
-                        className="text-base transition-colors duration-200"
-                        style={{ color: 'var(--color-text-tertiary)' }}
+                        className="text-base transition-colors duration-200 text-error"
                       >
-                        No due date
+                        No due date set
                       </span>
                     )}
                   </div>

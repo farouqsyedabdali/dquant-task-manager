@@ -62,10 +62,51 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
   };
 
   const handleNext = () => {
-    if (step === 1 && !formData.title.trim()) {
-      setError('Task title is required');
-      return;
+    if (step === 1) {
+      if (!formData.title.trim()) {
+        setError('Task title is required');
+        return;
+      }
+      
+      // Validate due date is required and in the future
+      if (!formData.dueDate || !formData.dueDate.trim()) {
+        setError('Due date is required');
+        return;
+      }
+
+      // If only date is provided (no time), set default time to 11:59 PM for validation
+      let dateToCheck = formData.dueDate;
+      if (!dateToCheck.includes('T') || (dateToCheck.includes('T') && !dateToCheck.includes(':'))) {
+        // Date only, add 11:59 PM
+        const datePart = dateToCheck.split('T')[0];
+        dateToCheck = `${datePart}T23:59:00`;
+      }
+      
+      const selectedDate = new Date(dateToCheck);
+      const now = new Date();
+      if (isNaN(selectedDate.getTime())) {
+        setError('Invalid due date format');
+        return;
+      }
+      if (selectedDate <= now) {
+        setError('Due date must be in the future');
+        return;
+      }
     }
+    
+    if (step === 2) {
+      // Validate assignment before moving to review
+      if (formData.assignmentType === 'internal' && !formData.assigneeId) {
+        setError('Please select an employee');
+        return;
+      }
+
+      if (formData.assignmentType === 'external' && !formData.externalContactId) {
+        setError('Please select an external contact');
+        return;
+      }
+    }
+    
     setError(null);
     setStep(step + 1);
   };
@@ -79,6 +120,31 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
     // Validate
     if (!formData.title.trim()) {
       setError('Task title is required');
+      return;
+    }
+
+    // Validate due date is required and in the future
+    if (!formData.dueDate || !formData.dueDate.trim()) {
+      setError('Due date is required');
+      return;
+    }
+
+    // If only date is provided (no time), set default time to 11:59 PM for validation
+    let dateToCheck = formData.dueDate;
+    if (!dateToCheck.includes('T') || (dateToCheck.includes('T') && !dateToCheck.includes(':'))) {
+      // Date only, add 11:59 PM
+      const datePart = dateToCheck.split('T')[0];
+      dateToCheck = `${datePart}T23:59:00`;
+    }
+    
+    const selectedDate = new Date(dateToCheck);
+    const now = new Date();
+    if (isNaN(selectedDate.getTime())) {
+      setError('Invalid due date format');
+      return;
+    }
+    if (selectedDate <= now) {
+      setError('Due date must be in the future');
       return;
     }
 
@@ -100,7 +166,7 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
         title: formData.title,
         description: formData.description || null,
         priority: formData.priority,
-        dueDate: formData.dueDate || null,
+        dueDate: formData.dueDate,
         assigneeId: formData.assignmentType === 'internal' ? parseInt(formData.assigneeId) : null,
         externalContactId: formData.assignmentType === 'external' ? parseInt(formData.externalContactId) : null
       };
@@ -226,6 +292,7 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
                   placeholder="Select due date"
                   showTime={false}
                   timeOptional={true}
+                  minDate={new Date().toISOString().split('T')[0]}
                 />
               </div>
             </div>
@@ -276,8 +343,9 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
                             borderColor: 'var(--color-border-default)',
                             color: 'var(--color-text-primary)',
                           }}
+                          required
                         >
-                          <option value="">Select employee...</option>
+                          <option value="">Select employee... *</option>
                           {employees.map(emp => (
                             <option key={emp.id} value={emp.id}>
                               {emp.name} - {emp.email}
@@ -324,8 +392,9 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
                             borderColor: 'var(--color-border-default)',
                             color: 'var(--color-text-primary)',
                           }}
+                          required
                         >
-                          <option value="">Select contact...</option>
+                          <option value="">Select contact... *</option>
                           {contacts.map(contact => (
                             <option key={contact.id} value={contact.id}>
                               {contact.name} - {contact.email}
@@ -399,21 +468,23 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
                   </span>
                 </div>
                 
-                {formData.dueDate && (
-                  <div className="flex justify-between">
-                    <span style={{ color: 'var(--color-text-secondary)' }}>Due Date:</span>
-                    <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                      {new Date(formData.dueDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--color-text-secondary)' }}>Due Date:</span>
+                  <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                    {formData.dueDate 
+                      ? new Date(formData.dueDate).toLocaleDateString()
+                      : <span className="text-error">Required</span>}
+                  </span>
+                </div>
                 
                 <div className="flex justify-between">
                   <span style={{ color: 'var(--color-text-secondary)' }}>Assigned To:</span>
                   <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                    {formData.assignmentType === 'internal' 
+                    {formData.assignmentType === 'internal' && formData.assigneeId
                       ? employees.find(e => e.id === parseInt(formData.assigneeId))?.name
-                      : contacts.find(c => c.id === parseInt(formData.externalContactId))?.name}
+                      : formData.assignmentType === 'external' && formData.externalContactId
+                      ? contacts.find(c => c.id === parseInt(formData.externalContactId))?.name
+                      : <span className="text-error">Required</span>}
                   </span>
                 </div>
                 

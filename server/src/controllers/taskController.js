@@ -759,15 +759,47 @@ const updateTask = async (req, res) => {
     let allowedUpdates = {};
     
     if (isCompanyAdmin || isAssigner) {
+      // Validate due date if provided
+      if (updateData.dueDate !== undefined) {
+        if (!updateData.dueDate) {
+          return res.status(400).json({ error: 'Due date is required' });
+        }
+
+        // If only date is provided (no time), set default time to 11:59 PM
+        let finalDueDate = updateData.dueDate;
+        if (typeof updateData.dueDate === 'string' && !updateData.dueDate.includes('T')) {
+          // Date only format (YYYY-MM-DD), add 11:59 PM
+          finalDueDate = `${updateData.dueDate}T23:59:00`;
+        } else if (typeof updateData.dueDate === 'string' && updateData.dueDate.includes('T') && !updateData.dueDate.includes(':')) {
+          // Date with T but no time (YYYY-MM-DDT), add 11:59 PM
+          finalDueDate = `${updateData.dueDate}23:59:00`;
+        }
+
+        const dueDateObj = new Date(finalDueDate);
+        const now = new Date();
+        if (isNaN(dueDateObj.getTime())) {
+          return res.status(400).json({ error: 'Invalid due date format' });
+        }
+        if (dueDateObj <= now) {
+          return res.status(400).json({ error: 'Due date must be in the future' });
+        }
+        allowedUpdates.dueDate = new Date(finalDueDate);
+      } else {
+        // If due date is not being updated, ensure existing task has a due date
+        if (!task.dueDate) {
+          return res.status(400).json({ error: 'Task must have a due date. Please provide one.' });
+        }
+      }
+
       // Assigner and admin can update everything
       allowedUpdates = {
+        ...allowedUpdates,
         title: updateData.title,
         description: updateData.description,
         priority: updateData.priority,
         status: updateData.status,
         assigneeId: updateData.assigneeId,
-        externalContactId: updateData.externalContactId,
-        dueDate: updateData.dueDate ? new Date(updateData.dueDate) : null
+        externalContactId: updateData.externalContactId
       };
     } else if (isAssignee) {
       // Assignee can only update status

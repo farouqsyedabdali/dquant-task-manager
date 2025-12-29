@@ -11,6 +11,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -110,8 +111,20 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
       return;
     }
 
-    if (selectedTemplateType === 'user' && !formData.dueDate) {
-      setError('Project due date is required when using a custom template');
+    // Validate due date is required and in the future
+    if (!formData.dueDate || !formData.dueDate.trim()) {
+      setError('Due date is required');
+      return;
+    }
+
+    const dueDateObj = new Date(formData.dueDate);
+    const now = new Date();
+    if (isNaN(dueDateObj.getTime())) {
+      setError('Invalid due date format');
+      return;
+    }
+    if (dueDateObj <= now) {
+      setError('Due date must be in the future');
       return;
     }
 
@@ -149,6 +162,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   const handleClose = () => {
     setStep(1);
     setSelectedTemplate(null);
+    setSearchTerm('');
     setFormData({
       name: '',
       description: '',
@@ -159,6 +173,25 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
     setError(null);
     onClose();
   };
+
+  // Filter templates based on search term
+  const filteredSystemTemplates = templates.filter(template => {
+    if (!searchTerm.trim()) return true;
+    const search = searchTerm.toLowerCase();
+    return (
+      template.name.toLowerCase().includes(search) ||
+      template.description?.toLowerCase().includes(search)
+    );
+  });
+
+  const filteredUserTemplates = userTemplates.filter(template => {
+    if (!searchTerm.trim()) return true;
+    const search = searchTerm.toLowerCase();
+    return (
+      template.name.toLowerCase().includes(search) ||
+      template.description?.toLowerCase().includes(search)
+    );
+  });
 
   if (!isOpen) return null;
 
@@ -234,14 +267,75 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
               </button>
             </div>
 
+            {/* Search Bar */}
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search templates by name or description..."
+                className="input input-bordered w-full pl-10"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+              />
+              <svg 
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                style={{ color: 'var(--color-text-tertiary)' }}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
             {/* System Templates */}
             {activeTab === 'system' && (
               <div>
                 <h4 className="text-sm font-medium mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
                   CHOOSE A SYSTEM TEMPLATE
+                  {searchTerm && (
+                    <span className="ml-2 text-xs">
+                      ({filteredSystemTemplates.length} {filteredSystemTemplates.length === 1 ? 'result' : 'results'})
+                    </span>
+                  )}
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {templates.map((template) => (
+                {filteredSystemTemplates.length === 0 ? (
+                  <div 
+                    className="p-12 text-center rounded-xl border-2 border-dashed"
+                    style={{ borderColor: 'var(--color-border-default)' }}
+                  >
+                    <div className="text-4xl mb-4 opacity-50">🔍</div>
+                    <h5 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+                      No templates found
+                    </h5>
+                    <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+                      No system templates match "{searchTerm}"
+                    </p>
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="btn btn-sm btn-ghost"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      Clear search
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredSystemTemplates.map((template) => (
                     <button
                       key={template.id}
                       onClick={() => handleTemplateSelect(template, 'system')}
@@ -274,10 +368,11 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                       </div>
                     </div>
                   </button>
-                ))}
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )}
 
           {/* My Templates Tab */}
           {activeTab === 'my-templates' && (
@@ -285,8 +380,13 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
               <div className="flex justify-between items-center mb-3">
                 <h4 className="text-sm font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
                   YOUR CUSTOM TEMPLATES
+                  {searchTerm && (
+                    <span className="ml-2 text-xs">
+                      ({filteredUserTemplates.length} {filteredUserTemplates.length === 1 ? 'result' : 'results'})
+                    </span>
+                  )}
                 </h4>
-                {userTemplates.length > 0 && (
+                {userTemplates.length > 0 && !searchTerm && (
                   <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
                     🚀 Click a template to reuse it with new dates
                   </p>
@@ -309,9 +409,29 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                     💡 Templates preserve task assignments and relative due dates
                   </p>
                 </div>
+              ) : filteredUserTemplates.length === 0 ? (
+                <div 
+                  className="p-12 text-center rounded-xl border-2 border-dashed"
+                  style={{ borderColor: 'var(--color-border-default)' }}
+                >
+                  <div className="text-4xl mb-4 opacity-50">🔍</div>
+                  <h5 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+                    No templates found
+                  </h5>
+                  <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+                    No custom templates match "{searchTerm}"
+                  </p>
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="btn btn-sm btn-ghost"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Clear search
+                  </button>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {userTemplates.map((template) => (
+                  {filteredUserTemplates.map((template) => (
                     <div key={template.id} className="relative">
                       <button
                         onClick={() => handleTemplateSelect(template, 'user')}
@@ -524,8 +644,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
             {/* Due Date */}
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-                Due Date {selectedTemplateType === 'user' && <span className="text-error">*</span>}
-                {selectedTemplateType !== 'user' && '(optional)'}
+                Due Date <span className="text-error">*</span>
               </label>
               <input
                 type="date"
@@ -537,15 +656,14 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                   borderColor: 'var(--color-border-default)',
                   color: 'var(--color-text-primary)',
                 }}
-                required={selectedTemplateType === 'user'}
+                required
+                min={new Date().toISOString().split('T')[0]}
               />
-              {selectedTemplateType === 'user' && (
-                <label className="label">
-                  <span className="label-text-alt" style={{ color: 'var(--color-text-tertiary)' }}>
-                    📅 All task due dates will be calculated relative to this date
-                  </span>
-                </label>
-              )}
+              <label className="label">
+                <span className="label-text-alt" style={{ color: 'var(--color-text-tertiary)' }}>
+                  📅 {selectedTemplateType === 'user' ? 'All task due dates will be calculated relative to this date' : 'Project must have a future due date'}
+                </span>
+              </label>
             </div>
 
 
