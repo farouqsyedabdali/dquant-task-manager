@@ -1572,9 +1572,24 @@ const removeCoAssignee = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Check if current user is the lead assignee
-    if (task.assigneeId !== currentUserId) {
-      return res.status(403).json({ error: 'Only the lead assignee can remove co-assignees' });
+    // Check if current user is the lead assignee OR removing themselves
+    const isRemovingSelf = parseInt(userId) === currentUserId;
+    const isLeadAssignee = task.assigneeId === currentUserId;
+    
+    if (!isLeadAssignee && !isRemovingSelf) {
+      return res.status(403).json({ error: 'Only the lead assignee can remove other co-assignees, or you can remove yourself' });
+    }
+    
+    // Check if the user being removed is actually a co-assignee
+    const coAssignee = await prisma.taskCoAssignee.findFirst({
+      where: {
+        taskId: parseInt(taskId),
+        userId: parseInt(userId)
+      }
+    });
+    
+    if (!coAssignee) {
+      return res.status(404).json({ error: 'User is not a co-assignee of this task' });
     }
 
     // Get user information for audit log
@@ -1598,21 +1613,25 @@ const removeCoAssignee = async (req, res) => {
       });
     }
 
-    // Notify the removed co-assignee
-    await createNotification(
-      'CO_ASSIGNEE_REMOVED',
-      'Removed as Co-Assignee',
-      `You have been removed as a co-assignee from task: ${task.title}`,
-      parseInt(taskId),
-      parseInt(userId),
-      companyId
-    );
+    // Notify the removed co-assignee (only if they didn't remove themselves)
+    if (!isRemovingSelf) {
+      await createNotification(
+        'CO_ASSIGNEE_REMOVED',
+        'Removed as Co-Assignee',
+        `You have been removed as a co-assignee from task: ${task.title}`,
+        parseInt(taskId),
+        parseInt(userId),
+        companyId
+      );
+    }
 
     // Notify creator, lead assignee, and other co-assignees
     await notifyTaskUsers(
       'CO_ASSIGNEE_REMOVED',
       'Co-Assignee Removed',
-      `A co-assignee was removed from task: ${task.title}`,
+      isRemovingSelf 
+        ? `A co-assignee removed themselves from task: ${task.title}`
+        : `A co-assignee was removed from task: ${task.title}`,
       parseInt(taskId),
       currentUserId, // Actor (person who removed the co-assignee)
       companyId,

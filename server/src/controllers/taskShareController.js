@@ -210,6 +210,106 @@ const unshareTask = async (req, res) => {
   }
 };
 
+// Unshare a task by share ID (works for internal users, external contacts, and email shares)
+const unshareTaskById = async (req, res) => {
+  try {
+    const { taskId, shareId } = req.params;
+    const currentUserId = req.user.id;
+    const companyId = req.user.companyId;
+
+    // Verify task exists and user has permission to unshare it
+    const task = await prisma.task.findFirst({
+      where: {
+        id: parseInt(taskId),
+        companyId: companyId
+      }
+    });
+
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // Check permissions: lead assignee, assigner, admin, or sysadmin
+    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSADMIN';
+    const isAssigner = task.assignerId === currentUserId;
+    const isLeadAssignee = task.assigneeId === currentUserId;
+    if (!(isLeadAssignee || isAssigner || isAdminOrSysadmin)) {
+      return res.status(403).json({ error: 'Only the lead assignee, assigner, or admin/sysadmin can unshare this task' });
+    }
+
+    // Find the share
+    const taskShare = await prisma.taskShare.findFirst({
+      where: {
+        id: parseInt(shareId),
+        taskId: parseInt(taskId),
+        companyId: companyId
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        contact: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    if (!taskShare) {
+      return res.status(404).json({ error: 'Share not found' });
+    }
+
+    // Get the name for notification and audit log
+    const unsharedName = taskShare.user?.name || taskShare.contact?.name || taskShare.email || 'Unknown';
+    const unsharedUserId = taskShare.userId;
+
+    // Delete the share
+    await prisma.taskShare.delete({
+      where: {
+        id: taskShare.id
+      }
+    });
+
+    // Send notification if it was an internal user
+    if (unsharedUserId) {
+      await createNotification(
+        'TASK_UNSHARED',
+        'Task Unshared',
+        `"${task.title}" has been unshared with you by ${req.user.name}`,
+        task.id,
+        unsharedUserId,
+        companyId
+      );
+    }
+
+    // Log audit action
+    await logAuditActionDirect(req, 'TASK_UNSHARED', 'TaskShare', {
+      entityId: taskShare.id,
+      taskTitle: task.title,
+      unsharedWithName: unsharedName,
+      metadata: {
+        taskId: parseInt(taskId),
+        shareId: parseInt(shareId),
+        userId: unsharedUserId,
+        contactId: taskShare.contactId,
+        email: taskShare.email
+      }
+    });
+
+    res.json({ message: 'Task unshared successfully' });
+  } catch (error) {
+    console.error('Unshare task by ID error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // Get users a task is shared with
 const getTaskShares = async (req, res) => {
   try {
@@ -241,6 +341,13 @@ const getTaskShares = async (req, res) => {
       },
       include: {
         user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        contact: {
           select: {
             id: true,
             name: true,
@@ -591,6 +698,7 @@ module.exports = {
   shareTaskWithContact,
   shareTaskWithEmail,
   unshareTask,
+  unshareTaskById,
   getTaskShares,
   getSharedTasks
 };

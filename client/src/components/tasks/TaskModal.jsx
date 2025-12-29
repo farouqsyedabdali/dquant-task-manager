@@ -11,7 +11,7 @@ import DeleteConfirmModal from '../common/DeleteConfirmModal';
 import TaskShareModal from './TaskShareModal';
 import TaskUpdatesModal from './TaskUpdatesModal';
 import SearchableDropdown from '../common/SearchableDropdown';
-import { usersAPI, tasksAPI, commentsAPI, taskShareAPI } from '../../services/api';
+import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
 import useContactStore from '../../stores/contactStore';
 import IconButton from '../common/IconButton';
 import { 
@@ -61,11 +61,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   // Check if current user is viewing a shared task (view-only access)
   const isSharedTask = viewedTask?.sharedWith?.some(share => share.userId === user?.id);
   
-  // Check if current user can share (lead assignee, assigner, admin, or sysadmin)
-  const canShare = viewedTask?.assigneeId === user?.id || 
-                   viewedTask?.assignerId === user?.id || 
-                   (isAdmin() && viewedTask?.companyId === user?.companyId) || 
-                   user?.role === 'SYSDMIN';
+  // Check if current user can share (lead assignee or assigner)
+  const canShare = viewedTask?.assigneeId === user?.id || viewedTask?.assignerId === user?.id;
   
   // Check if user can archive/unarchive this task
   const canArchive = !isSharedTask && (
@@ -123,47 +120,24 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           fetchUsers();
         }
         fetchCoAssignees(task.id);
-        fetchContactsForTask(); // Fetch contacts for both personal and company accounts
+        if (isPersonalAccount) {
+          fetchContactsForTask();
+        }
       }
     }
   }, [isOpen, task, fetchCoAssignees, isPersonalAccount]);
 
-  const handleAddCoAssignee = async (id, type, role) => {
-    if (!id || !viewedTask?.id) return;
+  const handleAddCoAssignee = async (userId) => {
+    if (!userId || !viewedTask?.id) return;
 
     try {
       setIsAddingCoAssignee(true);
+      await tasksAPI.addCoAssignee(viewedTask.id, userId);
       
-      if (type === 'user') {
-        // Internal user
-        if (role === 'lead-assignee') {
-          // Update task assignee
-          await updateTask(viewedTask.id, { assigneeId: parseInt(id) });
-        } else if (role === 'co-assignee') {
-          // Add as co-assignee
-          await tasksAPI.addCoAssignee(viewedTask.id, parseInt(id));
-          
-          // Track as recent employee
-          const selectedUser = users.find(u => u.id.toString() === id.toString());
-          if (selectedUser) {
-            addToRecentEmployees(selectedUser);
-          }
-        } else if (role === 'viewer') {
-          // Share as viewer
-          await taskShareAPI.shareTask(viewedTask.id, parseInt(id), 'VIEWER');
-        }
-      } else if (type === 'contact') {
-        // External contact
-        if (role === 'lead-assignee') {
-          // Update task external contact
-          await updateTask(viewedTask.id, { externalContactId: parseInt(id) });
-        } else if (role === 'co-assignee') {
-          // Share with EDIT permission (similar to co-assignee)
-          await taskShareAPI.shareTaskWithContact(viewedTask.id, parseInt(id), 'EDITOR');
-        } else if (role === 'viewer') {
-          // Share as viewer
-          await taskShareAPI.shareTaskWithContact(viewedTask.id, parseInt(id), 'VIEWER');
-        }
+      // Track as recent employee
+      const selectedUser = users.find(u => u.id.toString() === userId.toString());
+      if (selectedUser) {
+        addToRecentEmployees(selectedUser);
       }
       
       // Refresh co-assignees list and task data
@@ -173,8 +147,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         setViewedTask(result.data);
       }
     } catch (error) {
-      console.error('Error adding team member:', error);
-      alert(error.response?.data?.error || 'Failed to add team member');
+      console.error('Error adding co-assignee:', error);
+      alert(error.response?.data?.error || 'Failed to add co-assignee');
       throw error; // Re-throw so modal can handle it
     } finally {
       setIsAddingCoAssignee(false);
@@ -319,19 +293,15 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   // Create a comprehensive task summary
   const createTaskSummary = async (task) => {
-    const formatDate = (dateString, taskStatus) => {
+    const formatDate = (dateString) => {
       if (!dateString) return 'No due date set';
       const date = new Date(dateString);
       const now = new Date();
       const diffTime = date.getTime() - now.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
-      // Only show "Overdue" if task status is TODO or IN_PROGRESS
-      if (diffDays < 0 && (taskStatus === 'TODO' || taskStatus === 'IN_PROGRESS')) {
+      if (diffDays < 0) {
         return `Overdue by ${Math.abs(diffDays)} day(s)`;
-      } else if (diffDays < 0) {
-        // For other statuses, just show the date without "Overdue"
-        return new Date(dateString).toLocaleDateString();
       } else if (diffDays === 0) {
         return 'Due today';
       } else if (diffDays === 1) {
@@ -376,10 +346,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       let summary = '';
       
       // Analyze task status and urgency
-      // Only consider tasks as overdue if status is TODO or IN_PROGRESS
-      const isOverdue = task.dueDate && 
-                        new Date(task.dueDate) < new Date() && 
-                        (task.status === 'TODO' || task.status === 'IN_PROGRESS');
+      const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED';
       const isUrgent = task.priority === 'URGENT' || task.priority === 'HIGH';
       const hasSubtasks = task.subtasks && task.subtasks.length > 0;
       const hasParent = task.parentTask;
@@ -498,7 +465,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       textSummary: textSummary,
       status: `${getStatusEmoji(task.status)} ${task.status.replace('_', ' ')}`,
       priority: `${getPriorityEmoji(task.priority)} ${task.priority}`,
-      dueDate: formatDate(task.dueDate, task.status),
+      dueDate: formatDate(task.dueDate),
       createdBy: task.assigner?.name || 'Unknown',
       assignedTo: task.assignee?.name || 'Unassigned',
       createdAt: new Date(task.createdAt).toLocaleDateString('en-US', {
@@ -643,8 +610,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                       {viewedTask.title}
                     </h3>
                     {isSharedTask && (
-                      <div className="status-badge bg-blue-600 text-blue-100 uppercase flex items-center gap-1">
+                      <div className="status-badge bg-blue-600 text-blue-100 capitalize flex items-center gap-1.5">
                         <FaShareAlt className="w-3 h-3" />
+                        <span>Shared with you</span>
                       </div>
                     )}
                   </div>
@@ -929,7 +897,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                         >
                           {new Date(viewedTask.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        {new Date(viewedTask.dueDate) < new Date() && (viewedTask.status === 'TODO' || viewedTask.status === 'IN_PROGRESS') && (
+                        {new Date(viewedTask.dueDate) < new Date() && viewedTask.status !== 'COMPLETED' && (
                           <span className="text-red-400 text-sm mt-1">Overdue</span>
                         )}
                       </>
@@ -1632,16 +1600,11 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           onClose={() => setIsAddTeamMemberModalOpen(false)}
           onAdd={handleAddCoAssignee}
           taskId={viewedTask?.id}
-          contacts={contacts}
           excludeUserIds={[
             viewedTask?.assigneeId,
             ...(coAssignees.map(co => co.userId) || []),
             ...(viewedTask?.collaborators?.map(c => c.userId) || []),
             ...(viewedTask?.sharedWith?.map(s => s.userId).filter(Boolean) || [])
-          ].filter(Boolean)}
-          excludeContactIds={[
-            viewedTask?.externalContactId,
-            ...(viewedTask?.sharedWith?.map(s => s.contactId).filter(Boolean) || [])
           ].filter(Boolean)}
         />
       )}

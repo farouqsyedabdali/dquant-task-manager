@@ -39,11 +39,11 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
     try {
       const response = await tasksAPI.getAll();
       
-      // Show all visible tasks as potential parents
+      // Filter out completed tasks - only show live (not completed) tasks as potential parents
       // (A subtask can also be a parent to other subtasks)
-      const parentTasks = response.data;
+      const liveTasks = response.data.filter(task => task.status !== 'COMPLETED');
       
-      setAvailableTasks(parentTasks);
+      setAvailableTasks(liveTasks);
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
       setAvailableTasks([]);

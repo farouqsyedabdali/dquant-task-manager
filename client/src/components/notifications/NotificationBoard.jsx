@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useNotificationStore from '../../stores/notificationStore';
 import { formatDistanceToNow } from 'date-fns';
@@ -16,10 +16,28 @@ const NotificationBoard = () => {
   
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const notificationRef = useRef(null);
 
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
+
+  // Close notification board when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isOpen && notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -96,7 +114,7 @@ const NotificationBoard = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={notificationRef}>
       {/* Notification Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}

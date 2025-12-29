@@ -116,6 +116,7 @@ export const taskShareAPI = {
   shareTaskWithContact: (taskId, contactId, permissionLevel = 'VIEWER') => api.post(`/task-shares/${taskId}/share-contact`, { contactId, permissionLevel }),
   shareTaskWithEmail: (taskId, email, permissionLevel = 'VIEWER') => api.post(`/task-shares/${taskId}/share-email`, { email, permissionLevel }),
   unshareTask: (taskId, userId) => api.delete(`/task-shares/${taskId}/share/${userId}`),
+  unshareTaskById: (taskId, shareId) => api.delete(`/task-shares/${taskId}/share-id/${shareId}`),
   getTaskShares: (taskId) => api.get(`/task-shares/${taskId}/shares`),
   getSharedTasks: () => api.get('/task-shares/shared'),
 };

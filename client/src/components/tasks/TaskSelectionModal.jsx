@@ -21,7 +21,9 @@ const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '' 
     setIsLoadingTasks(true);
     try {
       const response = await tasksAPI.getAll();
-      setTasks(response.data);
+      // Filter out completed tasks - only show live (not completed) tasks
+      const liveTasks = response.data.filter(task => task.status !== 'COMPLETED');
+      setTasks(liveTasks);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     } finally {

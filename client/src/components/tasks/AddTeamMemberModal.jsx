@@ -216,7 +216,6 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
                 }}
               >
                 <option value="co-assignee">Co-assignee</option>
-                <option value="lead-assignee">Lead Assignee</option>
                 <option value="viewer">Viewer</option>
               </select>
             </div>

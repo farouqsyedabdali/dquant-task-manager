@@ -6,6 +6,21 @@ const getNotifications = async (req, res) => {
     const userId = req.user.id;
     const companyId = req.user.companyId;
     
+    // Clean up read notifications older than 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    await prisma.notification.deleteMany({
+      where: {
+        userId: userId,
+        companyId: companyId,
+        isRead: true,
+        readAt: {
+          lt: sevenDaysAgo
+        }
+      }
+    });
+    
     const notifications = await prisma.notification.findMany({
       where: {
         userId: userId,
@@ -47,13 +62,29 @@ const markAsRead = async (req, res) => {
         companyId: companyId
       },
       data: {
-        isRead: true
+        isRead: true,
+        readAt: new Date()
       }
     });
 
     if (notification.count === 0) {
       return res.status(404).json({ error: 'Notification not found' });
     }
+
+    // Clean up read notifications older than 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    await prisma.notification.deleteMany({
+      where: {
+        userId: userId,
+        companyId: companyId,
+        isRead: true,
+        readAt: {
+          lt: sevenDaysAgo
+        }
+      }
+    });
 
     res.json({ success: true, message: 'Notification marked as read' });
   } catch (error) {
@@ -67,6 +98,7 @@ const markAllAsRead = async (req, res) => {
   try {
     const userId = req.user.id;
     const companyId = req.user.companyId;
+    const now = new Date();
 
     await prisma.notification.updateMany({
       where: {
@@ -75,7 +107,23 @@ const markAllAsRead = async (req, res) => {
         isRead: false
       },
       data: {
-        isRead: true
+        isRead: true,
+        readAt: now
+      }
+    });
+
+    // Clean up read notifications older than 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    await prisma.notification.deleteMany({
+      where: {
+        userId: userId,
+        companyId: companyId,
+        isRead: true,
+        readAt: {
+          lt: sevenDaysAgo
+        }
       }
     });
 
@@ -110,6 +158,47 @@ const getUnreadCount = async (req, res) => {
 // Create a notification (helper function for other controllers)
 const createNotification = async (type, title, message, taskId, userId, companyId) => {
   try {
+    // Check current notification count for this user
+    const notificationCount = await prisma.notification.count({
+      where: {
+        userId: userId,
+        companyId: companyId
+      }
+    });
+
+    const MAX_NOTIFICATIONS = 30;
+
+    // If user has 30 or more notifications, delete the oldest ones
+    if (notificationCount >= MAX_NOTIFICATIONS) {
+      const notificationsToDelete = notificationCount - MAX_NOTIFICATIONS + 1; // +1 to make room for the new one
+      
+      // Get the oldest notifications (prioritize unread, then oldest read)
+      const oldestNotifications = await prisma.notification.findMany({
+        where: {
+          userId: userId,
+          companyId: companyId
+        },
+        orderBy: [
+          { isRead: 'asc' }, // Unread first
+          { createdAt: 'asc' } // Then oldest
+        ],
+        take: notificationsToDelete,
+        select: {
+          id: true
+        }
+      });
+
+      if (oldestNotifications.length > 0) {
+        await prisma.notification.deleteMany({
+          where: {
+            id: {
+              in: oldestNotifications.map(n => n.id)
+            }
+          }
+        });
+      }
+    }
+
     const notification = await prisma.notification.create({
       data: {
         type,

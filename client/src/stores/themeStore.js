@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { getPaletteById } from '../config/colorPalettes';
 
-// Get initial theme from system preference or localStorage
+// Get initial theme from localStorage, defaulting to light mode for new users
 const getInitialTheme = () => {
-  if (typeof window === 'undefined') return 'dark';
+  if (typeof window === 'undefined') return 'light';
 
   // Check if there's a saved preference
   const saved = localStorage.getItem('theme');
@@ -11,11 +11,7 @@ const getInitialTheme = () => {
     return saved;
   }
 
-  // Check system preference
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    return 'dark';
-  }
-
+  // Default to light mode for new users (most software starts with light mode)
   return 'light';
 };
 
