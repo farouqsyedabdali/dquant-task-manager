@@ -223,7 +223,8 @@ function AppContent() {
         </Routes>
 
         {/* Floating AI Button - Only show when authenticated and not on popup */}
-        {isAuthenticated() && window.location.pathname !== '/popup' && (
+        {/* Button is hidden but code is preserved for future use */}
+        {false && isAuthenticated() && window.location.pathname !== '/popup' && (
           <button
             className="fixed bottom-6 right-6 z-50 text-white rounded-full p-4 shadow-lg flex items-center justify-center transition-all duration-200"
             style={{ 
