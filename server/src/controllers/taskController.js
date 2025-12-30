@@ -323,7 +323,7 @@ const getTask = async (req, res) => {
     const userRole = req.user.role;
     const companyId = req.user.companyId;
 
-    let whereClause = { 
+    let whereClause = {
       id: parseInt(id)
     };
 
@@ -356,16 +356,18 @@ const getTask = async (req, res) => {
       ];
     } else {
       // Admins can see all tasks in their company OR tasks they're collaborating on
+      // OR tasks they created (as assigner)
       whereClause.OR = [
         { companyId: companyId },
-        { 
-          collaborators: { 
-            some: { 
+        {
+          collaborators: {
+            some: {
               userId: userId,
               companyId: companyId
             }
           }
-        }
+        },
+        { assignerId: userId }
       ];
     }
 

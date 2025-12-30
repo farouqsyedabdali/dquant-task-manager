@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { projectsAPI, templatesAPI } from '../../services/api';
 
 const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
@@ -8,10 +8,25 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [selectedTemplateType, setSelectedTemplateType] = useState('system'); // 'system' or 'user'
   const [activeTab, setActiveTab] = useState('system'); // 'system' or 'my-templates'
+  const [activeCategory, setActiveCategory] = useState('PROFESSIONAL'); // 'PERSONAL' or 'PROFESSIONAL'
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
   const [error, setError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 24,
+    total: 0,
+    totalPages: 0
+  });
+  const [userPagination, setUserPagination] = useState({
+    page: 1,
+    limit: 24,
+    total: 0,
+    totalPages: 0
+  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -39,28 +54,78 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
     '🏆', '⭐', '🔥', '💎', '🌟', '📣', '🎉', '💻', '✍️', '🤝'
   ];
 
+  // Debounce search term
   useEffect(() => {
-    if (isOpen) {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      // Reset to page 1 when search changes
+      setPagination(prev => ({ ...prev, page: 1 }));
+      setUserPagination(prev => ({ ...prev, page: 1 }));
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch templates when modal opens or filters change
+  useEffect(() => {
+    if (isOpen && activeTab === 'system') {
       fetchTemplates();
+    }
+  }, [isOpen, activeTab, activeCategory, debouncedSearchTerm, pagination.page]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'my-templates') {
       fetchUserTemplates();
     }
-  }, [isOpen]);
+  }, [isOpen, activeTab, debouncedSearchTerm, userPagination.page]);
 
   const fetchTemplates = async () => {
+    setIsLoadingTemplates(true);
     try {
-      const response = await projectsAPI.getTemplates();
-      setTemplates(response.data);
+      const response = await projectsAPI.getTemplates({
+        category: activeCategory,
+        search: debouncedSearchTerm,
+        page: pagination.page,
+        limit: pagination.limit
+      });
+      
+      if (response.data.templates) {
+        setTemplates(response.data.templates);
+        setPagination(response.data.pagination);
+      } else {
+        // Backward compatibility
+        setTemplates(Array.isArray(response.data) ? response.data : []);
+      }
     } catch (err) {
       console.error('Error fetching templates:', err);
+      setTemplates([]);
+    } finally {
+      setIsLoadingTemplates(false);
     }
   };
 
   const fetchUserTemplates = async () => {
+    setIsLoadingTemplates(true);
     try {
-      const response = await templatesAPI.getAll();
-      setUserTemplates(response.data);
+      const response = await templatesAPI.getAll({
+        includeSystem: false,
+        search: debouncedSearchTerm,
+        page: userPagination.page,
+        limit: userPagination.limit
+      });
+      
+      if (response.data.templates) {
+        setUserTemplates(response.data.templates);
+        setUserPagination(response.data.pagination);
+      } else {
+        // Backward compatibility
+        setUserTemplates(Array.isArray(response.data) ? response.data : []);
+      }
     } catch (err) {
       console.error('Error fetching user templates:', err);
+      setUserTemplates([]);
+    } finally {
+      setIsLoadingTemplates(false);
     }
   };
 
@@ -92,10 +157,9 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   };
 
   const handleDeleteTemplate = async (templateId, e) => {
-    e.stopPropagation(); // Prevent selecting the template when clicking delete
+    e.stopPropagation();
     try {
       await templatesAPI.delete(templateId);
-      // Refresh the user templates list
       await fetchUserTemplates();
       setDeleteConfirm(null);
     } catch (err) {
@@ -111,7 +175,6 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
       return;
     }
 
-    // Validate due date is required and in the future
     if (!formData.dueDate || !formData.dueDate.trim()) {
       setError('Due date is required');
       return;
@@ -134,20 +197,13 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
     try {
       let response;
       
-      if (selectedTemplateType === 'user') {
-        // Create project from user template (with date offset logic)
-        response = await templatesAPI.createProjectFromTemplate(selectedTemplate.id, {
-          name: formData.name,
-          description: formData.description,
-          dueDate: formData.dueDate
-        });
-      } else {
-        // Create project from system template or from scratch
-        response = await projectsAPI.create({
-          ...formData,
-          template: selectedTemplate?.id || null
-        });
-      }
+      // All templates (user and system) are now stored in the database
+      // Use the same endpoint for both
+      response = await templatesAPI.createProjectFromTemplate(selectedTemplate.id, {
+        name: formData.name,
+        description: formData.description,
+        dueDate: formData.dueDate
+      });
       
       onProjectCreated(response.data);
       handleClose();
@@ -163,6 +219,10 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
     setStep(1);
     setSelectedTemplate(null);
     setSearchTerm('');
+    setDebouncedSearchTerm('');
+    setActiveCategory('PROFESSIONAL');
+    setPagination({ page: 1, limit: 24, total: 0, totalPages: 0 });
+    setUserPagination({ page: 1, limit: 24, total: 0, totalPages: 0 });
     setFormData({
       name: '',
       description: '',
@@ -174,31 +234,17 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
     onClose();
   };
 
-  // Filter templates based on search term
-  const filteredSystemTemplates = templates.filter(template => {
-    if (!searchTerm.trim()) return true;
-    const search = searchTerm.toLowerCase();
-    return (
-      template.name.toLowerCase().includes(search) ||
-      template.description?.toLowerCase().includes(search)
-    );
-  });
-
-  const filteredUserTemplates = userTemplates.filter(template => {
-    if (!searchTerm.trim()) return true;
-    const search = searchTerm.toLowerCase();
-    return (
-      template.name.toLowerCase().includes(search) ||
-      template.description?.toLowerCase().includes(search)
-    );
-  });
+  const handleCategoryChange = (category) => {
+    setActiveCategory(category);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="modal modal-open backdrop-blur-sm animate-fadeIn">
       <div 
-        className="modal-box max-w-3xl border"
+        className="modal-box max-w-4xl w-full border"
         style={{ 
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)'
@@ -249,7 +295,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
               </div>
             </button>
 
-            {/* Tabs */}
+            {/* Main Tabs */}
             <div className="tabs tabs-boxed" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
               <button 
                 className={`tab ${activeTab === 'system' ? 'tab-active' : ''}`}
@@ -263,9 +309,29 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                 onClick={() => setActiveTab('my-templates')}
                 style={activeTab === 'my-templates' ? { backgroundColor: 'var(--color-primary)', color: 'white' } : {}}
               >
-                💾 My Templates ({userTemplates.length})
+                💾 My Templates ({userPagination.total || userTemplates.length})
               </button>
             </div>
+
+            {/* Category Tabs (only for system templates) */}
+            {activeTab === 'system' && (
+              <div className="tabs tabs-boxed" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
+                <button 
+                  className={`tab ${activeCategory === 'PROFESSIONAL' ? 'tab-active' : ''}`}
+                  onClick={() => handleCategoryChange('PROFESSIONAL')}
+                  style={activeCategory === 'PROFESSIONAL' ? { backgroundColor: 'var(--color-primary)', color: 'white' } : {}}
+                >
+                  💼 Professional
+                </button>
+                <button 
+                  className={`tab ${activeCategory === 'PERSONAL' ? 'tab-active' : ''}`}
+                  onClick={() => handleCategoryChange('PERSONAL')}
+                  style={activeCategory === 'PERSONAL' ? { backgroundColor: 'var(--color-primary)', color: 'white' } : {}}
+                >
+                  🏠 Personal
+                </button>
+              </div>
+            )}
 
             {/* Search Bar */}
             <div className="relative">
@@ -305,15 +371,22 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
             {/* System Templates */}
             {activeTab === 'system' && (
               <div>
-                <h4 className="text-sm font-medium mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
-                  CHOOSE A SYSTEM TEMPLATE
-                  {searchTerm && (
-                    <span className="ml-2 text-xs">
-                      ({filteredSystemTemplates.length} {filteredSystemTemplates.length === 1 ? 'result' : 'results'})
-                    </span>
-                  )}
-                </h4>
-                {filteredSystemTemplates.length === 0 ? (
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-sm font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
+                    {activeCategory === 'PROFESSIONAL' ? 'PROFESSIONAL TEMPLATES' : 'PERSONAL TEMPLATES'}
+                    {pagination.total > 0 && (
+                      <span className="ml-2 text-xs">
+                        ({pagination.total} {pagination.total === 1 ? 'template' : 'templates'})
+                      </span>
+                    )}
+                  </h4>
+                </div>
+
+                {isLoadingTemplates ? (
+                  <div className="flex justify-center items-center py-12">
+                    <span className="loading loading-spinner loading-lg"></span>
+                  </div>
+                ) : templates.length === 0 ? (
                   <div 
                     className="p-12 text-center rounded-xl border-2 border-dashed"
                     style={{ borderColor: 'var(--color-border-default)' }}
@@ -323,217 +396,269 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                       No templates found
                     </h5>
                     <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
-                      No system templates match "{searchTerm}"
+                      {searchTerm 
+                        ? `No ${activeCategory.toLowerCase()} templates match "${searchTerm}"`
+                        : `No ${activeCategory.toLowerCase()} templates available yet`}
                     </p>
-                    <button
-                      onClick={() => setSearchTerm('')}
-                      className="btn btn-sm btn-ghost"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      Clear search
-                    </button>
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        className="btn btn-sm btn-ghost"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        Clear search
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredSystemTemplates.map((template) => (
-                    <button
-                      key={template.id}
-                      onClick={() => handleTemplateSelect(template, 'system')}
-                      className="p-4 rounded-xl border transition-all hover:border-indigo-500 hover:bg-indigo-500/5 text-left group"
-                      style={{ 
-                        backgroundColor: 'var(--color-bg-tertiary)',
-                        borderColor: 'var(--color-border-default)'
-                      }}
-                    >
-                      <div className="flex items-start space-x-3">
-                        <div 
-                          className="w-10 h-10 rounded-lg flex items-center justify-center text-xl group-hover:scale-110 transition-transform"
-                          style={{ backgroundColor: template.color + '30' }}
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {templates.map((template) => (
+                        <button
+                          key={template.id}
+                          onClick={() => handleTemplateSelect(template, 'system')}
+                          className="p-4 rounded-xl border transition-all hover:border-indigo-500 hover:bg-indigo-500/5 text-left group"
+                          style={{ 
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            borderColor: 'var(--color-border-default)'
+                          }}
                         >
-                          {template.icon}
-                        </div>
-                      <div className="flex-1 min-w-0">
-                        <h5 className="font-semibold truncate group-hover:text-indigo-400 transition-colors" style={{ color: 'var(--color-text-primary)' }}>
-                          {template.name}
-                        </h5>
-                        <p className="text-xs line-clamp-2 mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                          {template.description}
-                        </p>
-                        <div className="flex items-center mt-2 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                          <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                          </svg>
-                          {template.taskCount} tasks included
-                        </div>
-                      </div>
+                          <div className="flex items-start space-x-3">
+                            <div 
+                              className="w-10 h-10 rounded-lg flex items-center justify-center text-xl group-hover:scale-110 transition-transform flex-shrink-0"
+                              style={{ backgroundColor: template.color + '30' }}
+                            >
+                              {template.icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h5 className="font-semibold truncate group-hover:text-indigo-400 transition-colors" style={{ color: 'var(--color-text-primary)' }}>
+                                {template.name}
+                              </h5>
+                              <p className="text-xs line-clamp-2 mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                                {template.description}
+                              </p>
+                              <div className="flex items-center mt-2 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                                <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                {template.taskCount || 0} tasks
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                  </button>
-                    ))}
-                  </div>
+
+                    {/* Pagination */}
+                    {pagination.totalPages > 1 && (
+                      <div className="flex justify-center items-center gap-2 mt-6">
+                        <button
+                          onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                          disabled={pagination.page === 1}
+                          className="btn btn-sm btn-ghost"
+                          style={{ 
+                            color: 'var(--color-text-secondary)',
+                            opacity: pagination.page === 1 ? 0.5 : 1
+                          }}
+                        >
+                          ← Previous
+                        </button>
+                        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                          Page {pagination.page} of {pagination.totalPages}
+                        </span>
+                        <button
+                          onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                          disabled={pagination.page >= pagination.totalPages}
+                          className="btn btn-sm btn-ghost"
+                          style={{ 
+                            color: 'var(--color-text-secondary)',
+                            opacity: pagination.page >= pagination.totalPages ? 0.5 : 1
+                          }}
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
 
-          {/* My Templates Tab */}
-          {activeTab === 'my-templates' && (
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="text-sm font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
-                  YOUR CUSTOM TEMPLATES
-                  {searchTerm && (
-                    <span className="ml-2 text-xs">
-                      ({filteredUserTemplates.length} {filteredUserTemplates.length === 1 ? 'result' : 'results'})
-                    </span>
-                  )}
-                </h4>
-                {userTemplates.length > 0 && !searchTerm && (
-                  <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                    🚀 Click a template to reuse it with new dates
-                  </p>
-                )}
-              </div>
-
-              {userTemplates.length === 0 ? (
-                <div 
-                  className="p-12 text-center rounded-xl border-2 border-dashed"
-                  style={{ borderColor: 'var(--color-border-default)' }}
-                >
-                  <div className="text-6xl mb-4 opacity-50">💾</div>
-                  <h5 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-                    No custom templates yet
-                  </h5>
-                  <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
-                    Create a project, set it up with tasks and due dates, then save it as a template for future use.
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                    💡 Templates preserve task assignments and relative due dates
-                  </p>
+            {/* My Templates Tab */}
+            {activeTab === 'my-templates' && (
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-sm font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
+                    YOUR CUSTOM TEMPLATES
+                    {userPagination.total > 0 && (
+                      <span className="ml-2 text-xs">
+                        ({userPagination.total} {userPagination.total === 1 ? 'template' : 'templates'})
+                      </span>
+                    )}
+                  </h4>
                 </div>
-              ) : filteredUserTemplates.length === 0 ? (
-                <div 
-                  className="p-12 text-center rounded-xl border-2 border-dashed"
-                  style={{ borderColor: 'var(--color-border-default)' }}
-                >
-                  <div className="text-4xl mb-4 opacity-50">🔍</div>
-                  <h5 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-                    No templates found
-                  </h5>
-                  <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
-                    No custom templates match "{searchTerm}"
-                  </p>
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="btn btn-sm btn-ghost"
-                    style={{ color: 'var(--color-text-secondary)' }}
+
+                {isLoadingTemplates ? (
+                  <div className="flex justify-center items-center py-12">
+                    <span className="loading loading-spinner loading-lg"></span>
+                  </div>
+                ) : userTemplates.length === 0 ? (
+                  <div 
+                    className="p-12 text-center rounded-xl border-2 border-dashed"
+                    style={{ borderColor: 'var(--color-border-default)' }}
                   >
-                    Clear search
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredUserTemplates.map((template) => (
-                    <div key={template.id} className="relative">
+                    <div className="text-6xl mb-4 opacity-50">💾</div>
+                    <h5 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+                      No custom templates yet
+                    </h5>
+                    <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+                      {searchTerm 
+                        ? `No custom templates match "${searchTerm}"`
+                        : 'Create a project, set it up with tasks and due dates, then save it as a template for future use.'}
+                    </p>
+                    {searchTerm && (
                       <button
-                        onClick={() => handleTemplateSelect(template, 'user')}
-                        className="w-full p-4 rounded-xl border transition-all hover:border-indigo-500 hover:bg-indigo-500/5 text-left group"
-                        style={{ 
-                          backgroundColor: 'var(--color-bg-tertiary)',
-                          borderColor: 'var(--color-border-default)'
-                        }}
+                        onClick={() => setSearchTerm('')}
+                        className="btn btn-sm btn-ghost"
+                        style={{ color: 'var(--color-text-secondary)' }}
                       >
-                        <div className="flex items-start space-x-3">
-                          <div 
-                            className="w-10 h-10 rounded-lg flex items-center justify-center text-xl group-hover:scale-110 transition-transform"
-                            style={{ backgroundColor: template.color + '30' }}
-                          >
-                            {template.icon}
-                          </div>
-                          <div className="flex-1 min-w-0 pr-8">
-                            <div className="flex items-center justify-between">
-                              <h5 className="font-semibold truncate group-hover:text-indigo-400 transition-colors" style={{ color: 'var(--color-text-primary)' }}>
-                                {template.name}
-                              </h5>
-                              {!template.isPersonal && (
-                                <span 
-                                  className="badge badge-sm ml-2"
-                                  style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
-                                >
-                                  Company
-                                </span>
-                              )}
-                            </div>
-                          {template.description && (
-                            <p className="text-xs line-clamp-2 mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                              {template.description}
-                            </p>
-                          )}
-                          <div className="flex items-center justify-between mt-2">
-                            <div className="flex items-center text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                              <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                              </svg>
-                              {template._count?.tasks || 0} tasks
-                            </div>
-                            {template.usageCount > 0 && (
-                              <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                                Used {template.usageCount}x
-                              </div>
-                            )}
-                          </div>
-                          {template.lastUsedAt && (
-                            <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                              Last used {new Date(template.lastUsedAt).toLocaleDateString()}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* Delete Button */}
-                    {deleteConfirm === template.id ? (
-                      <div 
-                        className="absolute top-2 right-2 flex items-center space-x-1 p-1 rounded-lg"
-                        style={{ backgroundColor: 'var(--color-bg-secondary)' }}
-                      >
-                        <button
-                          onClick={(e) => handleDeleteTemplate(template.id, e)}
-                          className="btn btn-xs btn-error"
-                          title="Confirm delete"
-                        >
-                          ✓
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteConfirm(null);
-                          }}
-                          className="btn btn-xs btn-ghost"
-                          title="Cancel"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteConfirm(template.id);
-                        }}
-                        className="absolute top-2 right-2 btn btn-xs btn-ghost btn-circle opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ color: 'var(--color-text-tertiary)' }}
-                        title="Delete template"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        Clear search
                       </button>
                     )}
                   </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {userTemplates.map((template) => (
+                        <div key={template.id} className="relative">
+                          <button
+                            onClick={() => handleTemplateSelect(template, 'user')}
+                            className="w-full p-4 rounded-xl border transition-all hover:border-indigo-500 hover:bg-indigo-500/5 text-left group"
+                            style={{ 
+                              backgroundColor: 'var(--color-bg-tertiary)',
+                              borderColor: 'var(--color-border-default)'
+                            }}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <div 
+                                className="w-10 h-10 rounded-lg flex items-center justify-center text-xl group-hover:scale-110 transition-transform flex-shrink-0"
+                                style={{ backgroundColor: template.color + '30' }}
+                              >
+                                {template.icon}
+                              </div>
+                              <div className="flex-1 min-w-0 pr-8">
+                                <div className="flex items-center justify-between">
+                                  <h5 className="font-semibold truncate group-hover:text-indigo-400 transition-colors" style={{ color: 'var(--color-text-primary)' }}>
+                                    {template.name}
+                                  </h5>
+                                  {!template.isPersonal && (
+                                    <span 
+                                      className="badge badge-sm ml-2"
+                                      style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+                                    >
+                                      Company
+                                    </span>
+                                  )}
+                                </div>
+                                {template.description && (
+                                  <p className="text-xs line-clamp-2 mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                                    {template.description}
+                                  </p>
+                                )}
+                                <div className="flex items-center justify-between mt-2">
+                                  <div className="flex items-center text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                                    <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                    {template.tasks?.length || 0} tasks
+                                  </div>
+                                  {template.usageCount > 0 && (
+                                    <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                                      Used {template.usageCount}x
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+
+                          {/* Delete Button */}
+                          {deleteConfirm === template.id ? (
+                            <div 
+                              className="absolute top-2 right-2 flex items-center space-x-1 p-1 rounded-lg"
+                              style={{ backgroundColor: 'var(--color-bg-secondary)' }}
+                            >
+                              <button
+                                onClick={(e) => handleDeleteTemplate(template.id, e)}
+                                className="btn btn-xs btn-error"
+                                title="Confirm delete"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirm(null);
+                                }}
+                                className="btn btn-xs btn-ghost"
+                                title="Cancel"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirm(template.id);
+                              }}
+                              className="absolute top-2 right-2 btn btn-xs btn-ghost btn-circle opacity-0 group-hover:opacity-100 transition-opacity"
+                              style={{ color: 'var(--color-text-tertiary)' }}
+                              title="Delete template"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {userPagination.totalPages > 1 && (
+                      <div className="flex justify-center items-center gap-2 mt-6">
+                        <button
+                          onClick={() => setUserPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                          disabled={userPagination.page === 1}
+                          className="btn btn-sm btn-ghost"
+                          style={{ 
+                            color: 'var(--color-text-secondary)',
+                            opacity: userPagination.page === 1 ? 0.5 : 1
+                          }}
+                        >
+                          ← Previous
+                        </button>
+                        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                          Page {userPagination.page} of {userPagination.totalPages}
+                        </span>
+                        <button
+                          onClick={() => setUserPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                          disabled={userPagination.page >= userPagination.totalPages}
+                          className="btn btn-sm btn-ghost"
+                          style={{ 
+                            color: 'var(--color-text-secondary)',
+                            opacity: userPagination.page >= userPagination.totalPages ? 0.5 : 1
+                          }}
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -666,7 +791,6 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
               </label>
             </div>
 
-
             {/* Template Info */}
             {selectedTemplate && (
               <div 
@@ -679,7 +803,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                     Using template: {selectedTemplate.name}
                   </p>
                   <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    {selectedTemplate.taskCount} tasks will be automatically created
+                    {selectedTemplate.taskCount || selectedTemplate.tasks?.length || 0} tasks will be automatically created
                   </p>
                 </div>
               </div>
@@ -734,4 +858,3 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
 };
 
 export default CreateProjectModal;
-

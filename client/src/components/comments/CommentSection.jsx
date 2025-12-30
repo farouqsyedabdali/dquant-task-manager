@@ -202,22 +202,22 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTas
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 flex-1">
-              <div 
-                className="flex-shrink-0 transition-colors duration-200"
-                style={{ color: 'var(--color-primary-light)' }}
+            <div 
+              className="flex-shrink-0 transition-colors duration-200"
+              style={{ color: 'var(--color-primary-light)' }}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p 
+                className="text-xs transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
               >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <p 
-                  className="text-xs transition-colors duration-200"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  AI can make mistakes. Please double-check the information.
-                </p>
-              </div>
+                AI can make mistakes. Please double-check the information.
+              </p>
+            </div>
             </div>
             {onTaskSwitch && (
               <button
@@ -313,7 +313,7 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTas
             >
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center space-x-2">
-                  <div 
+                    <div 
                     className="text-white rounded-full flex items-center justify-center flex-shrink-0"
                     style={{ 
                       backgroundColor: 'var(--color-primary)',
@@ -328,7 +328,7 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTas
                       justifyContent: 'center',
                       lineHeight: '1'
                     }}
-                  >
+                    >
                     <span 
                       className="text-xs"
                       style={{

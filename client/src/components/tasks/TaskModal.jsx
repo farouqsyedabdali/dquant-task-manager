@@ -583,8 +583,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           animation: fadeIn 0.3s ease-out;
         }
       `}</style>
-      <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 60 }}>
-      <div 
+      <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }}>
+      <div
         className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto scrollbar-thin transition-colors duration-200"
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
@@ -889,26 +889,26 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                 </h4>
                 {isEditing ? (
                   <div>
-                    <input
-                      type="datetime-local"
-                      name="dueDate"
-                      value={formData.dueDate}
-                      onChange={handleChange}
+                  <input
+                    type="datetime-local"
+                    name="dueDate"
+                    value={formData.dueDate}
+                    onChange={handleChange}
                       className={`input w-full transition-colors duration-200 ${errors.dueDate ? 'input-error' : ''}`}
-                      style={{
-                        backgroundColor: 'var(--color-bg-tertiary)',
+                    style={{
+                      backgroundColor: 'var(--color-bg-tertiary)',
                         borderColor: errors.dueDate ? '#ef4444' : 'var(--color-border-default)',
-                        color: 'var(--color-text-primary)',
-                      }}
+                      color: 'var(--color-text-primary)',
+                    }}
                       required
                       min={new Date().toISOString().slice(0, 16)}
-                      onFocus={(e) => {
+                    onFocus={(e) => {
                         e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-primary)';
-                      }}
-                      onBlur={(e) => {
+                    }}
+                    onBlur={(e) => {
                         e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-border-default)';
-                      }}
-                    />
+                    }}
+                  />
                     {errors.dueDate && (
                       <label className="label">
                         <span className="label-text-alt text-error">{errors.dueDate}</span>
@@ -998,7 +998,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           {viewedTask.assignee ? (
                             <div className="flex items-center justify-between gap-3 group relative">
                               <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                <div 
+                            <div 
                                   className="text-white rounded-full flex items-center justify-center flex-shrink-0"
                                   style={{ 
                                     backgroundColor: 'var(--color-primary)',
@@ -1013,7 +1013,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                     justifyContent: 'center',
                                     lineHeight: '1'
                                   }}
-                                >
+                            >
                                   <span 
                                     className="text-sm"
                                     style={{
@@ -1025,7 +1025,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                   >
                                     {viewedTask.assignee.name.charAt(0)}
                                   </span>
-                                </div>
+                          </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                             <span 
@@ -1055,7 +1055,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           >
                             {viewedTask.assignee.email}
                           </div>
-                              </div>
+                        </div>
                               {/* Add Person Button - Only show if user is lead assignee */}
                               {viewedTask?.assigneeId === user?.id && !isEditing && (
                                 <button
@@ -1076,7 +1076,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                   <FaPlus className="w-3 h-3" />
                                 </button>
                               )}
-                            </div>
+                    </div>
                           ) : (
                             /* No assignee - show Add button on its own row */
                             viewedTask?.assigneeId === user?.id && !isEditing && (
@@ -1100,7 +1100,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                 </button>
                               </div>
                             )
-                          )}
+                  )}
 
                 {/* Co-Assignees */}
                       {isLoadingCoAssignees ? (
@@ -1111,7 +1111,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             coAssignees.map((coAssignee) => (
                             <div key={coAssignee.id} className="flex items-center justify-between gap-3 group relative">
                               <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                <div 
+                                  <div 
                                   className="text-white rounded-full flex items-center justify-center flex-shrink-0"
                                   style={{ 
                                     backgroundColor: '#10b981',
@@ -1126,7 +1126,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                     justifyContent: 'center',
                                     lineHeight: '1'
                                   }}
-                                >
+                                  >
                                   <span 
                                     className="text-sm"
                                     style={{
@@ -1218,7 +1218,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                   >
                                     {collaborator.user.name.charAt(0)}
                                   </span>
-                                </div>
+                              </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                 <span 
@@ -1264,7 +1264,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             return (
                               <div key={share.id} className="flex items-center justify-between gap-3 group relative">
                                 <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                  <div 
+                                    <div 
                                     className="text-white rounded-full flex items-center justify-center flex-shrink-0"
                                     style={{ 
                                       backgroundColor: '#8b5cf6',
@@ -1279,7 +1279,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                       justifyContent: 'center',
                                       lineHeight: '1'
                                     }}
-                                  >
+                                    >
                                     <span 
                                       className="text-sm"
                                       style={{
@@ -1420,7 +1420,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             <div className="space-y-2">
                             {viewedTask.externalContact ? (
                               <div className="flex items-center space-x-3 group relative">
-                                <div 
+                                  <div 
                                   className="text-white rounded-full flex items-center justify-center flex-shrink-0"
                                   style={{ 
                                     backgroundColor: '#3b82f6',
@@ -1435,7 +1435,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                     justifyContent: 'center',
                                     lineHeight: '1'
                                   }}
-                                >
+                                  >
                                   <span 
                                     className="text-sm"
                                     style={{
@@ -1478,7 +1478,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                               </div>
                             ) : (
                               <div className="flex items-center space-x-3 group relative">
-                                <div 
+                                  <div 
                                   className="text-white rounded-full flex items-center justify-center flex-shrink-0"
                                   style={{ 
                                     backgroundColor: 'var(--color-primary)',
@@ -1493,7 +1493,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                     justifyContent: 'center',
                                     lineHeight: '1'
                                   }}
-                                >
+                                  >
                                   <span 
                                     className="text-sm"
                                     style={{
@@ -1716,7 +1716,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             <CommentSection 
               taskId={viewedTask.id} 
               task={viewedTask}
-              extensionUpdateData={extensionUpdateData}
+              extensionUpdateData={extensionUpdateData} 
               onTaskSwitch={onTaskSwitch}
             />
           </div>

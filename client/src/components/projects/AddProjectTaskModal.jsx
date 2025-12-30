@@ -64,9 +64,9 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
   const handleNext = () => {
     if (step === 1) {
       if (!formData.title.trim()) {
-        setError('Task title is required');
-        return;
-      }
+      setError('Task title is required');
+      return;
+    }
       
       // Validate due date is required and in the future
       if (!formData.dueDate || !formData.dueDate.trim()) {
@@ -468,14 +468,14 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
                   </span>
                 </div>
                 
-                <div className="flex justify-between">
-                  <span style={{ color: 'var(--color-text-secondary)' }}>Due Date:</span>
-                  <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                  <div className="flex justify-between">
+                    <span style={{ color: 'var(--color-text-secondary)' }}>Due Date:</span>
+                    <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
                     {formData.dueDate 
                       ? new Date(formData.dueDate).toLocaleDateString()
                       : <span className="text-error">Required</span>}
-                  </span>
-                </div>
+                    </span>
+                  </div>
                 
                 <div className="flex justify-between">
                   <span style={{ color: 'var(--color-text-secondary)' }}>Assigned To:</span>

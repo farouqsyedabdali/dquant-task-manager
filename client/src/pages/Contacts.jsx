@@ -241,8 +241,8 @@ const Contacts = () => {
                           lineHeight: '1'
                         }}
                       >
-                        {contact.name.charAt(0).toUpperCase()}
-                      </span>
+                          {contact.name.charAt(0).toUpperCase()}
+                        </span>
                     </div>
                     <div>
                       <h3

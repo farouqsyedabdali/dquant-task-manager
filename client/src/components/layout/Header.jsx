@@ -220,7 +220,7 @@ const Header = () => {
                     </p>
                   )}
                 </div>
-                <div 
+                  <div 
                   className="text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors duration-200"
                   style={{ 
                     backgroundColor: 'var(--color-primary)',
@@ -229,13 +229,13 @@ const Header = () => {
                     justifyContent: 'center',
                     lineHeight: '1'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--color-primary-hover)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--color-primary)';
-                  }}
-                >
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--color-primary-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+                    }}
+                  >
                   <span 
                     className="text-sm font-medium"
                     style={{
@@ -273,7 +273,7 @@ const Header = () => {
                     style={{ borderColor: 'var(--color-border-default)' }}
                   >
                     <div className="flex items-center space-x-3">
-                      <div 
+                        <div 
                         className="text-white rounded-full flex items-center justify-center flex-shrink-0"
                         style={{ 
                           backgroundColor: 'var(--color-primary)',
@@ -288,7 +288,7 @@ const Header = () => {
                           justifyContent: 'center',
                           lineHeight: '1'
                         }}
-                      >
+                        >
                         <span 
                           className="text-lg font-bold"
                           style={{
@@ -485,7 +485,7 @@ const Header = () => {
                 style={{ borderColor: 'var(--color-border-default)' }}
               >
                 <div className="flex items-center space-x-3 px-3 py-2">
-                  <div 
+                    <div 
                     className="text-white rounded-full flex items-center justify-center flex-shrink-0"
                     style={{ 
                       backgroundColor: 'var(--color-primary)',
@@ -500,7 +500,7 @@ const Header = () => {
                       justifyContent: 'center',
                       lineHeight: '1'
                     }}
-                  >
+                    >
                     <span 
                       className="text-xs"
                       style={{

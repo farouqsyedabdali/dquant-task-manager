@@ -886,21 +886,88 @@ const projectController = {
   },
 
   /**
-   * Get available project templates
+   * Get available project templates (system templates from database)
    * GET /api/projects/templates
+   * Query params:
+   *   - category: 'PERSONAL' | 'PROFESSIONAL' | 'ALL' (default: 'ALL')
+   *   - search: string (searches name and description)
+   *   - page: number (default: 1)
+   *   - limit: number (default: 50)
    */
   async getTemplates(req, res) {
     try {
-      const templates = Object.entries(PROJECT_TEMPLATES).map(([key, value]) => ({
-        id: key,
-        name: value.name,
-        description: value.description,
-        icon: value.icon,
-        color: value.color,
-        taskCount: value.tasks.length
+      const { companyId } = req.user;
+      const { 
+        category = 'ALL',
+        search = '',
+        page = '1',
+        limit = '50'
+      } = req.query;
+
+      const pageNum = parseInt(page, 10);
+      const limitNum = parseInt(limit, 10);
+      const skip = (pageNum - 1) * limitNum;
+
+      // Build where clause for system templates from any company
+      const whereClause = {
+        isSystemTemplate: true
+      };
+
+      // Category filter
+      if (category !== 'ALL') {
+        whereClause.category = category;
+      }
+
+      // Search filter
+      if (search.trim()) {
+        whereClause.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } }
+        ];
+      }
+
+      // Get total count
+      const total = await prisma.projectTemplate.count({
+        where: whereClause
+      });
+
+      // Get templates with pagination
+      const templates = await prisma.projectTemplate.findMany({
+        where: whereClause,
+        include: {
+          tasks: {
+            select: { id: true },
+            orderBy: { order: 'asc' }
+          }
+        },
+        orderBy: [
+          { lastUsedAt: 'desc' },
+          { createdAt: 'desc' }
+        ],
+        skip,
+        take: limitNum
+      });
+
+      // Format response
+      const formattedTemplates = templates.map(template => ({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        icon: template.icon,
+        color: template.color,
+        category: template.category,
+        taskCount: template.tasks.length
       }));
 
-      res.json(templates);
+      res.json({
+        templates: formattedTemplates,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum)
+        }
+      });
     } catch (error) {
       console.error('Get templates error:', error);
       res.status(500).json({ error: 'Failed to fetch templates' });

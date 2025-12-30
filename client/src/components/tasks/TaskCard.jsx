@@ -165,7 +165,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
                 </span>
                 {task.assignee ? (
                   <div className="flex items-center space-x-2">
-                    <div 
+                      <div 
                       className="text-white rounded-full w-6 h-6 flex items-center justify-center"
                       style={{ 
                         backgroundColor: 'var(--color-primary)',
@@ -174,7 +174,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
                         justifyContent: 'center',
                         lineHeight: '1'
                       }}
-                    >
+                      >
                       <span 
                         className="text-xs"
                         style={{
@@ -216,7 +216,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
                   <div className="flex flex-wrap gap-1">
                     {(showAllCoAssignees ? task.coAssignees : task.coAssignees.slice(0, 5)).map((coAssignee) => (
                       <div key={coAssignee.id} className="flex items-center space-x-1">
-                        <div 
+                          <div 
                           className="text-white rounded-full w-5 h-5 flex items-center justify-center"
                           style={{ 
                             backgroundColor: '#10b981',
@@ -225,7 +225,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
                             justifyContent: 'center',
                             lineHeight: '1'
                           }}
-                        >
+                          >
                           <span 
                             className="text-xs"
                             style={{

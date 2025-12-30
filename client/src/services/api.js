@@ -212,7 +212,7 @@ export const projectsAPI = {
   delete: (id) => api.delete(`/projects/${id}`),
   
   // Templates
-  getTemplates: () => api.get('/projects/templates'),
+  getTemplates: (params = {}) => api.get('/projects/templates', { params }),
   
   // Members
   addMember: (projectId, userId, role) => api.post(`/projects/${projectId}/members`, { userId, role }),
@@ -231,8 +231,8 @@ export const projectsAPI = {
 };
 
 export const templatesAPI = {
-  // Get all user templates
-  getAll: (includeCompany = true) => api.get('/templates', { params: { includeCompany } }),
+  // Get all user templates (with pagination and filtering)
+  getAll: (params = {}) => api.get('/templates', { params }),
   
   // Get a specific template
   getById: (id) => api.get(`/templates/${id}`),

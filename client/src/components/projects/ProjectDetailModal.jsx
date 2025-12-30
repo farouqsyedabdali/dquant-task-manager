@@ -338,8 +338,8 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   if (!isOpen) return null;
 
   return (
-    <div className="modal modal-open backdrop-blur-sm">
-      <div 
+    <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 50 }}>
+      <div
         className="modal-box max-w-6xl max-h-[90vh] border"
         style={{ 
           backgroundColor: 'var(--color-bg-secondary)',
@@ -608,7 +608,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       </div>
 
                       {/* Assigned To Column */}
-                      <div 
+                      <div
                         className="col-span-3"
                         onClick={(e) => {
                           // Stop propagation if clicking on dropdown
@@ -617,63 +617,49 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                           }
                         }}
                       >
-                        {task.isDraft ? (
-                          // Show dropdown for all draft tasks (assigned or not)
-                          <select
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              const [type, id] = e.target.value.split(':');
-                              if (id) {
-                                handleQuickAssign(task.id, id, type);
-                              }
-                            }}
-                            className="select select-sm select-bordered w-full"
-                            style={{
-                              backgroundColor: 'var(--color-bg-tertiary)',
-                              borderColor: 'var(--color-border-default)',
-                              color: 'var(--color-text-primary)',
-                            }}
-                            value={
-                              task.assigneeId 
-                                ? `internal:${task.assigneeId}` 
-                                : task.externalContactId 
-                                  ? `external:${task.externalContactId}` 
-                                  : ''
+                        {/* Show dropdown for all tasks (draft or sent) */}
+                        <select
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const [type, id] = e.target.value.split(':');
+                            if (id) {
+                              handleQuickAssign(task.id, id, type);
                             }
-                          >
-                            <option value="">Assign to...</option>
-                            <optgroup label="Internal Team">
-                              {employees.map(emp => (
-                                <option key={emp.id} value={`internal:${emp.id}`}>
-                                  {emp.name}
-                                </option>
-                              ))}
-                            </optgroup>
-                            <optgroup label="External Contacts">
-                              {contacts.map(contact => (
-                                <option key={contact.id} value={`external:${contact.id}`}>
-                                  {contact.name}
-                                </option>
-                              ))}
-                            </optgroup>
-                          </select>
-                        ) : (
-                          // Show assigned person for sent tasks (read-only)
-                          <>
-                            <p className="text-sm truncate" style={{ color: 'var(--color-text-primary)' }}>
-                              {task.assignee?.name || task.externalContact?.name || 'Unassigned'}
-                            </p>
-                            {task.externalContactId && (
-                              <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                                External Contact
-                              </p>
-                            )}
-                          </>
-                        )}
+                          }}
+                          className="select select-sm select-bordered w-full"
+                          style={{
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            borderColor: 'var(--color-border-default)',
+                            color: 'var(--color-text-primary)',
+                          }}
+                          value={
+                            task.assigneeId
+                              ? `internal:${task.assigneeId}`
+                              : task.externalContactId
+                                ? `external:${task.externalContactId}`
+                                : ''
+                          }
+                        >
+                          <option value="">Assign to...</option>
+                          <optgroup label="Internal Team">
+                            {employees.map(emp => (
+                              <option key={emp.id} value={`internal:${emp.id}`}>
+                                {emp.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="External Contacts">
+                            {contacts.map(contact => (
+                              <option key={contact.id} value={`external:${contact.id}`}>
+                                {contact.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
                       </div>
 
                       {/* Due Date Column */}
-                      <div 
+                      <div
                         className="col-span-2"
                         onClick={(e) => {
                           // Stop propagation if clicking on date input
@@ -682,28 +668,19 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                           }
                         }}
                       >
-                        {task.isDraft ? (
-                          // Show date input for draft tasks
-                          <input
-                            type="date"
-                            onClick={(e) => e.stopPropagation()}
-                            value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''}
-                            onChange={(e) => handleQuickDueDateChange(task.id, e.target.value)}
-                            className="input input-sm input-bordered w-full"
-                            style={{
-                              backgroundColor: 'var(--color-bg-tertiary)',
-                              borderColor: 'var(--color-border-default)',
-                              color: 'var(--color-text-primary)',
-                            }}
-                          />
-                        ) : (
-                          // Show formatted date for sent tasks
-                          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                            {task.dueDate 
-                              ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                              : '—'}
-                          </p>
-                        )}
+                        {/* Show date input for all tasks */}
+                        <input
+                          type="date"
+                          onClick={(e) => e.stopPropagation()}
+                          value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''}
+                          onChange={(e) => handleQuickDueDateChange(task.id, e.target.value)}
+                          className="input input-sm input-bordered w-full"
+                          style={{
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            borderColor: 'var(--color-border-default)',
+                            color: 'var(--color-text-primary)',
+                          }}
+                        />
                       </div>
                     </div>
                   ))
@@ -781,7 +758,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
       {/* Reassign Modal */}
       {isReassigning && reassignTask && (
-        <div className="modal modal-open backdrop-blur-sm">
+        <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 55 }}>
           <div 
             className="modal-box border"
             style={{ 

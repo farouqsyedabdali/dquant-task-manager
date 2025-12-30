@@ -222,7 +222,7 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
         }
         if (dueDateObj <= now) {
           return `⚠️ Due date must be in the future. Please provide a future date.`;
-        }
+          }
 
         // Create the task
         const newTask = await prisma.task.create({

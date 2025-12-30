@@ -5,36 +5,104 @@ const templateController = {
   /**
    * Get all templates for the current user
    * GET /api/templates
+   * Query params:
+   *   - category: 'PERSONAL' | 'PROFESSIONAL' | 'ALL' (default: 'ALL')
+   *   - search: string (searches name and description)
+   *   - tags: comma-separated string (future use)
+   *   - page: number (default: 1)
+   *   - limit: number (default: 50)
+   *   - includeSystem: boolean (default: true)
    */
   async getAllTemplates(req, res) {
     try {
       const { companyId, id: userId } = req.user;
-      const { includeCompany } = req.query;
+      const { 
+        category = 'ALL',
+        search = '',
+        tags = '',
+        page = '1',
+        limit = '50',
+        includeSystem = 'true',
+        includeCompany = 'false'
+      } = req.query;
 
-      const whereClause = {
-        userId,
-        ...(includeCompany === 'true' ? {} : { isPersonal: true })
-      };
+      const pageNum = parseInt(page, 10);
+      const limitNum = parseInt(limit, 10);
+      const skip = (pageNum - 1) * limitNum;
 
-      // If including company templates, add company templates
-      if (includeCompany === 'true') {
-        whereClause.companyId = companyId;
+      // Build where clause
+      let whereClause = {};
+
+      // System template filter
+      if (includeSystem === 'false') {
+        // Only user templates from this company
+        whereClause = {
+          companyId,
+          isSystemTemplate: false
+        };
       } else {
-        whereClause.companyId = companyId;
+        // Include system templates from any company + user templates from this company
+        whereClause = {
+          OR: [
+            { companyId },  // User templates from this company
+            { isSystemTemplate: true }  // System templates from any company
+          ]
+        };
       }
 
+      // Category filter
+      if (category !== 'ALL') {
+        whereClause.category = category;
+      }
+
+      // Search filter (name or description)
+      if (search.trim()) {
+        const searchFilter = {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } }
+          ]
+        };
+
+        // If we already have an OR clause, combine them with AND
+        if (whereClause.OR) {
+          whereClause.AND = [
+            { OR: whereClause.OR },
+            searchFilter
+          ];
+          delete whereClause.OR;
+        } else {
+          Object.assign(whereClause, searchFilter);
+        }
+      }
+
+      // Tags filter (future - for now just structure it)
+      if (tags.trim()) {
+        const tagArray = tags.split(',').map(t => t.trim()).filter(t => t);
+        if (tagArray.length > 0) {
+          whereClause.tags = {
+            hasSome: tagArray
+          };
+        }
+      }
+
+      // Get total count for pagination
+      const total = await prisma.projectTemplate.count({
+        where: whereClause
+      });
+
+      // Get templates with pagination
       const templates = await prisma.projectTemplate.findMany({
         where: whereClause,
         include: {
           tasks: {
             orderBy: { order: 'asc' },
-            include: {
-              assignee: {
-                select: { id: true, name: true, email: true }
-              },
-              externalContact: {
-                select: { id: true, name: true, email: true }
-              }
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              priority: true,
+              order: true
             }
           },
           user: {
@@ -42,12 +110,23 @@ const templateController = {
           }
         },
         orderBy: [
+          { isSystemTemplate: 'desc' }, // System templates first
           { lastUsedAt: 'desc' },
           { createdAt: 'desc' }
-        ]
+        ],
+        skip,
+        take: limitNum
       });
 
-      res.json(templates);
+      res.json({
+        templates,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum)
+        }
+      });
     } catch (error) {
       console.error('Get all templates error:', error);
       res.status(500).json({ error: 'Failed to fetch templates' });
@@ -173,16 +252,29 @@ const templateController = {
     try {
       const { companyId, id: userId } = req.user;
       const { id } = req.params;
-      const { name, description, color, icon, startDate } = req.body;
+      const { name, description, color, icon, dueDate } = req.body;
+
+      // Validate due date is required and in the future
+      if (!dueDate) {
+        return res.status(400).json({ error: 'Due date is required' });
+      }
+
+      const dueDateObj = new Date(dueDate);
+      const now = new Date();
+      if (isNaN(dueDateObj.getTime())) {
+        return res.status(400).json({ error: 'Invalid due date format' });
+      }
+      if (dueDateObj <= now) {
+        return res.status(400).json({ error: 'Due date must be in the future' });
+      }
 
       // Get template
       const template = await prisma.projectTemplate.findFirst({
         where: {
           id: parseInt(id),
-          companyId,
           OR: [
-            { userId },
-            { isPersonal: false }
+            { companyId, isSystemTemplate: false },  // User templates from this company
+            { isSystemTemplate: true }  // System templates from any company
           ]
         },
         include: {
@@ -200,8 +292,8 @@ const templateController = {
         return res.status(404).json({ error: 'Template not found' });
       }
 
-      // Calculate start date
-      const projectStartDate = startDate ? new Date(startDate) : new Date();
+      // Use due date as project start date for task calculations
+      const projectStartDate = dueDateObj;
 
       // Create project
       const project = await prisma.project.create({
@@ -210,6 +302,7 @@ const templateController = {
           description: description || template.description,
           color: color || template.color,
           icon: icon || template.icon,
+          dueDate: dueDateObj,
           ownerId: userId,
           companyId,
           tasks: {
@@ -226,6 +319,7 @@ const templateController = {
                 assigneeId: task.assigneeId,
                 externalContactId: task.externalContactId,
                 assignerId: userId,
+                companyId,
                 dueDate
               };
             })

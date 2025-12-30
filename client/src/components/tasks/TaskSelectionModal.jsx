@@ -16,7 +16,7 @@ const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '',
       fetchTasks();
       // Reset selection when modal opens (will be set after tasks load if suggestedTaskId exists)
       if (!suggestedTaskId) {
-        setSelectedTaskId('');
+      setSelectedTaskId('');
       }
     }
   }, [isOpen, suggestedTaskId]);
