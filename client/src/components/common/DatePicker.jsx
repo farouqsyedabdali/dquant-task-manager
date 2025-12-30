@@ -34,13 +34,8 @@ const DatePicker = ({
 
   useEffect(() => {
     setLocalValue(value || '');
-    // If timeOptional and value exists, check if it has time component
-    if (timeOptional && value) {
-      const date = new Date(value);
-      // Check if time is not 11:59 PM (23:59)
-      const hasCustomTime = !(date.getHours() === 23 && date.getMinutes() === 59);
-      setIncludeTime(hasCustomTime);
-    }
+    // Keep includeTime as false by default (unchecked)
+    // Don't auto-detect time from existing values
   }, [value, timeOptional]);
 
   useEffect(() => {

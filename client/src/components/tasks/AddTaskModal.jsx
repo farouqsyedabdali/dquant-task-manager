@@ -258,7 +258,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                 className="text-sm mt-1 transition-colors duration-200"
                 style={{ color: 'var(--color-primary-light)' }}
               >
-                Information filled by AI may be incorrect. Please double-check before saving.
+                AI can make mistakes. Please double check the information.
               </p>
             )}
           </div>

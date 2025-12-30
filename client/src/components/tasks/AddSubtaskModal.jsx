@@ -260,6 +260,14 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
             >
               Create Subtask
             </h3>
+            {extensionUpdateData && (
+              <p
+                className="text-sm mt-1 transition-colors duration-200"
+                style={{ color: 'var(--color-primary-light)' }}
+              >
+                AI can make mistakes. Please double check the information.
+              </p>
+            )}
             <p
               className="text-sm mt-1"
               style={{ color: 'var(--color-text-secondary)' }}
