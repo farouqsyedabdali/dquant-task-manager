@@ -320,6 +320,7 @@ const templateController = {
                 externalContactId: task.externalContactId,
                 assignerId: userId,
                 companyId,
+                isDraft: true,
                 dueDate
               };
             })
