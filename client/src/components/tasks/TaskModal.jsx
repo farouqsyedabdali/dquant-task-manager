@@ -1536,6 +1536,52 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                 {/* Task Hierarchy Tab */}
                 {activeTab === 'hierarchy' && (
                   <div className="animate-fadeIn">
+                    {/* Project Information */}
+                    {viewedTask.project && (
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-2 h-8">
+                          <h4
+                            className="text-sm font-semibold transition-colors duration-200"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            Project
+                          </h4>
+                        </div>
+                        <div
+                          className="border rounded-lg p-3 transition-colors duration-200"
+                          style={{
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            borderColor: 'var(--color-border-default)',
+                          }}
+                        >
+                          <div className="flex items-center space-x-3">
+                            {viewedTask.project.icon && (
+                              <div
+                                className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                                style={{ backgroundColor: viewedTask.project.color || '#6366f1' }}
+                              >
+                                {viewedTask.project.icon}
+                              </div>
+                            )}
+                            <div>
+                              <p
+                                className="font-medium transition-colors duration-200"
+                                style={{ color: 'var(--color-text-primary)' }}
+                              >
+                                {viewedTask.project.name}
+                              </p>
+                              <p
+                                className="text-xs transition-colors duration-200"
+                                style={{ color: 'var(--color-text-tertiary)' }}
+                              >
+                                Project Task
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-4">
                       {/* Parent Task */}
                       <div>

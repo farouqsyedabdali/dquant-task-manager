@@ -10,7 +10,10 @@ const SearchableDropdown = ({
   className = "",
   renderOption = (option) => `${option.name} (${option.email})`,
   recentEmployees = [], // New prop for recent employees
-  getOptionValue = (option) => option.id?.toString() // Custom value getter
+  getOptionValue = (option) => option.id?.toString(), // Custom value getter
+  allowAddNew = false, // Whether to allow adding new items
+  onAddNew, // Callback when user wants to add a new item
+  addNewText = "Add as new contact" // Text for the add new option
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,11 +55,34 @@ const SearchableDropdown = ({
         return name.toLowerCase().includes(term.toLowerCase()) ||
                email.toLowerCase().includes(term.toLowerCase());
       });
+
+      // Check if search term looks like an email and no matches found
+      const isEmail = /\S+@\S+\.\S+/.test(term.trim());
+      const hasExactEmailMatch = options.some(option => option.email?.toLowerCase() === term.toLowerCase());
+
+      if (allowAddNew && isEmail && filtered.length === 0 && !hasExactEmailMatch) {
+        // Add the "Add as new contact" option
+        filtered.push({
+          id: '__add_new__',
+          name: addNewText,
+          email: term.trim(),
+          isAddNewOption: true
+        });
+      }
+
       setFilteredOptions(filtered);
     }
   };
 
   const handleSelect = (option) => {
+    if (option.isAddNewOption) {
+      // Handle "Add as new contact" option
+      onAddNew && onAddNew(option.email);
+      setIsOpen(false);
+      setSearchTerm('');
+      return;
+    }
+
     onChange(getOptionValue(option));
     setIsOpen(false);
     setSearchTerm('');
@@ -170,15 +196,16 @@ const SearchableDropdown = ({
             ) : (
               (() => {
                 const recentIds = recentEmployees.map(emp => emp.id);
-                const recentOptions = filteredOptions.filter(option => recentIds.includes(option.id));
-                const otherOptions = filteredOptions.filter(option => !recentIds.includes(option.id));
-                
+                const recentOptions = filteredOptions.filter(option => recentIds.includes(option.id) && !option.isAddNewOption);
+                const otherOptions = filteredOptions.filter(option => !recentIds.includes(option.id) && !option.isAddNewOption);
+                const addNewOption = filteredOptions.find(option => option.isAddNewOption);
+
                 return (
                   <>
                     {/* Recent Employees Section */}
                     {recentOptions.length > 0 && searchTerm.trim() === '' && (
                       <>
-                        <div 
+                        <div
                           className="px-3 py-2 text-xs font-semibold transition-colors duration-200"
                           style={{
                             color: 'var(--color-primary)',
@@ -213,7 +240,7 @@ const SearchableDropdown = ({
                           </button>
                         ))}
                         {otherOptions.length > 0 && (
-                          <div 
+                          <div
                             className="px-3 py-2 text-xs font-semibold transition-colors duration-200"
                             style={{
                               color: 'var(--color-text-tertiary)',
@@ -228,7 +255,7 @@ const SearchableDropdown = ({
                         )}
                       </>
                     )}
-                    
+
                     {/* Other Employees */}
                     {otherOptions.map((option) => (
                       <button
@@ -252,6 +279,37 @@ const SearchableDropdown = ({
                         {renderOption(option)}
                       </button>
                     ))}
+
+                    {/* Add New Contact Option */}
+                    {addNewOption && (
+                      <button
+                        key={addNewOption.id}
+                        type="button"
+                        onClick={() => handleSelect(addNewOption)}
+                        className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200 border-t"
+                        style={{
+                          color: 'var(--color-primary)',
+                          backgroundColor: 'var(--color-bg-tertiary)',
+                          borderTopColor: 'var(--color-border-default)',
+                          borderTopWidth: '1px',
+                          borderTopStyle: 'solid',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--color-primary-light)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--color-primary-light)';
+                        }}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span>+</span>
+                          <span>{addNewOption.name}</span>
+                        </div>
+                      </button>
+                    )}
                   </>
                 );
               })()

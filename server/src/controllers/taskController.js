@@ -442,6 +442,14 @@ const getTask = async (req, res) => {
               }
             }
           }
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            icon: true
+          }
         }
       }
     });

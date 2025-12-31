@@ -6,6 +6,7 @@ import useContactStore from '../../stores/contactStore';
 import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
 import { usersAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
+import AddContactModal from '../common/AddContactModal';
 import IconButton from '../common/IconButton';
 import DatePicker from '../common/DatePicker';
 import { FaTimes, FaPlus, FaSave } from 'react-icons/fa';
@@ -23,6 +24,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
 
   const { createTask, isLoading } = useTaskStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
@@ -255,6 +258,20 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
     }
   };
 
+  const handleAddNewContact = (email) => {
+    setPendingEmail(email);
+    setIsAddContactModalOpen(true);
+  };
+
+  const handleContactAdded = (newContact) => {
+    // Refresh contacts to include the new one
+    fetchContactsForAssignment();
+    // Set the assignee to the new contact
+    setFormData(prev => ({ ...prev, assignee: `contact_${newContact.id}` }));
+    setIsAddContactModalOpen(false);
+    setPendingEmail('');
+  };
+
   const handleClose = () => {
     setFormData({
       title: '',
@@ -474,6 +491,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                  error={!!errors.assignee}
                  recentEmployees={recentEmployees}
                  getOptionValue={(option) => option.id}
+                 allowAddNew={!isPersonalAccount}
+                 onAddNew={handleAddNewContact}
                  renderOption={(assignee) => (
                    <div className="flex items-center space-x-2">
                      <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
@@ -566,6 +585,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
                    disabled={isLoadingContacts}
                    error={!!errors.assignee}
                    getOptionValue={(option) => option.id}
+                   allowAddNew={true}
+                   onAddNew={handleAddNewContact}
                    renderOption={(assignee) => (
                      <div className="flex items-center space-x-2">
                        <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
@@ -653,6 +674,18 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
           </div>
         </form>
       </div>
+
+      {/* Add Contact Modal */}
+      <AddContactModal
+        isOpen={isAddContactModalOpen}
+        onClose={() => {
+          setIsAddContactModalOpen(false);
+          setPendingEmail('');
+        }}
+        onContactAdded={handleContactAdded}
+        initialEmail={pendingEmail}
+        message="This person is not in your contact list. Please add them as a contact."
+      />
     </div>
   );
 };
