@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { usersAPI } from '../../services/api';
 import useUserStore from '../../stores/userStore';
 import useContactStore from '../../stores/contactStore';
@@ -7,6 +7,7 @@ import IconButton from '../common/IconButton';
 import { FaTimes, FaUserPlus } from 'react-icons/fa';
 
 const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], excludeContactIds = [], taskId, contacts = [] }) => {
+
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [selectedId, setSelectedId] = useState('');
@@ -15,10 +16,12 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
   const [isAdding, setIsAdding] = useState(false);
   const { recentEmployees } = useUserStore();
   const { fetchContacts } = useContactStore();
-  const [allContacts, setAllContacts] = useState(contacts);
+  const [allContacts, setAllContacts] = useState([]);
+  const [hasInitializedContacts, setHasInitializedContacts] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !hasInitializedContacts) {
+      setHasInitializedContacts(true);
       fetchUsers();
       if (contacts.length === 0) {
         fetchAllContacts();
@@ -28,8 +31,66 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
       setSelectedId('');
       setSelectedType('');
       setSelectedRole('co-assignee');
+    } else if (!isOpen) {
+      // Reset initialization flag when modal closes
+      setHasInitializedContacts(false);
     }
-  }, [isOpen, contacts]);
+  }, [isOpen, hasInitializedContacts]); // Only run when modal opens or initialization state changes
+
+  // Memoized values - must be called before any early returns
+  const availableUsers = useMemo(() => users.filter(u =>
+    !excludeUserIds.some(excludedId =>
+      excludedId?.toString() === u.id?.toString()
+    )
+  ), [users, excludeUserIds]);
+
+  const availableContacts = useMemo(() => allContacts.filter(c =>
+    !excludeContactIds.some(excludedId =>
+      excludedId?.toString() === c.id?.toString()
+    )
+  ), [allContacts, excludeContactIds]);
+
+  // Combine users and contacts into a unified list
+  const allOptions = useMemo(() => [
+    ...availableUsers.map(u => ({
+      ...u,
+      type: 'user',
+      displayName: u.name,
+      email: u.email
+    })),
+    ...availableContacts.map(c => ({
+      ...c,
+      type: 'contact',
+      displayName: c.name,
+      email: c.email
+    }))
+  ], [availableUsers, availableContacts]);
+
+  const getOptionValue = useCallback((option) => `${option.type}_${option.id}`, []);
+
+  const renderOption = useCallback((option) => (
+    <div className="flex items-center space-x-2">
+      <div className={`w-2 h-2 rounded-full ${option.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+      <span>{option.displayName || option.name}</span>
+      <span
+        className="transition-colors duration-200"
+        style={{ color: 'var(--color-text-tertiary)' }}
+      >
+        ({option.email})
+      </span>
+      {option.type === 'contact' && (
+        <span
+          className="text-xs px-2 py-0.5 rounded transition-colors duration-200"
+          style={{
+            backgroundColor: 'var(--color-bg-tertiary)',
+            color: 'var(--color-text-secondary)'
+          }}
+        >
+          External
+        </span>
+      )}
+    </div>
+  ), []);
 
   const fetchUsers = async () => {
     setIsLoadingUsers(true);
@@ -73,34 +134,6 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
   };
 
   if (!isOpen) return null;
-
-  const availableUsers = users.filter(u => 
-    !excludeUserIds.some(excludedId => 
-      excludedId?.toString() === u.id?.toString()
-    )
-  );
-
-  const availableContacts = allContacts.filter(c => 
-    !excludeContactIds.some(excludedId => 
-      excludedId?.toString() === c.id?.toString()
-    )
-  );
-
-  // Combine users and contacts into a unified list
-  const allOptions = [
-    ...availableUsers.map(u => ({ 
-      ...u, 
-      type: 'user', 
-      displayName: u.name, 
-      email: u.email
-    })),
-    ...availableContacts.map(c => ({ 
-      ...c, 
-      type: 'contact', 
-      displayName: c.name, 
-      email: c.email
-    }))
-  ];
 
   return (
     <div className="modal modal-open backdrop-blur-sm" onClick={onClose}>
@@ -154,30 +187,8 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
                 placeholder="Search for a team member or contact..."
                 disabled={isLoadingUsers}
                 recentEmployees={recentEmployees}
-                renderOption={(option) => (
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-2 h-2 rounded-full ${option.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                    <span>{option.displayName || option.name}</span>
-                    <span 
-                      className="transition-colors duration-200"
-                      style={{ color: 'var(--color-text-tertiary)' }}
-                    >
-                      ({option.email})
-                    </span>
-                    {option.type === 'contact' && (
-                      <span 
-                        className="text-xs px-2 py-0.5 rounded transition-colors duration-200"
-                        style={{ 
-                          backgroundColor: 'var(--color-bg-tertiary)',
-                          color: 'var(--color-text-secondary)'
-                        }}
-                      >
-                        External
-                      </span>
-                    )}
-                  </div>
-                )}
-                getOptionValue={(option) => `${option.type}_${option.id}`}
+                renderOption={renderOption}
+                getOptionValue={getOptionValue}
               />
               {allOptions.length === 0 && !isLoadingUsers && (
                 <p 

@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 
-const SearchableDropdown = ({ 
-  options, 
-  value, 
-  onChange, 
+const SearchableDropdown = ({
+  options,
+  value,
+  onChange,
   placeholder = "Select an option",
   disabled = false,
   error = false,
@@ -23,7 +23,7 @@ const SearchableDropdown = ({
     const recentOptions = options.filter(option => recentIds.includes(option.id));
     const otherOptions = options.filter(option => !recentIds.includes(option.id));
     setFilteredOptions([...recentOptions, ...otherOptions]);
-  }, [options, recentEmployees, getOptionValue]);
+  }, [options, recentEmployees]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -62,7 +62,9 @@ const SearchableDropdown = ({
     setSearchTerm('');
   };
 
-  const selectedOption = options.find(opt => getOptionValue(opt) === value);
+  const selectedOption = useMemo(() => {
+    return options.find(opt => getOptionValue(opt) === value);
+  }, [options, value, getOptionValue]);
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
