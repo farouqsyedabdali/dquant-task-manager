@@ -8,7 +8,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [selectedTemplateType, setSelectedTemplateType] = useState('system'); // 'system' or 'user'
   const [activeTab, setActiveTab] = useState('system'); // 'system' or 'my-templates'
-  const [activeCategory, setActiveCategory] = useState('PROFESSIONAL'); // 'PERSONAL' or 'PROFESSIONAL'
+  const [activeCategory, setActiveCategory] = useState('ALL'); // 'ALL', 'PERSONAL', or 'PROFESSIONAL'
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
   const [error, setError] = useState(null);
@@ -316,14 +316,21 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
             {/* Category Tabs (only for system templates) */}
             {activeTab === 'system' && (
               <div className="tabs tabs-boxed" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
-                <button 
+                <button
+                  className={`tab ${activeCategory === 'ALL' ? 'tab-active' : ''}`}
+                  onClick={() => handleCategoryChange('ALL')}
+                  style={activeCategory === 'ALL' ? { backgroundColor: 'var(--color-primary)', color: 'white' } : {}}
+                >
+                  📚 All
+                </button>
+                <button
                   className={`tab ${activeCategory === 'PROFESSIONAL' ? 'tab-active' : ''}`}
                   onClick={() => handleCategoryChange('PROFESSIONAL')}
                   style={activeCategory === 'PROFESSIONAL' ? { backgroundColor: 'var(--color-primary)', color: 'white' } : {}}
                 >
                   💼 Professional
                 </button>
-                <button 
+                <button
                   className={`tab ${activeCategory === 'PERSONAL' ? 'tab-active' : ''}`}
                   onClick={() => handleCategoryChange('PERSONAL')}
                   style={activeCategory === 'PERSONAL' ? { backgroundColor: 'var(--color-primary)', color: 'white' } : {}}
@@ -340,22 +347,13 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search templates by name or description..."
-                className="input input-bordered w-full pl-10"
+                className="input input-bordered w-full pl-4"
                 style={{
                   backgroundColor: 'var(--color-bg-tertiary)',
                   borderColor: 'var(--color-border-default)',
                   color: 'var(--color-text-primary)',
                 }}
               />
-              <svg 
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
-                style={{ color: 'var(--color-text-tertiary)' }}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
@@ -373,7 +371,9 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <h4 className="text-sm font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
-                    {activeCategory === 'PROFESSIONAL' ? 'PROFESSIONAL TEMPLATES' : 'PERSONAL TEMPLATES'}
+                    {activeCategory === 'ALL' ? 'ALL TEMPLATES' :
+                     activeCategory === 'PROFESSIONAL' ? 'PROFESSIONAL TEMPLATES' :
+                     'PERSONAL TEMPLATES'}
                     {pagination.total > 0 && (
                       <span className="ml-2 text-xs">
                         ({pagination.total} {pagination.total === 1 ? 'template' : 'templates'})
@@ -396,9 +396,9 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                       No templates found
                     </h5>
                     <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
-                      {searchTerm 
-                        ? `No ${activeCategory.toLowerCase()} templates match "${searchTerm}"`
-                        : `No ${activeCategory.toLowerCase()} templates available yet`}
+                      {searchTerm
+                        ? `No ${activeCategory === 'ALL' ? '' : activeCategory.toLowerCase() + ' '}templates match "${searchTerm}"`
+                        : `No ${activeCategory === 'ALL' ? '' : activeCategory.toLowerCase() + ' '}templates available yet`}
                     </p>
                     {searchTerm && (
                       <button

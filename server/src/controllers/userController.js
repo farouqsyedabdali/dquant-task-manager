@@ -18,6 +18,8 @@ const getAllUsers = async (req, res) => {
         name: true,
         email: true,
         role: true,
+        department: true,
+        position: true,
         createdAt: true,
         updatedAt: true
       },
@@ -95,7 +97,7 @@ const getUserById = async (req, res) => {
 // Create new employee
 const createEmployee = async (req, res) => {
   try {
-    const { name, email, password, role = 'EMPLOYEE' } = req.body;
+    const { name, email, password, role = 'EMPLOYEE', department = 'Default Department', position = 'Default Position' } = req.body;
     const companyId = req.user.companyId;
     const currentUserRole = req.user.role;
 
@@ -136,6 +138,8 @@ const createEmployee = async (req, res) => {
         email,
         password: hashedPassword,
         role: role,
+        department,
+        position,
         companyId
       },
       select: {
@@ -170,7 +174,7 @@ const createEmployee = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role } = req.body;
+    const { name, email, role, department, position } = req.body;
     const companyId = req.user.companyId;
     const currentUserRole = req.user.role;
 
@@ -240,7 +244,9 @@ const updateUser = async (req, res) => {
       data: {
         ...(name && { name }),
         ...(email && { email }),
-        ...(role && { role })
+        ...(role && { role }),
+        ...(department && { department }),
+        ...(position && { position })
       },
       select: {
         id: true,

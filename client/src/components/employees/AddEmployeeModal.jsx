@@ -5,6 +5,8 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    department: 'Default Department',
+    position: 'Default Position',
     password: '',
     confirmPassword: '',
     role: 'EMPLOYEE'
@@ -66,6 +68,8 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
     const result = await createEmployee({
       name: formData.name.trim(),
       email: formData.email.trim(),
+      department: formData.department.trim(),
+      position: formData.position.trim(),
       password: formData.password,
       role: formData.role
     });
@@ -74,6 +78,8 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
       setFormData({
         name: '',
         email: '',
+        department: 'Default Department',
+        position: 'Default Position',
         password: '',
         confirmPassword: '',
         role: 'EMPLOYEE'
@@ -99,15 +105,15 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="modal modal-open backdrop-blur-sm animate-fadeIn">
-      <div 
-        className="modal-box max-w-md border"
-        style={{ 
+      <div
+        className="modal-box max-w-lg border"
+        style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)'
         }}
       >
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4">
           <h3 
             className="text-2xl font-bold"
             style={{ color: 'var(--color-text-primary)' }}
@@ -124,11 +130,11 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {/* Name */}
           <div>
-            <label 
-              className="block text-sm font-medium mb-2"
+            <label
+              className="block text-sm font-medium mb-1"
               style={{ color: 'var(--color-text-secondary)' }}
             >
               Name *
@@ -153,8 +159,8 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
 
           {/* Email */}
           <div>
-            <label 
-              className="block text-sm font-medium mb-2"
+            <label
+              className="block text-sm font-medium mb-1"
               style={{ color: 'var(--color-text-secondary)' }}
             >
               Email *
@@ -177,10 +183,56 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
             )}
           </div>
 
+          {/* Department */}
+          <div>
+            <label
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Department
+            </label>
+            <input
+              type="text"
+              name="department"
+              value={formData.department}
+              onChange={handleChange}
+              className="input w-full"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+              placeholder="Enter department"
+            />
+          </div>
+
+          {/* Position */}
+          <div>
+            <label
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Position
+            </label>
+            <input
+              type="text"
+              name="position"
+              value={formData.position}
+              onChange={handleChange}
+              className="input w-full"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+              placeholder="Enter position"
+            />
+          </div>
+
           {/* Role Selection */}
           <div>
-            <label 
-              className="block text-sm font-medium mb-2"
+            <label
+              className="block text-sm font-medium mb-1"
               style={{ color: 'var(--color-text-secondary)' }}
             >
               Role *
@@ -209,8 +261,8 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
 
           {/* Password */}
           <div>
-            <label 
-              className="block text-sm font-medium mb-2"
+            <label
+              className="block text-sm font-medium mb-1"
               style={{ color: 'var(--color-text-secondary)' }}
             >
               Password *
@@ -235,8 +287,8 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
 
           {/* Confirm Password */}
           <div>
-            <label 
-              className="block text-sm font-medium mb-2"
+            <label
+              className="block text-sm font-medium mb-1"
               style={{ color: 'var(--color-text-secondary)' }}
             >
               Confirm Password *
@@ -260,7 +312,7 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
           </div>
 
           {/* Submit Buttons */}
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end space-x-3 pt-2">
             <button
               type="button"
               onClick={handleClose}

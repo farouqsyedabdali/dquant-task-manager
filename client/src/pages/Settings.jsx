@@ -14,6 +14,7 @@ const Settings = () => {
   const { theme, setTheme, lightPalette, darkPalette, setLightPalette, setDarkPalette } = useThemeStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   const [showOlderVersions, setShowOlderVersions] = useState(false);
@@ -41,7 +42,23 @@ const Settings = () => {
   }, [user?.autoArchivePeriod]);
 
 
+  // Get the required confirmation text
+  const getRequiredConfirmationText = () => {
+    if (isPersonalAccount) {
+      return user?.email || '';
+    } else {
+      // For companies, use company name or a generic text
+      return 'DELETE';
+    }
+  };
+
   const confirmDeleteCompany = async () => {
+    // Double-check confirmation text matches
+    if (deleteConfirmationText !== getRequiredConfirmationText()) {
+      alert('Please type the confirmation text correctly.');
+      return;
+    }
+
     setIsDeleting(true);
     try {
       console.log('Attempting to delete company...');
@@ -60,6 +77,7 @@ const Settings = () => {
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);
+      setDeleteConfirmationText('');
     }
   };
 
@@ -987,10 +1005,38 @@ const Settings = () => {
             <p className="text-red-400 font-semibold mb-6">
               This action cannot be undone!
             </p>
+
+            {/* Type Confirmation */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                Type <strong style={{ color: 'var(--color-text-primary)' }}>{getRequiredConfirmationText()}</strong> to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmationText}
+                onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                className="input input-bordered w-full"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+                placeholder={`Type ${getRequiredConfirmationText()} here`}
+                disabled={isDeleting}
+              />
+              {deleteConfirmationText && deleteConfirmationText !== getRequiredConfirmationText() && (
+                <p className="text-red-400 text-sm mt-1">
+                  Text must match exactly: {getRequiredConfirmationText()}
+                </p>
+              )}
+            </div>
             
             <div className="modal-action">
               <button
-                onClick={() => setShowDeleteModal(false)}
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteConfirmationText('');
+                }}
                 className="btn btn-ghost"
                 style={{ color: 'var(--color-text-secondary)' }}
                 disabled={isDeleting}
@@ -1004,7 +1050,7 @@ const Settings = () => {
                   backgroundColor: '#ef4444',
                   color: 'white'
                 }}
-                disabled={isDeleting}
+                disabled={isDeleting || deleteConfirmationText !== getRequiredConfirmationText()}
                 onMouseEnter={(e) => e.target.style.opacity = '0.9'}
                 onMouseLeave={(e) => e.target.style.opacity = '1'}
               >

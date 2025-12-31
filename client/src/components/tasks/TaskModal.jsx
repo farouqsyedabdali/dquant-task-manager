@@ -133,13 +133,13 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     try {
       setIsAddingCoAssignee(true);
       await tasksAPI.addCoAssignee(viewedTask.id, userId);
-      
+
       // Track as recent employee
       const selectedUser = users.find(u => u.id.toString() === userId.toString());
       if (selectedUser) {
         addToRecentEmployees(selectedUser);
       }
-      
+
       // Refresh co-assignees list and task data
       await fetchCoAssignees(viewedTask.id);
       const result = await fetchTask(viewedTask.id);
@@ -1103,243 +1103,243 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                   )}
 
                 {/* Co-Assignees */}
-                      {isLoadingCoAssignees ? (
-                        <div className="flex justify-center py-2">
-                          <span className="loading loading-spinner loading-sm"></span>
+                {isLoadingCoAssignees ? (
+                  <div className="flex justify-center py-2">
+                    <span className="loading loading-spinner loading-sm"></span>
+                  </div>
+                ) : (
+                  coAssignees.map((coAssignee) => (
+                    <div key={coAssignee.id} className="flex items-center justify-between gap-3 group relative">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div
+                          className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{
+                            backgroundColor: '#10b981',
+                            width: '32px',
+                            height: '32px',
+                            minWidth: '32px',
+                            minHeight: '32px',
+                            maxWidth: '32px',
+                            maxHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            lineHeight: '1'
+                          }}
+                        >
+                          <span
+                            className="text-sm"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              lineHeight: '1'
+                            }}
+                          >
+                            {coAssignee.user.name.charAt(0)}
+                          </span>
                         </div>
-                          ) : (
-                            coAssignees.map((coAssignee) => (
-                            <div key={coAssignee.id} className="flex items-center justify-between gap-3 group relative">
-                              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                  <div 
-                                  className="text-white rounded-full flex items-center justify-center flex-shrink-0"
-                                  style={{ 
-                                    backgroundColor: '#10b981',
-                                    width: '32px',
-                                    height: '32px',
-                                    minWidth: '32px',
-                                    minHeight: '32px',
-                                    maxWidth: '32px',
-                                    maxHeight: '32px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    lineHeight: '1'
-                                  }}
-                                  >
-                                  <span 
-                                    className="text-sm"
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      lineHeight: '1'
-                                    }}
-                                  >
-                                    {coAssignee.user.name.charAt(0)}
-                                  </span>
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                  <span 
-                                        className="text-sm block truncate transition-colors duration-200"
-                                    style={{ color: 'var(--color-text-primary)' }}
-                                  >
-                                    {coAssignee.user.name}
-                                  </span>
-                                      <span 
-                                        className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
-                                        style={{
-                                          backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                                          color: '#6ee7b7',
-                                        }}
-                                      >
-                                        CO-ASSIGNEE
-                                      </span>
-                                    </div>
-                                </div>
-                                {/* Email tooltip */}
-                                <div 
-                                  className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                                  style={{
-                                    backgroundColor: 'var(--color-bg-primary)',
-                                    color: 'var(--color-text-primary)',
-                                  }}
-                                >
-                                  {coAssignee.user.email}
-                                </div>
-                              </div>
-                                {/* Remove button - only if user is lead assignee */}
-                                {viewedTask?.assigneeId === user?.id && (
-                                  <button
-                                onClick={() => handleRemoveCoAssignee(coAssignee.userId)}
-                                    className="w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100"
-                                    style={{
-                                      backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                                      color: '#ef4444',
-                                    }}
-                                    title="Remove co-assignee"
-                                  >
-                                    <FaTimes className="w-3 h-3" />
-                                  </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="text-sm block truncate transition-colors duration-200"
+                              style={{ color: 'var(--color-text-primary)' }}
+                            >
+                              {coAssignee.user.name}
+                            </span>
+                            <span
+                              className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
+                              style={{
+                                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                color: '#6ee7b7',
+                              }}
+                            >
+                              CO-ASSIGNEE
+                            </span>
+                          </div>
+                        </div>
+                        {/* Email tooltip */}
+                        <div
+                          className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                          style={{
+                            backgroundColor: 'var(--color-bg-primary)',
+                            color: 'var(--color-text-primary)',
+                          }}
+                        >
+                          {coAssignee.user.email}
+                        </div>
+                      </div>
+                      {/* Remove button - only if user is lead assignee */}
+                      {viewedTask?.assigneeId === user?.id && (
+                        <button
+                          onClick={() => handleRemoveCoAssignee(coAssignee.userId)}
+                          className="w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100"
+                          style={{
+                            backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                            color: '#ef4444',
+                          }}
+                          title="Remove co-assignee"
+                        >
+                          <FaTimes className="w-3 h-3" />
+                        </button>
                       )}
                     </div>
-                            ))
-                          )}
+                  ))
+                )}
 
-                          {/* Collaborators */}
-                          {viewedTask.collaborators && viewedTask.collaborators.map((collaborator) => (
-                            <div key={collaborator.id} className="flex items-center justify-between gap-3 group relative">
-                              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                <div 
-                                  className="text-white rounded-full flex items-center justify-center flex-shrink-0"
-                                  style={{ 
-                                    backgroundColor: '#3b82f6',
-                                    width: '32px',
-                                    height: '32px',
-                                    minWidth: '32px',
-                                    minHeight: '32px',
-                                    maxWidth: '32px',
-                                    maxHeight: '32px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    lineHeight: '1'
-                                  }}
-                                >
-                                  <span 
-                                    className="text-sm"
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      lineHeight: '1'
-                                    }}
-                                  >
-                                    {collaborator.user.name.charAt(0)}
-                                  </span>
-                              </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                <span 
-                                      className="text-sm block truncate transition-colors duration-200"
-                                  style={{ color: 'var(--color-text-primary)' }}
-                                >
-                                      {collaborator.user.name}
-                                    </span>
-                                    <span 
-                                      className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
-                                      style={{
-                                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                                        color: '#93c5fd',
-                                      }}
-                                    >
-                                      {collaborator.isExternal ? 'EXTERNAL ' : ''}{collaborator.permissionLevel}
-                                </span>
-                                  </div>
-                              </div>
-                              {/* Email tooltip */}
-                              <div 
-                                className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                                style={{
-                                  backgroundColor: 'var(--color-bg-primary)',
-                                  color: 'var(--color-text-primary)',
-                                }}
-                              >
-                                  {collaborator.user.email}
-                              </div>
-                            </div>
+                {/* Collaborators */}
+                {viewedTask.collaborators && viewedTask.collaborators.map((collaborator) => (
+                  <div key={collaborator.id} className="flex items-center justify-between gap-3 group relative">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div
+                        className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{
+                          backgroundColor: '#3b82f6',
+                          width: '32px',
+                          height: '32px',
+                          minWidth: '32px',
+                          minHeight: '32px',
+                          maxWidth: '32px',
+                          maxHeight: '32px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          lineHeight: '1'
+                        }}
+                      >
+                        <span
+                          className="text-sm"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            lineHeight: '1'
+                          }}
+                        >
+                          {collaborator.user.name.charAt(0)}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="text-sm block truncate transition-colors duration-200"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {collaborator.user.name}
+                          </span>
+                          <span
+                            className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
+                            style={{
+                              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                              color: '#93c5fd',
+                            }}
+                          >
+                            {collaborator.isExternal ? 'EXTERNAL ' : ''}{collaborator.permissionLevel}
+                          </span>
                         </div>
-                          ))}
+                      </div>
+                      {/* Email tooltip */}
+                      <div
+                        className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                        style={{
+                          backgroundColor: 'var(--color-bg-primary)',
+                          color: 'var(--color-text-primary)',
+                        }}
+                      >
+                        {collaborator.user.email}
+                      </div>
+                    </div>
+                  </div>
+                ))}
 
-                          {/* Shared With Users */}
-                          {viewedTask.sharedWith && viewedTask.sharedWith.map((share) => {
-                            // Skip if user is already in the list as assignee, co-assignee, or collaborator
-                            if (share.userId === viewedTask.assigneeId || 
-                                coAssignees.some(co => co.userId === share.userId) ||
-                                viewedTask.collaborators?.some(c => c.userId === share.userId)) {
-                              return null;
-                            }
-                            
-                            return (
-                              <div key={share.id} className="flex items-center justify-between gap-3 group relative">
-                                <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                    <div 
-                                    className="text-white rounded-full flex items-center justify-center flex-shrink-0"
-                                    style={{ 
-                                      backgroundColor: '#8b5cf6',
-                                      width: '32px',
-                                      height: '32px',
-                                      minWidth: '32px',
-                                      minHeight: '32px',
-                                      maxWidth: '32px',
-                                      maxHeight: '32px',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      lineHeight: '1'
-                                    }}
-                                    >
-                                    <span 
-                                      className="text-sm"
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        lineHeight: '1'
-                                      }}
-                                    >
-                                      {share.user?.name?.charAt(0) || '?'}
-                                    </span>
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span 
-                                        className="text-sm block truncate transition-colors duration-200"
-                                        style={{ color: 'var(--color-text-primary)' }}
-                                      >
-                                        {share.user?.name || share.email || 'Unknown'}
-                                      </span>
-                                      <span 
-                                        className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
-                                        style={{
-                                          backgroundColor: 'rgba(139, 92, 246, 0.2)',
-                                          color: '#c4b5fd',
-                                        }}
-                                      >
-                                        {share.isExternal ? 'EXTERNAL ' : ''}{share.permissionLevel || 'VIEWER'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  {/* Email tooltip */}
-                                  {(share.user?.email || share.email) && (
-                                  <div 
-                                    className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                                    style={{
-                                      backgroundColor: 'var(--color-bg-primary)',
-                                      color: 'var(--color-text-primary)',
-                                    }}
-                                  >
-                                      {share.user?.email || share.email}
-                                  </div>
-                                  )}
-                                </div>
-                            </div>
-                            );
-                          })}
+                {/* Shared With Users */}
+                {viewedTask.sharedWith && viewedTask.sharedWith.map((share) => {
+                  // Skip if user is already in the list as assignee, co-assignee, or collaborator
+                  if (share.userId === viewedTask.assigneeId ||
+                      coAssignees.some(co => co.userId === share.userId) ||
+                      viewedTask.collaborators?.some(c => c.userId === share.userId)) {
+                    return null;
+                  }
 
-                          {/* Empty State */}
-                          {!viewedTask.assignee && 
-                           (!coAssignees || coAssignees.length === 0) && 
-                           (!viewedTask.collaborators || viewedTask.collaborators.length === 0) &&
-                           (!viewedTask.sharedWith || viewedTask.sharedWith.length === 0) && (
-                            <p 
-                              className="text-sm text-center py-4 transition-colors duration-200"
-                              style={{ color: 'var(--color-text-tertiary)' }}
+                  return (
+                    <div key={share.id} className="flex items-center justify-between gap-3 group relative">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div
+                          className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{
+                            backgroundColor: '#8b5cf6',
+                            width: '32px',
+                            height: '32px',
+                            minWidth: '32px',
+                            minHeight: '32px',
+                            maxWidth: '32px',
+                            maxHeight: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            lineHeight: '1'
+                          }}
+                        >
+                          <span
+                            className="text-sm"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              lineHeight: '1'
+                            }}
+                          >
+                            {share.user?.name?.charAt(0) || '?'}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="text-sm block truncate transition-colors duration-200"
+                              style={{ color: 'var(--color-text-primary)' }}
                             >
-                              No people assigned
-                            </p>
+                              {share.user?.name || share.email || 'Unknown'}
+                            </span>
+                            <span
+                              className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
+                              style={{
+                                backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                                color: '#c4b5fd',
+                              }}
+                            >
+                              {share.isExternal ? 'EXTERNAL ' : ''}{share.permissionLevel || 'VIEWER'}
+                            </span>
+                          </div>
+                        </div>
+                        {/* Email tooltip */}
+                        {(share.user?.email || share.email) && (
+                          <div
+                            className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                            style={{
+                              backgroundColor: 'var(--color-bg-primary)',
+                              color: 'var(--color-text-primary)',
+                            }}
+                          >
+                            {share.user?.email || share.email}
+                          </div>
                         )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Empty State */}
+                {!viewedTask.assignee &&
+                 (!coAssignees || coAssignees.length === 0) &&
+                 (!viewedTask.collaborators || viewedTask.collaborators.length === 0) &&
+                 (!viewedTask.sharedWith || viewedTask.sharedWith.length === 0) && (
+                  <p
+                    className="text-sm text-center py-4 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    No people assigned
+                  </p>
+                )}
                       </div>
 
                         {/* Edit Mode - Assignee Selection */}

@@ -31,6 +31,8 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
       setFormData({
         name: employee.name,
         email: employee.email,
+        department: employee.department,
+        position: employee.position,
         role: employee.role
       });
       setErrors({});
@@ -113,6 +115,8 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
     const result = await updateUser(employee.id, {
       name: formData.name.trim(),
       email: formData.email.trim(),
+      department: formData.department.trim(),
+      position: formData.position.trim(),
       role: formData.role
     });
 
@@ -133,6 +137,8 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
     setFormData({
       name: employee.name,
       email: employee.email,
+      department: employee.department,
+      position: employee.position,
       role: employee.role
     });
     setErrors({});
@@ -292,7 +298,69 @@ const EmployeeDetailsModal = ({ employee, isOpen, onClose }) => {
               </div>
 
               <div>
-                <label 
+                <label
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Department
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    className="input w-full mt-1"
+                    style={{
+                      backgroundColor: 'var(--color-bg-tertiary)',
+                      borderColor: 'var(--color-border-default)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                    placeholder="Enter department"
+                  />
+                ) : (
+                  <p
+                    className="mt-1"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {formData.department}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Position
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    name="position"
+                    value={formData.position}
+                    onChange={handleChange}
+                    className="input w-full mt-1"
+                    style={{
+                      backgroundColor: 'var(--color-bg-tertiary)',
+                      borderColor: 'var(--color-border-default)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                    placeholder="Enter position"
+                  />
+                ) : (
+                  <p
+                    className="mt-1"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {formData.position}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
                   className="text-sm font-medium"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >

@@ -75,10 +75,12 @@ const Employees = () => {
   };
 
   // Apply search filter (include all users including current user)
-  const filteredUsers = users.filter(u => 
+  const filteredUsers = users.filter(u =>
     (u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
      u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     u.role.toLowerCase().includes(searchTerm.toLowerCase()))
+     u.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     u.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     u.position.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // CSV Import Handler
@@ -438,6 +440,18 @@ const Employees = () => {
                       className="text-left font-medium"
                       style={{ color: 'var(--color-text-secondary)' }}
                     >
+                      Department
+                    </th>
+                    <th
+                      className="text-left font-medium"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      Position
+                    </th>
+                    <th
+                      className="text-left font-medium"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
                       Role
                     </th>
                     <th
@@ -507,6 +521,18 @@ const Employees = () => {
                         style={{ color: 'var(--color-text-secondary)' }}
                       >
                         {employee.email}
+                      </td>
+                      <td
+                        className="py-4"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {employee.department}
+                      </td>
+                      <td
+                        className="py-4"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {employee.position}
                       </td>
                       <td className="py-4">
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleColor(employee.role)}`}>

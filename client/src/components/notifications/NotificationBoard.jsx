@@ -231,7 +231,7 @@ const NotificationBoard = () => {
                             color: (notification.task?.id || notification.taskId)
                               ? 'var(--color-primary)'
                               : (!notification.isRead 
-                                ? 'var(--color-text-primary)' 
+                              ? 'var(--color-text-primary)' 
                                 : 'var(--color-text-secondary)'),
                             textDecoration: (notification.task?.id || notification.taskId) ? 'underline' : 'none'
                           }}
@@ -255,32 +255,12 @@ const NotificationBoard = () => {
                         {notification.message}
                       </p>
                       <div className="flex items-center justify-between mt-2">
-                        <span 
+                        <span
                           className="text-xs transition-colors duration-200"
                           style={{ color: 'var(--color-text-muted)' }}
                         >
                           {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                         </span>
-                        {(notification.task?.id || notification.taskId) && (
-                          <span 
-                            className="text-xs transition-colors duration-200 underline truncate max-w-[150px]"
-                            style={{ 
-                              color: 'var(--color-primary)',
-                              cursor: 'pointer',
-                              display: 'inline-block'
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleNotificationClick(notification);
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.textDecoration = 'underline';
-                            }}
-                            title={notification.task?.title || 'Task'}
-                          >
-                            {notification.task?.title || `Task #${notification.task?.id || notification.taskId}`}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>

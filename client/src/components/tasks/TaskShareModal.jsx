@@ -197,21 +197,21 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4">
             <h2 
               className="text-xl font-bold transition-colors duration-200"
               style={{ color: 'var(--color-text-primary)' }}
             >
               Share Task
             </h2>
-            <button
-              onClick={handleClose}
+          <button
+            onClick={handleClose}
               className="transition-colors duration-200 hover:opacity-70"
               style={{ color: 'var(--color-text-tertiary)' }}
-            >
-              ✕
-            </button>
-          </div>
+          >
+            ✕
+          </button>
+        </div>
 
         <div className="mb-4">
           <h3 

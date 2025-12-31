@@ -43,6 +43,8 @@ model User {
   createdAt                DateTime           @default(now())
   updatedAt                DateTime           @updatedAt
   companyId                Int
+  department               String             @default("Default Department")
+  position                 String             @default("Default Position")
   emailVerificationCode    String?
   emailVerificationExpires DateTime?
   isEmailVerified          Boolean            @default(false)

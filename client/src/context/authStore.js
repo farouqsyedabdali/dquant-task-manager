@@ -161,7 +161,7 @@ const useAuthStore = create((set, get) => ({
         localStorage.removeItem('tokenExpiry');
         set({ user: null, token: null, error: null, isLoading: false });
       } else {
-        set({ error: errorMessage, isLoading: false });
+      set({ error: errorMessage, isLoading: false });
       }
       
       return { success: false, error: errorMessage };
