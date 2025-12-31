@@ -5,6 +5,7 @@ import AddProjectTaskModal from './AddProjectTaskModal';
 import TaskModal from '../tasks/TaskModal';
 import SaveAsTemplateModal from './SaveAsTemplateModal';
 import EditProjectModal from './EditProjectModal';
+import { FaTrash } from 'react-icons/fa';
 
 const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onProjectDeleted }) => {
   const [project, setProject] = useState(null);
@@ -573,18 +574,38 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
               <div className="divide-y" style={{ borderColor: 'var(--color-border-light)' }}>
                 {project.tasks && project.tasks.length > 0 ? (
                   project.tasks.map((task) => (
-                    <div 
+                    <div
                       key={task.id}
                       onClick={() => handleTaskClick(task)}
                       className="grid grid-cols-10 gap-4 p-4 cursor-pointer transition-all items-center hover:bg-indigo-500/10"
-                      style={{ 
+                      style={{
                         backgroundColor: task.isDraft ? 'var(--color-bg-secondary)' : 'transparent'
                       }}
                     >
                       {/* Task Name Column */}
-                      <div className="col-span-5 flex items-center space-x-3">
-                        <div className="flex-1 min-w-0">
-                          <p 
+                      <div className="col-span-5 flex items-center space-x-3 relative">
+                        {/* Delete button for draft tasks only - positioned absolutely */}
+                        {task.isDraft && project.canManage && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTask(task.id);
+                            }}
+                            className="absolute left-0 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-all hover:bg-red-600 hover:scale-110 z-10"
+                            title="Delete draft task"
+                            style={{
+                              backgroundColor: '#dc2626',
+                              border: '2px solid #dc2626'
+                            }}
+                          >
+                            <FaTrash
+                              size={16}
+                              style={{ color: '#ffffff' }}
+                            />
+                          </button>
+                        )}
+                        <div className={`flex-1 min-w-0 ${task.isDraft && project.canManage ? 'ml-12' : ''}`}>
+                          <p
                             className={`font-medium truncate ${task.status === 'COMPLETED' ? 'line-through opacity-60' : ''}`}
                             style={{ color: 'var(--color-text-primary)' }}
                             title={task.title}

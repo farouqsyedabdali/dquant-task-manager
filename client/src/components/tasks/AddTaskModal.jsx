@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import useTaskStore from '../../stores/taskStore';
 import useUserStore from '../../stores/userStore';
 import useAuthStore from '../../context/authStore';
@@ -15,8 +15,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
     title: '',
     description: '',
     priority: 'MEDIUM',
-    assigneeId: '',
-    externalContactId: '',
+    assignee: '', // Will store as "type_id" format (e.g., "user_123" or "contact_456")
     dueDate: getDefaultDueDate()
   });
   const [errors, setErrors] = useState({});
@@ -24,7 +23,6 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
-   const [assignmentType, setAssignmentType] = useState('internal'); // 'internal', 'external', or 'self'
 
   const { createTask, isLoading } = useTaskStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
@@ -35,12 +33,10 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   const isPersonalAccount = user?.isPersonal || false;
 
    useEffect(() => {
-     if (isOpen && !isPersonalAccount) {
-       fetchUsers();
-       fetchContactsForAssignment();
-       setAssignmentType('internal');
-     } else if (isOpen && isPersonalAccount) {
-       // For personal accounts, just fetch contacts
+     if (isOpen) {
+       if (!isPersonalAccount) {
+         fetchUsers();
+       }
        fetchContactsForAssignment();
      }
    }, [isOpen, isPersonalAccount, user?.id]); // Only depend on user.id, not the whole user object
@@ -76,31 +72,31 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   // Set assignee after users are loaded and if initialData has assignee name
   useEffect(() => {
     if (initialData?.assignee && users.length > 0 && isOpen) {
-      const matchingUser = users.find(user => 
+      const matchingUser = users.find(user =>
         user.name.toLowerCase().includes(initialData.assignee.toLowerCase()) ||
         initialData.assignee.toLowerCase().includes(user.name.toLowerCase())
       );
       if (matchingUser) {
         setFormData(prev => ({
           ...prev,
-          assigneeId: matchingUser.id.toString()
+          assignee: `user_${matchingUser.id.toString()}`
         }));
       }
     }
   }, [initialData, users, isOpen]);
 
-  // Set default assignee to current user when users are loaded and no assignee is set
+  // Set default assignee to current user when users are loaded and no assignee is set (company accounts only)
   useEffect(() => {
-    if (users.length > 0 && user && isOpen && !formData.assigneeId) {
+    if (!isPersonalAccount && users.length > 0 && user && isOpen && !formData.assignee) {
       const currentUser = users.find(u => u.id === user.id);
       if (currentUser) {
         setFormData(prev => ({
           ...prev,
-          assigneeId: currentUser.id.toString()
+          assignee: `user_${currentUser.id.toString()}`
         }));
       }
     }
-  }, [users, user, isOpen, formData.assigneeId]);
+  }, [users, user, isOpen, formData.assignee, isPersonalAccount]);
 
   const fetchUsers = async () => {
     try {
@@ -113,6 +109,41 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
       setIsLoadingUsers(false);
     }
   };
+
+  // Create unified assignee list combining users and contacts
+  const allAssignees = useMemo(() => {
+    const assignees = [];
+
+    // Add employees (for company accounts)
+    if (!isPersonalAccount) {
+      users.forEach(user => {
+        assignees.push({
+          id: `user_${user.id}`,
+          name: user.name,
+          email: user.email,
+          type: 'user',
+          displayName: user.name,
+          originalId: user.id
+        });
+      });
+    }
+
+    // Add contacts (for both account types)
+    contacts.forEach(contact => {
+      assignees.push({
+        id: `contact_${contact.id}`,
+        name: contact.name,
+        email: contact.email,
+        type: 'contact',
+        displayName: contact.name,
+        originalId: contact.id,
+        company: contact.company,
+        isPersonal: contact.isPersonal
+      });
+    });
+
+    return assignees;
+  }, [users, contacts, isPersonalAccount]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -147,12 +178,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
       newErrors.title = 'Title must be 50 characters or less';
     }
     
-     if (!isPersonalAccount) {
-       if (assignmentType === 'internal' && !formData.assigneeId) {
-         newErrors.assigneeId = 'Internal assignee is required';
-       } else if (assignmentType === 'external' && !formData.externalContactId) {
-         newErrors.externalContactId = 'External contact is required';
-       }
+     if (!isPersonalAccount && !formData.assignee) {
+       newErrors.assignee = 'Assignee is required';
      }
      // Personal accounts: contact assignment is optional (no validation needed)
     
@@ -191,14 +218,25 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
     }
 
      // Prepare the data for creation
+     let assigneeId = null;
+     let externalContactId = null;
+
+     if (formData.assignee) {
+       const [type, id] = formData.assignee.split('_');
+       if (type === 'user') {
+         assigneeId = parseInt(id);
+       } else if (type === 'contact') {
+         externalContactId = parseInt(id);
+       }
+     } else if (isPersonalAccount) {
+       // For personal accounts, if no assignee selected, assign to self
+       assigneeId = user.id;
+     }
+
      const createData = {
        ...formData,
-       assigneeId: isPersonalAccount 
-         ? (formData.externalContactId ? null : user.id) // If contact selected, assign to contact, otherwise self
-         : (assignmentType === 'internal' ? parseInt(formData.assigneeId) : null),
-       externalContactId: isPersonalAccount 
-         ? (formData.externalContactId ? parseInt(formData.externalContactId) : null)
-         : (assignmentType === 'external' ? parseInt(formData.externalContactId) : null),
+       assigneeId,
+       externalContactId,
        dueDate: formData.dueDate // Required, already validated
      };
 
@@ -209,11 +247,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
         title: '',
         description: '',
         priority: 'MEDIUM',
-        assigneeId: user ? user.id.toString() : '',
-        externalContactId: '',
+        assignee: !isPersonalAccount && user ? `user_${user.id.toString()}` : '',
         dueDate: getDefaultDueDate()
       });
-      setAssignmentType('internal');
       setErrors({});
       onClose();
     }
@@ -224,11 +260,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
       title: '',
       description: '',
       priority: 'MEDIUM',
-      assigneeId: user ? user.id.toString() : '',
-      externalContactId: '',
+      assignee: !isPersonalAccount && user ? `user_${user.id.toString()}` : '',
       dueDate: getDefaultDueDate()
     });
-    setAssignmentType('internal');
     setErrors({});
     onClose();
   };
@@ -412,166 +446,96 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
             </div>
           </div>
 
-           {/* Assignment Type - Only show for company accounts */}
+           {/* Assignee Selection - Show for company accounts */}
            {!isPersonalAccount && (
              <div>
-               <label 
+               <label
                  className="block text-sm font-medium mb-2 transition-colors duration-200"
                  style={{ color: 'var(--color-text-secondary)' }}
                >
-                 Assignment Type *
+                 Assign To *
                </label>
-               <div className="flex space-x-4 mb-4">
-                 <label className="flex items-center">
-                   <input
-                     type="radio"
-                     name="assignmentType"
-                     value="internal"
-                     checked={assignmentType === 'internal'}
-                     onChange={(e) => {
-                       setAssignmentType(e.target.value);
-                       setFormData(prev => ({ ...prev, externalContactId: '' }));
-                     }}
-                     className="radio radio-primary mr-2"
-                   />
-                   <span 
+               <SearchableDropdown
+                 options={allAssignees}
+                 value={formData.assignee}
+                 onChange={(value) => {
+                   setFormData(prev => ({ ...prev, assignee: value }));
+                   // Track the selected employee as recent (only for users)
+                   if (value && value.startsWith('user_')) {
+                     const userId = value.split('_')[1];
+                     const selectedEmployee = users.find(user => user.id.toString() === userId);
+                     if (selectedEmployee) {
+                       addToRecentEmployees(selectedEmployee);
+                     }
+                   }
+                 }}
+                 placeholder="Select an employee or contact"
+                 disabled={isLoadingUsers || isLoadingContacts}
+                 error={!!errors.assignee}
+                 recentEmployees={recentEmployees}
+                 getOptionValue={(option) => option.id}
+                 renderOption={(assignee) => (
+                   <div className="flex items-center space-x-2">
+                     <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                     <span>{assignee.displayName}</span>
+                     <span
+                       className="transition-colors duration-200"
+                       style={{ color: 'var(--color-text-tertiary)' }}
+                     >
+                       ({assignee.email})
+                     </span>
+                     {assignee.company && (
+                       <span
+                         className="transition-colors duration-200"
+                         style={{ color: 'var(--color-text-muted)' }}
+                       >
+                         - {assignee.company}
+                       </span>
+                     )}
+                     {assignee.type === 'contact' && (
+                       <span
+                         className="text-xs px-2 py-0.5 rounded transition-colors duration-200"
+                         style={{
+                           backgroundColor: 'var(--color-bg-tertiary)',
+                           color: 'var(--color-text-secondary)'
+                         }}
+                       >
+                         External
+                       </span>
+                     )}
+                   </div>
+                 )}
+               />
+               {errors.assignee && (
+                 <p className="text-red-400 text-sm mt-1">{errors.assignee}</p>
+               )}
+               {(isLoadingUsers || isLoadingContacts) && (
+                 <p
+                   className="text-sm mt-1 transition-colors duration-200"
+                   style={{ color: 'var(--color-text-tertiary)' }}
+                 >
+                   Loading assignees...
+                 </p>
+               )}
+               {allAssignees.length === 0 && !isLoadingUsers && !isLoadingContacts && (
+                 <p
+                   className="text-sm mt-1 transition-colors duration-200"
+                   style={{ color: 'var(--color-text-tertiary)' }}
+                 >
+                   No assignees available. <a
+                     href="/contacts"
                      className="transition-colors duration-200"
-                     style={{ color: 'var(--color-text-secondary)' }}
-                   >
-                     Internal Employee
-                   </span>
-                 </label>
-                 <label className="flex items-center">
-                   <input
-                     type="radio"
-                     name="assignmentType"
-                     value="external"
-                     checked={assignmentType === 'external'}
-                     onChange={(e) => {
-                       setAssignmentType(e.target.value);
-                       setFormData(prev => ({ ...prev, assigneeId: '' }));
+                     style={{ color: 'var(--color-primary-light)' }}
+                     onMouseEnter={(e) => {
+                       e.currentTarget.style.color = 'var(--color-primary)';
                      }}
-                     className="radio radio-primary mr-2"
-                   />
-                   <span 
-                     className="transition-colors duration-200"
-                     style={{ color: 'var(--color-text-secondary)' }}
+                     onMouseLeave={(e) => {
+                       e.currentTarget.style.color = 'var(--color-primary-light)';
+                     }}
                    >
-                     External Contact
-                   </span>
-                 </label>
-               </div>
-
-               {/* Internal Employee Assignment */}
-               {assignmentType === 'internal' && (
-                <div>
-                  <label 
-                    className="block text-sm font-medium mb-2 transition-colors duration-200"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    Select Employee *
-                  </label>
-                  <SearchableDropdown
-                    options={users}
-                    value={formData.assigneeId}
-                    onChange={(value) => {
-                      setFormData(prev => ({ ...prev, assigneeId: value }));
-                      // Track the selected employee as recent
-                      const selectedEmployee = users.find(user => user.id.toString() === value);
-                      if (selectedEmployee) {
-                        addToRecentEmployees(selectedEmployee);
-                      }
-                    }}
-                    placeholder="Select an employee"
-                    disabled={isLoadingUsers}
-                    error={!!errors.assigneeId}
-                    recentEmployees={recentEmployees}
-                  />
-                  {errors.assigneeId && (
-                    <p className="text-red-400 text-sm mt-1">{errors.assigneeId}</p>
-                  )}
-                  {isLoadingUsers && (
-                    <p 
-                      className="text-sm mt-1 transition-colors duration-200"
-                      style={{ color: 'var(--color-text-tertiary)' }}
-                    >
-                      Loading employees...
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* External Contact Assignment */}
-              {assignmentType === 'external' && (
-                <div>
-                  <label 
-                    className="block text-sm font-medium mb-2 transition-colors duration-200"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    Select Contact *
-                  </label>
-                  <SearchableDropdown
-                    options={contacts}
-                    value={formData.externalContactId}
-                    onChange={(value) => {
-                      setFormData(prev => ({ ...prev, externalContactId: value }));
-                    }}
-                    placeholder="Select a contact"
-                    disabled={isLoadingContacts}
-                    error={!!errors.externalContactId}
-                    renderOption={(contact) => (
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-2 h-2 rounded-full ${contact.isPersonal ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                        <span>{contact.name}</span>
-                        <span 
-                          className="transition-colors duration-200"
-                          style={{ color: 'var(--color-text-tertiary)' }}
-                        >
-                          ({contact.email})
-                        </span>
-                        {contact.company && (
-                          <span 
-                            className="transition-colors duration-200"
-                            style={{ color: 'var(--color-text-muted)' }}
-                          >
-                            - {contact.company}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  />
-                  {errors.externalContactId && (
-                    <p className="text-red-400 text-sm mt-1">{errors.externalContactId}</p>
-                  )}
-                  {isLoadingContacts && (
-                    <p 
-                      className="text-sm mt-1 transition-colors duration-200"
-                      style={{ color: 'var(--color-text-tertiary)' }}
-                    >
-                      Loading contacts...
-                    </p>
-                  )}
-                  {contacts.length === 0 && !isLoadingContacts && (
-                    <p 
-                      className="text-sm mt-1 transition-colors duration-200"
-                      style={{ color: 'var(--color-text-tertiary)' }}
-                    >
-                      No contacts available. <a 
-                        href="/contacts" 
-                        className="transition-colors duration-200"
-                        style={{ color: 'var(--color-primary-light)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = 'var(--color-primary)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = 'var(--color-primary-light)';
-                        }}
-                      >
-                        Add contacts
-                      </a> to assign tasks externally.
-                    </p>
-                  )}
-                </div>
+                     Add contacts
+                   </a> to assign tasks externally.
+                 </p>
                )}
              </div>
            )}
@@ -579,55 +543,79 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
            {/* Optional Contact Assignment - Only for personal accounts */}
            {isPersonalAccount && (
              <div>
-               <label 
+               <label
                  className="block text-sm font-medium mb-2 transition-colors duration-200"
                  style={{ color: 'var(--color-text-secondary)' }}
                >
                  Assign to Contact (Optional)
                </label>
                <div className="mb-2">
-                 <p 
+                 <p
                    className="text-sm mb-3 transition-colors duration-200"
                    style={{ color: 'var(--color-text-tertiary)' }}
                  >
                    Leave blank to assign to yourself, or select a contact to assign to them.
                  </p>
                  <SearchableDropdown
-                   options={contacts}
-                   value={formData.externalContactId}
+                   options={allAssignees}
+                   value={formData.assignee}
                    onChange={(value) => {
-                     setFormData(prev => ({ ...prev, externalContactId: value }));
+                     setFormData(prev => ({ ...prev, assignee: value }));
                    }}
                    placeholder="Select a contact (optional)"
                    disabled={isLoadingContacts}
-                   error={!!errors.externalContactId}
-                   renderOption={(contact) => (
+                   error={!!errors.assignee}
+                   getOptionValue={(option) => option.id}
+                   renderOption={(assignee) => (
                      <div className="flex items-center space-x-2">
-                       <div className={`w-2 h-2 rounded-full ${contact.isPersonal ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                       <span>{contact.name}</span>
-                       <span className="text-gray-400">({contact.email})</span>
-                       {contact.company && <span className="text-gray-500">- {contact.company}</span>}
+                       <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                       <span>{assignee.displayName}</span>
+                       <span
+                         className="transition-colors duration-200"
+                         style={{ color: 'var(--color-text-tertiary)' }}
+                       >
+                         ({assignee.email})
+                       </span>
+                       {assignee.company && (
+                         <span
+                           className="transition-colors duration-200"
+                           style={{ color: 'var(--color-text-muted)' }}
+                         >
+                           - {assignee.company}
+                         </span>
+                       )}
+                       {assignee.type === 'contact' && (
+                         <span
+                           className="text-xs px-2 py-0.5 rounded transition-colors duration-200"
+                           style={{
+                             backgroundColor: 'var(--color-bg-tertiary)',
+                             color: 'var(--color-text-secondary)'
+                           }}
+                         >
+                           External
+                         </span>
+                       )}
                      </div>
                    )}
                  />
-                 {errors.externalContactId && (
-                   <p className="text-red-400 text-sm mt-1">{errors.externalContactId}</p>
+                 {errors.assignee && (
+                   <p className="text-red-400 text-sm mt-1">{errors.assignee}</p>
                  )}
                  {isLoadingContacts && (
-                   <p 
+                   <p
                      className="text-sm mt-1 transition-colors duration-200"
                      style={{ color: 'var(--color-text-tertiary)' }}
                    >
                      Loading contacts...
                    </p>
                  )}
-                 {contacts.length === 0 && !isLoadingContacts && (
-                   <p 
+                 {allAssignees.length === 0 && !isLoadingContacts && (
+                   <p
                      className="text-sm mt-1 transition-colors duration-200"
                      style={{ color: 'var(--color-text-tertiary)' }}
                    >
-                     No contacts available. <a 
-                       href="/contacts" 
+                     No contacts available. <a
+                       href="/contacts"
                        className="transition-colors duration-200"
                        style={{ color: 'var(--color-primary-light)' }}
                        onMouseEnter={(e) => {

@@ -787,8 +787,8 @@ const updateTask = async (req, res) => {
         }
         allowedUpdates.dueDate = new Date(finalDueDate);
       } else {
-        // If due date is not being updated, ensure existing task has a due date
-        if (!task.dueDate) {
+        // If due date is not being updated, ensure existing task has a due date (unless it's a draft)
+        if (!task.dueDate && !task.isDraft) {
           return res.status(400).json({ error: 'Task must have a due date. Please provide one.' });
         }
       }
