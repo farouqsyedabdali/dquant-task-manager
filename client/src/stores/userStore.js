@@ -90,6 +90,20 @@ const useUserStore = create((set, get) => ({
     }
   },
 
+  // Resend employee invitation
+  resendEmployeeInvitation: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      await usersAPI.resendEmployeeInvitation(id);
+      set({ isLoading: false });
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Failed to resend invitation';
+      set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage };
+    }
+  },
+
   // Add employee to recent list
   addToRecentEmployees: (employee) => {
     set(state => {

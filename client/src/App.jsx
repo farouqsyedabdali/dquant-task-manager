@@ -19,6 +19,7 @@ import Calendar from './pages/Calendar';
 import LandingPage from './pages/LandingPage';
 import TaskInvitation from './pages/TaskInvitation';
 import EmailVerification from './pages/EmailVerification';
+import EmployeeSetup from './pages/EmployeeSetup';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Contacts from './pages/Contacts';
 import Projects from './pages/Projects';
@@ -82,6 +83,7 @@ function AppContent() {
           <Route path="/auth/google/callback" element={<GoogleCallback />} />
           <Route path="/task-invitation/:token" element={<TaskInvitation />} />
           <Route path="/verify-email" element={<EmailVerification />} />
+          <Route path="/complete-employee-setup" element={<EmployeeSetup />} />
           
           {/* Popup Route (no header/layout) */}
           <Route path="/popup" element={<TaskPopup />} />

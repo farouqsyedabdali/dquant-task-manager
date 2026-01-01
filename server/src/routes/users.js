@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllUsers, getEmployeesForAssignment, getUserById, createEmployee, updateUser, deleteEmployee, resetUserPassword, deleteCompany } = require('../controllers/userController');
+const { getAllUsers, getEmployeesForAssignment, getUserById, createEmployee, updateUser, deleteEmployee, resetUserPassword, deleteCompany, resendEmployeeInvitation } = require('../controllers/userController');
 const auth = require('../middleware/auth');
 const { adminOnly } = require('../middleware/roleCheck');
 
@@ -20,6 +20,9 @@ router.get('/:id', getUserById);
 
 // Create new employee
 router.post('/', createEmployee);
+
+// Resend employee invitation
+router.post('/:id/resend-invitation', resendEmployeeInvitation);
 
 // Update employee
 router.put('/:id', updateUser);

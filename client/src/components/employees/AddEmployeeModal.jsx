@@ -7,8 +7,6 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
     email: '',
     department: 'Default Department',
     position: 'Default Position',
-    password: '',
-    confirmPassword: '',
     role: 'EMPLOYEE'
   });
   const [errors, setErrors] = useState({});
@@ -33,34 +31,24 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
     }
-    
+
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
-    
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -70,7 +58,6 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
       email: formData.email.trim(),
       department: formData.department.trim(),
       position: formData.position.trim(),
-      password: formData.password,
       role: formData.role
     });
 
@@ -80,8 +67,6 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
         email: '',
         department: 'Default Department',
         position: 'Default Position',
-        password: '',
-        confirmPassword: '',
         role: 'EMPLOYEE'
       });
       setErrors({});
@@ -93,8 +78,8 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
     setFormData({
       name: '',
       email: '',
-      password: '',
-      confirmPassword: '',
+      department: 'Default Department',
+      position: 'Default Position',
       role: 'EMPLOYEE'
     });
     setErrors({});
@@ -259,56 +244,21 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
             </p>
           </div>
 
-          {/* Password */}
-          <div>
-            <label
-              className="block text-sm font-medium mb-1"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Password *
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className={`input w-full ${errors.password ? 'border-red-500' : ''}`}
-              style={{
-                backgroundColor: 'var(--color-bg-tertiary)',
-                borderColor: errors.password ? '#ef4444' : 'var(--color-border-default)',
-                color: 'var(--color-text-primary)',
-              }}
-              placeholder="Enter password"
-            />
-            {errors.password && (
-              <p className="text-red-400 text-sm mt-1">{errors.password}</p>
-            )}
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <label
-              className="block text-sm font-medium mb-1"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Confirm Password *
-            </label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              className={`input w-full ${errors.confirmPassword ? 'border-red-500' : ''}`}
-              style={{
-                backgroundColor: 'var(--color-bg-tertiary)',
-                borderColor: errors.confirmPassword ? '#ef4444' : 'var(--color-border-default)',
-                color: 'var(--color-text-primary)',
-              }}
-              placeholder="Confirm password"
-            />
-            {errors.confirmPassword && (
-              <p className="text-red-400 text-sm mt-1">{errors.confirmPassword}</p>
-            )}
+          {/* Invitation Notice */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-start space-x-2">
+              <div className="text-blue-500 mt-0.5">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-blue-800 font-medium">Invitation will be sent</p>
+                <p className="text-xs text-blue-600 mt-1">
+                  An email invitation will be sent to this employee with instructions to complete their account setup.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Submit Buttons */}
@@ -330,7 +280,7 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
               type="submit"
               disabled={isLoading}
               className="btn border-0"
-              style={{ 
+              style={{
                 backgroundColor: 'var(--color-primary)',
                 color: 'white'
               }}
@@ -340,10 +290,10 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
               {isLoading ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>
-                  Creating...
+                  Sending Invitation...
                 </>
               ) : (
-                'Add Employee'
+                'Send Invitation'
               )}
             </button>
           </div>

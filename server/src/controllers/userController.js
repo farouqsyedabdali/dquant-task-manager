@@ -1,6 +1,9 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { logAuditActionDirect } = require('../middleware/auditLogger');
+const emailService = require('../services/emailService');
+const employeeInvitationEmail = require('../templates/employeeInvitationEmail');
 
 const prisma = new PrismaClient();
 
@@ -97,13 +100,13 @@ const getUserById = async (req, res) => {
 // Create new employee
 const createEmployee = async (req, res) => {
   try {
-    const { name, email, password, role = 'EMPLOYEE', department = 'Default Department', position = 'Default Position' } = req.body;
+    const { name, email, role = 'EMPLOYEE', department = 'Default Department', position = 'Default Position' } = req.body;
     const companyId = req.user.companyId;
     const currentUserRole = req.user.role;
 
     // Validate required fields
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
+    if (!name || !email) {
+      return res.status(400).json({ error: 'Name and email are required' });
     }
 
     // Validate role
@@ -128,19 +131,22 @@ const createEmployee = async (req, res) => {
       return res.status(400).json({ error: 'Email already exists in this company' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Generate invitation token and expiry (24 hours)
+    const invitationToken = crypto.randomBytes(32).toString('hex');
+    const invitationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Create new user
+    // Create new user (without password - will be set during invitation completion)
     const newUser = await prisma.user.create({
       data: {
         name,
         email,
-        password: hashedPassword,
         role: role,
         department,
         position,
-        companyId
+        companyId,
+        invitationToken,
+        invitationExpires,
+        invitationSentAt: new Date()
       },
       select: {
         id: true,
@@ -148,9 +154,39 @@ const createEmployee = async (req, res) => {
         email: true,
         role: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        invitationToken: true,
+        invitationExpires: true,
+        invitationSentAt: true
       }
     });
+
+    // Get company name for email
+    const company = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { name: true }
+    });
+
+    // Send invitation email
+    try {
+      const invitationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/complete-employee-setup?token=${invitationToken}`;
+      const emailTemplate = employeeInvitationEmail(
+        newUser.name,
+        req.user.name,
+        company?.name || 'Your Company',
+        invitationUrl
+      );
+
+      await emailService.sendEmail({
+        to: newUser.email,
+        subject: emailTemplate.subject,
+        html: emailTemplate.html,
+        text: emailTemplate.text
+      });
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError);
+      // Don't fail the user creation if email fails, but log it
+    }
 
     // Log audit action
     await logAuditActionDirect(req, 'USER_CREATED', 'User', {
@@ -159,13 +195,117 @@ const createEmployee = async (req, res) => {
       metadata: {
         userEmail: newUser.email,
         userRole: newUser.role,
-        createdBy: req.user.name
+        createdBy: req.user.name,
+        invitationSent: true
       }
     });
 
-    res.status(201).json(newUser);
+    res.status(201).json({
+      ...newUser,
+      invitationStatus: 'sent'
+    });
   } catch (error) {
     console.error('Create user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Resend employee invitation
+const resendEmployeeInvitation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const companyId = req.user.companyId;
+    const currentUserRole = req.user.role;
+
+    // Only admins and sysadmins can resend invitations
+    if (!['ADMIN', 'SYSDMIN'].includes(currentUserRole)) {
+      return res.status(403).json({ error: 'Only administrators can resend invitations' });
+    }
+
+    // Get the user
+    const user = await prisma.user.findFirst({
+      where: {
+        id: parseInt(id),
+        companyId: companyId
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    // Check if user already has a password (already completed setup)
+    if (user.password) {
+      return res.status(400).json({ error: 'Employee has already completed account setup' });
+    }
+
+    // Generate new invitation token and expiry
+    const invitationToken = crypto.randomBytes(32).toString('hex');
+    const invitationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Update user with new invitation
+    const updatedUser = await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: {
+        invitationToken,
+        invitationExpires,
+        invitationSentAt: new Date()
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        invitationToken: true,
+        invitationExpires: true,
+        invitationSentAt: true
+      }
+    });
+
+    // Get company name for email
+    const company = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { name: true }
+    });
+
+    // Send invitation email
+    try {
+      const invitationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/complete-employee-setup?token=${invitationToken}`;
+      const emailTemplate = employeeInvitationEmail(
+        updatedUser.name,
+        req.user.name,
+        company?.name || 'Your Company',
+        invitationUrl
+      );
+
+      await emailService.sendEmail({
+        to: updatedUser.email,
+        subject: emailTemplate.subject,
+        html: emailTemplate.html,
+        text: emailTemplate.text
+      });
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError);
+      return res.status(500).json({ error: 'Failed to send invitation email' });
+    }
+
+    // Log audit action
+    await logAuditActionDirect(req, 'USER_INVITATION_RESENT', 'User', {
+      entityId: updatedUser.id,
+      userName: updatedUser.name,
+      metadata: {
+        userEmail: updatedUser.email,
+        resentBy: req.user.name
+      }
+    });
+
+    res.json({
+      message: 'Invitation resent successfully',
+      user: updatedUser,
+      invitationStatus: 'resent'
+    });
+
+  } catch (error) {
+    console.error('Resend invitation error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -446,5 +586,6 @@ module.exports = {
   updateUser,
   deleteEmployee,
   resetUserPassword,
-  deleteCompany
+  deleteCompany,
+  resendEmployeeInvitation
 }; 

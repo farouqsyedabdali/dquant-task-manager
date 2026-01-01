@@ -729,6 +729,109 @@ const resetPasswordWithCode = async (req, res) => {
   }
 };
 
+// Complete employee account setup (set password after invitation)
+const completeEmployeeSetup = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Invitation token and password are required' });
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    // Find user by invitation token
+    const user = await prisma.user.findFirst({
+      where: {
+        invitationToken: token,
+        invitationExpires: {
+          gt: new Date()
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired invitation token' });
+    }
+
+    // Check if user already has a password (already completed setup)
+    if (user.password) {
+      return res.status(400).json({ error: 'Account setup has already been completed' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update user with password and clear invitation data
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        invitationToken: null,
+        invitationExpires: null,
+        invitationSentAt: null,
+        isEmailVerified: true // Mark email as verified since they completed setup
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        companyId: true,
+        department: true,
+        position: true
+      }
+    });
+
+    // Get company info for JWT
+    const company = await prisma.company.findUnique({
+      where: { id: updatedUser.companyId },
+      select: { id: true, name: true, isPersonal: true }
+    });
+
+    // Generate JWT token
+    const token_payload = {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      role: updatedUser.role,
+      companyId: updatedUser.companyId,
+      companyName: company.name,
+      isPersonal: company.isPersonal,
+      department: updatedUser.department,
+      position: updatedUser.position
+    };
+
+    const jwt_token = jwt.sign(token_payload, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+    });
+
+    console.log('✅ EMPLOYEE SETUP COMPLETED:', {
+      userId: updatedUser.id,
+      email: updatedUser.email,
+      company: company.name,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'Account setup completed successfully',
+      token: jwt_token,
+      user: {
+        ...updatedUser,
+        company: company
+      }
+    });
+
+  } catch (error) {
+    console.error('Complete employee setup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -739,5 +842,6 @@ module.exports = {
   updateAutoArchivePeriod,
   forgotPassword,
   verifyPasswordResetCode,
-  resetPasswordWithCode
+  resetPasswordWithCode,
+  completeEmployeeSetup
 }; 

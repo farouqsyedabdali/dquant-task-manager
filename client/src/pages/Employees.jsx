@@ -20,7 +20,7 @@ const Employees = () => {
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [resetPasswordEmployee, setResetPasswordEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-      const { users, fetchUsers, deleteEmployee, createEmployee, isLoading, error } = useUserStore();
+      const { users, fetchUsers, deleteEmployee, createEmployee, resendEmployeeInvitation, isLoading, error } = useUserStore();
     const { user, isAdmin, isSysAdmin } = useAuthStore();
 
   useEffect(() => {
@@ -267,6 +267,20 @@ const Employees = () => {
   const handleResetPassword = (employee) => {
     setResetPasswordEmployee(employee);
     setIsResetPasswordModalOpen(true);
+  };
+
+  // Handle resend invitation
+  const handleResendInvitation = async (employeeId, employeeName) => {
+    if (!window.confirm(`Are you sure you want to resend the invitation to ${employeeName}?`)) {
+      return;
+    }
+
+    const result = await resendEmployeeInvitation(employeeId);
+    if (result.success) {
+      alert(`Invitation resent successfully to ${employeeName}`);
+    } else {
+      alert(`Failed to resend invitation: ${result.error}`);
+    }
   };
 
   return (
@@ -535,9 +549,18 @@ const Employees = () => {
                         {employee.position}
                       </td>
                       <td className="py-4">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleColor(employee.role)}`}>
-                          {getRoleLabel(employee.role)}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleColor(employee.role)}`}>
+                            {getRoleLabel(employee.role)}
+                          </span>
+                          {/* Show invitation status */}
+                          {employee.invitationToken && !employee.password && (
+                            <div className="badge badge-warning badge-sm">Pending Setup</div>
+                          )}
+                          {employee.invitationToken && employee.password && (
+                            <div className="badge badge-success badge-sm">Active</div>
+                          )}
+                        </div>
                       </td>
                       <td
                         className="py-4"
@@ -547,8 +570,24 @@ const Employees = () => {
                       </td>
                       <td className="py-4">
                         <div className="flex space-x-2">
+                          {/* Show resend invitation button for employees who haven't completed setup */}
+                          {employee.invitationToken && !employee.password && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleResendInvitation(employee.id, employee.name);
+                              }}
+                              className="btn btn-sm btn-outline btn-info"
+                              title="Resend invitation"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          )}
+
                           {/* Show password reset button for all users except current user */}
-                          {employee.id !== user?.id && (
+                          {employee.id !== user?.id && employee.password && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();

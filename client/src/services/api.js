@@ -59,6 +59,7 @@ export const authAPI = {
   sendVerificationEmail: (email) => api.post('/email-verification/send', email),
   verifyEmail: (token) => api.post('/email-verification/verify', token),
   checkVerificationStatus: (email) => api.get(`/email-verification/status?email=${email}`),
+  completeEmployeeSetup: (setupData) => api.post('/auth/complete-employee-setup', setupData),
   
   // Forgot password API
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
@@ -101,6 +102,7 @@ export const usersAPI = {
   updateUser: (id, userData) => api.put(`/users/${id}`, userData),
   resetUserPassword: (id, newPassword) => api.put(`/users/${id}/reset-password`, { newPassword }),
   deleteEmployee: (id) => api.delete(`/users/${id}`),
+  resendEmployeeInvitation: (id) => api.post(`/users/${id}/resend-invitation`),
 };
 
 // AI API
