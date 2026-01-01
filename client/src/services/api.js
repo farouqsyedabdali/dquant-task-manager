@@ -156,9 +156,10 @@ export const taskInvitationAPI = {
   getByToken: (token) => api.get(`/task-invitations/${token}`),
   // Auth required endpoints
   acceptInvitation: (token) => api.post(`/task-invitations/${token}/accept`),
-  declineInvitation: (token) => api.post(`/task-invitations/${token}/decline`),
+  declineInvitation: (token, data) => api.post(`/task-invitations/${token}/decline`, data),
   getReceived: () => api.get('/task-invitations/user/received'),
   getSent: () => api.get('/task-invitations/user/sent'),
+  getPending: () => api.get('/task-invitations/pending'),
 };
 
 // Feedback API (no auth required)

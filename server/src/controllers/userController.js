@@ -169,7 +169,15 @@ const createEmployee = async (req, res) => {
 
     // Send invitation email
     try {
-      const invitationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/complete-employee-setup?token=${invitationToken}`;
+      const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].replace(/\/$/, '');
+      const invitationUrl = `${clientUrl}/employee-setup/${invitationToken}`;
+
+      // Debug logging
+      console.log('🎯 Employee Invitation Debug (createEmployee):');
+      console.log('  CLIENT_URL env var:', process.env.CLIENT_URL);
+      console.log('  clientUrl used:', clientUrl);
+      console.log('  invitationUrl generated:', invitationUrl);
+
       const emailTemplate = employeeInvitationEmail(
         newUser.name,
         req.user.name,
@@ -269,7 +277,15 @@ const resendEmployeeInvitation = async (req, res) => {
 
     // Send invitation email
     try {
-      const invitationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/complete-employee-setup?token=${invitationToken}`;
+      const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].replace(/\/$/, '');
+      const invitationUrl = `${clientUrl}/employee-setup/${invitationToken}`;
+
+      // Debug logging
+      console.log('🎯 Employee Invitation Debug (resendEmployeeInvitation):');
+      console.log('  CLIENT_URL env var:', process.env.CLIENT_URL);
+      console.log('  clientUrl used:', clientUrl);
+      console.log('  invitationUrl generated:', invitationUrl);
+
       const emailTemplate = employeeInvitationEmail(
         updatedUser.name,
         req.user.name,

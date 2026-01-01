@@ -15,6 +15,7 @@ import TaskFilters from '../components/tasks/TaskFilters';
 import ArchiveSwitcher from '../components/tasks/ArchiveSwitcher';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import NotificationBoard from '../components/notifications/NotificationBoard';
+import PendingInvitations from '../components/dashboard/PendingInvitations';
 import IconButton from '../components/common/IconButton';
 import { FaPlus, FaTimes } from 'react-icons/fa';
 
@@ -1047,7 +1048,8 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           />
         </div>
 
-        
+        {/* Pending Invitations */}
+        <PendingInvitations />
 
         {/* Filters */}
         <div className="mb-6">

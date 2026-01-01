@@ -3,6 +3,12 @@ const cors = require('cors')
 const cookieParser = require('cookie-parser')
 require('dotenv').config()
 
+// Debug environment variables on startup
+console.log('🔧 Environment Debug:');
+console.log('  CLIENT_URL:', process.env.CLIENT_URL);
+console.log('  NODE_ENV:', process.env.NODE_ENV);
+console.log('  PORT:', process.env.PORT);
+
 const authRoutes = require('./routes/auth')
 const taskRoutes = require('./routes/tasks')
 const commentRoutes = require('./routes/comments')
@@ -71,6 +77,21 @@ app.use('/api/templates', templateRoutes)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Task Manager API is running' })
 })
+
+// Debug environment variables endpoint
+app.get('/api/debug/env', (req, res) => {
+  res.json({
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      CLIENT_URL: process.env.CLIENT_URL,
+      PORT: process.env.PORT,
+      DATABASE_URL: process.env.DATABASE_URL ? '[SET]' : '[NOT SET]',
+      JWT_SECRET: process.env.JWT_SECRET ? '[SET]' : '[NOT SET]',
+      RESEND_API_KEY: process.env.RESEND_API_KEY ? '[SET]' : '[NOT SET]'
+    }
+  });
+});
 
 // Database test endpoint
 app.get('/api/test-db', async (req, res) => {

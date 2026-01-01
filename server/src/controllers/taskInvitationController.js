@@ -599,6 +599,78 @@ const taskInvitationController = {
       console.error('Error getting sent invitations:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
+  },
+
+  /**
+   * Get pending invitations for current user (based on their email)
+   * GET /api/task-invitations/pending
+   */
+  async getPendingInvitations(req, res) {
+    try {
+      const userId = req.user.id;
+      const userEmail = req.user.email;
+
+      // Get all pending invitations sent to this user's email
+      const invitations = await prisma.taskInvitation.findMany({
+        where: {
+          recipientEmail: userEmail.toLowerCase(),
+          status: 'PENDING'
+        },
+        include: {
+          task: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              priority: true,
+              dueDate: true,
+              status: true,
+              projectId: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                  color: true
+                }
+              }
+            }
+          },
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      // Filter out expired invitations and update their status
+      const validInvitations = [];
+      for (const invitation of invitations) {
+        if (isExpired(invitation)) {
+          // Update status to expired
+          await prisma.taskInvitation.update({
+            where: { id: invitation.id },
+            data: { status: 'EXPIRED' }
+          });
+        } else {
+          validInvitations.push(invitation);
+        }
+      }
+
+      res.json({
+        invitations: validInvitations,
+        count: validInvitations.length
+      });
+
+    } catch (error) {
+      console.error('Error getting pending invitations:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }
 };
 
