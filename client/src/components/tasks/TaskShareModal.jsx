@@ -1,17 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
-import { taskShareAPI, usersAPI, contactsAPI } from '../../services/api';
+import { taskShareAPI, usersAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
 import IconButton from '../common/IconButton';
 import useAuthStore from '../../context/authStore';
+import useContactStore from '../../stores/contactStore';
 import { FaShare, FaTimes } from 'react-icons/fa';
 
 const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
   const { user } = useAuthStore();
+  const { contacts, fetchContacts } = useContactStore();
   const [users, setUsers] = useState([]);
-  const [contacts, setContacts] = useState([]);
   const [sharedWith, setSharedWith] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingShares, setIsLoadingShares] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState(''); // Unified field for user_id or contact_id
   const [recipientEmail, setRecipientEmail] = useState('');
   const [permissionLevel, setPermissionLevel] = useState('VIEWER'); // 'VIEWER' or 'COMMENTER'
@@ -25,10 +27,10 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
       if (!isPersonalAccount) {
         fetchUsers();
       }
-      fetchContacts();
+      fetchContacts(); // Now uses the store's fetchContacts
       fetchTaskShares();
     }
-  }, [isOpen, task, isPersonalAccount]);
+  }, [isOpen, task, isPersonalAccount, fetchContacts]);
 
   // Unified list of all available recipients (employees + contacts)
   const allRecipients = useMemo(() => {
@@ -37,11 +39,13 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
     // Add employees (if not personal account)
     if (!isPersonalAccount) {
       const employeeOptions = users
-        .filter(user =>
-          user.id !== task.assigneeId && // Not the lead assignee
-          !task.coAssignees?.some(co => co.userId === user.id) && // Not a co-assignee
-          !sharedWith.some(share => share.userId === user.id) // Not already shared
-        )
+        .filter(user => {
+          const isAssignee = user.id === task?.assigneeId;
+          const isCoAssignee = task?.coAssignees?.some(co => co.userId === user.id);
+          const isShared = sharedWith.some(share => share.userId === user.id);
+
+          return !isAssignee && !isCoAssignee && !isShared;
+        })
         .map(user => ({
           id: `user_${user.id}`,
           name: user.name,
@@ -49,14 +53,16 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
           displayName: user.name,
           type: 'user'
         }));
+
       recipientOptions.push(...employeeOptions);
     }
 
     // Add contacts
     const contactOptions = contacts
-      .filter(contact =>
-        !sharedWith.some(share => share.contactId === contact.id) // Not already shared
-      )
+      .filter(contact => {
+        const isAlreadyShared = sharedWith.some(share => share.contactId === contact.id);
+        return !isAlreadyShared;
+      })
       .map(contact => ({
         id: `contact_${contact.id}`,
         name: contact.name,
@@ -65,32 +71,34 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
         type: 'contact',
         isPersonal: contact.isPersonal
       }));
+
     recipientOptions.push(...contactOptions);
 
     return recipientOptions;
-  }, [users, contacts, task.assigneeId, task.coAssignees, sharedWith, isPersonalAccount]);
+  }, [
+    JSON.stringify(users.map(u => ({id: u.id, name: u.name}))),
+    JSON.stringify(contacts.map(c => ({id: c.id, name: c.name}))),
+    JSON.stringify(sharedWith.map(s => ({userId: s.userId, contactId: s.contactId}))),
+    task?.assigneeId,
+    JSON.stringify(task?.coAssignees?.map(c => c.userId) || []),
+    isPersonalAccount
+  ]);
 
   const fetchUsers = async () => {
     try {
+      setIsLoadingUsers(true);
       const response = await usersAPI.getEmployees();
       setUsers(response.data);
     } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
-
-  const fetchContacts = async () => {
-    try {
-      const response = await contactsAPI.getContacts();
-      setContacts(response.data.contacts || []);
-    } catch (error) {
-      console.error('Error fetching contacts:', error);
+      console.error('❌ Error fetching users:', error);
+    } finally {
+      setIsLoadingUsers(false);
     }
   };
 
   const fetchTaskShares = async () => {
     if (!task) return;
-    
+
     try {
       setIsLoadingShares(true);
       const response = await taskShareAPI.getTaskShares(task.id);
@@ -313,6 +321,7 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
                 onChange={setSelectedRecipient}
                 placeholder="Select an employee or contact..."
                 className="w-full"
+                disabled={isLoadingUsers}
                 renderOption={(recipient) => (
                   <div className="flex items-center space-x-2">
                     <div className={`w-2 h-2 rounded-full ${recipient.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>

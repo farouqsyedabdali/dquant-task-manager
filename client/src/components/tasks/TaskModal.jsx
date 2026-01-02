@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import useTaskStore from '../../stores/taskStore';
 import useAuthStore from '../../context/authStore';
@@ -57,6 +57,36 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
+
+  // Unified list of all available assignees (employees + contacts)
+  const allAssignees = useMemo(() => {
+    const assigneeOptions = [];
+
+    // Add employees (if not personal account)
+    if (!isPersonalAccount) {
+      const employeeOptions = users.map(user => ({
+        id: user.id.toString(),
+        name: user.name,
+        email: user.email,
+        displayName: user.name,
+        type: 'user'
+      }));
+      assigneeOptions.push(...employeeOptions);
+    }
+
+    // Add contacts
+    const contactOptions = contacts.map(contact => ({
+      id: `contact_${contact.id}`,
+      name: contact.name,
+      email: contact.email,
+      displayName: contact.name,
+      type: 'contact',
+      isPersonal: contact.isPersonal
+    }));
+    assigneeOptions.push(...contactOptions);
+
+    return assigneeOptions;
+  }, [users, contacts, isPersonalAccount]);
 
   // Check if current user is viewing a shared task (view-only access)
   const isSharedTask = viewedTask?.sharedWith?.some(share => share.userId === user?.id);
@@ -120,9 +150,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           fetchUsers();
         }
         fetchCoAssignees(task.id);
-        if (isPersonalAccount) {
-          fetchContactsForTask();
-        }
+        fetchContactsForTask(); // Fetch contacts for all account types
       }
     }
   }, [isOpen, task, fetchCoAssignees, isPersonalAccount]);
@@ -1352,18 +1380,48 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                               Change Assignee
                             </h4>
                             <SearchableDropdown
-                              options={users}
-                              value={formData.assigneeId}
+                              options={allAssignees}
+                              value={formData.assigneeId || (formData.externalContactId ? `contact_${formData.externalContactId}` : '')}
                               onChange={(value) => {
-                                setFormData(prev => ({ ...prev, assigneeId: value }));
-                                const selectedEmployee = users.find(user => user.id.toString() === value);
-                                if (selectedEmployee) {
-                                  addToRecentEmployees(selectedEmployee);
+                                if (value.startsWith('contact_')) {
+                                  // Selected a contact
+                                  const contactId = value.split('_')[1];
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    assigneeId: '',
+                                    externalContactId: contactId
+                                  }));
+                                } else {
+                                  // Selected an employee
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    assigneeId: value,
+                                    externalContactId: ''
+                                  }));
+                                  const selectedEmployee = users.find(user => user.id.toString() === value);
+                                  if (selectedEmployee) {
+                                    addToRecentEmployees(selectedEmployee);
+                                  }
                                 }
                               }}
-                              placeholder="Select an employee"
-                              disabled={isLoadingUsers}
+                              placeholder="Select an employee or contact"
+                              disabled={isLoadingUsers || isLoadingContacts}
                               recentEmployees={recentEmployees}
+                              renderOption={(assignee) => (
+                                <div className="flex items-center space-x-2">
+                                  <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                                  <span>{assignee.displayName || assignee.name}</span>
+                                  <span style={{ color: 'var(--color-text-tertiary)' }}>({assignee.email})</span>
+                                  {assignee.type === 'contact' && (
+                                    <span className="text-xs px-2 py-0.5 rounded" style={{
+                                      backgroundColor: 'var(--color-bg-tertiary)',
+                                      color: 'var(--color-text-secondary)'
+                                    }}>
+                                      External
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             />
                           </div>
                         )}

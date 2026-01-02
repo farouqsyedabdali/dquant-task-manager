@@ -329,9 +329,9 @@ const getTaskShares = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Check if current user is the lead assignee (only lead assignee can view shares)
-    if (task.assigneeId !== currentUserId) {
-      return res.status(403).json({ error: 'Only the lead assignee can view task shares' });
+    // Check if current user is the lead assignee or task creator (both can view shares)
+    if (task.assigneeId !== currentUserId && task.assignerId !== currentUserId) {
+      return res.status(403).json({ error: 'Only the lead assignee or task creator can view task shares' });
     }
 
     const shares = await prisma.taskShare.findMany({

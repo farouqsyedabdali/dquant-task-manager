@@ -998,10 +998,23 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
             </div>
             <div className="flex items-center space-x-4">
               {/* ViewSwitcher removed - only card view is shown */}
-              
+
               {/* Notification Board */}
               <NotificationBoard />
-              
+
+              {/* Pending Invitations Button */}
+              {pendingInvitations.length > 0 && (
+                <IconButton
+                  icon={<FaEnvelope />}
+                  label={`Pending Invites (${pendingInvitations.length})`}
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsPendingInvitationsModalOpen(true)}
+                  disabled={isLoadingInvitations}
+                  style={{ backgroundColor: '#ea580c', color: 'white' }}
+                />
+              )}
+
               <IconButton
                 icon={<FaPlus />}
                 label="Add New Task"
@@ -1087,24 +1100,10 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
             >
               {archiveView === 'archived' ? 'Archived Tasks' : 'All Tasks'} ({filteredTasks.length})
             </h2>
-            <div className="flex items-center space-x-3">
-              {/* Pending Invitations Button */}
-              {pendingInvitations.length > 0 && (
-                <IconButton
-                  icon={<FaEnvelope />}
-                  label={`Pending Invites (${pendingInvitations.length})`}
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsPendingInvitationsModalOpen(true)}
-                  disabled={isLoadingInvitations}
-                />
-              )}
-
-              <ArchiveSwitcher
-                currentView={archiveView}
-                onViewChange={setArchiveView}
-              />
-            </div>
+            <ArchiveSwitcher
+              currentView={archiveView}
+              onViewChange={setArchiveView}
+            />
           </div>
           
           {filteredTasks.length === 0 ? (
