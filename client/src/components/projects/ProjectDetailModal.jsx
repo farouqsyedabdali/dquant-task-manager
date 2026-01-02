@@ -187,12 +187,10 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
     if (!window.confirm(`Are you sure you want to delete ${count} draft task${count > 1 ? 's' : ''}?`)) return;
 
     try {
-      // Delete all selected tasks
-      const deletePromises = Array.from(selectedDraftTasks).map(taskId =>
-        projectsAPI.removeTask(projectId, taskId)
-      );
-
-      await Promise.all(deletePromises);
+      // Delete tasks sequentially to avoid overwhelming database connections
+      for (const taskId of selectedDraftTasks) {
+        await projectsAPI.removeTask(projectId, taskId);
+      }
 
       await fetchProject();
       setSelectedDraftTasks(new Set());
@@ -556,6 +554,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       size="sm"
                       onClick={() => setShowSaveTemplateModal(true)}
                       title="Save project as a reusable template"
+                      className="!bg-purple-600 hover:!bg-purple-700 !text-white"
                     />
                   </>
                 )}
@@ -565,7 +564,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                     <IconButton
                       icon={<FaEdit />}
                       label="Edit Project"
-                      variant="secondary"
+                      variant="primary"
                       size="sm"
                       onClick={() => setIsEditModalOpen(true)}
                     />
@@ -573,7 +572,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       <IconButton
                         icon={<FaCheck />}
                         label="Mark Complete"
-                        variant="secondary"
+                        variant="success"
                         size="sm"
                         onClick={handleMarkComplete}
                       />
@@ -582,7 +581,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       <IconButton
                         icon={<FaTimes />}
                         label="Uncomplete"
-                        variant="secondary"
+                        variant="warning"
                         size="sm"
                         onClick={handleUncomplete}
                       />
@@ -683,10 +682,11 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                           </p>
                           <div className="flex items-center space-x-2 mt-1">
                             <span className={`px-2 py-0.5 rounded text-xs ${
-                              task.priority === 'LOW' ? 'bg-gray-500/20 text-gray-400' :
-                              task.priority === 'MEDIUM' ? 'bg-blue-500/20 text-blue-400' :
-                              task.priority === 'HIGH' ? 'bg-orange-500/20 text-orange-400' :
-                              'bg-red-500/20 text-red-400'
+                              task.priority === 'LOW' ? 'bg-green-600 text-green-200' :
+                              task.priority === 'MEDIUM' ? 'bg-yellow-600 text-yellow-200' :
+                              task.priority === 'HIGH' ? 'bg-orange-600 text-orange-200' :
+                              task.priority === 'URGENT' ? 'bg-red-600 text-red-200' :
+                              'bg-yellow-600 text-yellow-200'
                             }`}>
                               {task.priority}
                             </span>
