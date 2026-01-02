@@ -5,7 +5,8 @@ import AddProjectTaskModal from './AddProjectTaskModal';
 import TaskModal from '../tasks/TaskModal';
 import SaveAsTemplateModal from './SaveAsTemplateModal';
 import EditProjectModal from './EditProjectModal';
-import { FaTrash } from 'react-icons/fa';
+import { FaTrash, FaPlus, FaPaperPlane, FaSave, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
+import IconButton from '../common/IconButton';
 
 const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onProjectDeleted }) => {
   const [project, setProject] = useState(null);
@@ -24,6 +25,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedDraftTasks, setSelectedDraftTasks] = useState(new Set());
 
   const [reassignForm, setReassignForm] = useState({
     assignmentType: 'internal',
@@ -47,6 +49,12 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedDraftTasks(new Set());
+    }
+  }, [isOpen]);
 
   const fetchProject = async () => {
     try {
@@ -135,7 +143,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
   const handleDeleteTask = async (taskId) => {
     if (!window.confirm('Are you sure you want to delete this task?')) return;
-    
+
     try {
       await projectsAPI.removeTask(projectId, taskId);
       await fetchProject();
@@ -143,6 +151,54 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
     } catch (err) {
       console.error('Error deleting task:', err);
       setError(err.response?.data?.error || 'Failed to delete task');
+    }
+  };
+
+  const handleDraftTaskSelect = (taskId, isSelected) => {
+    setSelectedDraftTasks(prev => {
+      const newSet = new Set(prev);
+      if (isSelected) {
+        newSet.add(taskId);
+      } else {
+        newSet.delete(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllDrafts = () => {
+    const draftTasks = project?.tasks?.filter(t => t.isDraft) || [];
+    const allSelected = draftTasks.every(task => selectedDraftTasks.has(task.id));
+
+    if (allSelected) {
+      // Deselect all
+      setSelectedDraftTasks(new Set());
+    } else {
+      // Select all
+      setSelectedDraftTasks(new Set(draftTasks.map(task => task.id)));
+    }
+  };
+
+  const handleBulkDeleteDrafts = async () => {
+    if (selectedDraftTasks.size === 0) return;
+
+    const count = selectedDraftTasks.size;
+    if (!window.confirm(`Are you sure you want to delete ${count} draft task${count > 1 ? 's' : ''}?`)) return;
+
+    try {
+      // Delete all selected tasks
+      const deletePromises = Array.from(selectedDraftTasks).map(taskId =>
+        projectsAPI.removeTask(projectId, taskId)
+      );
+
+      await Promise.all(deletePromises);
+
+      await fetchProject();
+      setSelectedDraftTasks(new Set());
+      setSuccessMessage(`${count} draft task${count > 1 ? 's' : ''} deleted successfully!`);
+    } catch (err) {
+      console.error('Error bulk deleting tasks:', err);
+      setError(err.response?.data?.error || 'Failed to delete some tasks');
     }
   };
 
@@ -396,13 +452,15 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                 )}
               </div>
 
-              <button 
+              <IconButton
+                icon={<FaTimes />}
+                label="Close"
+                iconOnly={true}
+                variant="ghost"
+                size="sm"
                 onClick={onClose}
-                className="btn btn-ghost btn-sm btn-circle ml-4"
-                style={{ color: 'var(--color-text-tertiary)' }}
-              >
-                ✕
-              </button>
+                className="!ml-4 !p-2 !rounded-full"
+              />
             </div>
 
             {/* Success Message */}
@@ -453,87 +511,78 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
             {/* Action Buttons */}
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-2 flex-wrap">
                 {project.canManage && (
                   <>
-                    <button
+                    <IconButton
+                      icon={<FaPlus />}
+                      label="Add Task"
+                      variant="primary"
+                      size="sm"
                       onClick={() => setIsAddingTask(true)}
-                      className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 btn-sm"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      Add Task
-                    </button>
+                      className="!bg-indigo-600 hover:!bg-indigo-700"
+                    />
 
                     {draftCount > 0 && (
-                      <button
+                      <IconButton
+                        icon={<FaPaperPlane />}
+                        label={sendingAll ? "Sending..." : `Send All Drafts (${draftCount})`}
+                        variant="primary"
+                        size="sm"
                         onClick={handleSendAllDrafts}
                         disabled={sendingAll}
-                        className="btn bg-emerald-600 hover:bg-emerald-700 text-white border-0 btn-sm"
-                      >
-                        {sendingAll ? (
-                          <>
-                            <span className="loading loading-spinner loading-sm mr-2"></span>
-                            Sending...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            Send All Drafts ({draftCount})
-                          </>
-                        )}
-                      </button>
+                        loading={sendingAll}
+                        className="!bg-emerald-600 hover:!bg-emerald-700"
+                      />
                     )}
 
-                    <button
+                    {selectedDraftTasks.size > 0 && (
+                      <IconButton
+                        icon={<FaTrash />}
+                        label={`Delete Selected (${selectedDraftTasks.size})`}
+                        variant="danger"
+                        size="sm"
+                        onClick={handleBulkDeleteDrafts}
+                      />
+                    )}
+
+                    <IconButton
+                      icon={<FaSave />}
+                      label="Save as Template"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setShowSaveTemplateModal(true)}
-                      className="btn btn-outline btn-sm"
-                      style={{ 
-                        borderColor: 'var(--color-border-default)',
-                        color: 'var(--color-text-secondary)'
-                      }}
                       title="Save project as a reusable template"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                      </svg>
-                      Save as Template
-                    </button>
+                    />
                   </>
                 )}
 
                 {project.canManage && (
                   <>
-                    <button
+                    <IconButton
+                      icon={<FaEdit />}
+                      label="Edit Project"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setIsEditModalOpen(true)}
-                      className="btn btn-outline btn-sm"
-                      style={{ borderColor: 'var(--color-border-default)', color: 'var(--color-text-secondary)' }}
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit Project
-                    </button>
+                    />
                     {project.status !== 'COMPLETED' && (
-                      <button
+                      <IconButton
+                        icon={<FaCheck />}
+                        label="Mark Complete"
+                        variant="secondary"
+                        size="sm"
                         onClick={handleMarkComplete}
-                        className="btn btn-outline btn-sm"
-                        style={{ borderColor: 'var(--color-border-default)', color: 'var(--color-text-secondary)' }}
-                      >
-                        Mark Complete
-                      </button>
+                      />
                     )}
                     {project.status === 'COMPLETED' && (
-                      <button
+                      <IconButton
+                        icon={<FaTimes />}
+                        label="Uncomplete"
+                        variant="secondary"
+                        size="sm"
                         onClick={handleUncomplete}
-                        className="btn btn-outline btn-sm"
-                        style={{ borderColor: 'var(--color-border-default)', color: 'var(--color-text-secondary)' }}
-                      >
-                        Uncomplete
-                      </button>
+                      />
                     )}
                   </>
                 )}
@@ -557,15 +606,27 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
               }}
             >
               {/* Table Header */}
-              <div 
+              <div
                 className="grid grid-cols-10 gap-4 p-4 font-semibold text-sm border-b"
-                style={{ 
+                style={{
                   backgroundColor: 'var(--color-bg-quaternary)',
                   borderColor: 'var(--color-border-default)',
                   color: 'var(--color-text-secondary)'
                 }}
               >
-                <div className="col-span-5">Task Name</div>
+                <div className="col-span-5 flex items-center">
+                  <div className="w-6 flex justify-center">
+                    {draftCount > 0 && project.canManage && (
+                      <input
+                        type="checkbox"
+                        checked={draftCount > 0 && draftCount === selectedDraftTasks.size}
+                        onChange={handleSelectAllDrafts}
+                        className="checkbox checkbox-sm"
+                      />
+                    )}
+                  </div>
+                  <span className="ml-2">Task Name</span>
+                </div>
                 <div className="col-span-3">Assigned To</div>
                 <div className="col-span-2">Due Date</div>
               </div>
@@ -583,28 +644,23 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       }}
                     >
                       {/* Task Name Column */}
-                      <div className="col-span-5 flex items-center space-x-3 relative">
-                        {/* Delete button for draft tasks only - positioned absolutely */}
-                        {task.isDraft && project.canManage && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteTask(task.id);
-                            }}
-                            className="absolute left-0 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-all hover:bg-red-600 hover:scale-110 z-10"
-                            title="Delete draft task"
-                            style={{
-                              backgroundColor: '#dc2626',
-                              border: '2px solid #dc2626'
-                            }}
-                          >
-                            <FaTrash
-                              size={16}
-                              style={{ color: '#ffffff' }}
+                      <div className="col-span-5 flex items-center">
+                        <div className="w-6 flex justify-center">
+                          {/* Checkbox for draft tasks only */}
+                          {task.isDraft && project.canManage && (
+                            <input
+                              type="checkbox"
+                              checked={selectedDraftTasks.has(task.id)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleDraftTaskSelect(task.id, e.target.checked);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="checkbox checkbox-sm"
                             />
-                          </button>
-                        )}
-                        <div className={`flex-1 min-w-0 ${task.isDraft && project.canManage ? 'ml-12' : ''}`}>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 ml-2">
                           <p
                             className={`font-medium truncate ${task.status === 'COMPLETED' ? 'line-through opacity-60' : ''}`}
                             style={{ color: 'var(--color-text-primary)' }}
@@ -717,47 +773,50 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       Add your first task to get started
                     </p>
                     {project.canManage && (
-                      <button
+                      <IconButton
+                        icon={<FaPlus />}
+                        label="Add Task"
+                        variant="primary"
+                        size="sm"
                         onClick={() => setIsAddingTask(true)}
-                        className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 btn-sm"
-                      >
-                        Add Task
-                      </button>
+                        className="!bg-indigo-600 hover:!bg-indigo-700"
+                      />
                     )}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Danger Zone */}
             {project.canManage && (
               <div className="mt-8 pt-6 border-t" style={{ borderColor: 'var(--color-border-default)' }}>
-                <h4 className="text-sm font-medium mb-3 text-red-400">Danger Zone</h4>
                 {!confirmDelete ? (
-                  <button
+                  <IconButton
+                    icon={<FaTrash />}
+                    label="Delete Project"
+                    variant="danger"
+                    size="sm"
                     onClick={() => setConfirmDelete(true)}
-                    className="btn btn-outline btn-error btn-sm"
-                  >
-                    Delete Project
-                  </button>
+                  />
                 ) : (
                   <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
                     <p className="text-sm mb-3" style={{ color: 'var(--color-text-secondary)' }}>
                       Are you sure? Tasks will be unlinked from the project but not deleted.
                     </p>
-                    <div className="space-x-2">
-                      <button
+                    <div className="flex gap-2">
+                      <IconButton
+                        icon={<FaTrash />}
+                        label="Yes, Delete Project"
+                        variant="danger"
+                        size="sm"
                         onClick={handleDeleteProject}
-                        className="btn btn-error btn-sm"
-                      >
-                        Yes, Delete Project
-                      </button>
-                      <button
+                      />
+                      <IconButton
+                        icon={<FaTimes />}
+                        label="Cancel"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setConfirmDelete(false)}
-                        className="btn btn-ghost btn-sm"
-                      >
-                        Cancel
-                      </button>
+                      />
                     </div>
                   </div>
                 )}
@@ -887,26 +946,27 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
               </div>
             </div>
 
-            <div className="modal-action">
-              <button
+            <div className="flex justify-end gap-2">
+              <IconButton
+                icon={<FaPaperPlane />}
+                label="Reassign Task"
+                variant="primary"
                 onClick={handleReassignSubmit}
                 disabled={
                   (reassignForm.assignmentType === 'internal' && !reassignForm.assigneeId) ||
                   (reassignForm.assignmentType === 'external' && !reassignForm.externalContactId)
                 }
-                className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-              >
-                Reassign Task
-              </button>
-              <button
+                className="!bg-indigo-600 hover:!bg-indigo-700"
+              />
+              <IconButton
+                icon={<FaTimes />}
+                label="Cancel"
+                variant="ghost"
                 onClick={() => {
                   setIsReassigning(false);
                   setReassignTask(null);
                 }}
-                className="btn btn-ghost"
-              >
-                Cancel
-              </button>
+              />
             </div>
           </div>
         </div>
