@@ -7,6 +7,7 @@ import SaveAsTemplateModal from './SaveAsTemplateModal';
 import EditProjectModal from './EditProjectModal';
 import { FaTrash, FaPlus, FaPaperPlane, FaSave, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
 import IconButton from '../common/IconButton';
+import { formatDateForInput } from '../../utils/dateUtils';
 
 const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onProjectDeleted }) => {
   const [project, setProject] = useState(null);
@@ -759,7 +760,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                         <input
                           type="date"
                           onClick={(e) => e.stopPropagation()}
-                          value={task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''}
+                          value={task.dueDate ? formatDateForInput(task.dueDate) : ''}
                           onChange={(e) => handleQuickDueDateChange(task.id, e.target.value)}
                           className="input input-sm input-bordered w-full"
                           style={{

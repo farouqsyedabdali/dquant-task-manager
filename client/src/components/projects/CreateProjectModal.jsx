@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { projectsAPI, templatesAPI } from '../../services/api';
+import { formatDateForInput } from '../../utils/dateUtils';
 
 const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   const [step, setStep] = useState(1); // 1: choose template or scratch, 2: project details
@@ -782,7 +783,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                   color: 'var(--color-text-primary)',
                 }}
                 required
-                min={new Date().toISOString().split('T')[0]}
+                min={formatDateForInput(new Date())}
               />
               <label className="label">
                 <span className="label-text-alt" style={{ color: 'var(--color-text-tertiary)' }}>

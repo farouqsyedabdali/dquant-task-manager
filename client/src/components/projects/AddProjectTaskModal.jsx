@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { usersAPI, contactsAPI } from '../../services/api';
 import DatePicker from '../common/DatePicker';
+import { formatDateForInput } from '../../utils/dateUtils';
 
 const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
   const [step, setStep] = useState(1);
@@ -292,7 +293,7 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
                   placeholder="Select due date"
                   showTime={false}
                   timeOptional={true}
-                  minDate={new Date().toISOString().split('T')[0]}
+                  minDate={formatDateForInput(new Date())}
                 />
               </div>
             </div>

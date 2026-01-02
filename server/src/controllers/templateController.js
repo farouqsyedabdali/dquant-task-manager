@@ -226,7 +226,9 @@ const templateController = {
               priority: task.priority,
               assigneeId: task.assigneeId,
               externalContactId: task.externalContactId,
-              daysOffset: 0,
+              daysOffset: project.dueDate && task.dueDate
+                ? Math.ceil((project.dueDate.getTime() - task.dueDate.getTime()) / (24 * 60 * 60 * 1000))
+                : 0,
               order: index
             }))
           }
@@ -308,9 +310,9 @@ const templateController = {
           companyId,
           tasks: {
             create: template.tasks.map(task => {
-              // Calculate due date based on daysOffset
+              // Calculate due date based on daysOffset (days before project due date)
               const dueDate = task.daysOffset > 0
-                ? new Date(projectStartDate.getTime() + task.daysOffset * 24 * 60 * 60 * 1000)
+                ? new Date(projectStartDate.getTime() - task.daysOffset * 24 * 60 * 60 * 1000)
                 : null;
 
               return {

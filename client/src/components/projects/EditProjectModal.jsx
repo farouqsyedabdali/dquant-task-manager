@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { projectsAPI } from '../../services/api';
+import { formatDateForInput } from '../../utils/dateUtils';
 
 const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +48,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
         color: project.color || '#6366f1',
         icon: project.icon || '📁',
         status: project.status || 'ACTIVE',
-        dueDate: project.dueDate ? new Date(project.dueDate).toISOString().split('T')[0] : ''
+        dueDate: project.dueDate ? formatDateForInput(project.dueDate) : ''
       });
       setError(null);
     }
