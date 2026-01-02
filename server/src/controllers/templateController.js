@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { parseLocalDate, isDateInFuture } = require('../utils/dateUtils');
 
 const templateController = {
   /**
@@ -259,7 +260,7 @@ const templateController = {
         return res.status(400).json({ error: 'Due date is required' });
       }
 
-      const dueDateObj = new Date(dueDate);
+      const dueDateObj = parseLocalDate(dueDate);
       const now = new Date();
       if (isNaN(dueDateObj.getTime())) {
         return res.status(400).json({ error: 'Invalid due date format' });
@@ -455,3 +456,5 @@ const templateController = {
 };
 
 module.exports = templateController;
+
+

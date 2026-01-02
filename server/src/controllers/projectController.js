@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { parseLocalDate, isDateInFuture } = require('../utils/dateUtils');
 
 // Project templates with predefined tasks
 const PROJECT_TEMPLATES = {
@@ -261,7 +262,7 @@ const projectController = {
         return res.status(400).json({ error: 'Due date is required' });
       }
 
-      const dueDateObj = new Date(dueDate);
+      const dueDateObj = parseLocalDate(dueDate);
       const now = new Date();
       if (isNaN(dueDateObj.getTime())) {
         return res.status(400).json({ error: 'Invalid due date format' });
@@ -280,7 +281,7 @@ const projectController = {
           color: color || (templateData ? templateData.color : '#6366f1'),
           icon: icon || (templateData ? templateData.icon : '📁'),
           template: template || null,
-          dueDate: new Date(dueDate),
+          dueDate: dueDateObj,
           ownerId: userId,
           companyId
         },
@@ -382,7 +383,7 @@ const projectController = {
           return res.status(400).json({ error: 'Due date is required' });
         }
 
-        const dueDateObj = new Date(dueDate);
+        const dueDateObj = parseLocalDate(dueDate);
         const now = new Date();
         if (isNaN(dueDateObj.getTime())) {
           return res.status(400).json({ error: 'Invalid due date format' });
@@ -390,7 +391,7 @@ const projectController = {
         if (dueDateObj <= now) {
           return res.status(400).json({ error: 'Due date must be in the future' });
         }
-        finalDueDate = new Date(dueDate);
+        finalDueDate = dueDateObj;
       } else {
         // If due date is not being updated, ensure existing project has a due date
         if (!project.dueDate) {
@@ -728,17 +729,8 @@ const projectController = {
           return res.status(400).json({ error: 'Due date is required' });
         }
 
-        // If only date is provided (no time), set default time to 11:59 PM
-        let finalDueDate = dueDate;
-        if (typeof dueDate === 'string' && !dueDate.includes('T')) {
-          // Date only format (YYYY-MM-DD), add 11:59 PM
-          finalDueDate = `${dueDate}T23:59:00`;
-        } else if (typeof dueDate === 'string' && dueDate.includes('T') && !dueDate.includes(':')) {
-          // Date with T but no time (YYYY-MM-DDT), add 11:59 PM
-          finalDueDate = `${dueDate}23:59:00`;
-        }
-
-        const dueDateObj = new Date(finalDueDate);
+        // Parse date, treating date-only inputs as local time
+        const dueDateObj = parseLocalDate(dueDate);
         const now = new Date();
         if (isNaN(dueDateObj.getTime())) {
           return res.status(400).json({ error: 'Invalid due date format' });
@@ -767,7 +759,7 @@ const projectController = {
             assignerId: userId,
             assigneeId: assigneeId ? parseInt(assigneeId) : null,
             externalContactId: externalContactId ? parseInt(externalContactId) : null,
-            dueDate: new Date(finalDueDate), // Required, already validated with default 11:59 PM if needed
+            dueDate: dueDateObj, // Required, already validated
             isDraft: true,
             companyId
           },
