@@ -272,12 +272,14 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const handleQuickDueDateChange = async (taskId, newDueDate) => {
     try {
       await tasksAPI.update(taskId, { dueDate: newDueDate || null });
-      
+
       // Update the task in local state without full reload
+      // Convert the date string to a Date object for consistent local state
+      const dateObject = newDueDate ? new Date(newDueDate + 'T00:00:00') : null;
       setProject(prev => ({
         ...prev,
-        tasks: prev.tasks.map(task => 
-          task.id === taskId ? { ...task, dueDate: newDueDate || null } : task
+        tasks: prev.tasks.map(task =>
+          task.id === taskId ? { ...task, dueDate: dateObject } : task
         )
       }));
     } catch (err) {
