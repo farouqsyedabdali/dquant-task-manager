@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import useTaskStore from '../stores/taskStore';
 import useAuthStore from '../context/authStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../utils/constants';
-import { commentsAPI, taskArchiveAPI, aiAPI } from '../services/api';
+import { commentsAPI, taskArchiveAPI, aiAPI, taskInvitationAPI } from '../services/api';
 import TaskCard from '../components/tasks/TaskCard';
 // import TaskList from '../components/tasks/TaskList'; // Kept in file but not used
 import AddTaskModal from '../components/tasks/AddTaskModal';
@@ -15,9 +15,8 @@ import TaskFilters from '../components/tasks/TaskFilters';
 import ArchiveSwitcher from '../components/tasks/ArchiveSwitcher';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import NotificationBoard from '../components/notifications/NotificationBoard';
-import PendingInvitations from '../components/dashboard/PendingInvitations';
 import IconButton from '../components/common/IconButton';
-import { FaPlus, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaEnvelope, FaCheck } from 'react-icons/fa';
 
 const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -38,10 +37,26 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   const [isLoadingArchived, setIsLoadingArchived] = useState(false);
   const [deleteTaskId, setDeleteTaskId] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [pendingInvitations, setPendingInvitations] = useState([]);
+  const [isPendingInvitationsModalOpen, setIsPendingInvitationsModalOpen] = useState(false);
+  const [isLoadingInvitations, setIsLoadingInvitations] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
   const { tasks, fetchTasks, fetchTasksByType, fetchTask, deleteTask, updateTaskStatus, updateTaskPriority, filters, setFilters, clearFilters, getFilteredTasks } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
+
+  // Fetch pending invitations
+  const fetchPendingInvitations = async () => {
+    try {
+      setIsLoadingInvitations(true);
+      const response = await taskInvitationAPI.getPending();
+      setPendingInvitations(response.data.invitations);
+    } catch (error) {
+      console.error('Error fetching pending invitations:', error);
+    } finally {
+      setIsLoadingInvitations(false);
+    }
+  };
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -51,6 +66,9 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
     if (!filters.status) {
       setFilters({ status: 'TODO,IN_PROGRESS' });
     }
+
+    // Fetch pending invitations on mount
+    fetchPendingInvitations();
   }, []); // Empty dependency array - only run once on mount
 
   // Handle taskbar actions from Electron
@@ -1048,9 +1066,6 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           />
         </div>
 
-        {/* Pending Invitations */}
-        <PendingInvitations />
-
         {/* Filters */}
         <div className="mb-6">
           <TaskFilters 
@@ -1072,10 +1087,24 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
             >
               {archiveView === 'archived' ? 'Archived Tasks' : 'All Tasks'} ({filteredTasks.length})
             </h2>
-            <ArchiveSwitcher 
-              currentView={archiveView} 
-              onViewChange={setArchiveView} 
-            />
+            <div className="flex items-center space-x-3">
+              {/* Pending Invitations Button */}
+              {pendingInvitations.length > 0 && (
+                <IconButton
+                  icon={<FaEnvelope />}
+                  label={`Pending Invites (${pendingInvitations.length})`}
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsPendingInvitationsModalOpen(true)}
+                  disabled={isLoadingInvitations}
+                />
+              )}
+
+              <ArchiveSwitcher
+                currentView={archiveView}
+                onViewChange={setArchiveView}
+              />
+            </div>
           </div>
           
           {filteredTasks.length === 0 ? (
@@ -1386,6 +1415,168 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Invitations Modal */}
+      {isPendingInvitationsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200"
+            onClick={() => setIsPendingInvitationsModalOpen(false)}
+          />
+
+          {/* Modal */}
+          <div
+            className="relative border rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden"
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center p-4 border-b" style={{ borderColor: 'var(--color-border-default)' }}>
+              <h3
+                className="text-lg font-semibold transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                Pending Task Invitations ({pendingInvitations.length})
+              </h3>
+              <button
+                onClick={() => setIsPendingInvitationsModalOpen(false)}
+                className="transition-colors duration-200 hover:opacity-70"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 max-h-[60vh] overflow-y-auto">
+              {isLoadingInvitations ? (
+                <div className="text-center py-8">
+                  <div className="text-sm transition-colors duration-200" style={{ color: 'var(--color-text-tertiary)' }}>
+                    Loading...
+                  </div>
+                </div>
+              ) : pendingInvitations.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-sm transition-colors duration-200" style={{ color: 'var(--color-text-tertiary)' }}>
+                    No pending invitations
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingInvitations.map((invitation) => (
+                    <div
+                      key={invitation.id}
+                      className="border rounded-lg p-4 transition-colors duration-200"
+                      style={{
+                        backgroundColor: 'var(--color-bg-tertiary)',
+                        borderColor: 'var(--color-border-default)',
+                      }}
+                    >
+                      {/* Header with task title and priority */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h4 className="text-base font-medium truncate transition-colors duration-200" style={{ color: 'var(--color-text-primary)' }}>
+                              {invitation.task.title}
+                            </h4>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${invitation.task.priority === 'LOW' ? 'bg-blue-500' : invitation.task.priority === 'MEDIUM' ? 'bg-yellow-500' : invitation.task.priority === 'HIGH' ? 'bg-orange-500' : 'bg-red-500'}`}>
+                              {invitation.task.priority}
+                            </span>
+                          </div>
+
+                          {/* Project info if available */}
+                          {invitation.task.project && (
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className="text-xs px-2 py-0.5 rounded transition-colors duration-200" style={{ backgroundColor: invitation.task.project.color || 'var(--color-primary)', color: 'white' }}>
+                                📁 {invitation.task.project.name}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Task description */}
+                      {invitation.task.description && (
+                        <p className="text-sm transition-colors duration-200 mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+                          {invitation.task.description.length > 100 ? `${invitation.task.description.substring(0, 100)}...` : invitation.task.description}
+                        </p>
+                      )}
+
+                      {/* Sender and due date info */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-1">
+                            <span className="text-sm transition-colors duration-200" style={{ color: 'var(--color-text-tertiary)' }}>
+                              From: {invitation.sender.name}
+                            </span>
+                          </div>
+
+                          {invitation.task.dueDate && (
+                            <div className="flex items-center space-x-1">
+                              <span className="text-sm transition-colors duration-200" style={{ color: 'var(--color-text-tertiary)' }}>
+                                Due: {new Date(invitation.task.dueDate).toLocaleDateString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center space-x-1">
+                          <span className="text-xs transition-colors duration-200" style={{ color: 'var(--color-text-tertiary)' }}>
+                            Expires: {new Date(invitation.expiresAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Personal message if available */}
+                      {invitation.message && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+                          <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                            <strong>Message:</strong> {invitation.message}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-end space-x-3">
+                        <IconButton
+                          label="Decline"
+                          variant="danger"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await taskInvitationAPI.declineInvitation(invitation.token, { reason: 'Declined from dashboard' });
+                              setPendingInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
+                            } catch (error) {
+                              console.error('Error declining invitation:', error);
+                            }
+                          }}
+                        />
+
+                        <IconButton
+                          icon={<FaCheck />}
+                          label="Accept"
+                          variant="primary"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await taskInvitationAPI.acceptInvitation(invitation.token);
+                              setPendingInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
+                            } catch (error) {
+                              console.error('Error accepting invitation:', error);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

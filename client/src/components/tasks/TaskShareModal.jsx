@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { taskShareAPI, usersAPI, contactsAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
+import IconButton from '../common/IconButton';
 import useAuthStore from '../../context/authStore';
+import { FaShare, FaTimes } from 'react-icons/fa';
 
 const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
   const { user } = useAuthStore();
@@ -10,10 +12,8 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
   const [sharedWith, setSharedWith] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingShares, setIsLoadingShares] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedContactId, setSelectedContactId] = useState('');
+  const [selectedRecipient, setSelectedRecipient] = useState(''); // Unified field for user_id or contact_id
   const [recipientEmail, setRecipientEmail] = useState('');
-  const [recipientType, setRecipientType] = useState('internal'); // 'internal' or 'external'
   const [permissionLevel, setPermissionLevel] = useState('VIEWER'); // 'VIEWER' or 'COMMENTER'
   const [error, setError] = useState(null);
   
@@ -29,6 +29,46 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
       fetchTaskShares();
     }
   }, [isOpen, task, isPersonalAccount]);
+
+  // Unified list of all available recipients (employees + contacts)
+  const allRecipients = useMemo(() => {
+    const recipientOptions = [];
+
+    // Add employees (if not personal account)
+    if (!isPersonalAccount) {
+      const employeeOptions = users
+        .filter(user =>
+          user.id !== task.assigneeId && // Not the lead assignee
+          !task.coAssignees?.some(co => co.userId === user.id) && // Not a co-assignee
+          !sharedWith.some(share => share.userId === user.id) // Not already shared
+        )
+        .map(user => ({
+          id: `user_${user.id}`,
+          name: user.name,
+          email: user.email,
+          displayName: user.name,
+          type: 'user'
+        }));
+      recipientOptions.push(...employeeOptions);
+    }
+
+    // Add contacts
+    const contactOptions = contacts
+      .filter(contact =>
+        !sharedWith.some(share => share.contactId === contact.id) // Not already shared
+      )
+      .map(contact => ({
+        id: `contact_${contact.id}`,
+        name: contact.name,
+        email: contact.email,
+        displayName: contact.name,
+        type: 'contact',
+        isPersonal: contact.isPersonal
+      }));
+    recipientOptions.push(...contactOptions);
+
+    return recipientOptions;
+  }, [users, contacts, task.assigneeId, task.coAssignees, sharedWith, isPersonalAccount]);
 
   const fetchUsers = async () => {
     try {
@@ -64,49 +104,44 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
 
   const handleShare = async () => {
     if (!task) return;
-    
-    // Validate selection based on recipient type
-    if (recipientType === 'internal' && !selectedUserId) {
-      setError('Please select an internal employee');
-      return;
-    }
-    
-    if (recipientType === 'external' && !selectedContactId && !recipientEmail.trim()) {
-      setError('Please select a contact or enter an email address');
+
+    // Validate selection
+    if (!selectedRecipient && !recipientEmail.trim()) {
+      setError('Please select a recipient or enter an email address');
       return;
     }
 
     try {
       setIsLoading(true);
       setError(null);
-      
-      if (recipientType === 'internal') {
-        // Share with internal employee
-        await taskShareAPI.shareTask(task.id, selectedUserId, permissionLevel);
-      } else {
-        // Share with external contact/email
-        if (selectedContactId) {
+
+      if (selectedRecipient) {
+        // Share with selected user/contact
+        if (selectedRecipient.startsWith('user_')) {
+          // Share with internal employee
+          const userId = selectedRecipient.split('_')[1];
+          await taskShareAPI.shareTask(task.id, userId, permissionLevel);
+        } else if (selectedRecipient.startsWith('contact_')) {
           // Share with existing contact
-          await taskShareAPI.shareTaskWithContact(task.id, selectedContactId, permissionLevel);
-        } else {
-          // Share with email address
-          await taskShareAPI.shareTaskWithEmail(task.id, recipientEmail, permissionLevel);
+          const contactId = selectedRecipient.split('_')[1];
+          await taskShareAPI.shareTaskWithContact(task.id, contactId, permissionLevel);
         }
+      } else {
+        // Share with email address
+        await taskShareAPI.shareTaskWithEmail(task.id, recipientEmail, permissionLevel);
       }
-      
+
       // Refresh the shared users list
       await fetchTaskShares();
-      
+
       // Notify parent component
       if (onShareUpdate) {
         onShareUpdate();
       }
-      
+
       // Reset form
-      setSelectedUserId('');
-      setSelectedContactId('');
+      setSelectedRecipient('');
       setRecipientEmail('');
-      setRecipientType('internal');
       setPermissionLevel('VIEWER');
     } catch (error) {
       console.error('Error sharing task:', error);
@@ -141,28 +176,14 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
   };
 
   const handleClose = () => {
-    setSelectedUserId('');
-    setSelectedContactId('');
+    setSelectedRecipient('');
     setRecipientEmail('');
-    setRecipientType('internal');
     setPermissionLevel('VIEWER');
     setError(null);
     onClose();
   };
 
   if (!isOpen || !task) return null;
-
-  // Filter out users who are already shared with, co-assignees, or the lead assignee
-  const availableUsers = users.filter(user => 
-    user.id !== task.assigneeId && // Not the lead assignee
-    !task.coAssignees?.some(co => co.userId === user.id) && // Not a co-assignee
-    !sharedWith.some(share => share.userId === user.id) // Not already shared
-  );
-
-  // Filter out contacts who are already shared with
-  const availableContacts = contacts.filter(contact => 
-    !sharedWith.some(share => share.contactId === contact.id)
-  );
 
   return (
     <>
@@ -242,99 +263,35 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
         )}
 
         <div className="space-y-4">
-          {/* Recipient Type Selection */}
-          <div>
-            <label 
-              className="block text-sm font-medium mb-2 transition-colors duration-200"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
-              Share with
-            </label>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setRecipientType('internal')}
-                className={`btn btn-sm transition-colors duration-200 ${
-                  recipientType === 'internal' 
-                    ? '!bg-blue-600 hover:!bg-blue-700 !text-white' 
-                    : '!bg-transparent !border !text-white'
-                }`}
-                style={recipientType === 'internal' ? {} : {
-                  borderColor: 'var(--color-border-default)',
-                  color: 'var(--color-text-primary)'
-                }}
-                disabled={isPersonalAccount}
-              >
-                Internal Employee
-              </button>
-              <button
-                onClick={() => setRecipientType('external')}
-                className={`btn btn-sm transition-colors duration-200 ${
-                  recipientType === 'external' 
-                    ? '!bg-blue-600 hover:!bg-blue-700 !text-white' 
-                    : '!bg-transparent !border !text-white'
-                }`}
-                style={recipientType === 'external' ? {} : {
-                  borderColor: 'var(--color-border-default)',
-                  color: 'var(--color-text-primary)'
-                }}
-              >
-                External Contact
-              </button>
-            </div>
-            {isPersonalAccount && (
-              <p 
-                className="text-xs mt-1 transition-colors duration-200"
-                style={{ color: 'var(--color-text-tertiary)' }}
-              >
-                Personal accounts can only share with external contacts
-              </p>
-            )}
-          </div>
 
           {/* Permission Level Selection */}
           <div>
-            <label 
+            <label
               className="block text-sm font-medium mb-2 transition-colors duration-200"
               style={{ color: 'var(--color-text-primary)' }}
             >
               Permission Level
             </label>
             <div className="flex space-x-2">
-              <button
+              <IconButton
+                label="Viewer"
+                variant={permissionLevel === 'VIEWER' ? 'primary' : 'secondary'}
+                size="sm"
                 onClick={() => setPermissionLevel('VIEWER')}
-                className={`btn btn-sm transition-colors duration-200 ${
-                  permissionLevel === 'VIEWER' 
-                    ? '!bg-blue-600 hover:!bg-blue-700 !text-white' 
-                    : '!bg-transparent !border !text-white'
-                }`}
-                style={permissionLevel === 'VIEWER' ? {} : {
-                  borderColor: 'var(--color-border-default)',
-                  color: 'var(--color-text-primary)'
-                }}
-              >
-                Viewer
-              </button>
-              <button
+              />
+              <IconButton
+                label="Commenter"
+                variant={permissionLevel === 'COMMENTER' ? 'primary' : 'secondary'}
+                size="sm"
                 onClick={() => setPermissionLevel('COMMENTER')}
-                className={`btn btn-sm transition-colors duration-200 ${
-                  permissionLevel === 'COMMENTER' 
-                    ? '!bg-blue-600 hover:!bg-blue-700 !text-white' 
-                    : '!bg-transparent !border !text-white'
-                }`}
-                style={permissionLevel === 'COMMENTER' ? {} : {
-                  borderColor: 'var(--color-border-default)',
-                  color: 'var(--color-text-primary)'
-                }}
-              >
-                Commenter
-              </button>
+              />
             </div>
-            <p 
+            <p
               className="text-xs mt-1 transition-colors duration-200"
               style={{ color: 'var(--color-text-tertiary)' }}
             >
-              {permissionLevel === 'VIEWER' 
-                ? 'Can only view the task' 
+              {permissionLevel === 'VIEWER'
+                ? 'Can only view the task'
                 : 'Can view and comment on the task'
               }
             </p>
@@ -342,74 +299,76 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
 
           {/* Recipient Selection */}
           <div>
-            <label 
+            <label
               className="block text-sm font-medium mb-2 transition-colors duration-200"
               style={{ color: 'var(--color-text-primary)' }}
             >
-              {recipientType === 'internal' ? 'Select Employee' : 'Select Contact or Enter Email'}
+              Share with
             </label>
-            
-            {recipientType === 'internal' ? (
+
+            <div className="space-y-2">
               <SearchableDropdown
-                options={availableUsers}
-                value={selectedUserId}
-                onChange={setSelectedUserId}
-                placeholder="Select an employee..."
+                options={allRecipients}
+                value={selectedRecipient}
+                onChange={setSelectedRecipient}
+                placeholder="Select an employee or contact..."
                 className="w-full"
+                renderOption={(recipient) => (
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${recipient.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                    <span>{recipient.displayName || recipient.name}</span>
+                    <span style={{ color: 'var(--color-text-tertiary)' }}>({recipient.email})</span>
+                    {recipient.type === 'contact' && (
+                      <span className="text-xs px-2 py-0.5 rounded" style={{
+                        backgroundColor: 'var(--color-bg-tertiary)',
+                        color: 'var(--color-text-secondary)'
+                      }}>
+                        External
+                      </span>
+                    )}
+                  </div>
+                )}
               />
-            ) : (
-              <div className="space-y-2">
-                <SearchableDropdown
-                  options={availableContacts}
-                  value={selectedContactId}
-                  onChange={setSelectedContactId}
-                  placeholder="Select a contact..."
-                  className="w-full"
-                  renderOption={(contact) => (
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-2 h-2 rounded-full ${contact.isPersonal ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                      <span>{contact.name}</span>
-                      <span style={{ color: 'var(--color-text-tertiary)' }}>({contact.email})</span>
-                    </div>
-                  )}
-                />
-                <div 
-                  className="text-center text-sm transition-colors duration-200"
-                  style={{ color: 'var(--color-text-tertiary)' }}
-                >
-                  OR
-                </div>
-                <input
-                  type="email"
-                  value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
-                  placeholder="Enter email address..."
-                  className="input input-bordered w-full transition-colors duration-200"
-                  style={{
-                    backgroundColor: 'var(--color-bg-tertiary)',
-                    borderColor: 'var(--color-border-default)',
-                    color: 'var(--color-text-primary)'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-primary)';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                  }}
-                />
+
+              <div
+                className="text-center text-sm transition-colors duration-200"
+                style={{ color: 'var(--color-text-tertiary)' }}
+              >
+                OR
               </div>
-            )}
+
+              <input
+                type="email"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                placeholder="Enter email address..."
+                className="input input-bordered w-full transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                }}
+              />
+            </div>
           </div>
 
           {/* Share Button */}
           <div className="flex justify-end">
-            <button
+            <IconButton
+              icon={<FaShare />}
+              label={isLoading ? 'Sharing...' : 'Share'}
+              variant="primary"
+              size="sm"
               onClick={handleShare}
-              disabled={isLoading || (recipientType === 'internal' && !selectedUserId) || (recipientType === 'external' && !selectedContactId && !recipientEmail.trim())}
-              className="btn btn-sm transition-colors duration-200 !bg-blue-600 hover:!bg-blue-700 !text-white disabled:!opacity-50"
-            >
-              {isLoading ? 'Sharing...' : 'Share'}
-            </button>
+              disabled={isLoading || (!selectedRecipient && !recipientEmail.trim())}
+              loading={isLoading}
+            />
           </div>
         </div>
 
@@ -473,13 +432,14 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
                       </span>
                     </div>
                   </div>
-                  <button
+                  <IconButton
+                    label="Remove"
+                    variant="danger"
+                    size="sm"
+                    iconOnly={true}
                     onClick={() => handleUnshare(share.userId || share.contactId)}
                     disabled={isLoading}
-                    className="btn btn-ghost btn-xs transition-colors duration-200 !text-red-400 hover:!text-red-300 disabled:!opacity-50"
-                  >
-                    Remove
-                  </button>
+                  />
                 </div>
               ))}
             </div>
@@ -487,13 +447,12 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
         </div>
 
         <div className="flex justify-end space-x-2 mt-4">
-          <button
+          <IconButton
+            label="Close"
+            variant="ghost"
+            size="sm"
             onClick={handleClose}
-            className="btn btn-sm btn-ghost transition-colors duration-200"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            Close
-          </button>
+          />
         </div>
       </div>
     </div>
