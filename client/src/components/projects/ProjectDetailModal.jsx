@@ -622,6 +622,11 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                         checked={draftCount > 0 && draftCount === selectedDraftTasks.size}
                         onChange={handleSelectAllDrafts}
                         className="checkbox checkbox-sm"
+                        style={{
+                          border: '2px solid var(--color-text-tertiary)',
+                          backgroundColor: draftCount > 0 && draftCount === selectedDraftTasks.size ? 'var(--color-accent)' : 'transparent',
+                          '--chkbg': 'var(--color-accent)'
+                        }}
                       />
                     )}
                   </div>
@@ -657,6 +662,11 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                               }}
                               onClick={(e) => e.stopPropagation()}
                               className="checkbox checkbox-sm"
+                              style={{
+                                border: '2px solid var(--color-text-tertiary)',
+                                backgroundColor: selectedDraftTasks.has(task.id) ? 'var(--color-accent)' : 'transparent',
+                                '--chkbg': 'var(--color-accent)'
+                              }}
                             />
                           )}
                         </div>

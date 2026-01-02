@@ -19,12 +19,12 @@ const getTasks = async (req, res) => {
     // Filter by task type
     if (type === 'assigned-to-me') {
       // Show tasks where user is lead assignee, co-assignee, shared with them, or collaborating
-      // BUT exclude draft tasks (they should only be visible to the creator)
+      // BUT exclude ALL draft tasks (they should only be visible in project view)
       whereClause.OR = [
         { AND: [{ assigneeId: userId }, { isDraft: false }] }, // Exclude drafts
-        { coAssignees: { some: { userId: userId } } },
-        { sharedWith: { some: { userId: userId } } },
-        { collaborators: { some: { userId: userId, companyId: companyId } } }
+        { AND: [{ coAssignees: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft co-assignments
+        { AND: [{ sharedWith: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft shares
+        { AND: [{ collaborators: { some: { userId: userId, companyId: companyId } } }, { isDraft: false }] } // Exclude draft collaborations
       ];
     } else if (type === 'created-by-me') {
       // Only show non-draft tasks they created (drafts only visible in project view)
@@ -36,9 +36,9 @@ const getTasks = async (req, res) => {
       whereClause.OR = [
         { AND: [{ assigneeId: userId }, { isDraft: false }] },
         { AND: [{ assignerId: userId }, { isDraft: false }] }, // Exclude drafts from created tasks too
-        { coAssignees: { some: { userId: userId } } },
-        { sharedWith: { some: { userId: userId } } },
-        { collaborators: { some: { userId: userId, companyId: companyId } } }
+        { AND: [{ coAssignees: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft co-assignments
+        { AND: [{ sharedWith: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft shares
+        { AND: [{ collaborators: { some: { userId: userId, companyId: companyId } } }, { isDraft: false }] } // Exclude draft collaborations
       ];
     } else {
       // Admins see all tasks in their company OR tasks they're collaborating on OR tasks assigned to them
@@ -46,7 +46,7 @@ const getTasks = async (req, res) => {
       whereClause.OR = [
         { AND: [{ companyId: companyId }, { isDraft: false }] }, // Exclude drafts from company tasks
         { AND: [{ assigneeId: userId }, { isDraft: false }] },
-        { collaborators: { some: { userId: userId, companyId: companyId } } }
+        { AND: [{ collaborators: { some: { userId: userId, companyId: companyId } } }, { isDraft: false }] } // Exclude draft collaborations
       ];
     }
 
