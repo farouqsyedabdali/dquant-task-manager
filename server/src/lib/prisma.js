@@ -9,13 +9,13 @@ const prisma = globalForPrisma.prisma || new PrismaClient({
       url: process.env.DATABASE_URL,
     },
   },
-  // Connection pool configuration
+  // Connection pool configuration optimized for Railway
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  // Connection pool settings
+  // Connection pool settings optimized for Railway
   __internal: {
     engine: {
-      connectionLimit: 10, // Maximum 10 concurrent connections
-      poolTimeout: 10, // 10 seconds timeout
+      connectionLimit: 3, // Railway has very limited connections, use max 3
+      poolTimeout: 60, // 60 seconds timeout for Railway
     },
   },
 });

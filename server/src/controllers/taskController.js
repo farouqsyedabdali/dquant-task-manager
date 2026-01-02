@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const prisma = require('../lib/prisma')
 const { createNotification, notifyTaskUsers } = require('./notificationController')
 const { logAuditActionDirect } = require('../middleware/auditLogger')
 const { autoChangeStatusToInProgress, markStatusAsManuallyChanged } = require('../utils/autoStatusManager')

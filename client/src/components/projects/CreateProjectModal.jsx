@@ -197,15 +197,23 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
 
     try {
       let response;
-      
-      // All templates (user and system) are now stored in the database
-      // Use the same endpoint for both
-      response = await templatesAPI.createProjectFromTemplate(selectedTemplate.id, {
-        name: formData.name,
-        description: formData.description,
-        dueDate: formData.dueDate
-      });
-      
+
+      if (selectedTemplate) {
+        // Create project from template
+        response = await templatesAPI.createProjectFromTemplate(selectedTemplate.id, {
+          name: formData.name,
+          description: formData.description,
+          dueDate: formData.dueDate
+        });
+      } else {
+        // Create project from scratch
+        response = await projectsAPI.create({
+          name: formData.name,
+          description: formData.description,
+          dueDate: formData.dueDate
+        });
+      }
+
       onProjectCreated(response.data);
       handleClose();
     } catch (err) {
