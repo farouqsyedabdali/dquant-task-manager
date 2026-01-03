@@ -5,7 +5,7 @@ import AddProjectTaskModal from './AddProjectTaskModal';
 import TaskModal from '../tasks/TaskModal';
 import SaveAsTemplateModal from './SaveAsTemplateModal';
 import EditProjectModal from './EditProjectModal';
-import { FaTrash, FaPlus, FaPaperPlane, FaSave, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaTrash, FaPlus, FaPaperPlane, FaSave, FaEdit, FaCheck, FaTimes, FaSync } from 'react-icons/fa';
 import IconButton from '../common/IconButton';
 import { formatDateForInput } from '../../utils/dateUtils';
 
@@ -43,6 +43,35 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       fetchContacts();
     }
   }, [isOpen, projectId]);
+
+  // Refresh project data when modal gains focus (in case external changes occurred)
+  useEffect(() => {
+    if (isOpen) {
+      const handleFocus = () => {
+        fetchProject();
+      };
+
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          fetchProject(); // Refresh when tab becomes visible
+        }
+      };
+
+      window.addEventListener('focus', handleFocus);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      // Also refresh periodically in case of external changes
+      const intervalId = setInterval(() => {
+        fetchProject();
+      }, 15000); // Refresh every 15 seconds (more frequent)
+
+      return () => {
+        window.removeEventListener('focus', handleFocus);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        clearInterval(intervalId);
+      };
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (successMessage) {
@@ -513,6 +542,17 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
             {/* Action Buttons */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2 flex-wrap">
+                {/* Refresh Button */}
+                <IconButton
+                  icon={<FaSync />}
+                  label="Refresh Data"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => fetchProject()}
+                  loading={isLoading}
+                  className="!p-2"
+                  title="Refresh project data"
+                />
                 {project.canManage && (
                   <>
                     <IconButton
