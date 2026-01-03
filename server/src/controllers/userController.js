@@ -44,13 +44,14 @@ const getEmployeesForAssignment = async (req, res) => {
     
     const employees = await prisma.user.findMany({
       where: {
-        companyId: companyId,
-        role: 'EMPLOYEE'
+        companyId: companyId
+        // Include all users regardless of role (admins can be assigned tasks too)
       },
       select: {
         id: true,
         name: true,
-        email: true
+        email: true,
+        role: true // Include role for potential future filtering
       },
       orderBy: {
         name: 'asc'

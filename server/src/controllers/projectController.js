@@ -1004,6 +1004,13 @@ const projectController = {
         return res.status(404).json({ error: 'Draft task not found' });
       }
 
+      // Validate mutual exclusivity of assigneeId and externalContactId
+      // Note: Both can be set if external contact has accepted (assigneeId for access, externalContactId for display)
+      if (task.assigneeId && task.externalContactId) {
+        // This is allowed - external contact has accepted and we keep both for display/access
+        // Just ensure task is not in draft state inappropriately
+      }
+
       // Validate that task has an assignee (either internal or external)
       if (!task.assigneeId && !task.externalContactId) {
         return res.status(400).json({ error: 'Task must have an assignee before it can be sent' });
@@ -1034,7 +1041,9 @@ const projectController = {
         }
       });
 
-      // Handle internal employee assignment
+      // Handle internal employee assignment OR external contact who has accepted
+      // If both assigneeId and externalContactId are set, it means external contact has accepted
+      // In this case, only send notification to assigneeId (they're already in the system)
       if (task.assigneeId && task.assignee) {
         // Create notification for internal employee
         await prisma.notification.create({
@@ -1052,8 +1061,9 @@ const projectController = {
         // This will be added in Phase 5
       }
 
-      // Handle external contact assignment
-      if (task.externalContactId && task.externalContact) {
+      // Handle external contact assignment (only if they haven't accepted yet)
+      // If assigneeId is set, external contact has already accepted, so don't send another invitation
+      if (task.externalContactId && task.externalContact && !task.assigneeId) {
         // Create task invitation for external contact
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
         const invitation = await prisma.taskInvitation.create({
@@ -1153,6 +1163,10 @@ const projectController = {
       // Validate all tasks have assignees and valid due dates
       const now = new Date();
       for (const task of draftTasks) {
+        // Validate mutual exclusivity of assigneeId and externalContactId
+        // Note: Both can be set if external contact has accepted (assigneeId for access, externalContactId for display)
+        // This is allowed and normal after external acceptance
+        
         if (!task.assigneeId && !task.externalContactId) {
           return res.status(400).json({ 
             error: `Task "${task.title}" must have an assignee before it can be sent` 
@@ -1187,7 +1201,9 @@ const projectController = {
 
         sentTasks.push(updatedTask);
 
-        // Handle internal employee assignment
+        // Handle internal employee assignment OR external contact who has accepted
+        // If both assigneeId and externalContactId are set, it means external contact has accepted
+        // In this case, only send notification to assigneeId (they're already in the system)
         if (task.assigneeId && task.assignee) {
           await prisma.notification.create({
             data: {
@@ -1201,8 +1217,9 @@ const projectController = {
           });
         }
 
-        // Handle external contact assignment
-        if (task.externalContactId && task.externalContact) {
+        // Handle external contact assignment (only if they haven't accepted yet)
+        // If assigneeId is set, external contact has already accepted, so don't send another invitation
+        if (task.externalContactId && task.externalContact && !task.assigneeId) {
           const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
           const invitation = await prisma.taskInvitation.create({
             data: {

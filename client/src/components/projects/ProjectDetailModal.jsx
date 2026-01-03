@@ -5,7 +5,7 @@ import AddProjectTaskModal from './AddProjectTaskModal';
 import TaskModal from '../tasks/TaskModal';
 import SaveAsTemplateModal from './SaveAsTemplateModal';
 import EditProjectModal from './EditProjectModal';
-import { FaTrash, FaPlus, FaPaperPlane, FaSave, FaEdit, FaCheck, FaTimes, FaSync } from 'react-icons/fa';
+import { FaTrash, FaPlus, FaPaperPlane, FaSave, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
 import IconButton from '../common/IconButton';
 import { formatDateForInput } from '../../utils/dateUtils';
 
@@ -43,35 +43,6 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       fetchContacts();
     }
   }, [isOpen, projectId]);
-
-  // Refresh project data when modal gains focus (in case external changes occurred)
-  useEffect(() => {
-    if (isOpen) {
-      const handleFocus = () => {
-        fetchProject();
-      };
-
-      const handleVisibilityChange = () => {
-        if (!document.hidden) {
-          fetchProject(); // Refresh when tab becomes visible
-        }
-      };
-
-      window.addEventListener('focus', handleFocus);
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-
-      // Also refresh periodically in case of external changes
-      const intervalId = setInterval(() => {
-        fetchProject();
-      }, 15000); // Refresh every 15 seconds (more frequent)
-
-      return () => {
-        window.removeEventListener('focus', handleFocus);
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        clearInterval(intervalId);
-      };
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     if (successMessage) {
@@ -260,8 +231,10 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
   const handleQuickAssign = async (taskId, assigneeId, assignmentType) => {
     try {
+      // Always send both fields to ensure mutual exclusivity
       const updateData = {
-        [assignmentType === 'internal' ? 'assigneeId' : 'externalContactId']: parseInt(assigneeId)
+        assigneeId: assignmentType === 'internal' ? parseInt(assigneeId) : null,
+        externalContactId: assignmentType === 'external' ? parseInt(assigneeId) : null
       };
       
       await tasksAPI.update(taskId, updateData);
@@ -396,14 +369,18 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const getTaskStatusIcon = (task) => {
     if (task.isDraft) return '📝';
     if (task.status === 'COMPLETED') return '✓';
-    if (task.externalContactId) {
-      // External contact task
+    
+    // Check if this is an external contact invitation that hasn't been accepted yet
+    // If assigneeId is set, external contact has accepted (we keep both fields)
+    if (task.externalContactId && !task.assigneeId) {
+      // External contact task that hasn't been accepted
       const invitation = task.invitations?.[0];
       if (!invitation || invitation.status === 'PENDING') return '📧';
       if (invitation.status === 'ACCEPTED') return '✅';
       if (invitation.status === 'DECLINED') return '❌';
     }
-    // Internal task
+    
+    // Internal task or accepted external contact
     if (task.status === 'IN_PROGRESS') return '⏳';
     return '○';
   };
@@ -411,12 +388,16 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const getTaskStatusText = (task) => {
     if (task.isDraft) return 'Draft';
     if (task.status === 'COMPLETED') return 'Completed';
-    if (task.externalContactId) {
+    
+    // Check if this is an external contact invitation that hasn't been accepted yet
+    // If assigneeId is set, external contact has accepted (we keep both fields)
+    if (task.externalContactId && !task.assigneeId) {
       const invitation = task.invitations?.[0];
       if (!invitation || invitation.status === 'PENDING') return 'Pending Response';
       if (invitation.status === 'ACCEPTED') return 'Accepted';
       if (invitation.status === 'DECLINED') return 'Declined';
     }
+    
     return task.status.replace('_', ' ');
   };
 
@@ -542,17 +523,6 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
             {/* Action Buttons */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Refresh Button */}
-                <IconButton
-                  icon={<FaSync />}
-                  label="Refresh Data"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => fetchProject()}
-                  loading={isLoading}
-                  className="!p-2"
-                  title="Refresh project data"
-                />
                 {project.canManage && (
                   <>
                     <IconButton
@@ -763,10 +733,11 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                             color: 'var(--color-text-primary)',
                           }}
                           value={
-                            task.assigneeId
-                              ? `internal:${task.assigneeId}`
-                              : task.externalContactId
-                                ? `external:${task.externalContactId}`
+                            // Prioritize externalContactId for display (handles accepted external users)
+                            task.externalContactId
+                              ? `external:${task.externalContactId}`
+                              : task.assigneeId
+                                ? `internal:${task.assigneeId}`
                                 : ''
                           }
                         >

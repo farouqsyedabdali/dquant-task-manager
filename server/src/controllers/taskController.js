@@ -793,6 +793,40 @@ const updateTask = async (req, res) => {
         assigneeId: updateData.assigneeId,
         externalContactId: updateData.externalContactId
       };
+
+      // Ensure assigneeId and externalContactId are mutually exclusive ONLY when explicitly assigning
+      // Note: Both can be set when an external contact has accepted (assigneeId for access, externalContactId for display)
+      if (updateData.assigneeId !== undefined && updateData.externalContactId !== undefined) {
+        // Both fields are being updated
+        // Only reject if BOTH are being set to non-null values from a null state
+        // Allow if one was already set (e.g., external user accepting keeps externalContactId)
+        const bothNonNull = updateData.assigneeId && updateData.externalContactId;
+        const existingBothNull = !task.assigneeId && !task.externalContactId;
+        
+        if (bothNonNull && existingBothNull) {
+          return res.status(400).json({ error: 'Cannot assign to both internal user and external contact simultaneously' });
+        }
+        
+        // Apply both values as provided
+        allowedUpdates.assigneeId = updateData.assigneeId;
+        allowedUpdates.externalContactId = updateData.externalContactId;
+        
+      } else if (updateData.assigneeId !== undefined) {
+        // Only assigneeId is being updated
+        allowedUpdates.assigneeId = updateData.assigneeId;
+        // If setting to a non-null value AND externalContactId is not already set, clear it
+        if (updateData.assigneeId !== null && !task.externalContactId) {
+          allowedUpdates.externalContactId = null;
+        }
+        
+      } else if (updateData.externalContactId !== undefined) {
+        // Only externalContactId is being updated
+        allowedUpdates.externalContactId = updateData.externalContactId;
+        // If setting to a non-null value AND assigneeId is not already set, clear it
+        if (updateData.externalContactId !== null && !task.assigneeId) {
+          allowedUpdates.assigneeId = null;
+        }
+      }
     } else if (isAssignee) {
       // Assignee can only update status
       allowedUpdates = {
@@ -1029,7 +1063,8 @@ const updateTask = async (req, res) => {
     }
 
     // Send email invitation to external contact if newly assigned
-    if (updateData.externalContactId && updateData.externalContactId !== task.externalContactId) {
+    // ONLY send invitation if task is NOT a draft (drafts get invitations when sent)
+    if (updateData.externalContactId && updateData.externalContactId !== task.externalContactId && !task.isDraft) {
       try {
         // Get the external contact details
         const externalContact = await prisma.contact.findFirst({

@@ -197,14 +197,14 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
 
     try {
       let response;
-
+      
       if (selectedTemplate) {
         // Create project from template
-        response = await templatesAPI.createProjectFromTemplate(selectedTemplate.id, {
-          name: formData.name,
-          description: formData.description,
-          dueDate: formData.dueDate
-        });
+      response = await templatesAPI.createProjectFromTemplate(selectedTemplate.id, {
+        name: formData.name,
+        description: formData.description,
+        dueDate: formData.dueDate
+      });
       } else {
         // Create project from scratch
         response = await projectsAPI.create({
@@ -213,7 +213,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
           dueDate: formData.dueDate
         });
       }
-
+      
       onProjectCreated(response.data);
       handleClose();
     } catch (err) {

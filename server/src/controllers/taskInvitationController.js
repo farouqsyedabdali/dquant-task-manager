@@ -296,11 +296,12 @@ const taskInvitationController = {
       
       if (isAssignment) {
         // This was an assignment - make them the lead assignee
+        // Keep externalContactId so the assigner can still see them in their contacts dropdown
         await prisma.task.update({
           where: { id: invitation.task.id },
           data: {
-            assigneeId: userId,
-            externalContactId: null // Clear the external contact reference
+            assigneeId: userId
+            // DON'T clear externalContactId - keep it for display purposes
           }
         });
         
