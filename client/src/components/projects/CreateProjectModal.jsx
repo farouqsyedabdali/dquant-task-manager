@@ -36,6 +36,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
     icon: '📁',
     dueDate: ''
   });
+  const [isTemplateInfoExpanded, setIsTemplateInfoExpanded] = useState(false);
 
   const colorOptions = [
     '#6366f1', // Indigo
@@ -130,7 +131,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
     }
   };
 
-  const handleTemplateSelect = (template, type) => {
+  const handleTemplateSelect = async (template, type) => {
     setSelectedTemplate(template);
     setSelectedTemplateType(type);
     if (template) {
@@ -141,6 +142,17 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
         color: template.color,
         icon: template.icon
       }));
+
+      // Fetch full template details including tasks
+      if (template.id) {
+        try {
+          const response = await templatesAPI.getById(template.id);
+          setSelectedTemplate(response.data);
+        } catch (err) {
+          console.error('Error fetching template details:', err);
+          // Continue with basic template data if fetch fails
+        }
+      }
     }
     setStep(2);
   };
@@ -800,21 +812,99 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
               </label>
             </div>
 
-            {/* Template Info */}
+            {/* Template Info - Collapsible */}
             {selectedTemplate && (
               <div 
-                className="rounded-lg p-3 flex items-center space-x-3"
-                style={{ backgroundColor: selectedTemplate.color + '10' }}
+                className="rounded-lg overflow-hidden border"
+                style={{ 
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)'
+                }}
               >
-                <span className="text-xl">{selectedTemplate.icon}</span>
-                <div>
-                  <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                    Using template: {selectedTemplate.name}
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    {selectedTemplate.taskCount || selectedTemplate.tasks?.length || 0} tasks will be automatically created
-                  </p>
-                </div>
+                {/* Header - Always visible and clickable */}
+                <button
+                  type="button"
+                  onClick={() => setIsTemplateInfoExpanded(!isTemplateInfoExpanded)}
+                  className="w-full p-3 flex items-center justify-between hover:bg-opacity-80 transition-colors"
+                  style={{ backgroundColor: selectedTemplate.color + '10' }}
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="text-xl">{selectedTemplate.icon}</span>
+                    <div className="text-left">
+                      <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                        Using template: {selectedTemplate.name}
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        {selectedTemplate.taskCount || selectedTemplate.tasks?.length || 0} tasks will be automatically created
+                      </p>
+                    </div>
+                  </div>
+                  <svg 
+                    className={`w-5 h-5 transition-transform ${isTemplateInfoExpanded ? 'rotate-180' : ''}`}
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Expandable Task List */}
+                {isTemplateInfoExpanded && selectedTemplate.tasks && selectedTemplate.tasks.length > 0 && (
+                  <div 
+                    className="p-3 border-t max-h-64 overflow-y-auto"
+                    style={{ 
+                      backgroundColor: 'var(--color-bg-secondary)',
+                      borderColor: 'var(--color-border-default)'
+                    }}
+                  >
+                    <h4 className="text-xs font-semibold mb-2 uppercase" style={{ color: 'var(--color-text-tertiary)' }}>
+                      Tasks in this template:
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedTemplate.tasks.map((task, index) => (
+                        <div 
+                          key={index}
+                          className="flex items-start space-x-2 p-2 rounded"
+                          style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                        >
+                          <span className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
+                            {index + 1}.
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                              {task.title}
+                            </p>
+                            {task.description && (
+                              <p className="text-xs line-clamp-2 mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                                {task.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-1">
+                              {task.priority && (
+                                <span className={`px-1.5 py-0.5 rounded text-xs ${
+                                  task.priority === 'LOW' ? 'bg-green-600 text-green-200' :
+                                  task.priority === 'MEDIUM' ? 'bg-yellow-600 text-yellow-200' :
+                                  task.priority === 'HIGH' ? 'bg-orange-600 text-orange-200' :
+                                  task.priority === 'URGENT' ? 'bg-red-600 text-red-200' :
+                                  'bg-gray-600 text-gray-200'
+                                }`}>
+                                  {task.priority}
+                                </span>
+                              )}
+                              {task.daysOffset > 0 && (
+                                <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                                  📅 {task.daysOffset} day{task.daysOffset !== 1 ? 's' : ''} before project due date
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

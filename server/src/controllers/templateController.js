@@ -144,11 +144,24 @@ const templateController = {
 
       const template = await prisma.projectTemplate.findFirst({
         where: {
-          id: parseInt(id),
-          companyId,
           OR: [
-            { userId },
-            { isPersonal: false }
+            // System templates (available to all users)
+            {
+              id: parseInt(id),
+              isSystemTemplate: true
+            },
+            // User's own personal templates
+            {
+              id: parseInt(id),
+              companyId,
+              userId
+            },
+            // Company-wide templates (not personal)
+            {
+              id: parseInt(id),
+              companyId,
+              isPersonal: false
+            }
           ]
         },
         include: {
