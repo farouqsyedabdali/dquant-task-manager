@@ -33,6 +33,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
     assigneeId: '',
     externalContactId: ''
   });
+  const [taskTimeSettings, setTaskTimeSettings] = useState({}); // Track which tasks have time enabled
 
   const { user } = useAuthStore();
 
@@ -62,6 +63,19 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       setIsLoading(true);
       const response = await projectsAPI.getById(projectId);
       setProject(response.data);
+      
+      // Initialize taskTimeSettings based on existing task times
+      // If time is NOT 23:59 (11:59 PM), checkbox should be checked
+      const timeSettings = {};
+      response.data.tasks?.forEach(task => {
+        if (task.dueDate) {
+          const date = new Date(task.dueDate);
+          const isDateOnly = date.getHours() === 23 && date.getMinutes() === 59;
+          timeSettings[task.id] = !isDateOnly; // Check if NOT date-only
+        }
+      });
+      setTaskTimeSettings(timeSettings);
+      
       setError(null);
     } catch (err) {
       console.error('Error fetching project:', err);
@@ -271,11 +285,20 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
   const handleQuickDueDateChange = async (taskId, newDueDate) => {
     try {
-      await tasksAPI.update(taskId, { dueDate: newDueDate || null });
+      // If time is not enabled for this task, append T23:59
+      const includeTime = taskTimeSettings[taskId] || false;
+      let finalDate = newDueDate;
+      
+      if (newDueDate && !includeTime) {
+        // Set to 11:59 PM for date-only
+        finalDate = `${newDueDate}T23:59`;
+      }
+      
+      await tasksAPI.update(taskId, { dueDate: finalDate || null });
 
       // Update the task in local state without full reload
       // Convert the date string to a Date object for consistent local state
-      const dateObject = newDueDate ? new Date(newDueDate + 'T00:00:00') : null;
+      const dateObject = finalDate ? new Date(finalDate) : null;
       setProject(prev => ({
         ...prev,
         tasks: prev.tasks.map(task =>
@@ -285,6 +308,45 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
     } catch (err) {
       console.error('Error updating due date:', err);
       setError(err.response?.data?.error || 'Failed to update due date');
+    }
+  };
+
+  const handleTimeToggle = async (taskId, checked) => {
+    setTaskTimeSettings(prev => ({ ...prev, [taskId]: checked }));
+    
+    // If task has a due date, update it with or without time
+    const task = project?.tasks?.find(t => t.id === taskId);
+    if (task?.dueDate) {
+      const date = new Date(task.dueDate);
+      let newValue;
+      
+      if (!checked) {
+        // Set to 11:59 PM
+        date.setHours(23, 59, 0, 0);
+        newValue = date.toISOString();
+      } else {
+        // Keep current time or set to current time if it was 11:59 PM
+        if (date.getHours() === 23 && date.getMinutes() === 59) {
+          const now = new Date();
+          date.setHours(now.getHours(), now.getMinutes(), 0, 0);
+          newValue = date.toISOString();
+        } else {
+          newValue = date.toISOString();
+        }
+      }
+      
+      try {
+        await tasksAPI.update(taskId, { dueDate: newValue });
+        setProject(prev => ({
+          ...prev,
+          tasks: prev.tasks.map(t =>
+            t.id === taskId ? { ...t, dueDate: new Date(newValue) } : t
+          )
+        }));
+      } catch (err) {
+        console.error('Error updating due date:', err);
+        setError(err.response?.data?.error || 'Failed to update due date');
+      }
     }
   };
 
@@ -626,7 +688,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                   color: 'var(--color-text-secondary)'
                 }}
               >
-                <div className="col-span-5 flex items-center">
+                <div className="col-span-4 flex items-center">
                   <div className="w-6 flex justify-center">
                     {draftCount > 0 && project.canManage && (
                       <input
@@ -645,7 +707,63 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                   <span className="ml-2">Task Name</span>
                 </div>
                 <div className="col-span-3">Assigned To</div>
-                <div className="col-span-2">Due Date</div>
+                <div className="col-span-3 flex flex-col">
+                  <span>Due Date</span>
+                  <label className="flex items-center mt-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={project.tasks?.length > 0 && project.tasks.every(t => taskTimeSettings[t.id])}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        // Toggle all task time settings
+                        const newSettings = {};
+                        project.tasks?.forEach(task => {
+                          newSettings[task.id] = checked;
+                        });
+                        setTaskTimeSettings(newSettings);
+                        
+                        // Update all tasks with dates
+                        project.tasks?.forEach(async (task) => {
+                          if (task.dueDate) {
+                            const date = new Date(task.dueDate);
+                            let newValue;
+                            
+                            if (!checked) {
+                              date.setHours(23, 59, 0, 0);
+                              newValue = date.toISOString();
+                            } else {
+                              if (date.getHours() === 23 && date.getMinutes() === 59) {
+                                const now = new Date();
+                                date.setHours(now.getHours(), now.getMinutes(), 0, 0);
+                                newValue = date.toISOString();
+                              } else {
+                                newValue = date.toISOString();
+                              }
+                            }
+                            
+                            try {
+                              await tasksAPI.update(task.id, { dueDate: newValue });
+                            } catch (err) {
+                              console.error('Error updating task time:', err);
+                            }
+                          }
+                        });
+                        
+                        // Refresh after all updates
+                        setTimeout(() => fetchProject(), 500);
+                      }}
+                      className="checkbox checkbox-xs mr-1"
+                      style={{
+                        accentColor: 'var(--color-primary)',
+                        border: '2px solid var(--color-text-tertiary)',
+                        backgroundColor: (project.tasks?.length > 0 && project.tasks.every(t => taskTimeSettings[t.id])) ? 'var(--color-accent)' : 'transparent'
+                      }}
+                    />
+                    <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                      Set time for all
+                    </span>
+                  </label>
+                </div>
               </div>
 
               {/* Task Rows */}
@@ -661,7 +779,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       }}
                     >
                       {/* Task Name Column */}
-                      <div className="col-span-5 flex items-center">
+                      <div className="col-span-4 flex items-center">
                         <div className="w-6 flex justify-center">
                           {/* Checkbox for draft tasks only */}
                           {task.isDraft && project.canManage && (
@@ -761,19 +879,31 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
                       {/* Due Date Column */}
                       <div
-                        className="col-span-2"
+                        className="col-span-3"
                         onClick={(e) => {
                           // Stop propagation if clicking on date input
-                          if (e.target.tagName === 'INPUT' || e.target.closest('input')) {
+                          if (e.target.tagName === 'INPUT' || e.target.closest('input') || e.target.tagName === 'LABEL') {
                             e.stopPropagation();
                           }
                         }}
                       >
                         {/* Show date input for all tasks */}
                         <input
-                          type="date"
+                          type={taskTimeSettings[task.id] ? 'datetime-local' : 'date'}
                           onClick={(e) => e.stopPropagation()}
-                          value={task.dueDate ? formatDateForInput(task.dueDate) : ''}
+                          value={task.dueDate ? (
+                            taskTimeSettings[task.id] 
+                              ? (() => {
+                                  const date = new Date(task.dueDate);
+                                  const year = date.getFullYear();
+                                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                                  const day = String(date.getDate()).padStart(2, '0');
+                                  const hours = String(date.getHours()).padStart(2, '0');
+                                  const minutes = String(date.getMinutes()).padStart(2, '0');
+                                  return `${year}-${month}-${day}T${hours}:${minutes}`;
+                                })()
+                              : formatDateForInput(task.dueDate)
+                          ) : ''}
                           onChange={(e) => handleQuickDueDateChange(task.id, e.target.value)}
                           className="input input-sm input-bordered w-full"
                           style={{
@@ -782,6 +912,31 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                             color: 'var(--color-text-primary)',
                           }}
                         />
+                        
+                        {/* Time checkbox */}
+                        <label 
+                          className="flex items-center mt-1 cursor-pointer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={taskTimeSettings[task.id] || false}
+                            onChange={(e) => handleTimeToggle(task.id, e.target.checked)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="checkbox checkbox-xs mr-1"
+                            style={{
+                              accentColor: 'var(--color-primary)',
+                              border: '2px solid var(--color-text-tertiary)',
+                              backgroundColor: taskTimeSettings[task.id] ? 'var(--color-accent)' : 'transparent'
+                            }}
+                          />
+                          <span 
+                            className="text-xs"
+                            style={{ color: 'var(--color-text-tertiary)' }}
+                          >
+                            Set time
+                          </span>
+                        </label>
                       </div>
                     </div>
                   ))
