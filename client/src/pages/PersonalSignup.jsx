@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import PasswordStrengthIndicator from '../components/common/PasswordStrengthIndicator';
+import LegalDocumentModal from '../components/legal/LegalDocumentModal';
 import { validatePassword } from '../utils/passwordValidation';
 
 const PersonalSignup = () => {
@@ -14,6 +15,8 @@ const PersonalSignup = () => {
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [legalDocumentType, setLegalDocumentType] = useState('terms'); // 'terms' or 'privacy'
   
   const { registerPersonal, error, clearError, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
@@ -347,23 +350,31 @@ const PersonalSignup = () => {
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
                   I agree to the{' '}
-                  <Link 
-                    to="/terms" 
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setLegalDocumentType('terms');
+                      setShowLegalModal(true);
+                    }}
                     style={{ color: 'var(--color-primary)' }}
-                    onMouseEnter={(e) => e.target.style.opacity = '0.8'}
-                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                    className="underline hover:opacity-80 transition-opacity"
                   >
                     Terms of Service
-                  </Link>{' '}
+                  </button>{' '}
                   and{' '}
-                  <Link 
-                    to="/privacy" 
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setLegalDocumentType('privacy');
+                      setShowLegalModal(true);
+                    }}
                     style={{ color: 'var(--color-primary)' }}
-                    onMouseEnter={(e) => e.target.style.opacity = '0.8'}
-                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                    className="underline hover:opacity-80 transition-opacity"
                   >
                     Privacy Policy
-                  </Link>
+                  </button>
                 </span>
               </label>
               {errors.acceptTerms && (
@@ -455,6 +466,13 @@ const PersonalSignup = () => {
           </div>
         </div>
       </div>
+
+      {/* Legal Document Modal */}
+      <LegalDocumentModal
+        isOpen={showLegalModal}
+        onClose={() => setShowLegalModal(false)}
+        documentType={legalDocumentType}
+      />
     </div>
   );
 };

@@ -5,6 +5,7 @@ import useFontSizeStore from '../context/fontSizeStore';
 import useThemeStore from '../stores/themeStore';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import AuditLogModal from '../components/audit/AuditLogModal';
+import LegalDocumentModal from '../components/legal/LegalDocumentModal';
 import { feedbackAPI, authAPI } from '../services/api';
 import { lightPalettes, darkPalettes } from '../config/colorPalettes';
 
@@ -18,6 +19,8 @@ const Settings = () => {
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   const [showOlderVersions, setShowOlderVersions] = useState(false);
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [legalDocumentType, setLegalDocumentType] = useState('terms'); // 'terms' or 'privacy'
   const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'preferences' | 'about' | 'feedback' | 'admin-tools'
   const navigate = useNavigate();
   
@@ -861,6 +864,51 @@ const Settings = () => {
                       </svg>
                       View Changelog
                     </button>
+
+                    {/* Legal Documents Section */}
+                    <div className="pt-4">
+                      <h3 
+                        className="text-sm font-semibold mb-3 uppercase tracking-wider"
+                        style={{ color: 'var(--color-text-tertiary)' }}
+                      >
+                        Legal Documents
+                      </h3>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          onClick={() => {
+                            setLegalDocumentType('terms');
+                            setShowLegalModal(true);
+                          }}
+                          className="btn btn-outline w-full sm:w-auto"
+                          style={{
+                            borderColor: 'var(--color-border-default)',
+                            color: 'var(--color-text-primary)'
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Terms of Service
+                        </button>
+                        <button
+                          onClick={() => {
+                            setLegalDocumentType('privacy');
+                            setShowLegalModal(true);
+                          }}
+                          className="btn btn-outline w-full sm:w-auto"
+                          style={{
+                            borderColor: 'var(--color-border-default)',
+                            color: 'var(--color-text-primary)'
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          Privacy Policy
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="pt-4">
                       <p 
                         className="text-sm transition-colors duration-200"
@@ -1376,6 +1424,13 @@ const Settings = () => {
           </div>
         </div>
       )}
+
+      {/* Legal Document Modal */}
+      <LegalDocumentModal
+        isOpen={showLegalModal}
+        onClose={() => setShowLegalModal(false)}
+        documentType={legalDocumentType}
+      />
     </div>
   );
 };

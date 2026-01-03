@@ -65,16 +65,23 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       setProject(response.data);
       
       // Initialize taskTimeSettings based on existing task times
-      // If time is NOT 23:59 (11:59 PM), checkbox should be checked
-      const timeSettings = {};
-      response.data.tasks?.forEach(task => {
-        if (task.dueDate) {
-          const date = new Date(task.dueDate);
-          const isDateOnly = date.getHours() === 23 && date.getMinutes() === 59;
-          timeSettings[task.id] = !isDateOnly; // Check if NOT date-only
-        }
+      // Preserve existing settings for tasks without dates
+      setTaskTimeSettings(prev => {
+        const newTimeSettings = {};
+        response.data.tasks?.forEach(task => {
+          if (task.dueDate) {
+            // Task has a date: determine setting from the date
+            const date = new Date(task.dueDate);
+            const isDateOnly = date.getHours() === 23 && date.getMinutes() === 59;
+            newTimeSettings[task.id] = !isDateOnly; // Check if NOT date-only
+          } else if (prev[task.id] !== undefined) {
+            // Task doesn't have a date but has a previous setting: preserve it
+            newTimeSettings[task.id] = prev[task.id];
+          }
+          // If task has no date and no previous setting, it will be undefined (unchecked)
+        });
+        return newTimeSettings;
       });
-      setTaskTimeSettings(timeSettings);
       
       setError(null);
     } catch (err) {
@@ -312,6 +319,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   };
 
   const handleTimeToggle = async (taskId, checked) => {
+    // Update local state immediately for UI responsiveness
     setTaskTimeSettings(prev => ({ ...prev, [taskId]: checked }));
     
     // If task has a due date, update it with or without time
@@ -348,6 +356,8 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
         setError(err.response?.data?.error || 'Failed to update due date');
       }
     }
+    // If task doesn't have a date yet, just keep the checkbox state in local state
+    // It will be applied when the user sets a date
   };
 
   const handleReassignSubmit = async () => {
@@ -713,44 +723,62 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                     <input
                       type="checkbox"
                       checked={project.tasks?.length > 0 && project.tasks.every(t => taskTimeSettings[t.id])}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const checked = e.target.checked;
-                        // Toggle all task time settings
+                        
+                        // Update all task time settings immediately
                         const newSettings = {};
                         project.tasks?.forEach(task => {
                           newSettings[task.id] = checked;
                         });
                         setTaskTimeSettings(newSettings);
                         
+                        // Only update tasks that have dates
+                        const tasksWithDates = project.tasks?.filter(task => task.dueDate) || [];
+                        
+                        if (tasksWithDates.length === 0) {
+                          // No tasks with dates, just update local state
+                          return;
+                        }
+                        
                         // Update all tasks with dates
-                        project.tasks?.forEach(async (task) => {
-                          if (task.dueDate) {
-                            const date = new Date(task.dueDate);
-                            let newValue;
-                            
-                            if (!checked) {
-                              date.setHours(23, 59, 0, 0);
+                        const updatePromises = tasksWithDates.map(async (task) => {
+                          const date = new Date(task.dueDate);
+                          let newValue;
+                          
+                          if (!checked) {
+                            date.setHours(23, 59, 0, 0);
+                            newValue = date.toISOString();
+                          } else {
+                            if (date.getHours() === 23 && date.getMinutes() === 59) {
+                              const now = new Date();
+                              date.setHours(now.getHours(), now.getMinutes(), 0, 0);
                               newValue = date.toISOString();
                             } else {
-                              if (date.getHours() === 23 && date.getMinutes() === 59) {
-                                const now = new Date();
-                                date.setHours(now.getHours(), now.getMinutes(), 0, 0);
-                                newValue = date.toISOString();
-                              } else {
-                                newValue = date.toISOString();
-                              }
+                              newValue = date.toISOString();
                             }
-                            
-                            try {
-                              await tasksAPI.update(task.id, { dueDate: newValue });
-                            } catch (err) {
-                              console.error('Error updating task time:', err);
-                            }
+                          }
+                          
+                          try {
+                            await tasksAPI.update(task.id, { dueDate: newValue });
+                            return { id: task.id, dueDate: new Date(newValue) };
+                          } catch (err) {
+                            console.error('Error updating task time:', err);
+                            return null;
                           }
                         });
                         
-                        // Refresh after all updates
-                        setTimeout(() => fetchProject(), 500);
+                        // Wait for all updates to complete
+                        const results = await Promise.all(updatePromises);
+                        
+                        // Update local state with new dates
+                        setProject(prev => ({
+                          ...prev,
+                          tasks: prev.tasks.map(t => {
+                            const result = results.find(r => r && r.id === t.id);
+                            return result ? { ...t, dueDate: result.dueDate } : t;
+                          })
+                        }));
                       }}
                       className="checkbox checkbox-xs mr-1"
                       style={{
