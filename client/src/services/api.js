@@ -204,6 +204,7 @@ export const contactsAPI = {
   create: (contactData) => api.post('/contacts', contactData),
   update: (id, contactData) => api.put(`/contacts/${id}`, contactData),
   delete: (id) => api.delete(`/contacts/${id}`),
+  getDeletionPreview: (id) => api.get(`/contacts/${id}/deletion-preview`),
   search: (query, limit) => api.get('/contacts/search', { params: { q: query, limit } }),
 };
 

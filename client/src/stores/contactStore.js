@@ -61,15 +61,25 @@ const useContactStore = create((set, get) => ({
   deleteContact: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await contactsAPI.delete(id);
+      const response = await contactsAPI.delete(id);
       set(state => ({
         contacts: state.contacts.filter(contact => contact.id !== id),
         isLoading: false
       }));
-      return { success: true };
+      return { success: true, data: response.data };
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Failed to delete contact';
       set({ error: errorMessage, isLoading: false });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  getContactDeletionPreview: async (id) => {
+    try {
+      const response = await contactsAPI.getDeletionPreview(id);
+      return { success: true, data: response.data };
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Failed to get deletion preview';
       return { success: false, error: errorMessage };
     }
   },

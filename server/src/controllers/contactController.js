@@ -184,8 +184,8 @@ const updateContact = async (req, res) => {
   }
 };
 
-// Delete a contact
-const deleteContact = async (req, res) => {
+// Get preview of tasks affected by contact deletion
+const getContactDeletionPreview = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -202,89 +202,160 @@ const deleteContact = async (req, res) => {
       return res.status(404).json({ error: 'Contact not found' });
     }
 
-    // Check if there are any common tasks between the user and this contact
-    // A common task is any task where both the user and contact are involved
-    
-    // Get all task IDs where the user is involved
-    const userTasksAsAssignee = await prisma.task.findMany({
-      where: { assigneeId: userId },
-      select: { id: true }
+    // Check if contact email matches a registered user (the assigner)
+    const contactUser = await prisma.user.findFirst({
+      where: {
+        email: contact.email.toLowerCase()
+      }
     });
-    
-    const userTasksAsCoAssignee = await prisma.taskCoAssignee.findMany({
-      where: { userId: userId },
-      select: { taskId: true }
+
+    if (!contactUser) {
+      // Contact is not a registered user, no tasks will be affected
+      return res.json({
+        contact: {
+          id: contact.id,
+          name: contact.name,
+          email: contact.email
+        },
+        affectedTasks: [],
+        taskCount: 0
+      });
+    }
+
+    // Find all tasks where:
+    // - Current user is the assignee
+    // - The contact (as a registered user) is the assigner
+    const affectedTasks = await prisma.task.findMany({
+      where: {
+        assigneeId: userId,
+        assignerId: contactUser.id,
+        status: { not: 'COMPLETED' } // Only show non-completed tasks
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        priority: true,
+        dueDate: true,
+        createdAt: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
     });
-    
-    const userTasksAsShared = await prisma.taskShare.findMany({
-      where: { userId: userId },
-      select: { taskId: true }
+
+    res.json({
+      contact: {
+        id: contact.id,
+        name: contact.name,
+        email: contact.email
+      },
+      affectedTasks,
+      taskCount: affectedTasks.length
     });
-    
-    const allUserTaskIds = [
-      ...userTasksAsAssignee.map(t => t.id),
-      ...userTasksAsCoAssignee.map(t => t.taskId),
-      ...userTasksAsShared.map(t => t.taskId)
-    ];
-    
-    if (allUserTaskIds.length === 0) {
-      // User has no tasks, safe to delete contact
-    } else {
-      // Check if contact is involved in any of the user's tasks
-      // Case 1: Contact is externalContactId in any of user's tasks
-      const tasksWithContactAsExternal = await prisma.task.findFirst({
+  } catch (error) {
+    console.error('Get contact deletion preview error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Delete a contact (soft delete with task withdrawal)
+const deleteContact = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const userCompanyId = req.user.companyId;
+
+    // Check if contact exists and belongs to user
+    const contact = await prisma.contact.findFirst({
+      where: {
+        id: parseInt(id),
+        userId: userId
+      }
+    });
+
+    if (!contact) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+
+    // Check if contact email matches a registered user (the assigner)
+    const contactUser = await prisma.user.findFirst({
+      where: {
+        email: contact.email.toLowerCase()
+      }
+    });
+
+    let withdrawnTaskCount = 0;
+
+    if (contactUser) {
+      // Find all tasks where current user is assigned and contact is the assigner
+      const affectedTasks = await prisma.task.findMany({
         where: {
-          id: { in: allUserTaskIds },
-          externalContactId: parseInt(id)
+          assigneeId: userId,
+          assignerId: contactUser.id,
+          status: { not: 'COMPLETED' } // Don't withdraw from completed tasks
+        },
+        include: {
+          invitations: {
+            where: {
+              recipientUserId: userId,
+              status: 'ACCEPTED'
+            }
+          }
         }
       });
-      
-      // Case 2: Contact is in TaskShare for any of user's tasks
-      const tasksWithContactShared = await prisma.taskShare.findFirst({
-        where: {
-          taskId: { in: allUserTaskIds },
-          contactId: parseInt(id)
-        }
-      });
-      
-      // Case 3: Check if contact email matches a registered user
-      const contactUser = await prisma.user.findFirst({
-        where: {
-          email: contact.email.toLowerCase()
-        }
-      });
-      
-      let tasksWithContactUser = null;
-      if (contactUser) {
-        // Check if contact-user is involved in any of user's tasks
-        tasksWithContactUser = await prisma.task.findFirst({
-          where: {
-            id: { in: allUserTaskIds },
-            OR: [
-              { assigneeId: contactUser.id },
-              {
-                coAssignees: {
-                  some: {
-                    userId: contactUser.id
-                  }
-                }
-              },
-              {
-                shares: {
-                  some: {
-                    userId: contactUser.id
-                  }
-                }
-              }
-            ]
+
+      // Withdraw from each task
+      for (const task of affectedTasks) {
+        // Update task: remove assignee and reset to TODO
+        await prisma.task.update({
+          where: { id: task.id },
+          data: {
+            assigneeId: null,
+            status: 'TODO'
           }
         });
-      }
-      
-      if (tasksWithContactAsExternal || tasksWithContactShared || tasksWithContactUser) {
-        return res.status(400).json({ 
-          error: 'Cannot delete contact. You have tasks in common with this contact. Please delete all common tasks before removing the contact.' 
+
+        // Update task invitation status to UNACCEPTED
+        if (task.invitations.length > 0) {
+          await prisma.taskInvitation.updateMany({
+            where: {
+              taskId: task.id,
+              recipientUserId: userId,
+              status: 'ACCEPTED'
+            },
+            data: {
+              status: 'UNACCEPTED',
+              respondedAt: new Date()
+            }
+          });
+        }
+
+        // Create notification for the assigner
+        await prisma.notification.create({
+          data: {
+            type: 'TASK_INVITATION_UNACCEPTED',
+            title: 'Task Withdrawn',
+            message: `${req.user.name} has withdrawn from the task "${task.title}"`,
+            userId: contactUser.id,
+            companyId: contactUser.companyId,
+            taskId: task.id
+          }
         });
+
+        // Log audit action
+        await logAuditActionDirect(req, 'TASK_UNACCEPTED', 'Task', {
+          entityId: task.id,
+          taskTitle: task.title,
+          assignerId: contactUser.id,
+          assignerName: contactUser.name,
+          metadata: {
+            reason: 'Contact deleted',
+            previousStatus: task.status
+          }
+        });
+
+        withdrawnTaskCount++;
       }
     }
 
@@ -293,18 +364,22 @@ const deleteContact = async (req, res) => {
       where: { id: parseInt(id) }
     });
 
-    // Log audit action
+    // Log contact deletion
     await logAuditActionDirect(req, 'CONTACT_DELETED', 'Contact', {
       entityId: contact.id,
       contactName: contact.name,
       contactEmail: contact.email,
       metadata: {
         isPersonal: contact.isPersonal,
-        company: contact.company
+        company: contact.company,
+        withdrawnTaskCount
       }
     });
 
-    res.json({ message: 'Contact deleted successfully' });
+    res.json({ 
+      message: 'Contact deleted successfully',
+      withdrawnTaskCount
+    });
   } catch (error) {
     console.error('Delete contact error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -356,5 +431,6 @@ module.exports = {
   createContact,
   updateContact,
   deleteContact,
+  getContactDeletionPreview,
   searchContacts
 };

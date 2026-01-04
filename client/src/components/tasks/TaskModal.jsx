@@ -110,6 +110,10 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     viewedTask?.externalContactId !== null &&
     viewedTask?.assignerId !== user?.id; // Not the creator
 
+  // Show creator name if user has company account OR if they're an external assignee
+  // (External assignees need to know who assigned them the task)
+  const shouldShowCreator = !isPersonalAccount || isAcceptedExternalAssignee;
+
   const fetchUsers = async () => {
     try {
       setIsLoadingUsers(true);
@@ -703,8 +707,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     className="flex items-center space-x-4 text-sm transition-colors duration-200"
                     style={{ color: 'var(--color-text-tertiary)' }}
                   >
-                    {!isPersonalAccount && <span>Created by {viewedTask.assigner?.name}</span>}
-                    {!isPersonalAccount && <span>•</span>}
+                    {shouldShowCreator && <span>Created by {viewedTask.assigner?.name}</span>}
+                    {shouldShowCreator && <span>•</span>}
                     <span>{new Date(viewedTask.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>

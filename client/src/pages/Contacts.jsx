@@ -9,6 +9,9 @@ const Contacts = () => {
   const [filterType, setFilterType] = useState('all'); // 'all', 'personal', 'business'
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isDeleteWarningOpen, setIsDeleteWarningOpen] = useState(false);
+  const [deletionPreview, setDeletionPreview] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const {
     contacts,
@@ -18,6 +21,7 @@ const Contacts = () => {
     createContact,
     updateContact,
     deleteContact,
+    getContactDeletionPreview,
     clearError
   } = useContactStore();
 
@@ -62,13 +66,36 @@ const Contacts = () => {
   };
 
   const handleDeleteContact = async (contact) => {
-    if (window.confirm(`Are you sure you want to delete ${contact.name}?`)) {
-      const result = await deleteContact(contact.id);
-      if (result.success) {
-        setSuccessMessage('Contact deleted successfully!');
+    // Fetch deletion preview
+    const previewResult = await getContactDeletionPreview(contact.id);
+    if (!previewResult.success) {
+      setErrorMessage(previewResult.error);
+      return;
+    }
+    
+    // Show warning dialog with affected tasks
+    setDeletionPreview(previewResult.data);
+    setIsDeleteWarningOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletionPreview) return;
+    
+    setIsDeleting(true);
+    const result = await deleteContact(deletionPreview.contact.id);
+    setIsDeleting(false);
+    
+    if (result.success) {
+      const taskCount = result.data?.withdrawnTaskCount || 0;
+      if (taskCount > 0) {
+        setSuccessMessage(`Contact deleted and withdrawn from ${taskCount} task${taskCount !== 1 ? 's' : ''}`);
       } else {
-        setErrorMessage(result.error);
+        setSuccessMessage('Contact deleted successfully!');
       }
+      setIsDeleteWarningOpen(false);
+      setDeletionPreview(null);
+    } else {
+      setErrorMessage(result.error);
     }
   };
 
@@ -375,6 +402,187 @@ const Contacts = () => {
           contact={editingContact}
           onSubmit={handleUpdateContact}
         />
+      )}
+
+      {/* Delete Warning Dialog */}
+      {isDeleteWarningOpen && deletionPreview && (
+        <div className="modal modal-open backdrop-blur-sm">
+          <div 
+            className="modal-box max-w-2xl border transition-colors duration-200"
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)',
+            }}
+          >
+            <div className="flex items-start space-x-3 mb-6">
+              <div className="flex-shrink-0">
+                <svg className="w-10 h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 
+                  className="text-2xl font-bold mb-2"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  Delete Contact: {deletionPreview.contact.name}?
+                </h3>
+                <p 
+                  className="text-sm mb-4"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  {deletionPreview.contact.email}
+                </p>
+              </div>
+            </div>
+
+            {deletionPreview.taskCount > 0 ? (
+              <>
+                <div 
+                  className="rounded-lg p-4 mb-6"
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: 'var(--color-border-warning)',
+                    borderWidth: '1px',
+                  }}
+                >
+                  <p 
+                    className="font-semibold mb-3"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    You are currently assigned to {deletionPreview.taskCount} task{deletionPreview.taskCount !== 1 ? 's' : ''} from this contact:
+                  </p>
+                  
+                  <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
+                    {deletionPreview.affectedTasks.slice(0, 10).map((task) => (
+                      <div 
+                        key={task.id}
+                        className="flex items-center space-x-2 p-2 rounded"
+                        style={{
+                          backgroundColor: 'var(--color-bg-secondary)',
+                        }}
+                      >
+                        <div className="flex-shrink-0">
+                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                            task.status === 'IN_PROGRESS' ? 'bg-blue-900 text-blue-300' :
+                            task.status === 'TODO' ? 'bg-gray-700 text-gray-300' :
+                            'bg-gray-800 text-gray-400'
+                          }`}>
+                            {task.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <span 
+                          className="flex-1 text-sm"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {task.title}
+                        </span>
+                        {task.priority && task.priority !== 'MEDIUM' && (
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            task.priority === 'URGENT' ? 'bg-red-900 text-red-300' :
+                            task.priority === 'HIGH' ? 'bg-orange-900 text-orange-300' :
+                            'bg-gray-700 text-gray-300'
+                          }`}>
+                            {task.priority}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                    {deletionPreview.taskCount > 10 && (
+                      <p 
+                        className="text-sm italic text-center"
+                        style={{ color: 'var(--color-text-tertiary)' }}
+                      >
+                        ... and {deletionPreview.taskCount - 10} more task{deletionPreview.taskCount - 10 !== 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
+
+                  <div 
+                    className="rounded-lg p-3"
+                    style={{
+                      backgroundColor: 'var(--color-bg-secondary)',
+                    }}
+                  >
+                    <p 
+                      className="font-semibold mb-2 text-yellow-500"
+                      style={{ fontSize: '0.95rem' }}
+                    >
+                      If you delete this contact:
+                    </p>
+                    <ul className="space-y-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      <li className="flex items-start space-x-2">
+                        <span className="text-red-500 font-bold">✗</span>
+                        <span>You will be withdrawn from all {deletionPreview.taskCount} task{deletionPreview.taskCount !== 1 ? 's' : ''}</span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <span className="text-red-500 font-bold">✗</span>
+                        <span>{deletionPreview.contact.name} will be notified for each task</span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <span className="text-red-500 font-bold">✗</span>
+                        <span>You will lose access to these tasks</span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <span className="text-red-500 font-bold">✗</span>
+                        <span>This action cannot be undone</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div 
+                className="rounded-lg p-4 mb-6"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                }}
+              >
+                <p style={{ color: 'var(--color-text-secondary)' }}>
+                  No active tasks will be affected by deleting this contact.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setIsDeleteWarningOpen(false);
+                  setDeletionPreview(null);
+                }}
+                disabled={isDeleting}
+                className="btn"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  color: 'var(--color-text-primary)',
+                  borderColor: 'var(--color-border-default)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="btn border-0"
+                style={{
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                }}
+              >
+                {isDeleting ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm"></span>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    {deletionPreview.taskCount > 0 ? 'Yes, Delete & Withdraw' : 'Yes, Delete Contact'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
