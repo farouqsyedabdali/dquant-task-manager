@@ -202,7 +202,7 @@ const getContactDeletionPreview = async (req, res) => {
       return res.status(404).json({ error: 'Contact not found' });
     }
 
-    // Check if contact email matches a registered user (the assigner)
+    // Check if contact email matches a registered user
     const contactUser = await prisma.user.findFirst({
       where: {
         email: contact.email.toLowerCase()
@@ -217,19 +217,40 @@ const getContactDeletionPreview = async (req, res) => {
           name: contact.name,
           email: contact.email
         },
-        affectedTasks: [],
-        taskCount: 0
+        tasksYouAreAssignedTo: [],
+        tasksYouAssignedToThem: [],
+        totalTaskCount: 0
       });
     }
 
-    // Find all tasks where:
-    // - Current user is the assignee
-    // - The contact (as a registered user) is the assigner
-    const affectedTasks = await prisma.task.findMany({
+    // Find tasks in BOTH directions:
+    
+    // 1. Tasks where YOU are assigned BY the contact
+    const tasksYouAreAssignedTo = await prisma.task.findMany({
       where: {
         assigneeId: userId,
         assignerId: contactUser.id,
-        status: { not: 'COMPLETED' } // Only show non-completed tasks
+        status: { not: 'COMPLETED' }
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        priority: true,
+        dueDate: true,
+        createdAt: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // 2. Tasks where YOU assigned TO the contact
+    const tasksYouAssignedToThem = await prisma.task.findMany({
+      where: {
+        assigneeId: contactUser.id,
+        assignerId: userId,
+        status: { not: 'COMPLETED' }
       },
       select: {
         id: true,
@@ -250,8 +271,9 @@ const getContactDeletionPreview = async (req, res) => {
         name: contact.name,
         email: contact.email
       },
-      affectedTasks,
-      taskCount: affectedTasks.length
+      tasksYouAreAssignedTo,
+      tasksYouAssignedToThem,
+      totalTaskCount: tasksYouAreAssignedTo.length + tasksYouAssignedToThem.length
     });
   } catch (error) {
     console.error('Get contact deletion preview error:', error);
@@ -278,22 +300,24 @@ const deleteContact = async (req, res) => {
       return res.status(404).json({ error: 'Contact not found' });
     }
 
-    // Check if contact email matches a registered user (the assigner)
+    // Check if contact email matches a registered user
     const contactUser = await prisma.user.findFirst({
       where: {
         email: contact.email.toLowerCase()
       }
     });
 
-    let withdrawnTaskCount = 0;
+    let withdrawnFromTaskCount = 0;
+    let unassignedTaskCount = 0;
 
     if (contactUser) {
-      // Find all tasks where current user is assigned and contact is the assigner
-      const affectedTasks = await prisma.task.findMany({
+      // DIRECTION 1: Tasks where current user is assigned BY the contact
+      // Action: Withdraw current user from these tasks
+      const tasksYouAreAssignedTo = await prisma.task.findMany({
         where: {
           assigneeId: userId,
           assignerId: contactUser.id,
-          status: { not: 'COMPLETED' } // Don't withdraw from completed tasks
+          status: { not: 'COMPLETED' }
         },
         include: {
           invitations: {
@@ -305,8 +329,7 @@ const deleteContact = async (req, res) => {
         }
       });
 
-      // Withdraw from each task
-      for (const task of affectedTasks) {
+      for (const task of tasksYouAreAssignedTo) {
         // Update task: remove assignee and reset to TODO
         await prisma.task.update({
           where: { id: task.id },
@@ -331,7 +354,7 @@ const deleteContact = async (req, res) => {
           });
         }
 
-        // Create notification for the assigner
+        // Notify the assigner (contact)
         await prisma.notification.create({
           data: {
             type: 'TASK_INVITATION_UNACCEPTED',
@@ -350,12 +373,82 @@ const deleteContact = async (req, res) => {
           assignerId: contactUser.id,
           assignerName: contactUser.name,
           metadata: {
-            reason: 'Contact deleted',
+            reason: 'Contact deleted - withdrew from task',
             previousStatus: task.status
           }
         });
 
-        withdrawnTaskCount++;
+        withdrawnFromTaskCount++;
+      }
+
+      // DIRECTION 2: Tasks where current user assigned TO the contact
+      // Action: Unassign contact from these tasks
+      const tasksYouAssignedToThem = await prisma.task.findMany({
+        where: {
+          assigneeId: contactUser.id,
+          assignerId: userId,
+          status: { not: 'COMPLETED' }
+        },
+        include: {
+          invitations: {
+            where: {
+              recipientUserId: contactUser.id,
+              status: 'ACCEPTED'
+            }
+          }
+        }
+      });
+
+      for (const task of tasksYouAssignedToThem) {
+        // Update task: remove assignee and reset to TODO
+        await prisma.task.update({
+          where: { id: task.id },
+          data: {
+            assigneeId: null,
+            status: 'TODO'
+          }
+        });
+
+        // Update task invitation status to UNACCEPTED
+        if (task.invitations.length > 0) {
+          await prisma.taskInvitation.updateMany({
+            where: {
+              taskId: task.id,
+              recipientUserId: contactUser.id,
+              status: 'ACCEPTED'
+            },
+            data: {
+              status: 'UNACCEPTED',
+              respondedAt: new Date()
+            }
+          });
+        }
+
+        // Notify the contact (they're being unassigned)
+        await prisma.notification.create({
+          data: {
+            type: 'TASK_INVITATION_UNACCEPTED',
+            title: 'Task Unassigned',
+            message: `You have been unassigned from the task "${task.title}" by ${req.user.name}`,
+            userId: contactUser.id,
+            companyId: contactUser.companyId,
+            taskId: task.id
+          }
+        });
+
+        // Log audit action
+        await logAuditActionDirect(req, 'TASK_UNACCEPTED', 'Task', {
+          entityId: task.id,
+          taskTitle: task.title,
+          assigneeId: contactUser.id,
+          assigneeName: contactUser.name,
+          metadata: {
+            reason: 'Contact deleted - unassigned from task',
+            previousStatus: task.status
+          }
+        });
+
+        unassignedTaskCount++;
       }
     }
 
@@ -372,13 +465,15 @@ const deleteContact = async (req, res) => {
       metadata: {
         isPersonal: contact.isPersonal,
         company: contact.company,
-        withdrawnTaskCount
+        withdrawnFromTaskCount,
+        unassignedTaskCount
       }
     });
 
     res.json({ 
       message: 'Contact deleted successfully',
-      withdrawnTaskCount
+      withdrawnFromTaskCount,
+      unassignedTaskCount
     });
   } catch (error) {
     console.error('Delete contact error:', error);

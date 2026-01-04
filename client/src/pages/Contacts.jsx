@@ -86,9 +86,19 @@ const Contacts = () => {
     setIsDeleting(false);
     
     if (result.success) {
-      const taskCount = result.data?.withdrawnTaskCount || 0;
-      if (taskCount > 0) {
-        setSuccessMessage(`Contact deleted and withdrawn from ${taskCount} task${taskCount !== 1 ? 's' : ''}`);
+      const withdrawnCount = result.data?.withdrawnFromTaskCount || 0;
+      const unassignedCount = result.data?.unassignedTaskCount || 0;
+      const totalCount = withdrawnCount + unassignedCount;
+      
+      if (totalCount > 0) {
+        const parts = [];
+        if (withdrawnCount > 0) {
+          parts.push(`withdrawn from ${withdrawnCount} task${withdrawnCount !== 1 ? 's' : ''}`);
+        }
+        if (unassignedCount > 0) {
+          parts.push(`unassigned ${unassignedCount} task${unassignedCount !== 1 ? 's' : ''}`);
+        }
+        setSuccessMessage(`Contact deleted and ${parts.join(' and ')}`);
       } else {
         setSuccessMessage('Contact deleted successfully!');
       }
@@ -436,7 +446,7 @@ const Contacts = () => {
               </div>
             </div>
 
-            {deletionPreview.taskCount > 0 ? (
+            {deletionPreview.totalTaskCount > 0 ? (
               <>
                 <div 
                   className="rounded-lg p-4 mb-6"
@@ -446,57 +456,119 @@ const Contacts = () => {
                     borderWidth: '1px',
                   }}
                 >
-                  <p 
-                    className="font-semibold mb-3"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    You are currently assigned to {deletionPreview.taskCount} task{deletionPreview.taskCount !== 1 ? 's' : ''} from this contact:
-                  </p>
-                  
-                  <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
-                    {deletionPreview.affectedTasks.slice(0, 10).map((task) => (
-                      <div 
-                        key={task.id}
-                        className="flex items-center space-x-2 p-2 rounded"
-                        style={{
-                          backgroundColor: 'var(--color-bg-secondary)',
-                        }}
+                  {/* Tasks you're assigned to by them */}
+                  {deletionPreview.tasksYouAreAssignedTo.length > 0 && (
+                    <div className="mb-6">
+                      <p 
+                        className="font-semibold mb-3 text-blue-400"
+                        style={{ fontSize: '0.95rem' }}
                       >
-                        <div className="flex-shrink-0">
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                            task.status === 'IN_PROGRESS' ? 'bg-blue-900 text-blue-300' :
-                            task.status === 'TODO' ? 'bg-gray-700 text-gray-300' :
-                            'bg-gray-800 text-gray-400'
-                          }`}>
-                            {task.status.replace('_', ' ')}
-                          </span>
-                        </div>
-                        <span 
-                          className="flex-1 text-sm"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
-                          {task.title}
-                        </span>
-                        {task.priority && task.priority !== 'MEDIUM' && (
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            task.priority === 'URGENT' ? 'bg-red-900 text-red-300' :
-                            task.priority === 'HIGH' ? 'bg-orange-900 text-orange-300' :
-                            'bg-gray-700 text-gray-300'
-                          }`}>
-                            {task.priority}
-                          </span>
+                        📥 You are assigned to {deletionPreview.tasksYouAreAssignedTo.length} task{deletionPreview.tasksYouAreAssignedTo.length !== 1 ? 's' : ''} FROM this contact:
+                      </p>
+                      
+                      <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
+                        {deletionPreview.tasksYouAreAssignedTo.slice(0, 10).map((task) => (
+                          <div 
+                            key={task.id}
+                            className="flex items-center space-x-2 p-2 rounded"
+                            style={{
+                              backgroundColor: 'var(--color-bg-secondary)',
+                            }}
+                          >
+                            <div className="flex-shrink-0">
+                              <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                task.status === 'IN_PROGRESS' ? 'bg-blue-900 text-blue-300' :
+                                task.status === 'TODO' ? 'bg-gray-700 text-gray-300' :
+                                'bg-gray-800 text-gray-400'
+                              }`}>
+                                {task.status.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <span 
+                              className="flex-1 text-sm"
+                              style={{ color: 'var(--color-text-primary)' }}
+                            >
+                              {task.title}
+                            </span>
+                            {task.priority && task.priority !== 'MEDIUM' && (
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                task.priority === 'URGENT' ? 'bg-red-900 text-red-300' :
+                                task.priority === 'HIGH' ? 'bg-orange-900 text-orange-300' :
+                                'bg-gray-700 text-gray-300'
+                              }`}>
+                                {task.priority}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                        {deletionPreview.tasksYouAreAssignedTo.length > 10 && (
+                          <p 
+                            className="text-sm italic text-center"
+                            style={{ color: 'var(--color-text-tertiary)' }}
+                          >
+                            ... and {deletionPreview.tasksYouAreAssignedTo.length - 10} more
+                          </p>
                         )}
                       </div>
-                    ))}
-                    {deletionPreview.taskCount > 10 && (
+                    </div>
+                  )}
+
+                  {/* Tasks you assigned to them */}
+                  {deletionPreview.tasksYouAssignedToThem.length > 0 && (
+                    <div className="mb-4">
                       <p 
-                        className="text-sm italic text-center"
-                        style={{ color: 'var(--color-text-tertiary)' }}
+                        className="font-semibold mb-3 text-purple-400"
+                        style={{ fontSize: '0.95rem' }}
                       >
-                        ... and {deletionPreview.taskCount - 10} more task{deletionPreview.taskCount - 10 !== 1 ? 's' : ''}
+                        📤 You have assigned {deletionPreview.tasksYouAssignedToThem.length} task{deletionPreview.tasksYouAssignedToThem.length !== 1 ? 's' : ''} TO this contact:
                       </p>
-                    )}
-                  </div>
+                      
+                      <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
+                        {deletionPreview.tasksYouAssignedToThem.slice(0, 10).map((task) => (
+                          <div 
+                            key={task.id}
+                            className="flex items-center space-x-2 p-2 rounded"
+                            style={{
+                              backgroundColor: 'var(--color-bg-secondary)',
+                            }}
+                          >
+                            <div className="flex-shrink-0">
+                              <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                task.status === 'IN_PROGRESS' ? 'bg-blue-900 text-blue-300' :
+                                task.status === 'TODO' ? 'bg-gray-700 text-gray-300' :
+                                'bg-gray-800 text-gray-400'
+                              }`}>
+                                {task.status.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <span 
+                              className="flex-1 text-sm"
+                              style={{ color: 'var(--color-text-primary)' }}
+                            >
+                              {task.title}
+                            </span>
+                            {task.priority && task.priority !== 'MEDIUM' && (
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                task.priority === 'URGENT' ? 'bg-red-900 text-red-300' :
+                                task.priority === 'HIGH' ? 'bg-orange-900 text-orange-300' :
+                                'bg-gray-700 text-gray-300'
+                              }`}>
+                                {task.priority}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                        {deletionPreview.tasksYouAssignedToThem.length > 10 && (
+                          <p 
+                            className="text-sm italic text-center"
+                            style={{ color: 'var(--color-text-tertiary)' }}
+                          >
+                            ... and {deletionPreview.tasksYouAssignedToThem.length - 10} more
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div 
                     className="rounded-lg p-3"
@@ -511,17 +583,25 @@ const Contacts = () => {
                       If you delete this contact:
                     </p>
                     <ul className="space-y-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      {deletionPreview.tasksYouAreAssignedTo.length > 0 && (
+                        <li className="flex items-start space-x-2">
+                          <span className="text-red-500 font-bold">✗</span>
+                          <span>You will be withdrawn from {deletionPreview.tasksYouAreAssignedTo.length} task{deletionPreview.tasksYouAreAssignedTo.length !== 1 ? 's' : ''} (they assigned you)</span>
+                        </li>
+                      )}
+                      {deletionPreview.tasksYouAssignedToThem.length > 0 && (
+                        <li className="flex items-start space-x-2">
+                          <span className="text-red-500 font-bold">✗</span>
+                          <span>Contact will be unassigned from {deletionPreview.tasksYouAssignedToThem.length} task{deletionPreview.tasksYouAssignedToThem.length !== 1 ? 's' : ''} (you assigned them)</span>
+                        </li>
+                      )}
                       <li className="flex items-start space-x-2">
                         <span className="text-red-500 font-bold">✗</span>
-                        <span>You will be withdrawn from all {deletionPreview.taskCount} task{deletionPreview.taskCount !== 1 ? 's' : ''}</span>
+                        <span>{deletionPreview.contact.name} will be notified for each affected task</span>
                       </li>
                       <li className="flex items-start space-x-2">
                         <span className="text-red-500 font-bold">✗</span>
-                        <span>{deletionPreview.contact.name} will be notified for each task</span>
-                      </li>
-                      <li className="flex items-start space-x-2">
-                        <span className="text-red-500 font-bold">✗</span>
-                        <span>You will lose access to these tasks</span>
+                        <span>All affected tasks will reset to "TODO" status</span>
                       </li>
                       <li className="flex items-start space-x-2">
                         <span className="text-red-500 font-bold">✗</span>
@@ -576,7 +656,15 @@ const Contacts = () => {
                   </>
                 ) : (
                   <>
-                    {deletionPreview.taskCount > 0 ? 'Yes, Delete & Withdraw' : 'Yes, Delete Contact'}
+                    {deletionPreview.totalTaskCount > 0 ? (
+                      deletionPreview.tasksYouAreAssignedTo.length > 0 && deletionPreview.tasksYouAssignedToThem.length > 0 
+                        ? 'Yes, Delete & Process All Tasks'
+                        : deletionPreview.tasksYouAreAssignedTo.length > 0
+                        ? 'Yes, Delete & Withdraw'
+                        : 'Yes, Delete & Unassign'
+                    ) : (
+                      'Yes, Delete Contact'
+                    )}
                   </>
                 )}
               </button>

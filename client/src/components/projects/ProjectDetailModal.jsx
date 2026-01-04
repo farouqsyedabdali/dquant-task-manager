@@ -22,6 +22,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [sendingTaskId, setSendingTaskId] = useState(null);
   const [sendingAll, setSendingAll] = useState(false);
+  const [sendingSelected, setSendingSelected] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
@@ -146,6 +147,44 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       setError(err.response?.data?.error || 'Failed to send tasks');
     } finally {
       setSendingAll(false);
+    }
+  };
+
+  const handleSendSelectedDrafts = async () => {
+    if (selectedDraftTasks.size === 0) return;
+
+    try {
+      setSendingSelected(true);
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Send tasks sequentially to avoid overwhelming the server
+      for (const taskId of selectedDraftTasks) {
+        try {
+          await projectsAPI.sendTask(projectId, taskId);
+          successCount++;
+        } catch (err) {
+          console.error(`Error sending task ${taskId}:`, err);
+          errorCount++;
+        }
+      }
+
+      await fetchProject();
+      setSelectedDraftTasks(new Set()); // Clear selection after sending
+
+      // Show appropriate message
+      if (errorCount === 0) {
+        setSuccessMessage(`${successCount} draft task${successCount > 1 ? 's' : ''} sent successfully!`);
+      } else if (successCount === 0) {
+        setError(`Failed to send ${errorCount} task${errorCount > 1 ? 's' : ''}`);
+      } else {
+        setSuccessMessage(`${successCount} task${successCount > 1 ? 's' : ''} sent successfully, ${errorCount} failed`);
+      }
+    } catch (err) {
+      console.error('Error sending selected drafts:', err);
+      setError('Failed to send selected tasks');
+    } finally {
+      setSendingSelected(false);
     }
   };
 
@@ -613,20 +652,32 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                         variant="primary"
                         size="sm"
                         onClick={handleSendAllDrafts}
-                        disabled={sendingAll}
+                        disabled={sendingAll || selectedDraftTasks.size > 0}
                         loading={sendingAll}
                         className="!bg-emerald-600 hover:!bg-emerald-700"
                       />
                     )}
 
                     {selectedDraftTasks.size > 0 && (
-                      <IconButton
-                        icon={<FaTrash />}
-                        label={`Delete Selected (${selectedDraftTasks.size})`}
-                        variant="danger"
-                        size="sm"
-                        onClick={handleBulkDeleteDrafts}
-                      />
+                      <>
+                        <IconButton
+                          icon={<FaPaperPlane />}
+                          label={sendingSelected ? "Sending..." : `Send Selected (${selectedDraftTasks.size})`}
+                          variant="primary"
+                          size="sm"
+                          onClick={handleSendSelectedDrafts}
+                          disabled={sendingSelected}
+                          loading={sendingSelected}
+                          className="!bg-emerald-600 hover:!bg-emerald-700"
+                        />
+                        <IconButton
+                          icon={<FaTrash />}
+                          label={`Delete Selected (${selectedDraftTasks.size})`}
+                          variant="danger"
+                          size="sm"
+                          onClick={handleBulkDeleteDrafts}
+                        />
+                      </>
                     )}
 
                     <IconButton
