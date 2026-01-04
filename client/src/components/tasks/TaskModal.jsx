@@ -36,6 +36,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isUnaccessConfirmOpen, setIsUnaccessConfirmOpen] = useState(false);
+  const [isUnaccepting, setIsUnaccepting] = useState(false);
   const [viewedTask, setViewedTask] = useState(task); // local state for current viewed task
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -100,6 +102,13 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     user?.role === 'SYSDMIN' || 
     viewedTask?.assignerId === user?.id
   );
+
+  // Check if current user is an accepted external assignee
+  // This means they accepted a task invitation and now have assigneeId set
+  const isAcceptedExternalAssignee = 
+    viewedTask?.assigneeId === user?.id && 
+    viewedTask?.externalContactId !== null &&
+    viewedTask?.assignerId !== user?.id; // Not the creator
 
   const fetchUsers = async () => {
     try {
@@ -321,6 +330,27 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     }
     setIsDeleteModalOpen(false);
     onClose();
+  };
+
+  const handleUnaccept = async () => {
+    if (!viewedTask?.id) return;
+    
+    setIsUnaccepting(true);
+    try {
+      const response = await tasksAPI.unaccessTask(viewedTask.id);
+      if (response.data.success) {
+        alert('You have successfully withdrawn from this task');
+        setIsUnaccessConfirmOpen(false);
+        onClose();
+        // Refresh the task list
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error withdrawing from task:', error);
+      alert(error.response?.data?.error || 'Failed to withdraw from this task');
+    } finally {
+      setIsUnaccepting(false);
+    }
   };
 
   // Handle task summarization
@@ -728,6 +758,17 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     onArchive?.(viewedTask.id);
                   }
                 }}
+              />
+            )}
+
+            {isAcceptedExternalAssignee && viewedTask.status !== 'COMPLETED' && (
+              <IconButton
+                icon={<FaTimesCircle />}
+                label="Withdraw"
+                variant="danger"
+                size="sm"
+                onClick={() => setIsUnaccessConfirmOpen(true)}
+                className="!bg-red-600 hover:!bg-red-700"
               />
             )}
             
@@ -1836,6 +1877,86 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         taskTitle={viewedTask.title}
         isLoading={isLoading}
       />
+
+      {/* Unaccept Confirmation Modal */}
+      {isUnaccessConfirmOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+            style={{
+              backgroundColor: 'var(--color-bg-primary)',
+              border: '1px solid var(--color-border)'
+            }}
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex-shrink-0">
+                <FaExclamationTriangle className="text-3xl text-yellow-500" />
+              </div>
+              <div className="flex-1">
+                <h3 
+                  className="text-xl font-bold mb-2"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  Withdraw from Task?
+                </h3>
+                <p 
+                  className="text-sm mb-3"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  You will withdraw from this task and it will no longer appear in your dashboard. The task creator ({viewedTask?.assigner?.name}) will be notified.
+                </p>
+                <div 
+                  className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 mb-4"
+                  style={{ 
+                    backgroundColor: 'var(--color-warning-bg)',
+                    borderColor: 'var(--color-warning-border)'
+                  }}
+                >
+                  <p 
+                    className="text-xs font-medium"
+                    style={{ color: 'var(--color-warning-text)' }}
+                  >
+                    <strong>Note:</strong> This action will remove you as the assignee and reset the task status to TODO. The task will need to be reassigned.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setIsUnaccessConfirmOpen(false)}
+                disabled={isUnaccepting}
+                className="px-4 py-2 rounded-md font-medium transition-colors"
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-border)'
+                }}
+              >
+                Cancel
+              </button>
+                <button
+                onClick={handleUnaccept}
+                disabled={isUnaccepting}
+                className="px-4 py-2 bg-red-600 text-white rounded-md font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isUnaccepting ? (
+                  <>
+                    <FaSpinner className="animate-spin" />
+                    Withdrawing...
+                  </>
+                ) : (
+                  <>
+                    <FaTimesCircle />
+                    Withdraw
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Task Share Modal */}
       <TaskShareModal

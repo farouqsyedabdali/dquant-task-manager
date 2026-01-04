@@ -13,7 +13,7 @@ const {
   removeCoAssignee,
   getCoAssignees
 } = require('../controllers/taskController');
-const { sendInvitation } = require('../controllers/taskInvitationController');
+const { sendInvitation, unaccessTask } = require('../controllers/taskInvitationController');
 const auth = require('../middleware/auth');
 const { adminOnly } = require('../middleware/roleCheck');
 
@@ -62,5 +62,8 @@ router.delete('/:id/co-assignees/:userId', removeCoAssignee);
 // Task invitation routes
 // Send task invitation via email
 router.post('/:taskId/send-invitation', sendInvitation);
+
+// Unaccept task (remove yourself from an accepted task)
+router.post('/:taskId/unaccept', unaccessTask);
 
 module.exports = router; 

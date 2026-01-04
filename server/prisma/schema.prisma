@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 model Company {
@@ -371,6 +370,7 @@ enum InvitationStatus {
   ACCEPTED
   DECLINED
   EXPIRED
+  UNACCEPTED
 }
 
 enum NotificationType {
@@ -389,6 +389,7 @@ enum NotificationType {
   TASK_INVITATION_RECEIVED
   TASK_INVITATION_ACCEPTED
   TASK_INVITATION_DECLINED
+  TASK_INVITATION_UNACCEPTED
   PROJECT_TASK_SENT
   PROJECT_TASK_ACCEPTED
   PROJECT_TASK_DECLINED
@@ -403,6 +404,7 @@ enum AuditAction {
   TASK_PRIORITY_CHANGED
   TASK_ASSIGNED
   TASK_UNASSIGNED
+  TASK_UNACCEPTED
   TASK_DUE_DATE_CHANGED
   COMMENT_CREATED
   COMMENT_UPDATED

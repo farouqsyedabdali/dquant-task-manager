@@ -83,6 +83,8 @@ export const tasksAPI = {
   removeCoAssignee: (taskId, userId) => api.delete(`/tasks/${taskId}/co-assignees/${userId}`),
   // Task Invitation API
   sendInvitation: (taskId, invitationData) => api.post(`/tasks/${taskId}/send-invitation`, invitationData),
+  // Unaccept task (remove yourself from an accepted task)
+  unaccessTask: (taskId) => api.post(`/tasks/${taskId}/unaccept`),
 };
 
 // Comments API

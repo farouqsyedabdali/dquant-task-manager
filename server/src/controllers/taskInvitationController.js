@@ -672,6 +672,134 @@ const taskInvitationController = {
       console.error('Error getting pending invitations:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
+  },
+
+  /**
+   * Unaccept a task (remove yourself from an accepted task)
+   * POST /api/tasks/:taskId/unaccept
+   */
+  async unaccessTask(req, res) {
+    try {
+      const { taskId } = req.params;
+      const userId = req.user.id;
+
+      console.log('🔍 Unaccept Debug:', {
+        taskId,
+        userId,
+        userEmail: req.user.email
+      });
+
+      // Get the task
+      const task = await prisma.task.findUnique({
+        where: { id: parseInt(taskId) },
+        include: {
+          assigner: {
+            select: { id: true, name: true, email: true, companyId: true }
+          }
+        }
+      });
+
+      if (!task) {
+        return res.status(404).json({ error: 'Task not found' });
+      }
+
+      console.log('📋 Task Info:', {
+        taskId: task.id,
+        assigneeId: task.assigneeId,
+        externalContactId: task.externalContactId,
+        assignerId: task.assignerId,
+        companyId: task.companyId
+      });
+
+      // Verify the current user is the assignee
+      if (task.assigneeId !== userId) {
+        console.log('❌ Mismatch:', {
+          taskAssigneeId: task.assigneeId,
+          currentUserId: userId,
+          areEqual: task.assigneeId === userId
+        });
+        return res.status(403).json({ 
+          error: 'You are not assigned to this task',
+          debug: {
+            taskAssigneeId: task.assigneeId,
+            yourUserId: userId
+          }
+        });
+      }
+
+      // Don't allow unaccepting completed tasks
+      if (task.status === 'COMPLETED') {
+        return res.status(400).json({ 
+          error: 'Cannot withdraw from a completed task' 
+        });
+      }
+
+      // Get the user info
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      // Update task - remove assignee and reset status
+      await prisma.task.update({
+        where: { id: task.id },
+        data: {
+          assigneeId: null,
+          status: 'TODO'
+          // Keep externalContactId for assigner's reference
+        }
+      });
+
+      // Update invitation status
+      await prisma.taskInvitation.updateMany({
+        where: {
+          taskId: task.id,
+          recipientUserId: userId,
+          status: 'ACCEPTED'
+        },
+        data: {
+          status: 'UNACCEPTED',
+          respondedAt: new Date()
+        }
+      });
+
+      // Create notification for the assigner
+      await prisma.notification.create({
+        data: {
+          type: 'TASK_INVITATION_UNACCEPTED',
+          title: 'User Withdrew from Task',
+          message: `${user.name} has withdrawn from task "${task.title}". Please reassign this task.`,
+          taskId: task.id,
+          userId: task.assignerId,
+          companyId: task.companyId
+        }
+      });
+
+      // Create audit log
+      await prisma.auditLog.create({
+        data: {
+          action: 'TASK_UNACCEPTED',
+          entityType: 'Task',
+          entityId: task.id,
+          description: `${user.name} withdrew from task "${task.title}"`,
+          userId: userId,
+          companyId: user.companyId,
+          metadata: {
+            taskTitle: task.title,
+            assignerId: task.assignerId,
+            assignerName: task.assigner.name
+          }
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'You have successfully withdrawn from this task'
+      });
+
+    } catch (error) {
+      console.error('Error unaccepting task:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }
 };
 

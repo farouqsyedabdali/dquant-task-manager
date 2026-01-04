@@ -576,7 +576,7 @@ const createTask = async (req, res) => {
         assigneeId: assigneeId ? parseInt(assigneeId) : null,
         externalContactId: externalContactId ? parseInt(externalContactId) : null,
         parentTaskId: parentTaskId ? parseInt(parentTaskId) : null,
-        dueDate: new Date(finalDueDate), // Required, already validated with default 11:59 PM if needed
+        dueDate: dueDateObj, // Required, already validated
         companyId
       },
       include: {
