@@ -217,6 +217,15 @@ const getTasks = async (req, res) => {
               }
             }
           }
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            icon: true,
+            ownerId: true
+          }
         }
       },
       orderBy: [
@@ -448,7 +457,8 @@ const getTask = async (req, res) => {
             id: true,
             name: true,
             color: true,
-            icon: true
+            icon: true,
+            ownerId: true
           }
         }
       }

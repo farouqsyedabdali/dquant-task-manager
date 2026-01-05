@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import useTaskStore from '../../stores/taskStore';
 import useAuthStore from '../../context/authStore';
 import useUserStore from '../../stores/userStore';
@@ -56,6 +57,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const { user, isAdmin } = useAuthStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
   const { fetchContacts } = useContactStore();
+  const navigate = useNavigate();
   
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
@@ -696,12 +698,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     >
                       {viewedTask.title}
                     </h3>
-                    {isSharedTask && (
-                      <div className="status-badge bg-blue-600 text-blue-100 capitalize flex items-center gap-1.5">
-                        <FaShareAlt className="w-3 h-3" />
-                        <span>Shared with you</span>
-                      </div>
-                    )}
                   </div>
                   <div 
                     className="flex items-center space-x-4 text-sm transition-colors duration-200"
@@ -1639,8 +1635,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                 {/* Task Hierarchy Tab */}
                 {activeTab === 'hierarchy' && (
                   <div className="animate-fadeIn">
-                    {/* Project Information */}
-                    {viewedTask.project && (
+                    {/* Project Information - Only show if no parent task and user is project owner */}
+                    {viewedTask.project && !viewedTask.parentTask && viewedTask.project.ownerId === user?.id && (
                       <div className="mb-6">
                         <div className="flex items-center justify-between mb-2 h-8">
                           <h4
@@ -1651,33 +1647,52 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           </h4>
                         </div>
                         <div
-                          className="border rounded-lg p-3 transition-colors duration-200"
+                          className="border rounded-lg p-3 cursor-pointer transition text-sm transition-colors duration-200"
                           style={{
                             backgroundColor: 'var(--color-bg-tertiary)',
                             borderColor: 'var(--color-border-default)',
                           }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                            e.currentTarget.style.borderColor = 'var(--color-primary)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                            e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                          }}
+                          onClick={() => {
+                            // Close task modal and navigate to project with state
+                            onClose();
+                            navigate('/projects', { 
+                              state: { openProjectId: viewedTask.project.id } 
+                            });
+                          }}
+                          title="Open project"
                         >
                           <div className="flex items-center space-x-3">
                             {viewedTask.project.icon && (
                               <div
-                                className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                                className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                                 style={{ backgroundColor: viewedTask.project.color || '#6366f1' }}
                               >
                                 {viewedTask.project.icon}
                               </div>
                             )}
-                            <div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <FaSitemap className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+                                <p
+                                  className="font-medium transition-colors duration-200 truncate"
+                                  style={{ color: 'var(--color-text-primary)' }}
+                                >
+                                  {viewedTask.project.name}
+                                </p>
+                              </div>
                               <p
-                                className="font-medium transition-colors duration-200"
-                                style={{ color: 'var(--color-text-primary)' }}
-                              >
-                                {viewedTask.project.name}
-                              </p>
-                              <p
-                                className="text-xs transition-colors duration-200"
+                                className="text-xs mt-1 transition-colors duration-200"
                                 style={{ color: 'var(--color-text-tertiary)' }}
                               >
-                                Project Task
+                                Click to view project
                               </p>
                             </div>
                           </div>

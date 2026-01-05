@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { projectsAPI, usersAPI } from '../services/api';
 import useAuthStore from '../context/authStore';
 import CreateProjectModal from '../components/projects/CreateProjectModal';
@@ -16,6 +17,7 @@ const Projects = () => {
   const [successMessage, setSuccessMessage] = useState('');
 
   const { user } = useAuthStore();
+  const location = useLocation();
 
   useEffect(() => {
     fetchProjects();
@@ -27,6 +29,18 @@ const Projects = () => {
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
+
+  // Handle navigation from TaskModal with project ID
+  useEffect(() => {
+    if (location.state?.openProjectId && projects.length > 0) {
+      const projectToOpen = projects.find(p => p.id === location.state.openProjectId);
+      if (projectToOpen) {
+        handleOpenProject(projectToOpen);
+        // Clear the state so it doesn't reopen on subsequent renders
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [location.state, projects]);
 
   const fetchProjects = async () => {
     try {
