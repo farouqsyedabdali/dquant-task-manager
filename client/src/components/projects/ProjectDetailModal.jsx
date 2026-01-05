@@ -84,20 +84,20 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       setProject(response.data);
       
       // Initialize taskTimeSettings based on existing task times
-      // Preserve existing settings for tasks without dates
+      // Preserve existing settings to prevent checkbox from auto-ticking on refresh
       setTaskTimeSettings(prev => {
         const newTimeSettings = {};
         response.data.tasks?.forEach(task => {
-          if (task.dueDate) {
-            // Task has a date: determine setting from the date
+          // First priority: preserve existing setting if task already tracked
+          if (prev[task.id] !== undefined) {
+            newTimeSettings[task.id] = prev[task.id];
+          } else if (task.dueDate) {
+            // Second priority: for NEW tasks with dates, detect from the date
             const date = new Date(task.dueDate);
             const isDateOnly = date.getHours() === 23 && date.getMinutes() === 59;
-            newTimeSettings[task.id] = !isDateOnly; // Check if NOT date-only
-          } else if (prev[task.id] !== undefined) {
-            // Task doesn't have a date but has a previous setting: preserve it
-            newTimeSettings[task.id] = prev[task.id];
+            newTimeSettings[task.id] = !isDateOnly;
           }
-          // If task has no date and no previous setting, it will be undefined (unchecked)
+          // If no previous setting and no date, leave undefined (unchecked)
         });
         return newTimeSettings;
       });
@@ -569,6 +569,38 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
     return task.status.replace('_', ' ');
   };
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'TODO':
+        return 'bg-gray-600 text-gray-200';
+      case 'IN_PROGRESS':
+        return 'bg-blue-600 text-blue-200';
+      case 'COMPLETED':
+        return 'bg-green-600 text-green-200';
+      case 'ON_HOLD':
+        return 'bg-yellow-600 text-yellow-200';
+      case 'CANCELLED':
+        return 'bg-red-600 text-red-200';
+      default:
+        return 'bg-gray-600 text-gray-200';
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'URGENT':
+        return 'bg-red-600 text-red-200';
+      case 'HIGH':
+        return 'bg-orange-600 text-orange-200';
+      case 'MEDIUM':
+        return 'bg-yellow-600 text-yellow-200';
+      case 'LOW':
+        return 'bg-green-600 text-green-200';
+      default:
+        return 'bg-yellow-600 text-yellow-200';
+    }
+  };
+
   const draftCount = project?.tasks?.filter(t => t.isDraft).length || 0;
 
   if (!isOpen) return null;
@@ -969,25 +1001,31 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                         </div>
                         <div className="flex-1 min-w-0 ml-2">
                           <p
-                            className={`font-medium truncate ${task.status === 'COMPLETED' ? 'line-through opacity-60' : ''}`}
+                            className="font-medium truncate"
                             style={{ color: 'var(--color-text-primary)' }}
                             title={task.title}
                           >
                             {task.title}
                           </p>
                           <div className="flex items-center space-x-2 mt-1">
-                            <span className={`px-2 py-0.5 rounded text-xs ${
-                              task.priority === 'LOW' ? 'bg-green-600 text-green-200' :
-                              task.priority === 'MEDIUM' ? 'bg-yellow-600 text-yellow-200' :
-                              task.priority === 'HIGH' ? 'bg-orange-600 text-orange-200' :
-                              task.priority === 'URGENT' ? 'bg-red-600 text-red-200' :
-                              'bg-yellow-600 text-yellow-200'
-                            }`}>
+                            {/* Priority Badge */}
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${getPriorityColor(task.priority)}`}>
                               {task.priority}
                             </span>
-                            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                              {getTaskStatusText(task)}
-                            </span>
+                            {/* Status Badge */}
+                            {task.isDraft ? (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-700 text-gray-300">
+                                Draft
+                              </span>
+                            ) : task.externalContactId && !task.assigneeId ? (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-600 text-purple-200">
+                                {getTaskStatusText(task)}
+                              </span>
+                            ) : (
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${getStatusColor(task.status)}`}>
+                                {task.status.replace('_', ' ')}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
