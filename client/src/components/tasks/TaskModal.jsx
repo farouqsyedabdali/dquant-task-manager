@@ -1776,26 +1776,33 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                 onClick={() => handleTaskClick(subtask.id)}
                                 title="Open subtask"
                               >
-                                <div className="flex items-center justify-between mb-1">
+                                {/* Title */}
+                                <div className="mb-2">
                                   <span 
                                     className="text-sm font-medium transition-colors duration-200"
                                     style={{ color: 'var(--color-text-primary)' }}
                                   >
                                     {subtask.title}
                                   </span>
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${getStatusColor(subtask.status)} w-fit`}>
-                                    {STATUS_LABELS[subtask.status].toUpperCase()}
-                                  </span>
                                 </div>
+                                
+                                {/* Assignee */}
                                 {!isPersonalAccount && subtask.assignee && (
                                   <div 
-                                    className="text-xs flex items-center gap-1 transition-colors duration-200"
+                                    className="text-xs flex items-center gap-1 mb-2 transition-colors duration-200"
                                     style={{ color: 'var(--color-text-tertiary)' }}
                                   >
                                     <FaUsers className="w-3 h-3" />
                                     {subtask.assignee.name}
                                   </div>
                                 )}
+                                
+                                {/* Status Badge */}
+                                <div>
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${getStatusColor(subtask.status)} inline-block`}>
+                                    {STATUS_LABELS[subtask.status].toUpperCase()}
+                                  </span>
+                                </div>
                               </div>
                             ))}
                           </div>

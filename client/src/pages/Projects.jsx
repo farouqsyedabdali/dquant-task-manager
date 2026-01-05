@@ -193,10 +193,10 @@ const Projects = () => {
                 }}
               >
                 {/* Project Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
                     <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                      className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
                       style={{ backgroundColor: project.color + '20' }}
                     >
                       {project.icon}
@@ -218,7 +218,7 @@ const Projects = () => {
                   </div>
                   
                   {/* Status Badge */}
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${getStatusColor(project.status)}`}>
                     {project.status.replace('_', ' ')}
                   </span>
                 </div>
