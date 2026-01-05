@@ -27,7 +27,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedDraftTasks, setSelectedDraftTasks] = useState(new Set());
+  const [selectedTasks, setSelectedTasks] = useState(new Set()); // Renamed from selectedDraftTasks - now works for ALL tasks
 
   const [reassignForm, setReassignForm] = useState({
     assignmentType: 'internal',
@@ -55,9 +55,27 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
   useEffect(() => {
     if (!isOpen) {
-      setSelectedDraftTasks(new Set());
+      setSelectedTasks(new Set());
     }
   }, [isOpen]);
+
+  // Computed selection analysis
+  const selectedTaskObjects = project?.tasks?.filter(t => selectedTasks.has(t.id)) || [];
+  const selectedCount = selectedTasks.size;
+  
+  // Analyze what's selected
+  const allDrafts = selectedTaskObjects.length > 0 && selectedTaskObjects.every(t => t.isDraft);
+  const allActive = selectedTaskObjects.length > 0 && selectedTaskObjects.every(t => !t.isDraft && t.status !== 'COMPLETED');
+  const allCompleted = selectedTaskObjects.length > 0 && selectedTaskObjects.every(t => t.status === 'COMPLETED');
+  const allTodo = selectedTaskObjects.length > 0 && selectedTaskObjects.every(t => t.status === 'TODO' && !t.isDraft);
+  const allInProgress = selectedTaskObjects.length > 0 && selectedTaskObjects.every(t => t.status === 'IN_PROGRESS');
+  const allOnHold = selectedTaskObjects.length > 0 && selectedTaskObjects.every(t => t.status === 'ON_HOLD');
+  
+  // Get counts by type
+  const draftTasks = selectedTaskObjects.filter(t => t.isDraft);
+  const activeTasks = selectedTaskObjects.filter(t => !t.isDraft && (t.status === 'TODO' || t.status === 'IN_PROGRESS'));
+  const completedTasks = selectedTaskObjects.filter(t => t.status === 'COMPLETED');
+  const onHoldTasks = selectedTaskObjects.filter(t => t.status === 'ON_HOLD');
 
   const fetchProject = async () => {
     try {
@@ -151,26 +169,26 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   };
 
   const handleSendSelectedDrafts = async () => {
-    if (selectedDraftTasks.size === 0) return;
+    if (draftTasks.length === 0) return;
 
     try {
       setSendingSelected(true);
       let successCount = 0;
       let errorCount = 0;
 
-      // Send tasks sequentially to avoid overwhelming the server
-      for (const taskId of selectedDraftTasks) {
+      // Send only draft tasks from selection
+      for (const task of draftTasks) {
         try {
-          await projectsAPI.sendTask(projectId, taskId);
+          await projectsAPI.sendTask(projectId, task.id);
           successCount++;
         } catch (err) {
-          console.error(`Error sending task ${taskId}:`, err);
+          console.error(`Error sending task ${task.id}:`, err);
           errorCount++;
         }
       }
 
       await fetchProject();
-      setSelectedDraftTasks(new Set()); // Clear selection after sending
+      setSelectedTasks(new Set()); // Clear selection after sending
 
       // Show appropriate message
       if (errorCount === 0) {
@@ -187,6 +205,46 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       setSendingSelected(false);
     }
   };
+
+  const handleBulkStatusChange = async (newStatus, taskList, statusName) => {
+    if (taskList.length === 0) return;
+
+    const count = taskList.length;
+    if (!window.confirm(`Mark ${count} task${count > 1 ? 's' : ''} as ${statusName}?`)) return;
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Update status for each task
+      for (const task of taskList) {
+        try {
+          await tasksAPI.updateStatus(task.id, newStatus);
+          successCount++;
+        } catch (err) {
+          console.error(`Error updating task ${task.id}:`, err);
+          errorCount++;
+        }
+      }
+
+      await fetchProject();
+      setSelectedTasks(new Set());
+
+      if (errorCount === 0) {
+        setSuccessMessage(`${successCount} task${successCount > 1 ? 's' : ''} marked as ${statusName}!`);
+      } else if (successCount === 0) {
+        setError(`Failed to update ${errorCount} task${errorCount > 1 ? 's' : ''}`);
+      } else {
+        setSuccessMessage(`${successCount} task${successCount > 1 ? 's' : ''} updated, ${errorCount} failed`);
+      }
+    } catch (err) {
+      console.error('Error bulk updating status:', err);
+      setError('Failed to update task status');
+    }
+  };
+
+  const handleBulkComplete = () => handleBulkStatusChange('COMPLETED', activeTasks, 'completed');
+  const handleBulkTodo = () => handleBulkStatusChange('TODO', [...completedTasks, ...onHoldTasks], 'to do');
 
   const handleTaskStatusChange = async (taskId, newStatus) => {
     try {
@@ -215,8 +273,8 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
     }
   };
 
-  const handleDraftTaskSelect = (taskId, isSelected) => {
-    setSelectedDraftTasks(prev => {
+  const handleTaskSelect = (taskId, isSelected) => {
+    setSelectedTasks(prev => {
       const newSet = new Set(prev);
       if (isSelected) {
         newSet.add(taskId);
@@ -227,34 +285,33 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
     });
   };
 
-  const handleSelectAllDrafts = () => {
-    const draftTasks = project?.tasks?.filter(t => t.isDraft) || [];
-    const allSelected = draftTasks.every(task => selectedDraftTasks.has(task.id));
+  const handleSelectAll = () => {
+    const allTasks = project?.tasks || [];
+    const allSelected = allTasks.every(task => selectedTasks.has(task.id));
 
     if (allSelected) {
       // Deselect all
-      setSelectedDraftTasks(new Set());
+      setSelectedTasks(new Set());
     } else {
       // Select all
-      setSelectedDraftTasks(new Set(draftTasks.map(task => task.id)));
+      setSelectedTasks(new Set(allTasks.map(task => task.id)));
     }
   };
 
-  const handleBulkDeleteDrafts = async () => {
-    if (selectedDraftTasks.size === 0) return;
+  const handleBulkDelete = async () => {
+    if (selectedCount === 0) return;
 
-    const count = selectedDraftTasks.size;
-    if (!window.confirm(`Are you sure you want to delete ${count} draft task${count > 1 ? 's' : ''}?`)) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedCount} task${selectedCount > 1 ? 's' : ''}?`)) return;
 
     try {
-      // Delete tasks sequentially to avoid overwhelming database connections
-      for (const taskId of selectedDraftTasks) {
-        await projectsAPI.removeTask(projectId, taskId);
+      // Delete tasks sequentially
+      for (const task of selectedTaskObjects) {
+        await projectsAPI.removeTask(projectId, task.id);
       }
 
       await fetchProject();
-      setSelectedDraftTasks(new Set());
-      setSuccessMessage(`${count} draft task${count > 1 ? 's' : ''} deleted successfully!`);
+      setSelectedTasks(new Set());
+      setSuccessMessage(`${selectedCount} task${selectedCount > 1 ? 's' : ''} deleted successfully!`);
     } catch (err) {
       console.error('Error bulk deleting tasks:', err);
       setError(err.response?.data?.error || 'Failed to delete some tasks');
@@ -645,37 +702,68 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       className="!bg-indigo-600 hover:!bg-indigo-700"
                     />
 
-                    {draftCount > 0 && (
+                    {/* Send Drafts Button - Shows when no selection OR drafts are selected */}
+                    {(draftCount > 0 && selectedCount === 0) && (
                       <IconButton
                         icon={<FaPaperPlane />}
                         label={sendingAll ? "Sending..." : `Send All Drafts (${draftCount})`}
                         variant="primary"
                         size="sm"
                         onClick={handleSendAllDrafts}
-                        disabled={sendingAll || selectedDraftTasks.size > 0}
+                        disabled={sendingAll}
                         loading={sendingAll}
                         className="!bg-emerald-600 hover:!bg-emerald-700"
                       />
                     )}
 
-                    {selectedDraftTasks.size > 0 && (
+                    {/* SMART ACTION BUTTONS - Based on Selection */}
+                    {selectedCount > 0 && (
                       <>
-                        <IconButton
-                          icon={<FaPaperPlane />}
-                          label={sendingSelected ? "Sending..." : `Send Selected (${selectedDraftTasks.size})`}
-                          variant="primary"
-                          size="sm"
-                          onClick={handleSendSelectedDrafts}
-                          disabled={sendingSelected}
-                          loading={sendingSelected}
-                          className="!bg-emerald-600 hover:!bg-emerald-700"
-                        />
+                        {/* Send Drafts (if any drafts selected) */}
+                        {draftTasks.length > 0 && (
+                          <IconButton
+                            icon={<FaPaperPlane />}
+                            label={sendingSelected ? "Sending..." : `Send Drafts (${draftTasks.length})`}
+                            variant="primary"
+                            size="sm"
+                            onClick={handleSendSelectedDrafts}
+                            disabled={sendingSelected}
+                            loading={sendingSelected}
+                            className="!bg-emerald-600 hover:!bg-emerald-700"
+                          />
+                        )}
+
+                        {/* Mark Complete (if any active tasks selected) */}
+                        {activeTasks.length > 0 && (
+                          <IconButton
+                            icon={<FaCheck />}
+                            label={`Complete (${activeTasks.length})`}
+                            variant="success"
+                            size="sm"
+                            onClick={handleBulkComplete}
+                            className="!bg-green-600 hover:!bg-green-700"
+                          />
+                        )}
+
+                        {/* Reopen (if completed or on-hold tasks selected) */}
+                        {(completedTasks.length > 0 || onHoldTasks.length > 0) && (
+                          <IconButton
+                            icon={<FaCheck />}
+                            label={`Reopen (${completedTasks.length + onHoldTasks.length})`}
+                            variant="primary"
+                            size="sm"
+                            onClick={handleBulkTodo}
+                            className="!bg-blue-600 hover:!bg-blue-700"
+                          />
+                        )}
+
+                        {/* Delete Selected */}
                         <IconButton
                           icon={<FaTrash />}
-                          label={`Delete Selected (${selectedDraftTasks.size})`}
+                          label={`Delete (${selectedCount})`}
                           variant="danger"
                           size="sm"
-                          onClick={handleBulkDeleteDrafts}
+                          onClick={handleBulkDelete}
                         />
                       </>
                     )}
@@ -749,24 +837,24 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                   color: 'var(--color-text-secondary)'
                 }}
               >
-                <div className="col-span-4 flex items-center">
-                  <div className="w-6 flex justify-center">
-                    {draftCount > 0 && project.canManage && (
-                      <input
-                        type="checkbox"
-                        checked={draftCount > 0 && draftCount === selectedDraftTasks.size}
-                        onChange={handleSelectAllDrafts}
-                        className="checkbox checkbox-sm"
-                        style={{
-                          border: '2px solid var(--color-text-tertiary)',
-                          backgroundColor: draftCount > 0 && draftCount === selectedDraftTasks.size ? 'var(--color-accent)' : 'transparent',
-                          '--chkbg': 'var(--color-accent)'
-                        }}
-                      />
-                    )}
-                  </div>
-                  <span className="ml-2">Task Name</span>
+              <div className="col-span-4 flex items-center">
+                <div className="w-6 flex justify-center">
+                  {project.tasks && project.tasks.length > 0 && project.canManage && (
+                    <input
+                      type="checkbox"
+                      checked={project.tasks.length > 0 && project.tasks.every(task => selectedTasks.has(task.id))}
+                      onChange={handleSelectAll}
+                      className="checkbox checkbox-sm"
+                      style={{
+                        border: '2px solid var(--color-text-tertiary)',
+                        backgroundColor: (project.tasks.length > 0 && project.tasks.every(task => selectedTasks.has(task.id))) ? 'var(--color-accent)' : 'transparent',
+                        '--chkbg': 'var(--color-accent)'
+                      }}
+                    />
+                  )}
                 </div>
+                <span className="ml-2">Task Name</span>
+              </div>
                 <div className="col-span-3">Assigned To</div>
                 <div className="col-span-3 flex flex-col">
                   <span>Due Date</span>
@@ -860,20 +948,20 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       {/* Task Name Column */}
                       <div className="col-span-4 flex items-center">
                         <div className="w-6 flex justify-center">
-                          {/* Checkbox for draft tasks only */}
-                          {task.isDraft && project.canManage && (
+                          {/* Checkbox for ALL tasks (if can manage) */}
+                          {project.canManage && (
                             <input
                               type="checkbox"
-                              checked={selectedDraftTasks.has(task.id)}
+                              checked={selectedTasks.has(task.id)}
                               onChange={(e) => {
                                 e.stopPropagation();
-                                handleDraftTaskSelect(task.id, e.target.checked);
+                                handleTaskSelect(task.id, e.target.checked);
                               }}
                               onClick={(e) => e.stopPropagation()}
                               className="checkbox checkbox-sm"
                               style={{
                                 border: '2px solid var(--color-text-tertiary)',
-                                backgroundColor: selectedDraftTasks.has(task.id) ? 'var(--color-accent)' : 'transparent',
+                                backgroundColor: selectedTasks.has(task.id) ? 'var(--color-accent)' : 'transparent',
                                 '--chkbg': 'var(--color-accent)'
                               }}
                             />
