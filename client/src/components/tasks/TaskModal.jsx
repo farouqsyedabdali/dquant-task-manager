@@ -17,7 +17,7 @@ import useContactStore from '../../stores/contactStore';
 import IconButton from '../common/IconButton';
 import { 
   FaTimes, FaEdit, FaTrash, FaArchive, FaShareAlt, FaChartBar, 
-  FaMagic, FaSave, FaPlus, FaUserPlus,
+  FaMagic, FaSave, FaPlus, FaUserPlus, FaCheck,
   FaCircle, FaSpinner, FaCheckCircle, FaPauseCircle, FaTimesCircle,
   FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle, FaUsers, FaSitemap
 } from 'react-icons/fa';
@@ -280,7 +280,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       newErrors.description = 'Description must be 300 characters or less';
     }
     
-    // Validate due date is required and in the future
+    // Validate due date is required (but allow past dates for editing existing tasks)
     if (!formData.dueDate || !formData.dueDate.trim()) {
       newErrors.dueDate = 'Due date is required';
     } else {
@@ -293,12 +293,10 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       }
       
       const selectedDate = new Date(dateToCheck);
-      const now = new Date();
       if (isNaN(selectedDate.getTime())) {
         newErrors.dueDate = 'Invalid due date format';
-      } else if (selectedDate <= now) {
-        newErrors.dueDate = 'Due date must be in the future';
       }
+      // Removed future date check - allow past dates for editing existing tasks
     }
     
     setErrors(newErrors);
@@ -772,24 +770,48 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
               />
             )}
             
+            {/* Edit/Save/Cancel Buttons */}
             {((isAdmin() && viewedTask.companyId === user?.companyId) || viewedTask.assignerId === user?.id) && !isSharedTask && (
-              <IconButton
-                icon={<FaEdit />}
-                label={isEditing ? 'Cancel' : 'Edit'}
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsEditing(!isEditing)}
-              />
-            )}
-            
-            {((isAdmin() && viewedTask.companyId === user?.companyId) || viewedTask.assignerId === user?.id) && !isSharedTask && (
-              <IconButton
-                icon={<FaTrash />}
-                label="Delete"
-                variant="danger"
-                size="sm"
-                onClick={handleDelete}
-              />
+              <>
+                {isEditing ? (
+                  <>
+                    <IconButton
+                      icon={<FaCheck />}
+                      label={isLoading ? 'Saving...' : 'Save Changes'}
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={isLoading}
+                      loading={isLoading}
+                    />
+                    <IconButton
+                      icon={<FaTimes />}
+                      label="Cancel"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setIsEditing(false)}
+                      disabled={isLoading}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <IconButton
+                      icon={<FaEdit />}
+                      label="Edit"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setIsEditing(true)}
+                    />
+                    <IconButton
+                      icon={<FaTrash />}
+                      label="Delete"
+                      variant="danger"
+                      size="sm"
+                      onClick={handleDelete}
+                    />
+                  </>
+                )}
+              </>
             )}
           </div>
           
@@ -1853,20 +1875,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
               />
             )}
 
-            {/* Save Button */}
-            {isEditing && (
-              <div className="pt-4">
-                <IconButton
-                  icon={<FaSave />}
-                  label={isLoading ? 'Saving...' : 'Save Changes'}
-                  variant="primary"
-                  onClick={handleSave}
-                  disabled={isLoading}
-                  loading={isLoading}
-                  className="w-full"
-                />
-              </div>
-            )}
           </div>
 
         {/* RIGHT COLUMN - Comments */}

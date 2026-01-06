@@ -220,24 +220,14 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTas
             </div>
             </div>
             {onTaskSwitch && (
-              <button
+              <IconButton
                 onClick={onTaskSwitch}
-                className="btn btn-sm ml-3 flex-shrink-0"
-                style={{
-                  backgroundColor: 'var(--color-primary)',
-                  color: 'white',
-                  border: 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                <FaExchangeAlt className="w-3 h-3 mr-1" />
-                Change Task
-              </button>
+                icon={<FaExchangeAlt />}
+                label="Change Task"
+                variant="primary"
+                size="sm"
+                className="ml-3 flex-shrink-0"
+              />
             )}
           </div>
         </div>

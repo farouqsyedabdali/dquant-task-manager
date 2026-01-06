@@ -112,6 +112,9 @@ export const aiAPI = {
   chat: (message) => api.post('/ai/chat', { message }),
   extractTask: (text) => api.post('/ai/extract-task', { text }),
   identifyTaskUpdate: (text) => api.post('/ai/identify-task-update', { text }),
+  suggestProjectIdeas: (text) => api.post('/ai/suggest-project-ideas', { text }),
+  createProjectFromIdea: (text, selectedIdea, projectName, dueDate) => 
+    api.post('/ai/create-project-from-idea', { text, selectedIdea, projectName, dueDate }),
 };
 
 // Task Share API

@@ -714,4 +714,398 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
   }
 });
 
+// POST /api/ai/suggest-project-ideas
+router.post('/suggest-project-ideas', async (req, res) => {
+  const { text } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: 'Text is required' });
+  }
+
+  try {
+    const userId = req.user.id;
+    const companyId = req.user.companyId;
+    const userName = req.user.name;
+
+    // Optimized system prompt for AI to generate 6 unique project ideas
+    const systemPrompt = `You are an AI assistant that generates relevant project ideas from text.
+
+Analyze the text and generate exactly 6 unique project ideas that would help accomplish the goals mentioned.
+
+Return ONLY a JSON array with 6 project ideas, sorted by relevance (most relevant first):
+[
+  {
+    "id": "unique_id_1",
+    "name": "Project Name",
+    "description": "Brief description (max 100 chars)",
+    "icon": "🎯",
+    "color": "#3b82f6",
+    "relevanceScore": 0.95
+  },
+  ...
+]
+
+Guidelines:
+- Generate 6 DIFFERENT project ideas (not variations of the same)
+- relevanceScore: 0.0-1.0 (1.0 = perfect match)
+- Sort by relevanceScore (highest first)
+- Use appropriate emoji icons (one per idea)
+- Use hex colors: #3b82f6 (blue), #10b981 (green), #f59e0b (orange), #ec4899 (pink), #8b5cf6 (purple), #06b6d4 (cyan)
+- Keep descriptions concise (max 100 characters)
+- Base ideas on the text's goals, context, and keywords
+- Make ideas actionable and specific`;
+
+    // Optimized API call: lower temperature, fewer tokens, no streaming needed
+    const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'google/gemma-3-27b-it:free',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Generate 6 project ideas from: "${text.substring(0, 500)}"` }
+      ],
+      temperature: 0.3, // Lower for faster, more consistent responses
+      max_tokens: 800   // Reduced from 2000 for faster response
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const aiResponse = openrouterRes.data.choices[0].message.content;
+    
+    // Extract JSON array from response
+    let suggestions = [];
+    try {
+      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        suggestions = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON array found');
+      }
+    } catch (parseError) {
+      console.warn('Failed to parse AI response, using fallback:', parseError);
+      // Fallback: Generate simple ideas from text keywords
+      const keywords = text.toLowerCase().split(/\s+/).filter(w => w.length > 3).slice(0, 6);
+      const fallbackIcons = ['🎯', '📋', '🚀', '💡', '⚡', '🎨'];
+      const fallbackColors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
+      
+      suggestions = keywords.map((keyword, idx) => ({
+        id: `fallback_${idx + 1}`,
+        name: keyword.charAt(0).toUpperCase() + keyword.slice(1) + ' Project',
+        description: `Project related to ${keyword}`,
+        icon: fallbackIcons[idx] || '📋',
+        color: fallbackColors[idx] || '#3b82f6',
+        relevanceScore: 0.7 - (idx * 0.1)
+      }));
+    }
+
+    // Ensure we have exactly 6 suggestions
+    const finalSuggestions = suggestions.slice(0, 6).map((suggestion, idx) => {
+      // Validate and sanitize
+      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
+      return {
+        id: suggestion.id || `idea_${idx + 1}`,
+        name: (suggestion.name || `Project Idea ${idx + 1}`).substring(0, 50),
+        description: (suggestion.description || 'A project idea').substring(0, 100),
+        icon: suggestion.icon || '📋',
+        color: suggestion.color || colors[idx % colors.length],
+        relevanceScore: Math.min(Math.max(suggestion.relevanceScore || 0.5, 0), 1)
+      };
+    });
+
+    // Fill remaining slots if needed
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
+    const icons = ['🎯', '📋', '🚀', '💡', '⚡', '🎨'];
+    while (finalSuggestions.length < 6) {
+      finalSuggestions.push({
+        id: `idea_${finalSuggestions.length + 1}`,
+        name: `Project Idea ${finalSuggestions.length + 1}`,
+        description: 'A project idea based on your text',
+        icon: icons[finalSuggestions.length] || '📋',
+        color: colors[finalSuggestions.length] || '#3b82f6',
+        relevanceScore: 0.5 - (finalSuggestions.length * 0.05)
+      });
+    }
+
+    res.json({
+      success: true,
+      ideas: finalSuggestions.slice(0, 6)
+    });
+
+  } catch (err) {
+    console.error('Project ideas suggestion error:', err);
+    // Fallback: Return generic ideas
+    const fallbackIcons = ['🎯', '📋', '🚀', '💡', '⚡', '🎨'];
+    const fallbackColors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
+    const fallbackIdeas = Array.from({ length: 6 }, (_, idx) => ({
+      id: `fallback_${idx + 1}`,
+      name: `Project Idea ${idx + 1}`,
+      description: 'A project idea based on your text',
+      icon: fallbackIcons[idx],
+      color: fallbackColors[idx],
+      relevanceScore: 0.5 - (idx * 0.05)
+    }));
+    
+    res.json({
+      success: true,
+      ideas: fallbackIdeas
+    });
+  }
+});
+
+// POST /api/ai/create-project-from-idea
+router.post('/create-project-from-idea', async (req, res) => {
+  const { text, selectedIdea, projectName, dueDate } = req.body;
+  
+  if (!text || !selectedIdea || !selectedIdea.id) {
+    return res.status(400).json({ error: 'Text and selectedIdea are required' });
+  }
+
+  try {
+    const userId = req.user.id;
+    const companyId = req.user.companyId;
+    const userName = req.user.name;
+
+    // Use selected idea data (AI-generated or fallback)
+    const ideaName = selectedIdea.name || 'Project';
+    const ideaDescription = selectedIdea.description || '';
+    const ideaIcon = selectedIdea.icon || '📋';
+    const ideaColor = selectedIdea.color || '#3b82f6';
+
+    // Optimized system prompt for AI to generate project with tasks
+    const systemPrompt = `You are an AI assistant that creates projects with tasks from ideas.
+
+Selected Project Idea: ${ideaName}
+Idea Description: ${ideaDescription}
+
+User's Original Text: "${text}"
+
+Generate a complete project with EXACTLY 17-23 actionable tasks (aim for 19-21 tasks) based on the idea and text.
+
+Return ONLY a JSON object:
+{
+  "projectName": "Specific project name (extract from text or use idea name)",
+  "projectDescription": "Detailed description (2-3 sentences, max 200 chars)",
+  "tasks": [
+    {
+      "title": "Task title (max 60 chars, actionable)",
+      "description": "Task details (max 150 chars) or null",
+      "priority": "HIGH|MEDIUM|LOW|URGENT",
+      "dueDate": "YYYY-MM-DD or null"
+    }
+  ],
+  "projectDueDate": "YYYY-MM-DD or null"
+}
+
+Guidelines:
+- Generate EXACTLY 17-23 tasks (aim for 19-21 tasks)
+- Tasks should be specific, actionable, and ordered logically
+- Extract dates from text (e.g., "by Friday" = calculate date, "March 15th" = 2024-03-15)
+- Set priority based on urgency cues in text
+- Make tasks relevant to the idea and text context
+- If no dates in text, set dueDate to null
+- Break down the project into detailed phases with multiple tasks per phase`;
+
+    // Optimized API call
+    const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'google/gemma-3-27b-it:free',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Create project "${ideaName}" from: "${text.substring(0, 500)}"` }
+      ],
+      temperature: 0.3, // Lower for faster, more consistent responses
+      max_tokens: 3500  // Increased to accommodate 17-20 tasks
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const aiResponse = openrouterRes.data.choices[0].message.content;
+    
+    // Extract JSON from response
+    let projectData = null;
+    try {
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        projectData = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON object found');
+      }
+    } catch (parseError) {
+      console.warn('Failed to parse AI response, using fallback:', parseError);
+      // Fallback: Generate basic project with default tasks (17-20 tasks)
+      projectData = {
+        projectName: projectName || ideaName,
+        projectDescription: ideaDescription || 'A project based on your idea',
+        tasks: [
+          { title: 'Define project scope and objectives', description: null, priority: 'HIGH', dueDate: null },
+          { title: 'Conduct initial research and analysis', description: null, priority: 'HIGH', dueDate: null },
+          { title: 'Create project timeline and milestones', description: null, priority: 'HIGH', dueDate: null },
+          { title: 'Identify required resources and budget', description: null, priority: 'HIGH', dueDate: null },
+          { title: 'Assemble project team and assign roles', description: null, priority: 'MEDIUM', dueDate: null },
+          { title: 'Set up project management tools and systems', description: null, priority: 'MEDIUM', dueDate: null },
+          { title: 'Develop detailed project plan', description: null, priority: 'HIGH', dueDate: null },
+          { title: 'Create initial project documentation', description: null, priority: 'MEDIUM', dueDate: null },
+          { title: 'Conduct kickoff meeting with stakeholders', description: null, priority: 'HIGH', dueDate: null },
+          { title: 'Begin project execution phase', description: null, priority: 'HIGH', dueDate: null },
+          { title: 'Monitor progress and track milestones', description: null, priority: 'MEDIUM', dueDate: null },
+          { title: 'Address any issues or blockers', description: null, priority: 'HIGH', dueDate: null },
+          { title: 'Conduct regular status reviews', description: null, priority: 'MEDIUM', dueDate: null },
+          { title: 'Update project documentation as needed', description: null, priority: 'LOW', dueDate: null },
+          { title: 'Review and refine project deliverables', description: null, priority: 'HIGH', dueDate: null },
+          { title: 'Conduct quality assurance checks', description: null, priority: 'HIGH', dueDate: null },
+          { title: 'Prepare final project deliverables', description: null, priority: 'HIGH', dueDate: null },
+          { title: 'Conduct project review and lessons learned', description: null, priority: 'MEDIUM', dueDate: null },
+          { title: 'Complete project documentation', description: null, priority: 'MEDIUM', dueDate: null },
+          { title: 'Finalize and close project', description: null, priority: 'HIGH', dueDate: null }
+        ],
+        projectDueDate: dueDate || null
+      };
+    }
+
+    // Parse dates
+    let projectDueDateObj = null;
+    if (projectData.projectDueDate) {
+      try {
+        projectDueDateObj = new Date(projectData.projectDueDate);
+        if (isNaN(projectDueDateObj.getTime())) {
+          projectDueDateObj = null;
+        }
+      } catch (e) {
+        projectDueDateObj = null;
+      }
+    }
+    if (dueDate && !projectDueDateObj) {
+      try {
+        projectDueDateObj = new Date(dueDate);
+        if (isNaN(projectDueDateObj.getTime())) {
+          projectDueDateObj = null;
+        }
+      } catch (e) {
+        projectDueDateObj = null;
+      }
+    }
+
+    // Validate tasks array
+    if (!Array.isArray(projectData.tasks) || projectData.tasks.length === 0) {
+      // Fallback tasks if AI didn't generate any (17-20 tasks)
+      projectData.tasks = [
+        { title: 'Define project scope and objectives', description: null, priority: 'HIGH', dueDate: null },
+        { title: 'Conduct initial research and analysis', description: null, priority: 'HIGH', dueDate: null },
+        { title: 'Create project timeline and milestones', description: null, priority: 'HIGH', dueDate: null },
+        { title: 'Identify required resources and budget', description: null, priority: 'HIGH', dueDate: null },
+        { title: 'Assemble project team and assign roles', description: null, priority: 'MEDIUM', dueDate: null },
+        { title: 'Set up project management tools and systems', description: null, priority: 'MEDIUM', dueDate: null },
+        { title: 'Develop detailed project plan', description: null, priority: 'HIGH', dueDate: null },
+        { title: 'Create initial project documentation', description: null, priority: 'MEDIUM', dueDate: null },
+        { title: 'Conduct kickoff meeting with stakeholders', description: null, priority: 'HIGH', dueDate: null },
+        { title: 'Begin project execution phase', description: null, priority: 'HIGH', dueDate: null },
+        { title: 'Monitor progress and track milestones', description: null, priority: 'MEDIUM', dueDate: null },
+        { title: 'Address any issues or blockers', description: null, priority: 'HIGH', dueDate: null },
+        { title: 'Conduct regular status reviews', description: null, priority: 'MEDIUM', dueDate: null },
+        { title: 'Update project documentation as needed', description: null, priority: 'LOW', dueDate: null },
+        { title: 'Review and refine project deliverables', description: null, priority: 'HIGH', dueDate: null },
+        { title: 'Conduct quality assurance checks', description: null, priority: 'HIGH', dueDate: null },
+        { title: 'Prepare final project deliverables', description: null, priority: 'HIGH', dueDate: null },
+        { title: 'Conduct project review and lessons learned', description: null, priority: 'MEDIUM', dueDate: null },
+        { title: 'Complete project documentation', description: null, priority: 'MEDIUM', dueDate: null },
+        { title: 'Finalize and close project', description: null, priority: 'HIGH', dueDate: null }
+      ];
+    }
+
+    // Ensure we have 17-23 tasks (prefer 19-21)
+    let tasksToCreate = projectData.tasks;
+    if (tasksToCreate.length < 17) {
+      // If AI generated fewer than 17, pad with generic tasks
+      const additionalTasks = [
+        { title: 'Review project progress', description: null, priority: 'MEDIUM', dueDate: null },
+        { title: 'Update stakeholders on status', description: null, priority: 'MEDIUM', dueDate: null },
+        { title: 'Refine project approach', description: null, priority: 'MEDIUM', dueDate: null },
+        { title: 'Optimize workflow processes', description: null, priority: 'LOW', dueDate: null },
+        { title: 'Document lessons learned', description: null, priority: 'LOW', dueDate: null },
+        { title: 'Plan next phase activities', description: null, priority: 'MEDIUM', dueDate: null }
+      ];
+      tasksToCreate = [...tasksToCreate, ...additionalTasks.slice(0, 17 - tasksToCreate.length)];
+    } else if (tasksToCreate.length > 23) {
+      // Limit to 23 max
+      tasksToCreate = tasksToCreate.slice(0, 23);
+    }
+
+    // Create project
+    const project = await prisma.project.create({
+      data: {
+        name: projectName || projectData.projectName || ideaName,
+        description: (projectData.projectDescription || ideaDescription).substring(0, 500),
+        color: ideaColor,
+        icon: ideaIcon,
+        dueDate: projectDueDateObj,
+        ownerId: userId,
+        companyId,
+        tasks: {
+          create: tasksToCreate.map((task, index) => {
+            let taskDueDate = null;
+            if (task.dueDate) {
+              try {
+                taskDueDate = new Date(task.dueDate);
+                if (isNaN(taskDueDate.getTime())) {
+                  taskDueDate = null;
+                }
+              } catch (e) {
+                taskDueDate = null;
+              }
+            }
+
+            return {
+              title: (task.title || `Task ${index + 1}`).substring(0, 200),
+              description: task.description ? task.description.substring(0, 1000) : null,
+              priority: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(task.priority) 
+                ? task.priority 
+                : 'MEDIUM',
+              status: 'TODO',
+              assignerId: userId,
+              companyId,
+              isDraft: true,
+              dueDate: taskDueDate
+            };
+          })
+        }
+      },
+      include: {
+        tasks: true,
+        owner: {
+          select: { id: true, name: true, email: true }
+        }
+      }
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        action: 'PROJECT_CREATED',
+        entityType: 'Project',
+        entityId: project.id,
+        description: `Created project "${project.name}" from AI-generated idea`,
+        userId,
+        companyId,
+        metadata: {
+          projectName: project.name,
+          ideaName: ideaName,
+          aiGenerated: true,
+          taskCount: tasksToCreate.length
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      project: project
+    });
+
+  } catch (err) {
+    console.error('Create project from idea error:', err);
+    res.status(500).json({ error: 'Failed to create project from idea' });
+  }
+});
+
 module.exports = router; 

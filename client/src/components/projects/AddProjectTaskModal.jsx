@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { usersAPI, contactsAPI } from '../../services/api';
 import DatePicker from '../common/DatePicker';
 import { formatDateForInput } from '../../utils/dateUtils';
+import IconButton from '../common/IconButton';
+import { FaArrowLeft, FaArrowRight, FaTimes, FaCheck } from 'react-icons/fa';
 
 const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
   const [step, setStep] = useState(1);
@@ -519,31 +521,24 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
 
         {/* Actions */}
         <div className="flex justify-between mt-8 pt-4 border-t" style={{ borderColor: 'var(--color-border-default)' }}>
-          <button
+          <IconButton
             onClick={step === 1 ? handleClose : handleBack}
-            className="btn btn-ghost"
-            style={{ color: 'var(--color-text-secondary)' }}
+            icon={step === 1 ? <FaTimes /> : <FaArrowLeft />}
+            label={step === 1 ? 'Cancel' : 'Back'}
+            variant="secondary"
+            size="sm"
             disabled={isLoading}
-          >
-            {step === 1 ? 'Cancel' : '← Back'}
-          </button>
+          />
           
-          <button
+          <IconButton
             onClick={step === 3 ? handleSubmit : handleNext}
+            icon={step === 3 ? <FaCheck /> : <FaArrowRight />}
+            label={isLoading ? 'Adding...' : step === 3 ? 'Add Task as Draft' : 'Next'}
+            variant="primary"
+            size="sm"
             disabled={isLoading}
-            className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-          >
-            {isLoading ? (
-              <>
-                <span className="loading loading-spinner loading-sm mr-2"></span>
-                Adding...
-              </>
-            ) : step === 3 ? (
-              'Add Task as Draft'
-            ) : (
-              'Next →'
-            )}
-          </button>
+            loading={isLoading}
+          />
         </div>
       </div>
     </div>

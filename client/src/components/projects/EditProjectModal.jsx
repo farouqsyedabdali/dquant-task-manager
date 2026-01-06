@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { projectsAPI } from '../../services/api';
 import { formatDateForInput } from '../../utils/dateUtils';
+import IconButton from '../common/IconButton';
+import { FaTimes, FaCheck } from 'react-icons/fa';
 
 const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -119,13 +121,15 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
               Update project details
             </p>
           </div>
-          <button 
-            onClick={handleClose} 
-            className="btn btn-ghost btn-sm btn-circle"
-            style={{ color: 'var(--color-text-tertiary)' }}
-          >
-            ✕
-          </button>
+          <IconButton
+            onClick={handleClose}
+            icon={<FaTimes />}
+            label="Close"
+            iconOnly={true}
+            variant="ghost"
+            size="sm"
+            className="!p-2 !rounded-full"
+          />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -274,33 +278,23 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
 
           {/* Actions */}
           <div className="flex justify-end space-x-2 pt-4 border-t" style={{ borderColor: 'var(--color-border-default)' }}>
-            <button
+            <IconButton
               type="button"
               onClick={handleClose}
-              className="btn btn-ghost"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Cancel
-            </button>
-            <button
+              icon={<FaTimes />}
+              label="Cancel"
+              variant="secondary"
+              size="sm"
+            />
+            <IconButton
               type="submit"
               disabled={isLoading || !formData.name.trim()}
-              className="btn"
-              style={{ 
-                backgroundColor: 'var(--color-primary)',
-                color: 'white',
-                border: 'none'
-              }}
-            >
-              {isLoading ? (
-                <>
-                  <span className="loading loading-spinner loading-sm mr-2"></span>
-                  Updating...
-                </>
-              ) : (
-                'Update Project'
-              )}
-            </button>
+              icon={<FaCheck />}
+              label={isLoading ? 'Saving...' : 'Save Changes'}
+              variant="primary"
+              size="sm"
+              loading={isLoading}
+            />
           </div>
         </form>
       </div>

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import useContactStore from '../stores/contactStore';
+import IconButton from '../components/common/IconButton';
+import { FaPlus, FaTimes, FaCheck } from 'react-icons/fa';
 
 const Contacts = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -177,26 +179,18 @@ const Contacts = () => {
           </select>
 
           {/* Add Contact Button */}
-          <button
+          <IconButton
             onClick={() => {
               setIsAddModalOpen(true);
               // Clear any existing messages when opening add modal
               setSuccessMessage('');
               setErrorMessage('');
             }}
-            className="btn border-0"
-            style={{ 
-              backgroundColor: 'var(--color-primary)',
-              color: 'white'
-            }}
-            onMouseEnter={(e) => e.target.style.opacity = '0.9'}
-            onMouseLeave={(e) => e.target.style.opacity = '1'}
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Add Contact
-          </button>
+            icon={<FaPlus />}
+            label="Add Contact"
+            variant="primary"
+            size="sm"
+          />
         </div>
 
         {/* Error Display */}
@@ -726,19 +720,15 @@ const AddContactModal = ({ isOpen, onClose, onSubmit }) => {
           >
             Add Contact
           </h3>
-          <button 
-            onClick={onClose} 
-            className="btn btn-ghost btn-sm btn-circle transition-colors duration-200"
-            style={{ color: 'var(--color-text-tertiary)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--color-text-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--color-text-tertiary)';
-            }}
-          >
-            ✕
-          </button>
+          <IconButton
+            onClick={onClose}
+            icon={<FaTimes />}
+            label="Close"
+            iconOnly={true}
+            variant="ghost"
+            size="sm"
+            className="!p-2 !rounded-full"
+          />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -874,23 +864,21 @@ const AddContactModal = ({ isOpen, onClose, onSubmit }) => {
           </div>
 
           <div className="modal-action">
-            <button type="submit" className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0">
-              Add Contact
-            </button>
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className="btn btn-ghost transition-colors duration-200"
-              style={{ color: 'var(--color-text-tertiary)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--color-text-primary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--color-text-tertiary)';
-              }}
-            >
-              Cancel
-            </button>
+            <IconButton
+              type="submit"
+              icon={<FaCheck />}
+              label="Add Contact"
+              variant="primary"
+              size="sm"
+            />
+            <IconButton
+              type="button"
+              onClick={onClose}
+              icon={<FaTimes />}
+              label="Cancel"
+              variant="secondary"
+              size="sm"
+            />
           </div>
         </form>
       </div>

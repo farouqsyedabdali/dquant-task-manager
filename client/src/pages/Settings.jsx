@@ -8,6 +8,8 @@ import AuditLogModal from '../components/audit/AuditLogModal';
 import LegalDocumentModal from '../components/legal/LegalDocumentModal';
 import { feedbackAPI, authAPI } from '../services/api';
 import { lightPalettes, darkPalettes } from '../config/colorPalettes';
+import IconButton from '../components/common/IconButton';
+import { FaFileAlt, FaTrash, FaPaperPlane, FaHistory, FaFileContract, FaShieldAlt, FaTimes } from 'react-icons/fa';
 
 const Settings = () => {
   const { user, isAdmin, isSysAdmin, isSuperAdmin, deleteCompany } = useAuthStore();
@@ -345,15 +347,14 @@ const Settings = () => {
                       Admin Tools
                     </h2>
                     <div className="space-y-4">
-                      <button
+                      <IconButton
                         onClick={() => setShowAuditLog(true)}
-                        className="btn btn-primary w-full"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        View Audit Log
-                      </button>
+                        icon={<FaFileAlt />}
+                        label="View Audit Log"
+                        variant="primary"
+                        size="sm"
+                        className="w-full"
+                      />
                       <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                         Track all user actions and system changes
                       </div>
@@ -379,20 +380,6 @@ const Settings = () => {
                     >
                       {isPersonalAccount ? 'Account Management' : 'Company Management'}
                     </h2>
-                    <div className="space-y-4">
-                      <div className="alert alert-warning">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                        </svg>
-                        <span className="text-sm">Danger Zone</span>
-                      </div>
-                      <button
-                        onClick={() => setShowDeleteModal(true)}
-                        className="btn btn-error btn-outline w-full"
-                      >
-                        {isPersonalAccount ? 'Delete Account' : 'Delete Company'}
-                      </button>
-                    </div>
                   </div>
                 </div>
               )}
@@ -792,25 +779,15 @@ const Settings = () => {
                     </div>
 
                     <div className="flex justify-end">
-                      <button
+                      <IconButton
                         type="submit"
-                        className="btn btn-primary"
+                        icon={<FaPaperPlane />}
+                        label={isSubmittingFeedback ? 'Sending...' : 'Send Feedback'}
+                        variant="primary"
+                        size="sm"
                         disabled={isSubmittingFeedback || feedbackForm.feedback.length < 10}
-                      >
-                        {isSubmittingFeedback ? (
-                          <>
-                            <span className="loading loading-spinner loading-sm"></span>
-                            Sending...
-                          </>
-                        ) : (
-                          <>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            Send Feedback
-                          </>
-                        )}
-                      </button>
+                        loading={isSubmittingFeedback}
+                      />
                     </div>
                   </form>
 
@@ -855,15 +832,14 @@ const Settings = () => {
                     About
                   </h2>
                   <div className="space-y-4">
-                    <button
+                    <IconButton
                       onClick={() => setShowChangelog(true)}
-                      className="btn btn-primary w-full md:w-auto"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      View Changelog
-                    </button>
+                      icon={<FaHistory />}
+                      label="View Changelog"
+                      variant="primary"
+                      size="sm"
+                      className="w-full md:w-auto"
+                    />
 
                     {/* Legal Documents Section */}
                     <div className="pt-4">
@@ -874,38 +850,28 @@ const Settings = () => {
                         Legal Documents
                       </h3>
                       <div className="flex flex-col sm:flex-row gap-3">
-                        <button
+                        <IconButton
                           onClick={() => {
                             setLegalDocumentType('terms');
                             setShowLegalModal(true);
                           }}
-                          className="btn btn-outline w-full sm:w-auto"
-                          style={{
-                            borderColor: 'var(--color-border-default)',
-                            color: 'var(--color-text-primary)'
-                          }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          Terms of Service
-                        </button>
-                        <button
+                          icon={<FaFileContract />}
+                          label="Terms of Service"
+                          variant="secondary"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                        />
+                        <IconButton
                           onClick={() => {
                             setLegalDocumentType('privacy');
                             setShowLegalModal(true);
                           }}
-                          className="btn btn-outline w-full sm:w-auto"
-                          style={{
-                            borderColor: 'var(--color-border-default)',
-                            color: 'var(--color-text-primary)'
-                          }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                          </svg>
-                          Privacy Policy
-                        </button>
+                          icon={<FaShieldAlt />}
+                          label="Privacy Policy"
+                          variant="secondary"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                        />
                       </div>
                     </div>
 
@@ -1080,37 +1046,26 @@ const Settings = () => {
             </div>
             
             <div className="modal-action">
-              <button
+              <IconButton
                 onClick={() => {
                   setShowDeleteModal(false);
                   setDeleteConfirmationText('');
                 }}
-                className="btn btn-ghost"
-                style={{ color: 'var(--color-text-secondary)' }}
+                icon={<FaTimes />}
+                label="Cancel"
+                variant="secondary"
+                size="sm"
                 disabled={isDeleting}
-              >
-                Cancel
-              </button>
-              <button
+              />
+              <IconButton
                 onClick={confirmDeleteCompany}
-                className="btn border-0"
-                style={{ 
-                  backgroundColor: '#ef4444',
-                  color: 'white'
-                }}
+                icon={<FaTrash />}
+                label={isDeleting ? 'Deleting...' : 'Delete Company'}
+                variant="danger"
+                size="sm"
                 disabled={isDeleting || deleteConfirmationText !== getRequiredConfirmationText()}
-                onMouseEnter={(e) => e.target.style.opacity = '0.9'}
-                onMouseLeave={(e) => e.target.style.opacity = '1'}
-              >
-                {isDeleting ? (
-                  <>
-                    <span className="loading loading-spinner loading-sm"></span>
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete Company'
-                )}
-              </button>
+                loading={isDeleting}
+              />
             </div>
           </div>
         </div>

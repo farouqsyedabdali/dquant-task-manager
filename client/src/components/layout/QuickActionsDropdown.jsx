@@ -1,12 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { aiAPI } from '../../services/api';
-import { FaPlus, FaEdit, FaLayerGroup, FaChevronDown } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaLayerGroup, FaChevronDown, FaProjectDiagram, FaTimes } from 'react-icons/fa';
+import ProjectIdeaSelectionModal from '../projects/ProjectIdeaSelectionModal';
+import IconButton from '../common/IconButton';
 
 const QuickActionsDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
+  const [isProjectIdeasModalOpen, setIsProjectIdeasModalOpen] = useState(false);
+  const [projectIdeas, setProjectIdeas] = useState([]);
+  const [isLoadingIdeas, setIsLoadingIdeas] = useState(false);
+  const [clipboardText, setClipboardText] = useState('');
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -142,6 +148,74 @@ const QuickActionsDropdown = () => {
     } catch (err) {
       console.error('Update task error:', err);
       setError(err.message || 'Failed to update task');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCreateProject = async () => {
+    setIsOpen(false);
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const inputText = await readClipboard();
+      setClipboardText(inputText);
+      setIsLoadingIdeas(true);
+      setIsProjectIdeasModalOpen(true);
+      setIsProcessing(false);
+
+      // Call AI to suggest project ideas
+      const response = await aiAPI.suggestProjectIdeas(inputText);
+      
+      if (response.data.success && response.data.ideas) {
+        setProjectIdeas(response.data.ideas);
+        console.log('QuickActions: AI suggested project ideas:', response.data.ideas);
+      } else {
+        throw new Error('Failed to get project ideas');
+      }
+    } catch (err) {
+      console.error('Create project error:', err);
+      setError(err.message || 'Failed to get project ideas');
+      setIsProjectIdeasModalOpen(false);
+      setIsProcessing(false);
+    } finally {
+      setIsLoadingIdeas(false);
+    }
+  };
+
+  const handleProjectIdeaSelect = async (selectedIdea) => {
+    setIsProjectIdeasModalOpen(false);
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      // Call AI to create project from idea
+      const response = await aiAPI.createProjectFromIdea(
+        clipboardText,
+        selectedIdea,
+        null, // projectName - let AI generate it
+        null  // dueDate - let AI extract it
+      );
+
+      if (response.data.success && response.data.project) {
+        const project = response.data.project;
+        console.log('QuickActions: Project created successfully:', project);
+        
+        // Navigate to projects page with project ID and success message
+        navigate('/projects', {
+          state: {
+            openProjectId: project.id,
+            successMessage: `Project "${project.name}" created successfully with ${project.tasks?.length || 0} tasks!`
+          }
+        });
+      } else {
+        throw new Error('Failed to create project');
+      }
+    } catch (err) {
+      console.error('Create project from idea error:', err);
+      setError(err.message || 'Failed to create project');
+      setIsProjectIdeasModalOpen(true); // Reopen modal so user can try again
     } finally {
       setIsProcessing(false);
     }
@@ -337,6 +411,30 @@ const QuickActionsDropdown = () => {
                 </div>
               </div>
             </button>
+
+            {/* Create Project or Event */}
+            <button
+              onClick={handleCreateProject}
+              className="w-full px-4 py-3 text-left flex items-center space-x-3 transition-colors duration-200"
+              style={{ color: 'var(--color-text-primary)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <FaProjectDiagram className="w-4 h-4 text-orange-500" />
+              <div>
+                <div className="font-medium">Create Project</div>
+                <div 
+                  className="text-xs transition-colors duration-200"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                >
+                  Create project or event
+                </div>
+              </div>
+            </button>
           </div>
         </div>
       )}
@@ -351,12 +449,30 @@ const QuickActionsDropdown = () => {
               </svg>
               <span>{error}</span>
             </div>
-            <button onClick={() => setError(null)} className="btn btn-sm btn-ghost">
-              ✕
-            </button>
+            <IconButton
+              onClick={() => setError(null)}
+              icon={<FaTimes />}
+              label="Close"
+              iconOnly={true}
+              variant="ghost"
+              size="sm"
+            />
           </div>
         </div>
       )}
+
+      {/* Project Ideas Selection Modal */}
+      <ProjectIdeaSelectionModal
+        isOpen={isProjectIdeasModalOpen}
+        onClose={() => {
+          setIsProjectIdeasModalOpen(false);
+          setProjectIdeas([]);
+          setClipboardText('');
+        }}
+        ideas={projectIdeas}
+        onSelect={handleProjectIdeaSelect}
+        isLoading={isLoadingIdeas}
+      />
     </div>
   );
 };

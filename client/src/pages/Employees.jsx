@@ -5,6 +5,8 @@ import AddEmployeeModal from '../components/employees/AddEmployeeModal';
 import EmployeeDetailsModal from '../components/employees/EmployeeDetailsModal';
 import ResetPasswordModal from '../components/employees/ResetPasswordModal';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
+import IconButton from '../components/common/IconButton';
+import { FaPlus, FaCloudUploadAlt } from 'react-icons/fa';
 
 const Employees = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -306,21 +308,13 @@ const Employees = () => {
                 Manage employees in your company
               </p>
             </div>
-            <button
+            <IconButton
               onClick={() => setIsAddModalOpen(true)}
-              className="btn border-0"
-              style={{ 
-                backgroundColor: 'var(--color-primary)',
-                color: 'white'
-              }}
-              onMouseEnter={(e) => e.target.style.opacity = '0.9'}
-              onMouseLeave={(e) => e.target.style.opacity = '1'}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Employee
-            </button>
+              icon={<FaPlus />}
+              label="Add Employee"
+              variant="primary"
+              size="sm"
+            />
           </div>
         </div>
 
@@ -374,15 +368,14 @@ const Employees = () => {
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
               {isAdmin() && (
-                <button
+                <IconButton
                   onClick={() => setIsCsvImportModalOpen(true)}
-                  className="btn bg-green-600 hover:bg-green-700 text-white border-0"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                  </svg>
-                  Bulk Import
-                </button>
+                  icon={<FaCloudUploadAlt />}
+                  label="Bulk Import"
+                  variant="primary"
+                  size="sm"
+                  className="!bg-green-600 hover:!bg-green-700"
+                />
               )}
             </div>
           </div>

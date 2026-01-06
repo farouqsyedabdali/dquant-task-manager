@@ -770,7 +770,7 @@ const updateTask = async (req, res) => {
     let allowedUpdates = {};
     
     if (isCompanyAdmin || isAssigner) {
-      // Validate due date if provided
+      // Validate due date if provided (allow past dates for editing existing tasks)
       if (updateData.dueDate !== undefined) {
         if (!updateData.dueDate) {
           return res.status(400).json({ error: 'Due date is required' });
@@ -778,13 +778,11 @@ const updateTask = async (req, res) => {
 
         // Parse date, treating date-only inputs as local time
         const dueDateObj = parseLocalDate(updateData.dueDate);
-        const now = new Date();
         if (isNaN(dueDateObj.getTime())) {
           return res.status(400).json({ error: 'Invalid due date format' });
         }
-        if (dueDateObj <= now) {
-          return res.status(400).json({ error: 'Due date must be in the future' });
-        }
+        // Removed future date check - allow past dates when editing existing tasks
+        // Users may need to mark tasks complete that were due in the past
         allowedUpdates.dueDate = dueDateObj;
       } else {
         // If due date is not being updated, ensure existing task has a due date (unless it's a draft)

@@ -7,6 +7,8 @@ import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
 import { usersAPI, tasksAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
 import DatePicker from '../common/DatePicker';
+import IconButton from '../common/IconButton';
+import { FaTimes, FaCheck } from 'react-icons/fa';
 
 const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
@@ -281,19 +283,15 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
               </span>
             </p>
           </div>
-          <button 
-            onClick={handleClose} 
-            className="btn btn-ghost btn-sm btn-circle transition-colors duration-200"
-            style={{ color: 'var(--color-text-tertiary)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--color-text-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--color-text-tertiary)';
-            }}
-          >
-            ✕
-          </button>
+          <IconButton
+            onClick={handleClose}
+            icon={<FaTimes />}
+            label="Close"
+            iconOnly={true}
+            variant="ghost"
+            size="sm"
+            className="!p-2 !rounded-full"
+          />
         </div>
 
         {/* Form */}
@@ -500,38 +498,23 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
           {/* Submit Buttons */}
           <div className="flex justify-end space-x-3 pt-4">
-            <button
+            <IconButton
               type="button"
               onClick={handleClose}
-              className="btn transition-colors duration-200"
-              style={{
-                backgroundColor: 'var(--color-bg-tertiary)',
-                borderColor: 'var(--color-border-default)',
-                color: 'var(--color-text-primary)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-quaternary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-              }}
-            >
-              Cancel
-            </button>
-            <button
+              icon={<FaTimes />}
+              label="Cancel"
+              variant="secondary"
+              size="sm"
+            />
+            <IconButton
               type="submit"
               disabled={isLoading}
-              className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-            >
-              {isLoading ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  Creating...
-                </>
-              ) : (
-                'Create Subtask'
-              )}
-            </button>
+              icon={<FaCheck />}
+              label={isLoading ? 'Creating...' : 'Create Subtask'}
+              variant="primary"
+              size="sm"
+              loading={isLoading}
+            />
           </div>
         </form>
       </div>

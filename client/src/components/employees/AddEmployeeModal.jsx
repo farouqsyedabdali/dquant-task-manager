@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import useUserStore from '../../stores/userStore';
+import IconButton from '../common/IconButton';
+import { FaTimes, FaCheck } from 'react-icons/fa';
 
 const AddEmployeeModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
@@ -105,13 +107,15 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
           >
             Add New Employee
           </h3>
-          <button
+          <IconButton
             onClick={handleClose}
-            className="btn btn-ghost btn-sm btn-circle"
-            style={{ color: 'var(--color-text-tertiary)' }}
-          >
-            ✕
-          </button>
+            icon={<FaTimes />}
+            label="Close"
+            iconOnly={true}
+            variant="ghost"
+            size="sm"
+            className="!p-2 !rounded-full"
+          />
         </div>
 
         {/* Form */}
@@ -263,39 +267,23 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
 
           {/* Submit Buttons */}
           <div className="flex justify-end space-x-3 pt-2">
-            <button
+            <IconButton
               type="button"
               onClick={handleClose}
-              className="btn border-0"
-              style={{ 
-                backgroundColor: 'var(--color-bg-tertiary)',
-                color: 'var(--color-text-primary)'
-              }}
-              onMouseEnter={(e) => e.target.style.opacity = '0.9'}
-              onMouseLeave={(e) => e.target.style.opacity = '1'}
-            >
-              Cancel
-            </button>
-            <button
+              icon={<FaTimes />}
+              label="Cancel"
+              variant="secondary"
+              size="sm"
+            />
+            <IconButton
               type="submit"
               disabled={isLoading}
-              className="btn border-0"
-              style={{
-                backgroundColor: 'var(--color-primary)',
-                color: 'white'
-              }}
-              onMouseEnter={(e) => e.target.style.opacity = '0.9'}
-              onMouseLeave={(e) => e.target.style.opacity = '1'}
-            >
-              {isLoading ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  Sending Invitation...
-                </>
-              ) : (
-                'Send Invitation'
-              )}
-            </button>
+              icon={<FaCheck />}
+              label={isLoading ? 'Sending Invitation...' : 'Send Invitation'}
+              variant="primary"
+              size="sm"
+              loading={isLoading}
+            />
           </div>
         </form>
       </div>

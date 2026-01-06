@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import useContactStore from '../../stores/contactStore';
+import IconButton from './IconButton';
+import { FaTimes, FaCheck } from 'react-icons/fa';
 
 const AddContactModal = ({
   isOpen,
@@ -91,20 +93,16 @@ const AddContactModal = ({
           >
             Add Contact
           </h3>
-          <button
+          <IconButton
             onClick={handleClose}
             disabled={isSubmitting}
-            className="btn btn-ghost btn-sm btn-circle transition-colors duration-200"
-            style={{ color: 'var(--color-text-tertiary)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--color-text-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--color-text-tertiary)';
-            }}
-          >
-            ✕
-          </button>
+            icon={<FaTimes />}
+            label="Close"
+            iconOnly={true}
+            variant="ghost"
+            size="sm"
+            className="!p-2 !rounded-full"
+          />
         </div>
 
         {message && (
@@ -233,21 +231,24 @@ const AddContactModal = ({
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
-            <button
+            <IconButton
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="btn btn-ghost"
-            >
-              Cancel
-            </button>
-            <button
+              icon={<FaTimes />}
+              label="Cancel"
+              variant="secondary"
+              size="sm"
+            />
+            <IconButton
               type="submit"
               disabled={isSubmitting}
-              className="btn btn-primary"
-            >
-              {isSubmitting ? 'Adding...' : 'Add Contact'}
-            </button>
+              icon={<FaCheck />}
+              label={isSubmitting ? 'Adding...' : 'Add Contact'}
+              variant="primary"
+              size="sm"
+              loading={isSubmitting}
+            />
           </div>
         </form>
       </div>

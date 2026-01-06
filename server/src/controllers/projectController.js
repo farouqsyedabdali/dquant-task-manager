@@ -375,7 +375,7 @@ const projectController = {
         return res.status(403).json({ error: 'Only the project owner can update this project' });
       }
 
-      // Validate due date if provided
+      // Validate due date if provided (allow past dates for editing existing projects)
       let finalDueDate = project.dueDate; // Keep existing if not updating
       if (dueDate !== undefined) {
         if (!dueDate) {
@@ -383,13 +383,11 @@ const projectController = {
         }
 
         const dueDateObj = parseLocalDate(dueDate);
-        const now = new Date();
         if (isNaN(dueDateObj.getTime())) {
           return res.status(400).json({ error: 'Invalid due date format' });
         }
-        if (dueDateObj <= now) {
-          return res.status(400).json({ error: 'Due date must be in the future' });
-        }
+        // Removed future date check - allow past dates when editing existing projects
+        // Users may need to update projects that have past due dates
         finalDueDate = dueDateObj;
       } else {
         // If due date is not being updated, ensure existing project has a due date

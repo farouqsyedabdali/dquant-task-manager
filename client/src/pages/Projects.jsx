@@ -4,6 +4,8 @@ import { projectsAPI, usersAPI } from '../services/api';
 import useAuthStore from '../context/authStore';
 import CreateProjectModal from '../components/projects/CreateProjectModal';
 import ProjectDetailModal from '../components/projects/ProjectDetailModal';
+import IconButton from '../components/common/IconButton';
+import { FaPlus } from 'react-icons/fa';
 
 const Projects = () => {
   const [projects, setProjects] = useState([]);
@@ -30,7 +32,7 @@ const Projects = () => {
     }
   }, [successMessage]);
 
-  // Handle navigation from TaskModal with project ID
+  // Handle navigation from TaskModal or QuickActions with project ID
   useEffect(() => {
     if (location.state?.openProjectId && projects.length > 0) {
       const projectToOpen = projects.find(p => p.id === location.state.openProjectId);
@@ -152,15 +154,13 @@ const Projects = () => {
           </select>
 
           {/* Create Project Button */}
-          <button
+          <IconButton
             onClick={() => setIsCreateModalOpen(true)}
-            className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            New Project
-          </button>
+            icon={<FaPlus />}
+            label="New Project"
+            variant="primary"
+            size="sm"
+          />
         </div>
 
         {/* Success Message */}
@@ -352,10 +352,12 @@ const Projects = () => {
           onClose={() => {
             setIsDetailModalOpen(false);
             setSelectedProject(null);
+            setSuccessMessage(''); // Clear success message when closing
           }}
           projectId={selectedProject.id}
           onProjectUpdated={handleProjectUpdated}
           onProjectDeleted={handleProjectDeleted}
+          initialSuccessMessage={location.state?.successMessage || null}
         />
       )}
     </div>

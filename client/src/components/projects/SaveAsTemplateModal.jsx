@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import IconButton from '../common/IconButton';
+import { FaTimes, FaCheck } from 'react-icons/fa';
 
 const SaveAsTemplateModal = ({ isOpen, onClose, projectName, onSave }) => {
   const [templateData, setTemplateData] = useState({
@@ -107,33 +109,24 @@ const SaveAsTemplateModal = ({ isOpen, onClose, projectName, onSave }) => {
           </div>
 
           <div className="modal-action">
-            <button
+            <IconButton
               type="submit"
               disabled={!templateData.name.trim() || isSaving}
-              className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-            >
-              {isSaving ? (
-                <>
-                  <span className="loading loading-spinner loading-sm mr-2"></span>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                  </svg>
-                  Save Template
-                </>
-              )}
-            </button>
-            <button
+              icon={<FaCheck />}
+              label={isSaving ? 'Saving...' : 'Save Template'}
+              variant="primary"
+              size="sm"
+              loading={isSaving}
+            />
+            <IconButton
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="btn btn-ghost"
-            >
-              Cancel
-            </button>
+              icon={<FaTimes />}
+              label="Cancel"
+              variant="secondary"
+              size="sm"
+            />
           </div>
         </form>
       </div>

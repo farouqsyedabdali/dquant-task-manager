@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { projectsAPI, templatesAPI } from '../../services/api';
 import { formatDateForInput } from '../../utils/dateUtils';
+import IconButton from '../common/IconButton';
+import { FaArrowLeft, FaTimes, FaCheck } from 'react-icons/fa';
 
 const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   const [step, setStep] = useState(1); // 1: choose template or scratch, 2: project details
@@ -75,6 +77,36 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
     }
   }, [isOpen, activeTab, activeCategory, debouncedSearchTerm, pagination.page]);
 
+  // Fetch user templates count when modal opens (for tab count display)
+  // This ensures the count is available immediately when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      // Fetch with minimal params just to get the count
+      const fetchCount = async () => {
+        try {
+          const response = await templatesAPI.getAll({
+            includeSystem: false,
+            page: 1,
+            limit: 1 // Just need the pagination info, not the actual templates
+          });
+          
+          if (response.data.pagination) {
+            setUserPagination(prev => ({
+              ...prev,
+              total: response.data.pagination.total,
+              totalPages: response.data.pagination.totalPages
+            }));
+          }
+        } catch (err) {
+          console.error('Error fetching user templates count:', err);
+        }
+      };
+      
+      fetchCount();
+    }
+  }, [isOpen]);
+
+  // Fetch user templates when my-templates tab is active or filters change
   useEffect(() => {
     if (isOpen && activeTab === 'my-templates') {
       fetchUserTemplates();
@@ -910,43 +942,32 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
 
             {/* Actions */}
             <div className="flex justify-between pt-4 border-t" style={{ borderColor: 'var(--color-border-default)' }}>
-              <button
+              <IconButton
                 type="button"
                 onClick={() => setStep(1)}
-                className="btn btn-ghost"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                ← Back
-              </button>
+                icon={<FaArrowLeft />}
+                label="Back"
+                variant="ghost"
+                size="sm"
+              />
               <div className="space-x-2">
-                <button
+                <IconButton
                   type="button"
                   onClick={handleClose}
-                  className="btn btn-ghost"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Cancel
-                </button>
-                <button
+                  icon={<FaTimes />}
+                  label="Cancel"
+                  variant="secondary"
+                  size="sm"
+                />
+                <IconButton
                   type="submit"
                   disabled={isLoading || !formData.name.trim()}
-                  className="btn border-0"
-                  style={{ 
-                    backgroundColor: 'var(--color-primary)',
-                    color: 'white'
-                  }}
-                  onMouseEnter={(e) => e.target.style.opacity = '0.9'}
-                  onMouseLeave={(e) => e.target.style.opacity = '1'}
-                >
-                  {isLoading ? (
-                    <>
-                      <span className="loading loading-spinner loading-sm mr-2"></span>
-                      Creating...
-                    </>
-                  ) : (
-                    'Create Project'
-                  )}
-                </button>
+                  icon={<FaCheck />}
+                  label={isLoading ? 'Creating...' : 'Create Project'}
+                  variant="primary"
+                  size="sm"
+                  loading={isLoading}
+                />
               </div>
             </div>
           </form>

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import useTaskStore from '../../stores/taskStore';
 import TaskCard from '../tasks/TaskCard';
+import IconButton from '../common/IconButton';
+import { FaCalendarAlt } from 'react-icons/fa';
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -567,12 +569,13 @@ const Calendar = () => {
             </div>
           )}
 
-            <button
+            <IconButton
               onClick={goToToday}
-              className="btn btn-primary"
-            >
-              Today
-            </button>
+              icon={<FaCalendarAlt />}
+              label="Today"
+              variant="primary"
+              size="sm"
+            />
           </div>
         </div>
 
