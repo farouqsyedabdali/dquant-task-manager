@@ -954,7 +954,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
       <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-4 relative">
             <div>
               <h1 
                 className="text-3xl font-bold transition-colors duration-200"
@@ -974,6 +974,19 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
                 }
               </p>
             </div>
+            
+            {/* Company Name - Centered */}
+            {!user?.isPersonal && user?.companyName && (
+              <div className="absolute left-1/2 transform -translate-x-1/2">
+                <h2 
+                  className="text-xl font-semibold transition-colors duration-200"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  {user.companyName}
+                </h2>
+              </div>
+            )}
+            
             <div className="flex items-center space-x-4">
               {/* ViewSwitcher removed - only card view is shown */}
 
@@ -1001,6 +1014,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
               />
             </div>
           </div>
+          
         </div>
 
         {/* Statistics Cards */}

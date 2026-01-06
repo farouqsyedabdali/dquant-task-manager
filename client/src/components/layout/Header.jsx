@@ -4,6 +4,7 @@ import useAuthStore from '../../context/authStore';
 import CalendarIcon from '../icons/CalendarIcon';
 import QuickActionsDropdown from './QuickActionsDropdown';
 import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaUserFriends, FaProjectDiagram } from 'react-icons/fa';
+import tialzLogo from '../../assets/TIALZ BETA (No Background).png';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -89,15 +90,15 @@ const Header = () => {
     >
       <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo and Brand */}
+          {/* Logo */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <h1 
-                className="text-xl font-bold transition-colors duration-200"
-                style={{ color: 'var(--color-text-primary)' }}
-              >
-                {user?.companyName || 'Tialz Task Manager'}
-              </h1>
+              <img 
+                src={tialzLogo}
+                alt="TIALZ Logo"
+                className="h-28 w-auto object-contain"
+                style={{ maxHeight: '112px' }}
+              />
             </div>
             
             {/* Navigation Links */}
