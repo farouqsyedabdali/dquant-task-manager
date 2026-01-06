@@ -950,7 +950,11 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
     let filtered = archiveView === 'archived' ? 
       currentTasks.filter(task => {
         // Apply basic filters to archived tasks
-        if (filters.status && task.status !== filters.status) return false;
+        if (filters.status) {
+          // Handle comma-separated status values (e.g., "TODO,IN_PROGRESS")
+          const statusArray = filters.status.split(',').map(s => s.trim());
+          if (!statusArray.includes(task.status)) return false;
+        }
         if (filters.priority && task.priority !== filters.priority) return false;
         if (filters.search) {
           const searchLower = filters.search.toLowerCase();

@@ -4,14 +4,34 @@ const crypto = require('crypto');
 const prisma = require('../lib/prisma');
 const emailService = require('../services/emailService');
 const emailVerificationEmail = require('../templates/emailVerificationEmail');
+const secureLogger = require('../middleware/secureLogger');
+const { 
+  checkAccountLockout, 
+  recordFailedLogin, 
+  recordSuccessfulLogin 
+} = require('../middleware/accountLockout');
 
 const login = async (req, res) => {
   try {
     const { email, password, companyEmail } = req.body;
-    console.log('🔐 LOGIN ATTEMPT:', { email, companyEmail, timestamp: new Date().toISOString() });
+    secureLogger.info('🔐 LOGIN ATTEMPT:', { email, companyEmail, timestamp: new Date().toISOString() });
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Check if account is locked (before checking credentials)
+    const lockStatus = await checkAccountLockout(email);
+    if (lockStatus.locked) {
+      secureLogger.warn('🔒 Login blocked - account locked', { 
+        email, 
+        remainingMinutes: lockStatus.remainingMinutes 
+      });
+      return res.status(423).json({ 
+        error: lockStatus.message,
+        accountLocked: true,
+        remainingMinutes: lockStatus.remainingMinutes
+      });
     }
 
     // First, find the company by email
@@ -60,11 +80,14 @@ const login = async (req, res) => {
     }
 
     if (!user) {
-      console.log('❌ USER NOT FOUND:', email);
+      // Record failed attempt even if user doesn't exist (security best practice)
+      // This prevents user enumeration attacks
+      await recordFailedLogin(email);
+      secureLogger.warn('❌ USER NOT FOUND:', { email });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    console.log('👤 USER FOUND:', { 
+    secureLogger.info('👤 USER FOUND:', { 
       id: user.id, 
       name: user.name, 
       email: user.email, 
@@ -85,10 +108,31 @@ const login = async (req, res) => {
     if (user.password) {
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
-        console.log('❌ INVALID PASSWORD for user:', user.email);
+        // Record failed login attempt
+        const lockoutResult = await recordFailedLogin(email);
+        
+        secureLogger.warn('❌ INVALID PASSWORD for user:', { 
+          email: user.email,
+          attempts: lockoutResult.attempts,
+          remainingAttempts: lockoutResult.remainingAttempts
+        });
+        
+        // If account is now locked, return lockout message
+        if (lockoutResult.isLocked) {
+          const lockStatus = await checkAccountLockout(email);
+          return res.status(423).json({ 
+            error: lockStatus.message,
+            accountLocked: true,
+            remainingMinutes: lockStatus.remainingMinutes
+          });
+        }
+        
+        // Return generic error (don't reveal remaining attempts for security)
         return res.status(401).json({ error: 'Invalid credentials' });
       }
     } else {
+      // Record failed attempt for accounts without password
+      await recordFailedLogin(email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -110,7 +154,7 @@ const login = async (req, res) => {
 
     // Check if company is suspended
     if (userCompany.markedForDeletion) {
-      console.log('🚫 COMPANY SUSPENDED:', {
+      secureLogger.warn('🚫 COMPANY SUSPENDED:', {
         companyId: userCompany.id,
         companyName: userCompany.name,
         userEmail: user.email,
@@ -130,6 +174,9 @@ const login = async (req, res) => {
       });
     }
 
+    // Record successful login and reset failed attempts
+    await recordSuccessfulLogin(user.id);
+
     const token = jwt.sign(
       { 
         userId: user.id,
@@ -140,7 +187,7 @@ const login = async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    console.log('✅ LOGIN SUCCESS:', { 
+    secureLogger.info('✅ LOGIN SUCCESS:', { 
       userId: user.id, 
       email: user.email, 
       role: user.role,

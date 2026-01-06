@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
+const secureLogger = require('./secureLogger');
 
 const auth = async (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    console.log('🔑 AUTH MIDDLEWARE:', {
+    secureLogger.debug('🔑 AUTH MIDDLEWARE:', {
       path: req.path,
       hasToken: !!token,
       tokenLength: token?.length,
@@ -12,12 +13,12 @@ const auth = async (req, res, next) => {
     });
     
     if (!token) {
-      console.log('❌ NO TOKEN provided');
+      secureLogger.warn('❌ NO TOKEN provided', { path: req.path });
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('🔓 TOKEN DECODED:', {
+    secureLogger.debug('🔓 TOKEN DECODED:', {
       userId: decoded.userId,
       role: decoded.role,
       companyId: decoded.companyId
@@ -31,11 +32,11 @@ const auth = async (req, res, next) => {
     });
 
     if (!user) {
-      console.log('❌ USER NOT FOUND in database');
+      secureLogger.warn('❌ USER NOT FOUND in database', { userId: decoded.userId });
       return res.status(401).json({ error: 'Invalid token.' });
     }
 
-    console.log('✅ AUTH SUCCESS:', {
+    secureLogger.debug('✅ AUTH SUCCESS:', {
       userId: user.id,
       email: user.email,
       role: user.role,
@@ -47,7 +48,7 @@ const auth = async (req, res, next) => {
     req.companyId = user.companyId;
     next();
   } catch (error) {
-    console.log('❌ AUTH ERROR:', error.message);
+    secureLogger.warn('❌ AUTH ERROR:', { message: error.message, path: req.path });
     res.status(401).json({ error: 'Invalid token.' });
   }
 };

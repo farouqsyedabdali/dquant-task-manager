@@ -51,6 +51,9 @@ model User {
   invitationToken          String?
   invitationExpires        DateTime?
   invitationSentAt         DateTime?
+  failedLoginAttempts      Int                  @default(0)
+  accountLockedUntil       DateTime?
+  lastLoginAttempt         DateTime?
   auditLogs                AuditLog[]
   comments                 Comment[]
   contacts                 Contact[]

@@ -1,6 +1,8 @@
+const secureLogger = require('./secureLogger');
+
 const roleCheck = (allowedRoles) => {
   return (req, res, next) => {
-    console.log('🔐 ROLE CHECK:', {
+    secureLogger.debug('🔐 ROLE CHECK:', {
       path: req.path,
       userRole: req.user?.role,
       allowedRoles: allowedRoles,
@@ -9,19 +11,21 @@ const roleCheck = (allowedRoles) => {
     });
 
     if (!req.user) {
-      console.log('❌ NO USER in request');
+      secureLogger.warn('❌ NO USER in request', { path: req.path });
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      console.log('❌ INSUFFICIENT PERMISSIONS:', {
+      secureLogger.warn('❌ INSUFFICIENT PERMISSIONS:', {
         userRole: req.user.role,
-        requiredRoles: allowedRoles
+        requiredRoles: allowedRoles,
+        path: req.path,
+        userId: req.user.id
       });
       return res.status(403).json({ error: 'Access denied. Insufficient permissions.' });
     }
 
-    console.log('✅ ROLE CHECK PASSED');
+    secureLogger.debug('✅ ROLE CHECK PASSED');
     next();
   };
 };

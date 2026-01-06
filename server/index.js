@@ -1,6 +1,7 @@
 const app = require('./src/app')
 const { startReminderScheduler } = require('./src/utils/taskReminderScheduler')
 const { startAutoArchiveScheduler } = require('./src/utils/autoArchiveScheduler')
+const secureLogger = require('./src/middleware/secureLogger')
 const PORT = process.env.PORT || 3000
 
 // Helper function to mask password in database URL
@@ -20,14 +21,14 @@ function maskDatabaseUrl(url) {
 // Test database connection on startup
 async function testDatabaseConnection() {
   try {
-    console.log('🔍 Testing database connection...')
-    console.log(`🔗 Database URL: ${maskDatabaseUrl(process.env.DATABASE_URL)}`)
+    secureLogger.info('🔍 Testing database connection...')
+    secureLogger.info(`🔗 Database URL: ${maskDatabaseUrl(process.env.DATABASE_URL)}`)
     const prisma = require('./src/lib/prisma')
     await prisma.$connect()
-    console.log('✅ Database connection successful')
+    secureLogger.info('✅ Database connection successful')
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message)
-    console.error('🔧 DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set')
+    secureLogger.error('❌ Database connection failed:', { message: error.message })
+    secureLogger.error('🔧 DATABASE_URL:', { isSet: !!process.env.DATABASE_URL })
     process.exit(1)
   }
 }
@@ -37,13 +38,13 @@ async function startServer() {
   await testDatabaseConnection()
   
   app.listen(PORT, () => {
-    console.log('🚀 Task Manager Server Starting...')
-    console.log(`🌐 Server running on port ${PORT}`)
-    console.log(`🔧 NODE_ENV: ${process.env.NODE_ENV}`)
-    console.log(`📁 Working directory: ${process.cwd()}`)
-    console.log(`🆔 Process ID: ${process.pid}`)
-    console.log(`Health check: http://localhost:${PORT}/api/health`)
-    console.log('✅ Server ready to accept connections')
+    secureLogger.info('🚀 Task Manager Server Starting...')
+    secureLogger.info(`🌐 Server running on port ${PORT}`)
+    secureLogger.info(`🔧 NODE_ENV: ${process.env.NODE_ENV}`)
+    secureLogger.info(`📁 Working directory: ${process.cwd()}`)
+    secureLogger.info(`🆔 Process ID: ${process.pid}`)
+    secureLogger.info(`Health check: http://localhost:${PORT}/api/health`)
+    secureLogger.info('✅ Server ready to accept connections')
     
     // Start the task reminder scheduler
     startReminderScheduler()
@@ -54,6 +55,6 @@ async function startServer() {
 }
 
 startServer().catch(error => {
-  console.error('❌ Failed to start server:', error)
+  secureLogger.error('❌ Failed to start server:', { message: error.message, stack: error.stack })
   process.exit(1)
 })

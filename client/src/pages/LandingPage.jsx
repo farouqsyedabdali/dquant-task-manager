@@ -8,10 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
     ? 'https://dquant-task-manager-production.up.railway.app/api' 
     : 'http://localhost:3000/api');
 
-// Import OS icons
-import windowsIcon from '../../assets/windows-11-icon.png';
-import macosIcon from '../../assets/macos-icon.png';
-import linuxIcon from '../../assets/linux-icon.png';
+// No OS icons needed - web-focused
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -193,13 +190,13 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Fixed Open Task Manager Button in Top Right */}
+      {/* Fixed Launch App Button in Top Right */}
       <div className="fixed top-4 right-4 z-50">
         <button
           onClick={handleOpenInBrowser}
           className="bg-[#5865f2] hover:bg-[#4752c4] text-white px-4 py-2 rounded-lg font-semibold text-sm md:text-base"
         >
-          Open Task Manager
+          Launch App
         </button>
           </div>
 
@@ -208,7 +205,7 @@ const LandingPage = () => {
         <div className="hidden md:flex space-x-8">
           <button onClick={() => scrollToSection('features')} className="text-white/70 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">Features</button>
           <button onClick={() => scrollToSection('pricing')} className="text-white/70 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">Pricing</button>
-          <button onClick={() => scrollToSection('download')} className="text-white/70 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">Download</button>
+          <button onClick={() => scrollToSection('get-started')} className="text-white/70 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-colors">Get Started</button>
         </div>
       </div>
 
@@ -220,11 +217,12 @@ const LandingPage = () => {
             {/* Left - Text */}
             <div>
               <h1 className="hero-title text-white mb-6 leading-tight">
-                PRODUCTIVITY THAT'S ALL SMART & SIMPLE
+                AI-POWERED TASK MANAGEMENT FOR MODERN TEAMS
               </h1>
               <p className="text-lg md:text-xl text-white/70 leading-relaxed max-w-2xl">
-                Turn any highlighted text into actionable tasks instantly. From PDFs to emails, 
-                create, update, and manage tasks with the power of AI. Your productivity revolution starts here.
+                Transform how you work with intelligent task management. Create tasks from any text, 
+                collaborate with your team in real-time, and let AI handle the complexity. 
+                Access from any browser, anywhere.
               </p>
               </div>
 
@@ -266,18 +264,18 @@ const LandingPage = () => {
           {/* Centered Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => scrollToSection('download')}
+              onClick={handleOpenInBrowser}
               className="bg-[#5865f2] hover:bg-[#4752c4] text-white px-8 py-3 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-colors"
             >
-              <span>⬇️</span>
-              Download App
+              <span>🚀</span>
+              Get Started Free
             </button>
             <button
-              onClick={handleOpenInBrowser}
+              onClick={() => scrollToSection('features')}
               className="bg-transparent border-2 border-gray-600 hover:border-gray-500 hover:bg-white/5 text-white px-8 py-3 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-colors"
             >
-              <span>🌐</span>
-              Open in Browser
+              <span>✨</span>
+              Explore Features
             </button>
           </div>
         </div>
@@ -329,8 +327,8 @@ const LandingPage = () => {
               },
               {
                 icon: "⚡",
-                title: "Real-time Sync",
-                description: "Instant synchronization across all your devices and platforms. Start on desktop, continue on mobile, finish on tablet.",
+                title: "Access Anywhere",
+                description: "Work from any device with just a browser. No downloads required. Your tasks sync instantly across all sessions and devices.",
                 animation: "syncing-devices"
               }
             ].map((feature, index) => (
@@ -750,8 +748,8 @@ const LandingPage = () => {
                   "Basic AI features",
                   "1 user account",
                   "Email support",
-                  "Mobile app access",
-                  "Browser extension"
+                  "Web access from any device",
+                  "Real-time sync"
                 ],
                 popular: false
               },
@@ -821,94 +819,91 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Download Section */}
-      <section id="download" className="py-20 px-4 sm:px-6 lg:px-8">
+      {/* Get Started Section */}
+      <section id="get-started" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <div>
             <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
               Ready to Get Started?
             </h2>
             <p className="text-xl text-white/70 mb-12">
-              Download Tialz Task Manager and transform your productivity today
+              Start managing your tasks smarter with Tialz. No downloads, no setup required.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
               {[
                 {
-                  platform: "Windows",
-                  icon: windowsIcon,
-                  version: "v0.0.2",
-                  size: "Latest",
-                  url: `${API_BASE_URL}/downloads/windows/latest`,
-                  available: true
+                  icon: "🚀",
+                  title: "Sign Up Free",
+                  description: "Create your account in seconds. No credit card required.",
+                  step: "Step 1"
                 },
                 {
-                  platform: "macOS",
-                  icon: macosIcon,
-                  version: "Coming soon",
-                  size: "52.1 MB",
-                  url: "#",
-                  available: false
+                  icon: "📝",
+                  title: "Create Tasks",
+                  description: "Start adding tasks or let AI extract them from any text.",
+                  step: "Step 2"
                 },
                 {
-                  platform: "Linux",
-                  icon: linuxIcon,
-                  version: "Coming soon",
-                  size: "48.7 MB",
-                  url: "#",
-                  available: false
+                  icon: "✨",
+                  title: "Get Productive",
+                  description: "Collaborate with your team and watch productivity soar.",
+                  step: "Step 3"
                 }
-              ].map((download, index) => (
+              ].map((item, index) => (
                 <div
                   key={index}
-                  className={`bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl p-6 transition-colors ${
-                    download.available 
-                      ? 'hover:bg-white/15 hover:border-white/30 cursor-pointer' 
-                      : 'opacity-60 cursor-not-allowed'
-                  }`}
-                  onClick={() => {
-                    if (download.available && download.url !== '#') {
-                      window.open(download.url, '_blank');
-                    }
-                  }}
+                  className="bg-white/10 backdrop-blur-xl border border-white/20 hover:border-white/30 rounded-xl p-6 transition-colors"
                 >
-                  <div className="flex items-center justify-center mb-4">
-                    <img src={download.icon} alt={download.platform} className="w-12 h-12" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-2 text-center">{download.platform}</h3>
-                  <p className="text-gray-400 mb-2 text-center">Version {download.version}</p>
-                  <p className="text-sm text-gray-500 mb-4 text-center">{download.size}</p>
-                  <div className={`text-center py-2 px-4 rounded-lg font-semibold transition-colors ${
-                    download.available
-                      ? 'bg-[#5865f2] hover:bg-[#4752c4] text-white'
-                      : 'bg-gray-700 text-gray-400'
-                  }`}>
-                    {download.available ? 'Download' : 'Coming Soon'}
-                  </div>
+                  <div className="text-sm text-[#5865f2] font-semibold mb-3">{item.step}</div>
+                  <div className="text-4xl mb-4">{item.icon}</div>
+                  <h3 className="text-xl font-semibold text-white mb-3">{item.title}</h3>
+                  <p className="text-white/70">{item.description}</p>
                 </div>
               ))}
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8">
-              <h3 className="text-2xl font-bold text-white mb-4">System Requirements</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
-                <div>
-                  <h4 className="text-lg font-semibold text-white mb-3">Minimum Requirements</h4>
-                  <ul className="space-y-2 text-white/70">
-                    <li>• Windows 10 or macOS 10.15 or Ubuntu 18.04</li>
-                    <li>• 4GB RAM</li>
-                    <li>• 100MB free disk space</li>
-                    <li>• Internet connection</li>
-                  </ul>
+            <div className="space-y-4">
+              <button
+                onClick={handleOpenInBrowser}
+                className="bg-[#5865f2] hover:bg-[#4752c4] text-white px-12 py-4 rounded-lg font-semibold text-xl transition-colors inline-flex items-center gap-3"
+              >
+                <span>🌐</span>
+                Open Task Manager
+              </button>
+              <p className="text-white/60 text-sm">Works on any device with a modern browser</p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 mt-12">
+              <h3 className="text-2xl font-bold text-white mb-6">Why Choose Web-Based?</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                <div className="flex items-start gap-4">
+                  <div className="text-3xl">💻</div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-2">No Installation Required</h4>
+                    <p className="text-white/70">Access instantly from any browser. No downloads, updates, or maintenance.</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-lg font-semibold text-white mb-3">Recommended</h4>
-                  <ul className="space-y-2 text-white/70">
-                    <li>• Windows 11 or macOS 12 or Ubuntu 20.04</li>
-                    <li>• 8GB RAM</li>
-                    <li>• 500MB free disk space</li>
-                    <li>• High-speed internet connection</li>
-                  </ul>
+                <div className="flex items-start gap-4">
+                  <div className="text-3xl">🔄</div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-2">Always Up-to-Date</h4>
+                    <p className="text-white/70">Get the latest features automatically. Never worry about updates again.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="text-3xl">🌍</div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-2">Work Anywhere</h4>
+                    <p className="text-white/70">Access your tasks from any device, anywhere in the world.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="text-3xl">⚡</div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-2">Lightning Fast</h4>
+                    <p className="text-white/70">Built with modern web technologies for blazing-fast performance.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -935,10 +930,10 @@ const LandingPage = () => {
             <div>
               <h4 className="text-white font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-white/70">
-                <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Download</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Updates</a></li>
+                <li><button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">Features</button></li>
+                <li><button onClick={() => scrollToSection('pricing')} className="hover:text-white transition-colors">Pricing</button></li>
+                <li><button onClick={() => scrollToSection('get-started')} className="hover:text-white transition-colors">Get Started</button></li>
+                <li><button onClick={handleOpenInBrowser} className="hover:text-white transition-colors">Launch App</button></li>
               </ul>
             </div>
             
