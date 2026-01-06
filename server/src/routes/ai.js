@@ -1,7 +1,9 @@
 const express = require('express');
+const { body } = require('express-validator');
 const axios = require('axios');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const { validators, handleValidationErrors } = require('../middleware/validators');
 
 const router = express.Router();
 
@@ -29,11 +31,11 @@ function extractJsonCommands(text) {
 }
 
 // POST /api/ai/chat
-router.post('/chat', async (req, res) => {
+router.post('/chat',
+  validators.aiText('message'),
+  handleValidationErrors,
+  async (req, res) => {
   const { message } = req.body;
-  if (!message) {
-    return res.status(400).json({ error: 'Message is required' });
-  }
 
   let responded = false;
 
@@ -341,7 +343,10 @@ ${userTasks.map((task, idx) => `#${idx+1}: ${task.title} (${task.status}, ${task
 });
 
 // POST /api/ai/extract-task
-router.post('/extract-task', async (req, res) => {
+router.post('/extract-task',
+  validators.aiText('text'),
+  handleValidationErrors,
+  async (req, res) => {
   const { text } = req.body;
   if (!text) {
     return res.status(400).json({ error: 'Text is required' });
@@ -505,7 +510,10 @@ Output: {"title": "Update website homepage", "description": "Update the website 
 });
 
 // POST /api/ai/identify-task-update
-router.post('/identify-task-update', async (req, res) => {
+router.post('/identify-task-update',
+  validators.aiText('text'),
+  handleValidationErrors,
+  async (req, res) => {
   const { text } = req.body;
   if (!text) {
     return res.status(400).json({ error: 'Text is required' });
@@ -715,7 +723,10 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
 });
 
 // POST /api/ai/suggest-project-ideas
-router.post('/suggest-project-ideas', async (req, res) => {
+router.post('/suggest-project-ideas',
+  validators.aiText('text'),
+  handleValidationErrors,
+  async (req, res) => {
   const { text } = req.body;
   if (!text) {
     return res.status(400).json({ error: 'Text is required' });
@@ -853,7 +864,14 @@ Guidelines:
 });
 
 // POST /api/ai/create-project-from-idea
-router.post('/create-project-from-idea', async (req, res) => {
+router.post('/create-project-from-idea',
+  validators.aiText('text'),
+  body('selectedIdea').isObject().withMessage('selectedIdea must be an object'),
+  body('selectedIdea.id').notEmpty().withMessage('selectedIdea.id is required'),
+  body('projectName').optional().trim().escape().isLength({ max: 200 }).withMessage('Project name must be less than 200 characters'),
+  body('dueDate').optional().trim().isISO8601().withMessage('Due date must be a valid ISO 8601 date'),
+  handleValidationErrors,
+  async (req, res) => {
   const { text, selectedIdea, projectName, dueDate } = req.body;
   
   if (!text || !selectedIdea || !selectedIdea.id) {
@@ -871,6 +889,19 @@ router.post('/create-project-from-idea', async (req, res) => {
     const ideaIcon = selectedIdea.icon || '📋';
     const ideaColor = selectedIdea.color || '#3b82f6';
 
+    // Parse project due date if provided
+    let projectDueDateForAI = null;
+    if (dueDate) {
+      try {
+        const parsed = new Date(dueDate);
+        if (!isNaN(parsed.getTime())) {
+          projectDueDateForAI = parsed.toISOString().split('T')[0]; // YYYY-MM-DD format
+        }
+      } catch (e) {
+        // Ignore invalid dates
+      }
+    }
+
     // Optimized system prompt for AI to generate project with tasks
     const systemPrompt = `You are an AI assistant that creates projects with tasks from ideas.
 
@@ -878,6 +909,7 @@ Selected Project Idea: ${ideaName}
 Idea Description: ${ideaDescription}
 
 User's Original Text: "${text}"
+${projectDueDateForAI ? `Project Due Date: ${projectDueDateForAI} (ALL task dates must be BEFORE this date)` : 'No project due date specified'}
 
 Generate a complete project with EXACTLY 17-23 actionable tasks (aim for 19-21 tasks) based on the idea and text.
 
@@ -900,10 +932,13 @@ Guidelines:
 - Generate EXACTLY 17-23 tasks (aim for 19-21 tasks)
 - Tasks should be specific, actionable, and ordered logically
 - Extract dates from text (e.g., "by Friday" = calculate date, "March 15th" = 2024-03-15)
+- CRITICAL: All task due dates MUST be before the project due date (${projectDueDateForAI || 'N/A'})
+- If project due date is provided, distribute task dates evenly before it, with earlier tasks having earlier dates
 - Set priority based on urgency cues in text
 - Make tasks relevant to the idea and text context
 - If no dates in text, set dueDate to null
-- Break down the project into detailed phases with multiple tasks per phase`;
+- Break down the project into detailed phases with multiple tasks per phase
+- Return dates in YYYY-MM-DD format only (no time component)`;
 
     // Optimized API call
     const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
@@ -1047,8 +1082,32 @@ Guidelines:
             let taskDueDate = null;
             if (task.dueDate) {
               try {
-                taskDueDate = new Date(task.dueDate);
-                if (isNaN(taskDueDate.getTime())) {
+                // Parse date and ensure it's date-only (no time component)
+                // Extract just the date part (YYYY-MM-DD)
+                const dateStr = task.dueDate.split('T')[0]; // Remove time if present
+                const dateParts = dateStr.split('-');
+                if (dateParts.length === 3) {
+                  // Create date at 11:59 PM (end of day) to indicate date-only
+                  taskDueDate = new Date(
+                    parseInt(dateParts[0]),
+                    parseInt(dateParts[1]) - 1,
+                    parseInt(dateParts[2]),
+                    23, 59, 0, 0
+                  );
+                  
+                  // Validate that task date is before project due date
+                  if (projectDueDateObj && taskDueDate > projectDueDateObj) {
+                    // If task date is after project date, set it to 1 day before project date
+                    const adjustedDate = new Date(projectDueDateObj);
+                    adjustedDate.setDate(adjustedDate.getDate() - 1);
+                    adjustedDate.setHours(23, 59, 0, 0);
+                    taskDueDate = adjustedDate;
+                  }
+                  
+                  if (isNaN(taskDueDate.getTime())) {
+                    taskDueDate = null;
+                  }
+                } else {
                   taskDueDate = null;
                 }
               } catch (e) {

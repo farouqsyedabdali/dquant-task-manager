@@ -6,7 +6,11 @@ import EmployeeDetailsModal from '../components/employees/EmployeeDetailsModal';
 import ResetPasswordModal from '../components/employees/ResetPasswordModal';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import IconButton from '../components/common/IconButton';
-import { FaPlus, FaCloudUploadAlt } from 'react-icons/fa';
+import SkeletonList from '../components/common/SkeletonList';
+import EmptyState from '../components/common/EmptyState';
+import ConfirmModal from '../components/common/ConfirmModal';
+import { useToastContext } from '../context/ToastContext';
+import { FaPlus, FaCloudUploadAlt, FaUsers } from 'react-icons/fa';
 
 const Employees = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -22,8 +26,11 @@ const Employees = () => {
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [resetPasswordEmployee, setResetPasswordEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-      const { users, fetchUsers, deleteEmployee, createEmployee, resendEmployeeInvitation, isLoading, error } = useUserStore();
-    const { user, isAdmin, isSysAdmin } = useAuthStore();
+  const [isResendConfirmOpen, setIsResendConfirmOpen] = useState(false);
+  const [pendingResendEmployee, setPendingResendEmployee] = useState(null);
+  const { users, fetchUsers, deleteEmployee, createEmployee, resendEmployeeInvitation, isLoading, error } = useUserStore();
+  const { user, isAdmin, isSysAdmin } = useAuthStore();
+  const toast = useToastContext();
 
   useEffect(() => {
     fetchUsers();
@@ -273,15 +280,27 @@ const Employees = () => {
 
   // Handle resend invitation
   const handleResendInvitation = async (employeeId, employeeName) => {
-    if (!window.confirm(`Are you sure you want to resend the invitation to ${employeeName}?`)) {
-      return;
-    }
+    setPendingResendEmployee({ id: employeeId, name: employeeName });
+    setIsResendConfirmOpen(true);
+  };
 
-    const result = await resendEmployeeInvitation(employeeId);
-    if (result.success) {
-      alert(`Invitation resent successfully to ${employeeName}`);
-    } else {
-      alert(`Failed to resend invitation: ${result.error}`);
+  const confirmResendInvitation = async () => {
+    if (!pendingResendEmployee) return;
+    
+    setIsResendConfirmOpen(false);
+    const { id: employeeId, name: employeeName } = pendingResendEmployee;
+    setPendingResendEmployee(null);
+
+    try {
+      const result = await resendEmployeeInvitation(employeeId);
+      if (result.success) {
+        toast.success(`Invitation resent successfully to ${employeeName}`);
+      } else {
+        toast.error(`Failed to resend invitation: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error resending invitation:', error);
+      toast.error('Failed to resend invitation');
     }
   };
 
@@ -408,24 +427,15 @@ const Employees = () => {
           </div>
           
           {isLoading ? (
-            <div className="flex justify-center items-center py-12">
-              <span 
-                className="loading loading-spinner loading-lg"
-                style={{ color: 'var(--color-primary)' }}
-              ></span>
-            </div>
+            <SkeletonList count={5} variant="default" />
           ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-12">
-              <div
-                className="text-lg mb-2"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                No employees found
-              </div>
-              <p style={{ color: 'var(--color-text-tertiary)' }}>
-                Add your first employee to get started.
-              </p>
-            </div>
+            <EmptyState
+              icon={<FaUsers className="w-16 h-16" />}
+              title="No employees found"
+              description="Add your first employee to get started with team collaboration."
+              actionLabel="Add Employee"
+              onAction={() => setIsAddModalOpen(true)}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="table w-full">
@@ -786,7 +796,22 @@ const Employees = () => {
         />
       )}
 
-
+      {/* Resend Invitation Confirmation */}
+      {isResendConfirmOpen && pendingResendEmployee && (
+        <ConfirmModal
+          isOpen={isResendConfirmOpen}
+          onClose={() => {
+            setIsResendConfirmOpen(false);
+            setPendingResendEmployee(null);
+          }}
+          onConfirm={confirmResendInvitation}
+          title="Resend Invitation?"
+          message={`Are you sure you want to resend the invitation to ${pendingResendEmployee.name}?`}
+          confirmText="Resend"
+          cancelText="Cancel"
+          variant="info"
+        />
+      )}
       
     </div>
   );

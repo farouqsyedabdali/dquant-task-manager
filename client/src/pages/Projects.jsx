@@ -5,7 +5,10 @@ import useAuthStore from '../context/authStore';
 import CreateProjectModal from '../components/projects/CreateProjectModal';
 import ProjectDetailModal from '../components/projects/ProjectDetailModal';
 import IconButton from '../components/common/IconButton';
-import { FaPlus } from 'react-icons/fa';
+import SkeletonCard from '../components/common/SkeletonCard';
+import EmptyState from '../components/common/EmptyState';
+import { useToastContext } from '../context/ToastContext';
+import { FaPlus, FaProjectDiagram } from 'react-icons/fa';
 
 const Projects = () => {
   const [projects, setProjects] = useState([]);
@@ -20,6 +23,7 @@ const Projects = () => {
 
   const { user } = useAuthStore();
   const location = useLocation();
+  const toast = useToastContext();
 
   useEffect(() => {
     fetchProjects();
@@ -186,153 +190,135 @@ const Projects = () => {
         )}
 
         {/* Loading State */}
-        {isLoading && (
-          <div className="flex justify-center py-12">
-            <span className="loading loading-spinner loading-lg"></span>
-          </div>
-        )}
-
-        {/* Projects Grid */}
-        {!isLoading && (
+        {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => (
-              <div
-                key={project.id}
-                onClick={() => handleOpenProject(project)}
-                className="rounded-xl p-6 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-xl group"
-                style={{
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  borderColor: 'var(--color-border-default)',
-                  borderWidth: 1,
-                }}
-              >
-                {/* Project Header */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                      style={{ backgroundColor: project.color + '20' }}
-                    >
-                      {project.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3
-                        className="text-lg font-semibold truncate group-hover:text-indigo-400 transition-colors"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
-                        {project.name}
-                      </h3>
-                      <p
-                        className="text-sm truncate"
-                        style={{ color: 'var(--color-text-tertiary)' }}
-                      >
-                        {project.owner?.name}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Status Badge */}
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${getStatusColor(project.status)}`}>
-                    {project.status.replace('_', ' ')}
-                  </span>
-                </div>
-
-                {/* Description */}
-                {project.description && (
-                  <p
-                    className="text-sm mb-4 line-clamp-2"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {project.description}
-                  </p>
-                )}
-
-                {/* Progress Bar */}
-                <div className="mb-4">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span style={{ color: 'var(--color-text-tertiary)' }}>Progress</span>
-                    <span style={{ color: 'var(--color-text-secondary)' }}>{project.progress}%</span>
-                  </div>
-                  <div 
-                    className="w-full h-2 rounded-full overflow-hidden"
-                    style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${project.progress}%`,
-                        backgroundColor: project.color
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'var(--color-border-light)' }}>
-                  <div className="flex items-center space-x-4">
-                    {/* Tasks Count */}
-                    <div className="flex items-center space-x-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                      </svg>
-                      <span className="text-sm">{project.completedTasks}/{project.totalTasks}</span>
-                    </div>
-
-                    {/* Members Count */}
-                    <div className="flex items-center space-x-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                      <span className="text-sm">{project._count?.members || 1}</span>
-                    </div>
-                  </div>
-
-                  {/* Owner indicator */}
-                  {project.isOwner && (
-                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-500/20 text-indigo-400">
-                      Owner
-                    </span>
-                  )}
-                </div>
-              </div>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <SkeletonCard key={index} variant="project" />
             ))}
           </div>
-        )}
+        ) : (
+          <>
+            {/* Projects Grid */}
+            {filteredProjects.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProjects.map((project) => (
+                  <div
+                    key={project.id}
+                    onClick={() => handleOpenProject(project)}
+                    className="rounded-xl p-6 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-xl group"
+                    style={{
+                      backgroundColor: 'var(--color-bg-secondary)',
+                      borderColor: 'var(--color-border-default)',
+                      borderWidth: 1,
+                    }}
+                  >
+                    {/* Project Header */}
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                          style={{ backgroundColor: project.color + '20' }}
+                        >
+                          {project.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3
+                            className="text-lg font-semibold truncate group-hover:text-indigo-400 transition-colors"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {project.name}
+                          </h3>
+                          <p
+                            className="text-sm truncate"
+                            style={{ color: 'var(--color-text-tertiary)' }}
+                          >
+                            {project.owner?.name}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Status Badge */}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${getStatusColor(project.status)}`}>
+                        {project.status.replace('_', ' ')}
+                      </span>
+                    </div>
 
-        {/* Empty State */}
-        {!isLoading && filteredProjects.length === 0 && (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
-              <svg className="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <h3
-              className="text-xl font-semibold mb-2"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
-              No projects yet
-            </h3>
-            <p
-              className="mb-6 max-w-md mx-auto"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              {searchTerm 
-                ? 'No projects match your search. Try different keywords.'
-                : 'Create your first project to organize tasks and collaborate with your team.'}
-            </p>
-            {!searchTerm && (
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Create Your First Project
-              </button>
+                    {/* Description */}
+                    {project.description && (
+                      <p
+                        className="text-sm mb-4 line-clamp-2"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {project.description}
+                      </p>
+                    )}
+
+                    {/* Progress Bar */}
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span style={{ color: 'var(--color-text-tertiary)' }}>Progress</span>
+                        <span style={{ color: 'var(--color-text-secondary)' }}>{project.progress}%</span>
+                      </div>
+                      <div 
+                        className="w-full h-2 rounded-full overflow-hidden"
+                        style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                      >
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${project.progress}%`,
+                            backgroundColor: project.color
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'var(--color-border-light)' }}>
+                      <div className="flex items-center space-x-4">
+                        {/* Tasks Count */}
+                        <div className="flex items-center space-x-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                          </svg>
+                          <span className="text-sm">{project.completedTasks}/{project.totalTasks}</span>
+                        </div>
+
+                        {/* Members Count */}
+                        <div className="flex items-center space-x-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          <span className="text-sm">{project._count?.members || 1}</span>
+                        </div>
+                      </div>
+
+                      {/* Owner indicator */}
+                      {project.isOwner && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-500/20 text-indigo-400">
+                          Owner
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={<FaProjectDiagram className="w-16 h-16" />}
+                title="No projects yet"
+                description={
+                  searchTerm
+                    ? 'No projects match your search. Try different keywords.'
+                    : 'Create your first project to organize tasks and collaborate with your team.'
+                }
+                actionLabel="Create Your First Project"
+                onAction={() => setIsCreateModalOpen(true)}
+                secondaryActionLabel={searchTerm ? "Clear Search" : undefined}
+                onSecondaryAction={searchTerm ? () => setSearchTerm('') : undefined}
+              />
             )}
-          </div>
+          </>
         )}
       </div>
 

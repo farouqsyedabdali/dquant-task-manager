@@ -15,6 +15,8 @@ import SearchableDropdown from '../common/SearchableDropdown';
 import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
 import useContactStore from '../../stores/contactStore';
 import IconButton from '../common/IconButton';
+import ConfirmModal from '../common/ConfirmModal';
+import { useToastContext } from '../../context/ToastContext';
 import { 
   FaTimes, FaEdit, FaTrash, FaArchive, FaShareAlt, FaChartBar, 
   FaMagic, FaSave, FaPlus, FaUserPlus, FaCheck,
@@ -191,7 +193,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       }
     } catch (error) {
       console.error('Error adding co-assignee:', error);
-      alert(error.response?.data?.error || 'Failed to add co-assignee');
+      toast.error(error.response?.data?.error || 'Failed to add co-assignee');
       throw error; // Re-throw so modal can handle it
     } finally {
       setIsAddingCoAssignee(false);
@@ -204,9 +206,10 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     try {
       await tasksAPI.removeCoAssignee(viewedTask.id, userId);
       setCoAssignees(prev => prev.filter(co => co.userId !== userId));
+      toast.success('Co-assignee removed successfully');
     } catch (error) {
       console.error('Error removing co-assignee:', error);
-      alert(error.response?.data?.error || 'Failed to remove co-assignee');
+      toast.error(error.response?.data?.error || 'Failed to remove co-assignee');
     }
   };
 
@@ -343,7 +346,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     try {
       const response = await tasksAPI.unaccessTask(viewedTask.id);
       if (response.data.success) {
-        alert('You have successfully withdrawn from this task');
+        toast.success('You have successfully withdrawn from this task');
         setIsUnaccessConfirmOpen(false);
         onClose();
         // Refresh the task list
@@ -351,7 +354,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       }
     } catch (error) {
       console.error('Error withdrawing from task:', error);
-      alert(error.response?.data?.error || 'Failed to withdraw from this task');
+      toast.error(error.response?.data?.error || 'Failed to withdraw from this task');
     } finally {
       setIsUnaccepting(false);
     }
@@ -368,7 +371,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       setIsSummaryModalOpen(true);
     } catch (error) {
       console.error('Failed to create task summary:', error);
-      alert('Failed to create task summary');
+      toast.error('Failed to create task summary');
     } finally {
       setIsLoadingSummary(false);
     }

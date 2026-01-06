@@ -16,7 +16,11 @@ import ArchiveSwitcher from '../components/tasks/ArchiveSwitcher';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import NotificationBoard from '../components/notifications/NotificationBoard';
 import IconButton from '../components/common/IconButton';
-import { FaPlus, FaTimes, FaEnvelope, FaCheck } from 'react-icons/fa';
+import SkeletonCard from '../components/common/SkeletonCard';
+import EmptyState from '../components/common/EmptyState';
+import ConfirmModal from '../components/common/ConfirmModal';
+import { useToastContext } from '../context/ToastContext';
+import { FaPlus, FaTimes, FaEnvelope, FaCheck, FaTasks } from 'react-icons/fa';
 
 const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -42,8 +46,11 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   const [isLoadingInvitations, setIsLoadingInvitations] = useState(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
-  const { tasks, fetchTasks, fetchTasksByType, fetchTask, deleteTask, updateTaskStatus, updateTaskPriority, filters, setFilters, clearFilters, getFilteredTasks } = useTaskStore();
+  const [isCompleteConfirmOpen, setIsCompleteConfirmOpen] = useState(false);
+  const [pendingCompleteData, setPendingCompleteData] = useState(null);
+  const { tasks, fetchTasks, fetchTasksByType, fetchTask, deleteTask, updateTaskStatus, updateTaskPriority, filters, setFilters, clearFilters, getFilteredTasks, isLoading } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
+  const toast = useToastContext();
 
   // Fetch pending invitations
   const fetchPendingInvitations = async () => {
@@ -542,45 +549,9 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
       const task = tasks.find(t => t.id === completeData.taskId);
       const taskTitle = task ? task.title : 'Unknown Task';
       
-      // Show confirmation dialog with task details
-      const confirmed = window.confirm(
-        `Are you sure you want to complete this task?\n\n` +
-        `Task: "${taskTitle}"\n` +
-        `Completion Note: "${completeData.updateContent || 'No additional details provided'}"\n\n` +
-        `This will mark the task as COMPLETED and add a completion comment.`
-      );
-      
-      if (confirmed) {
-        try {
-          // Mark the task as completed
-          await updateTaskStatus(completeData.taskId, 'COMPLETED');
-          
-          // Add a completion comment
-          if (completeData.updateContent && completeData.updateContent.trim()) {
-            try {
-              await commentsAPI.create(completeData.taskId, `✅ Task completed: ${completeData.updateContent}`);
-            } catch (commentError) {
-              console.error('Failed to add completion comment:', commentError);
-              // Continue even if comment fails
-            }
-          }
-          
-          // Show success message
-          alert(`✅ Task "${taskTitle}" has been completed and marked as COMPLETED!`);
-          
-          // Refresh tasks to show updated status
-          fetchTasks();
-        } catch (error) {
-          console.error('Failed to complete task:', error);
-          alert('Failed to complete task. Please try again.');
-          // Still open modal for manual completion
-          setExtensionUpdateData(completeData);
-          setIsTaskModalOpen(true);
-        }
-      } else {
-        // User cancelled, show info message
-        console.log('Task completion cancelled by user');
-      }
+      // Store completion data and show confirmation modal
+      setPendingCompleteData(completeData);
+      setIsCompleteConfirmOpen(true);
     } else {
       // No task found, open AddTaskModal for manual task creation
       console.log('No matching task found for completion, opening AddTaskModal for manual task creation');
@@ -971,6 +942,9 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
   };
   
   const filteredTasks = getFilteredAndSortedTasks();
+  
+  // Check if there are active filters
+  const hasActiveFilters = !!(filters.status || filters.priority || filters.search || filters.dueDateFilter || filters.taskType || filters.sortBy);
 
   return (
     <div 
@@ -1110,21 +1084,26 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
             />
           </div>
           
-          {filteredTasks.length === 0 ? (
-            <div className="text-center py-12">
-              <div 
-                className="text-lg mb-2 transition-colors duration-200"
-                style={{ color: 'var(--color-text-tertiary)' }}
-              >
-                No tasks found
-              </div>
-              <p 
-                className="transition-colors duration-200"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
-                Try adjusting your filters or create a new task.
-              </p>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {Array.from({ length: 10 }).map((_, index) => (
+                <SkeletonCard key={index} variant="task" />
+              ))}
             </div>
+          ) : filteredTasks.length === 0 ? (
+            <EmptyState
+              icon={<FaTasks className="w-16 h-16" />}
+              title="No tasks found"
+              description={
+                archiveView === 'archived'
+                  ? "You don't have any archived tasks yet."
+                  : "Try adjusting your filters or create a new task to get started."
+              }
+              actionLabel="Create New Task"
+              onAction={handleAddTask}
+              secondaryActionLabel={hasActiveFilters ? "Clear Filters" : undefined}
+              onSecondaryAction={hasActiveFilters ? clearFilters : undefined}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {filteredTasks.map((task) => (

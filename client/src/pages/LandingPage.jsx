@@ -879,18 +879,18 @@ const LandingPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                 <div className="flex items-start gap-4">
                   <div className="text-3xl">💻</div>
-                  <div>
+                <div>
                     <h4 className="text-lg font-semibold text-white mb-2">No Installation Required</h4>
                     <p className="text-white/70">Access instantly from any browser. No downloads, updates, or maintenance.</p>
-                  </div>
+                </div>
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="text-3xl">🔄</div>
-                  <div>
+                <div>
                     <h4 className="text-lg font-semibold text-white mb-2">Always Up-to-Date</h4>
                     <p className="text-white/70">Get the latest features automatically. Never worry about updates again.</p>
-                  </div>
                 </div>
+              </div>
                 <div className="flex items-start gap-4">
                   <div className="text-3xl">🌍</div>
                   <div>

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import useContactStore from '../stores/contactStore';
 import IconButton from '../components/common/IconButton';
-import { FaPlus, FaTimes, FaCheck } from 'react-icons/fa';
+import SkeletonCard from '../components/common/SkeletonCard';
+import EmptyState from '../components/common/EmptyState';
+import { FaPlus, FaTimes, FaCheck, FaUserFriends } from 'react-icons/fa';
 
 const Contacts = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -227,17 +229,19 @@ const Contacts = () => {
         )}
 
         {/* Loading State */}
-        {isLoading && (
-          <div className="flex justify-center py-8">
-            <span className="loading loading-spinner loading-lg"></span>
-          </div>
-        )}
-
-        {/* Contacts Grid */}
-        {!isLoading && (
+        {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredContacts.map((contact) => (
-              <div
+            {Array.from({ length: 6 }).map((_, index) => (
+              <SkeletonCard key={index} variant="task" />
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Contacts Grid */}
+            {filteredContacts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredContacts.map((contact) => (
+                  <div
                 key={contact.id}
                 className="rounded-lg p-6 transition-colors"
                 style={{
@@ -353,36 +357,25 @@ const Contacts = () => {
                     </span>
                   </div>
                 </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && filteredContacts.length === 0 && (
-          <div className="text-center py-12">
-            <svg className="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <h3
-              className="text-lg font-medium mb-2"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              No contacts found
-            </h3>
-            <p
-              className="mb-4"
-              style={{ color: 'var(--color-text-tertiary)' }}
-            >
-              {searchTerm ? 'Try adjusting your search terms' : 'Get started by adding your first contact'}
-            </p>
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-            >
-              Add Contact
-            </button>
-          </div>
+            ) : (
+              <EmptyState
+                icon={<FaUserFriends className="w-16 h-16" />}
+                title="No contacts yet"
+                description={
+                  searchTerm
+                    ? 'No contacts match your search. Try different keywords.'
+                    : 'Add your first contact to start collaborating on tasks and projects.'
+                }
+                actionLabel="Add Contact"
+                onAction={() => setIsAddModalOpen(true)}
+                secondaryActionLabel={searchTerm ? "Clear Search" : undefined}
+                onSecondaryAction={searchTerm ? () => setSearchTerm('') : undefined}
+              />
+            )}
+          </>
         )}
       </div>
 

@@ -9,6 +9,8 @@ import LegalDocumentModal from '../components/legal/LegalDocumentModal';
 import { feedbackAPI, authAPI } from '../services/api';
 import { lightPalettes, darkPalettes } from '../config/colorPalettes';
 import IconButton from '../components/common/IconButton';
+import ConfirmModal from '../components/common/ConfirmModal';
+import { useToastContext } from '../context/ToastContext';
 import { FaFileAlt, FaTrash, FaPaperPlane, FaHistory, FaFileContract, FaShieldAlt, FaTimes } from 'react-icons/fa';
 
 const Settings = () => {

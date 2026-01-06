@@ -119,7 +119,8 @@ const AuditLogModal = ({ isOpen, onClose }) => {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Error exporting audit logs:', err);
-      alert('Failed to export audit logs');
+      // Toast will be handled by parent component or we can add toast here
+      console.error('Failed to export audit logs');
     }
   };
 

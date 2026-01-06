@@ -37,6 +37,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const [taskTimeSettings, setTaskTimeSettings] = useState({}); // Track which tasks have time enabled
 
   const { user } = useAuthStore();
+  const toast = useToastContext();
 
   useEffect(() => {
     if (isOpen && projectId) {
@@ -46,7 +47,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       // Set initial success message if provided
       if (initialSuccessMessage) {
         setSuccessMessage(initialSuccessMessage);
-      }
+    }
     }
   }, [isOpen, projectId, initialSuccessMessage]);
 
@@ -265,15 +266,24 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Are you sure you want to delete this task?')) return;
+    setPendingDeleteTaskId(taskId);
+    setIsDeleteTaskConfirmOpen(true);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!pendingDeleteTaskId) return;
+    
+    setIsDeleteTaskConfirmOpen(false);
+    const taskId = pendingDeleteTaskId;
+    setPendingDeleteTaskId(null);
 
     try {
       await projectsAPI.removeTask(projectId, taskId);
       await fetchProject();
-      setSuccessMessage('Task deleted successfully!');
+      toast.success('Task deleted successfully!');
     } catch (err) {
       console.error('Error deleting task:', err);
-      setError(err.response?.data?.error || 'Failed to delete task');
+      toast.error(err.response?.data?.error || 'Failed to delete task');
     }
   };
 
@@ -305,7 +315,18 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const handleBulkDelete = async () => {
     if (selectedCount === 0) return;
 
-    if (!window.confirm(`Are you sure you want to delete ${selectedCount} task${selectedCount > 1 ? 's' : ''}?`)) return;
+    setIsBulkDeleteConfirmOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    setIsBulkDeleteConfirmOpen(false);
+    
+    const selectedTaskObjects = Array.from(selectedTasks)
+      .map(id => project.tasks.find(t => t.id === id))
+      .filter(Boolean);
+    
+    const count = selectedTaskObjects.length;
+    if (count === 0) return;
 
     try {
       // Delete tasks sequentially
@@ -315,10 +336,10 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
       await fetchProject();
       setSelectedTasks(new Set());
-      setSuccessMessage(`${selectedCount} task${selectedCount > 1 ? 's' : ''} deleted successfully!`);
+      toast.success(`${count} task${count > 1 ? 's' : ''} deleted successfully!`);
     } catch (err) {
       console.error('Error bulk deleting tasks:', err);
-      setError(err.response?.data?.error || 'Failed to delete some tasks');
+      toast.error(err.response?.data?.error || 'Failed to delete some tasks');
     }
   };
 
