@@ -799,20 +799,20 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                   </>
                 ) : (
                   <>
-                    <IconButton
-                      icon={<FaEdit />}
+              <IconButton
+                icon={<FaEdit />}
                       label="Edit"
-                      variant="secondary"
-                      size="sm"
+                variant="secondary"
+                size="sm"
                       onClick={() => setIsEditing(true)}
-                    />
-                    <IconButton
-                      icon={<FaTrash />}
-                      label="Delete"
-                      variant="danger"
-                      size="sm"
-                      onClick={handleDelete}
-                    />
+              />
+              <IconButton
+                icon={<FaTrash />}
+                label="Delete"
+                variant="danger"
+                size="sm"
+                onClick={handleDelete}
+              />
                   </>
                 )}
               </>

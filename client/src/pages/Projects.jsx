@@ -198,118 +198,118 @@ const Projects = () => {
           </div>
         ) : (
           <>
-            {/* Projects Grid */}
+        {/* Projects Grid */}
             {filteredProjects.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProjects.map((project) => (
-                  <div
-                    key={project.id}
-                    onClick={() => handleOpenProject(project)}
-                    className="rounded-xl p-6 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-xl group"
-                    style={{
-                      backgroundColor: 'var(--color-bg-secondary)',
-                      borderColor: 'var(--color-border-default)',
-                      borderWidth: 1,
-                    }}
-                  >
-                    {/* Project Header */}
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                          style={{ backgroundColor: project.color + '20' }}
-                        >
-                          {project.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3
-                            className="text-lg font-semibold truncate group-hover:text-indigo-400 transition-colors"
-                            style={{ color: 'var(--color-text-primary)' }}
-                          >
-                            {project.name}
-                          </h3>
-                          <p
-                            className="text-sm truncate"
-                            style={{ color: 'var(--color-text-tertiary)' }}
-                          >
-                            {project.owner?.name}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {/* Status Badge */}
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${getStatusColor(project.status)}`}>
-                        {project.status.replace('_', ' ')}
-                      </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.map((project) => (
+              <div
+                key={project.id}
+                onClick={() => handleOpenProject(project)}
+                className="rounded-xl p-6 cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-xl group"
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                  borderWidth: 1,
+                }}
+              >
+                {/* Project Header */}
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                      style={{ backgroundColor: project.color + '20' }}
+                    >
+                      {project.icon}
                     </div>
-
-                    {/* Description */}
-                    {project.description && (
+                    <div className="flex-1 min-w-0">
+                      <h3
+                        className="text-lg font-semibold truncate group-hover:text-indigo-400 transition-colors"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {project.name}
+                      </h3>
                       <p
-                        className="text-sm mb-4 line-clamp-2"
-                        style={{ color: 'var(--color-text-secondary)' }}
+                        className="text-sm truncate"
+                        style={{ color: 'var(--color-text-tertiary)' }}
                       >
-                        {project.description}
+                        {project.owner?.name}
                       </p>
-                    )}
-
-                    {/* Progress Bar */}
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span style={{ color: 'var(--color-text-tertiary)' }}>Progress</span>
-                        <span style={{ color: 'var(--color-text-secondary)' }}>{project.progress}%</span>
-                      </div>
-                      <div 
-                        className="w-full h-2 rounded-full overflow-hidden"
-                        style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-                      >
-                        <div
-                          className="h-full rounded-full transition-all duration-300"
-                          style={{
-                            width: `${project.progress}%`,
-                            backgroundColor: project.color
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'var(--color-border-light)' }}>
-                      <div className="flex items-center space-x-4">
-                        {/* Tasks Count */}
-                        <div className="flex items-center space-x-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                          </svg>
-                          <span className="text-sm">{project.completedTasks}/{project.totalTasks}</span>
-                        </div>
-
-                        {/* Members Count */}
-                        <div className="flex items-center space-x-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                          </svg>
-                          <span className="text-sm">{project._count?.members || 1}</span>
-                        </div>
-                      </div>
-
-                      {/* Owner indicator */}
-                      {project.isOwner && (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-500/20 text-indigo-400">
-                          Owner
-                        </span>
-                      )}
                     </div>
                   </div>
-                ))}
+                  
+                  {/* Status Badge */}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${getStatusColor(project.status)}`}>
+                    {project.status.replace('_', ' ')}
+                  </span>
+                </div>
+
+                {/* Description */}
+                {project.description && (
+                  <p
+                    className="text-sm mb-4 line-clamp-2"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    {project.description}
+                  </p>
+                )}
+
+                {/* Progress Bar */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span style={{ color: 'var(--color-text-tertiary)' }}>Progress</span>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>{project.progress}%</span>
+                  </div>
+                  <div 
+                    className="w-full h-2 rounded-full overflow-hidden"
+                    style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${project.progress}%`,
+                        backgroundColor: project.color
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'var(--color-border-light)' }}>
+                  <div className="flex items-center space-x-4">
+                    {/* Tasks Count */}
+                    <div className="flex items-center space-x-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                      </svg>
+                      <span className="text-sm">{project.completedTasks}/{project.totalTasks}</span>
+                    </div>
+
+                    {/* Members Count */}
+                    <div className="flex items-center space-x-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      <span className="text-sm">{project._count?.members || 1}</span>
+                    </div>
+                  </div>
+
+                  {/* Owner indicator */}
+                  {project.isOwner && (
+                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-500/20 text-indigo-400">
+                      Owner
+                    </span>
+                  )}
+                </div>
               </div>
+            ))}
+          </div>
             ) : (
               <EmptyState
                 icon={<FaProjectDiagram className="w-16 h-16" />}
                 title="No projects yet"
                 description={
                   searchTerm
-                    ? 'No projects match your search. Try different keywords.'
+                ? 'No projects match your search. Try different keywords.'
                     : 'Create your first project to organize tasks and collaborate with your team.'
                 }
                 actionLabel="Create Your First Project"

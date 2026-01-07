@@ -737,17 +737,60 @@ router.post('/suggest-project-ideas',
     const companyId = req.user.companyId;
     const userName = req.user.name;
 
-    // Optimized system prompt for AI to generate 6 unique project ideas
-    const systemPrompt = `You are an AI assistant that generates relevant project ideas from text.
+    // Context-aware system prompt for AI to generate 6 unique project/event ideas
+    const systemPrompt = `You are an AI assistant that generates relevant project or event ideas from text.
 
-Analyze the text and generate exactly 6 unique project ideas that would help accomplish the goals mentioned.
+CRITICAL RULE: First determine if the text is about a PERSONAL EVENT or CORPORATE/TECHNICAL PROJECT.
 
-Return ONLY a JSON array with 6 project ideas, sorted by relevance (most relevant first):
+PERSONAL EVENT indicators:
+- Social gatherings (movie night, BBQ, birthday party, hangout, dinner party)
+- Casual invitations ("want to hang out", "come over", "let's get together")
+- Personal activities (vacation planning, home improvement, personal goals)
+- Informal language, friendly tone
+
+CORPORATE/TECHNICAL indicators:
+- Building software, apps, platforms, systems
+- Technical terms (API, database, backend, frontend, integration)
+- Business initiatives, professional work
+- Formal business language
+
+FOR PERSONAL EVENTS - Generate ideas about ORGANIZING THE EVENT:
+✅ CORRECT format: "Organize a movie night", "Plan Friday movie night", "Coordinate movie selection"
+✅ CORRECT descriptions: "Plan and organize a casual movie night with friends"
+❌ WRONG format: "Movie Night Scheduler App", "Collaborative Movie Lister Tool", "Movie Night Bot"
+❌ WRONG descriptions: "App to poll availability", "Tool for friends to suggest", "Bot to integrate"
+
+FOR CORPORATE/TECHNICAL - Generate ideas about BUILDING PROJECTS:
+✅ CORRECT: "Create backend for React app", "API Integration Project", "Database Migration System"
+
+EXAMPLES:
+
+Input: "Hey, want to do a movie night Friday?"
+✅ CORRECT suggestions:
+- "Organize a movie night"
+- "Plan Friday movie night"
+- "Coordinate movie selection"
+- "Organize movie snacks"
+- "Plan movie night setup"
+- "Coordinate movie night timing"
+
+❌ WRONG suggestions (DO NOT GENERATE THESE):
+- "Movie Night Scheduler App"
+- "Collaborative Movie Lister Tool"
+- "Movie Night Food Order Bot"
+
+Input: "Create a backend API for our React app"
+✅ CORRECT suggestions:
+- "Create backend for React app"
+- "API Integration Project"
+- "Database schema design"
+
+Return ONLY a JSON array with 6 ideas:
 [
   {
     "id": "unique_id_1",
-    "name": "Project Name",
-    "description": "Brief description (max 100 chars)",
+    "name": "Project or Event Name (NO apps/tools/bots for personal events!)",
+    "description": "Brief description (max 100 chars, about the event/activity, NOT about building software)",
     "icon": "🎯",
     "color": "#3b82f6",
     "relevanceScore": 0.95
@@ -755,25 +798,38 @@ Return ONLY a JSON array with 6 project ideas, sorted by relevance (most relevan
   ...
 ]
 
-Guidelines:
-- Generate 6 DIFFERENT project ideas (not variations of the same)
+STRICT RULES:
+- For personal events: Names should be like "Organize X", "Plan X", "Coordinate X" - NEVER "X App", "X Tool", "X Bot", "X Platform", "X Manager", "X System"
+- Descriptions should be about organizing/planning the event, NOT about building software
+- If you see words like "app", "tool", "bot", "platform", "manager", "system" in your suggestions for personal events, you're doing it WRONG
 - relevanceScore: 0.0-1.0 (1.0 = perfect match)
 - Sort by relevanceScore (highest first)
-- Use appropriate emoji icons (one per idea)
-- Use hex colors: #3b82f6 (blue), #10b981 (green), #f59e0b (orange), #ec4899 (pink), #8b5cf6 (purple), #06b6d4 (cyan)
-- Keep descriptions concise (max 100 characters)
-- Base ideas on the text's goals, context, and keywords
-- Make ideas actionable and specific`;
+- Use appropriate emoji icons
+- Use hex colors: #3b82f6, #10b981, #f59e0b, #ec4899, #8b5cf6, #06b6d4`;
 
-    // Optimized API call: lower temperature, fewer tokens, no streaming needed
+    // Context-aware API call: analyze text context and generate appropriate suggestions
     const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
       model: 'google/gemma-3-27b-it:free',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Generate 6 project ideas from: "${text.substring(0, 500)}"` }
+        { role: 'user', content: `Analyze this text and generate 6 context-appropriate project or event ideas.
+
+CRITICAL: Is this a PERSONAL EVENT or CORPORATE/TECHNICAL?
+
+If PERSONAL EVENT (movie night, BBQ, birthday, hangout, casual invitation):
+- Generate ideas like: "Organize a movie night", "Plan Friday movie night", "Coordinate movie selection"
+- DO NOT generate: "Movie Night Scheduler App", "Movie Lister Tool", "Movie Bot", "Movie Platform", "Movie Manager"
+- Focus on organizing/planning the event itself, NOT building software
+
+If TECHNICAL/CORPORATE (building software, APIs, databases):
+- Generate ideas like: "Create backend for React app", "API Integration Project"
+
+Text: "${text.substring(0, 500)}"
+
+Remember: For personal events, suggest ORGANIZING the event, NOT building apps/tools/bots/platforms to manage it.` }
       ],
-      temperature: 0.3, // Lower for faster, more consistent responses
-      max_tokens: 800   // Reduced from 2000 for faster response
+      temperature: 0.4, // Slightly higher for more creative context interpretation
+      max_tokens: 1000   // Increased for better context analysis
     }, {
       headers: {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -865,11 +921,62 @@ Guidelines:
 
 // POST /api/ai/create-project-from-idea
 router.post('/create-project-from-idea',
+  // Debug: Log raw request before validation
+  (req, res, next) => {
+    console.log('🚀 Raw create-project-from-idea request:', {
+      body: req.body,
+      textLength: req.body.text?.length || 0,
+      selectedIdea: req.body.selectedIdea,
+      selectedIdeaType: typeof req.body.selectedIdea,
+      selectedIdeaId: req.body.selectedIdea?.id,
+      selectedIdeaIdType: typeof req.body.selectedIdea?.id
+    });
+    next();
+  },
   validators.aiText('text'),
-  body('selectedIdea').isObject().withMessage('selectedIdea must be an object'),
-  body('selectedIdea.id').notEmpty().withMessage('selectedIdea.id is required'),
-  body('projectName').optional().trim().escape().isLength({ max: 200 }).withMessage('Project name must be less than 200 characters'),
-  body('dueDate').optional().trim().isISO8601().withMessage('Due date must be a valid ISO 8601 date'),
+  body('selectedIdea')
+    .isObject()
+    .withMessage('selectedIdea must be an object')
+    .custom((value) => {
+      if (!value || typeof value !== 'object') {
+        throw new Error('selectedIdea must be an object');
+      }
+      // Check if id exists (allowing strings, numbers, or 0)
+      if (value.id === undefined || value.id === null || value.id === '') {
+        throw new Error('selectedIdea.id is required');
+      }
+      // ID can be string (like 'project_idea_1') or number
+      if (typeof value.id !== 'string' && typeof value.id !== 'number') {
+        throw new Error('selectedIdea.id must be a string or number');
+      }
+      return true;
+    }),
+  body('projectName')
+    .optional({ nullable: true, checkFalsy: true })
+    .customSanitizer((value) => {
+      return value ? String(value).trim() : value;
+    })
+    .custom((value) => {
+      if (!value) return true; // Allow null/empty
+      if (value.length > 200) {
+        throw new Error('Project name must be less than 200 characters');
+      }
+      return true;
+    }),
+  body('dueDate')
+    .optional({ nullable: true, checkFalsy: true })
+    .customSanitizer((value) => {
+      return value ? String(value).trim() : value;
+    })
+    .custom((value) => {
+      if (!value) return true; // Allow null/empty
+      // Check if it's a valid ISO 8601 date
+      const date = new Date(value);
+      if (isNaN(date.getTime())) {
+        throw new Error('Due date must be a valid ISO 8601 date');
+      }
+      return true;
+    }),
   handleValidationErrors,
   async (req, res) => {
   const { text, selectedIdea, projectName, dueDate } = req.body;

@@ -214,7 +214,11 @@ const QuickActionsDropdown = () => {
       }
     } catch (err) {
       console.error('Create project from idea error:', err);
-      setError(err.message || 'Failed to create project');
+      console.error('Response data:', err.response?.data);
+      console.error('Response status:', err.response?.status);
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to create project';
+      console.error('Error message:', errorMessage);
+      setError(errorMessage);
       setIsProjectIdeasModalOpen(true); // Reopen modal so user can try again
     } finally {
       setIsProcessing(false);
