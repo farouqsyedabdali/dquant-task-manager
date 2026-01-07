@@ -5,6 +5,7 @@ import useTaskStore from '../../stores/taskStore';
 import useAuthStore from '../../context/authStore';
 import useUserStore from '../../stores/userStore';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
+import { convertLocalDateTimeToUTC } from '../../utils/dateUtils';
 import CommentSection from '../comments/CommentSection';
 import AddSubtaskModal from './AddSubtaskModal';
 import AddTeamMemberModal from './AddTeamMemberModal';
@@ -318,7 +319,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       ...formData,
       assigneeId: formData.assigneeId ? parseInt(formData.assigneeId) : null,
       externalContactId: formData.externalContactId ? parseInt(formData.externalContactId) : null,
-      dueDate: formData.dueDate // Required, already validated
+      dueDate: convertLocalDateTimeToUTC(formData.dueDate) // Convert to UTC for server
     };
 
     const result = await updateTask(viewedTask.id, updateData);

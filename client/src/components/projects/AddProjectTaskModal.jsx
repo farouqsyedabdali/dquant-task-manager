@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { usersAPI, contactsAPI } from '../../services/api';
 import DatePicker from '../common/DatePicker';
-import { formatDateForInput } from '../../utils/dateUtils';
+import { formatDateForInput, convertLocalDateTimeToUTC } from '../../utils/dateUtils';
 import IconButton from '../common/IconButton';
 import { FaArrowLeft, FaArrowRight, FaTimes, FaCheck } from 'react-icons/fa';
 
@@ -169,7 +169,7 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
         title: formData.title,
         description: formData.description || null,
         priority: formData.priority,
-        dueDate: formData.dueDate,
+        dueDate: convertLocalDateTimeToUTC(formData.dueDate), // Convert to UTC for server
         assigneeId: formData.assignmentType === 'internal' ? parseInt(formData.assigneeId) : null,
         externalContactId: formData.assignmentType === 'external' ? parseInt(formData.externalContactId) : null
       };

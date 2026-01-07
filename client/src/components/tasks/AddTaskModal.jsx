@@ -4,6 +4,7 @@ import useUserStore from '../../stores/userStore';
 import useAuthStore from '../../context/authStore';
 import useContactStore from '../../stores/contactStore';
 import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
+import { convertLocalDateTimeToUTC } from '../../utils/dateUtils';
 import { usersAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
 import AddContactModal from '../common/AddContactModal';
@@ -236,11 +237,12 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
        assigneeId = user.id;
      }
 
+     // Convert local datetime to UTC ISO string for server
      const createData = {
        ...formData,
        assigneeId,
        externalContactId,
-       dueDate: formData.dueDate // Required, already validated
+       dueDate: convertLocalDateTimeToUTC(formData.dueDate) // Convert to UTC for server
      };
 
 

@@ -4,6 +4,7 @@ import useTaskStore from '../../stores/taskStore';
 import useUserStore from '../../stores/userStore';
 import useAuthStore from '../../context/authStore';
 import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
+import { convertLocalDateTimeToUTC } from '../../utils/dateUtils';
 import { usersAPI, tasksAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
 import DatePicker from '../common/DatePicker';
@@ -209,7 +210,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
     const createData = {
       ...formData,
       assigneeId: parseInt(formData.assigneeId),
-      dueDate: formData.dueDate // Required, already validated
+      dueDate: convertLocalDateTimeToUTC(formData.dueDate) // Convert to UTC for server
     };
 
     const result = await createSubtask(parseInt(selectedParentId), createData);

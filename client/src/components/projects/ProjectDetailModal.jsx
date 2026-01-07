@@ -8,7 +8,7 @@ import SaveAsTemplateModal from './SaveAsTemplateModal';
 import EditProjectModal from './EditProjectModal';
 import { FaTrash, FaPlus, FaPaperPlane, FaSave, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
 import IconButton from '../common/IconButton';
-import { formatDateForInput } from '../../utils/dateUtils';
+import { formatDateForInput, convertLocalDateTimeToUTC } from '../../utils/dateUtils';
 
 const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onProjectDeleted, initialSuccessMessage }) => {
   const [project, setProject] = useState(null);
@@ -423,7 +423,9 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
         finalDate = `${newDueDate}T23:59`;
       }
       
-      await tasksAPI.update(taskId, { dueDate: finalDate || null });
+      // Convert local datetime to UTC ISO string for server
+      const utcDate = convertLocalDateTimeToUTC(finalDate);
+      await tasksAPI.update(taskId, { dueDate: utcDate });
 
       // Update the task in local state without full reload
       // Convert the date string to a Date object for consistent local state
