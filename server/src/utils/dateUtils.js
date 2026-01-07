@@ -16,18 +16,28 @@ function parseLocalDate(dateString) {
       return new Date(year, month - 1, day, 23, 59, 0, 0); // Local time
     }
 
-    // Check if this is a datetime string that represents local time (e.g., from DatePicker with T23:59)
-    if (dateString.includes('T') && (dateString.endsWith('T23:59') || dateString.endsWith('T23:59:00') || dateString.endsWith('T23:59:00.000'))) {
-      // This appears to be a local time datetime string from our DatePicker
+    // Check if this is a datetime string WITHOUT timezone indicator (Z or +/-HH:MM)
+    // These come from HTML datetime-local inputs and should be treated as local time
+    if (dateString.includes('T') && !dateString.includes('Z') && !dateString.match(/[+-]\d{2}:\d{2}$/)) {
+      // This is a local time datetime string from our DatePicker (e.g., "2024-01-15T14:30")
       // Parse the components manually to avoid UTC interpretation
       const [datePart, timePart] = dateString.split('T');
       const [year, month, day] = datePart.split('-').map(Number);
-      const [hours, minutes, seconds = 0] = timePart.split(':').map(Number);
-      return new Date(year, month - 1, day, hours, minutes, seconds || 0, 0); // Local time
+      
+      // Handle time part - could be "HH:mm", "HH:mm:ss", or "HH:mm:ss.sss"
+      const timeMatch = timePart.match(/^(\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?/);
+      if (timeMatch) {
+        const hours = parseInt(timeMatch[1], 10);
+        const minutes = parseInt(timeMatch[2], 10);
+        const seconds = timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
+        const milliseconds = timeMatch[4] ? parseInt(timeMatch[4].substring(0, 3).padEnd(3, '0'), 10) : 0;
+        return new Date(year, month - 1, day, hours, minutes, seconds, milliseconds); // Local time
+      }
     }
   }
 
-  // Other datetime strings or invalid inputs - let JavaScript handle them
+  // If it has a timezone indicator (Z or +/-HH:MM), or is not a string, let JavaScript handle it
+  // This preserves UTC times and properly formatted ISO strings
   return new Date(dateString);
 }
 

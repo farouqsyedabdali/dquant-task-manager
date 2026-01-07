@@ -1103,7 +1103,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
               {Array.from({ length: 10 }).map((_, index) => (
                 <SkeletonCard key={index} variant="task" />
               ))}
-            </div>
+              </div>
           ) : filteredTasks.length === 0 ? (
             <EmptyState
               icon={<FaTasks className="w-16 h-16" />}

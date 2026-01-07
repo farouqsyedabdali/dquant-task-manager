@@ -28,8 +28,8 @@ const Employees = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isResendConfirmOpen, setIsResendConfirmOpen] = useState(false);
   const [pendingResendEmployee, setPendingResendEmployee] = useState(null);
-  const { users, fetchUsers, deleteEmployee, createEmployee, resendEmployeeInvitation, isLoading, error } = useUserStore();
-  const { user, isAdmin, isSysAdmin } = useAuthStore();
+      const { users, fetchUsers, deleteEmployee, createEmployee, resendEmployeeInvitation, isLoading, error } = useUserStore();
+    const { user, isAdmin, isSysAdmin } = useAuthStore();
   const toast = useToastContext();
 
   useEffect(() => {
@@ -292,10 +292,10 @@ const Employees = () => {
     setPendingResendEmployee(null);
 
     try {
-      const result = await resendEmployeeInvitation(employeeId);
-      if (result.success) {
+    const result = await resendEmployeeInvitation(employeeId);
+    if (result.success) {
         toast.success(`Invitation resent successfully to ${employeeName}`);
-      } else {
+    } else {
         toast.error(`Failed to resend invitation: ${result.error}`);
       }
     } catch (error) {
