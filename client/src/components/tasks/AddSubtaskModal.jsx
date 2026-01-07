@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import useTaskStore from '../../stores/taskStore';
 import useUserStore from '../../stores/userStore';
 import useAuthStore from '../../context/authStore';
+import useContactStore from '../../stores/contactStore';
 import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
 import { convertLocalDateTimeToUTC } from '../../utils/dateUtils';
 import { usersAPI, tasksAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
+import AddContactModal from '../common/AddContactModal';
 import DatePicker from '../common/DatePicker';
 import IconButton from '../common/IconButton';
 import { FaTimes, FaCheck } from 'react-icons/fa';
@@ -17,25 +19,50 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
     description: '',
     priority: 'MEDIUM',
     assigneeId: '',
+    externalContactId: '',
     dueDate: getDefaultDueDate()
   });
   const [errors, setErrors] = useState({});
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [contacts, setContacts] = useState([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
   const [availableTasks, setAvailableTasks] = useState([]);
   const [selectedParentId, setSelectedParentId] = useState(parentTask?.id || '');
 
   const { createSubtask, isLoading } = useTaskStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
   const { user } = useAuthStore();
+  const { fetchContacts } = useContactStore();
+  
+  // Check if this is a personal account
+  const isPersonalAccount = user?.isPersonal || false;
 
-  // Fetch users and available tasks when modal opens
+  // Fetch users, contacts, and available tasks when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
+      fetchContactsForSubtask();
       fetchAvailableTasks();
     }
   }, [isOpen]);
+
+  // Function to fetch contacts
+  const fetchContactsForSubtask = async () => {
+    setIsLoadingContacts(true);
+    try {
+      const result = await fetchContacts();
+      if (result.success) {
+        setContacts(result.data.contacts || []);
+      }
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  };
 
   // Function to fetch available parent tasks
   const fetchAvailableTasks = async () => {
@@ -51,6 +78,54 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
       console.error('Failed to fetch tasks:', error);
       setAvailableTasks([]);
     }
+  };
+
+  // Unified list of all available assignees (employees + contacts)
+  const allAssignees = useMemo(() => {
+    const assigneeOptions = [];
+
+    // Add employees (if not personal account)
+    if (!isPersonalAccount) {
+      const employeeOptions = users.map(user => ({
+        id: user.id.toString(),
+        name: user.name,
+        email: user.email,
+        displayName: user.name,
+        type: 'user'
+      }));
+      assigneeOptions.push(...employeeOptions);
+    }
+
+    // Add contacts
+    const contactOptions = contacts.map(contact => ({
+      id: `contact_${contact.id}`,
+      name: contact.name,
+      email: contact.email,
+      displayName: contact.name,
+      company: contact.company,
+      type: 'contact'
+    }));
+    assigneeOptions.push(...contactOptions);
+
+    return assigneeOptions;
+  }, [users, contacts, isPersonalAccount]);
+
+  const handleAddNewContact = (email) => {
+    setPendingEmail(email);
+    setIsAddContactModalOpen(true);
+  };
+
+  const handleContactAdded = async (newContact) => {
+    // Refresh contacts to include the new one
+    await fetchContactsForSubtask();
+    // Set the assignee to the new contact
+    setFormData(prev => ({
+      ...prev,
+      assigneeId: '',
+      externalContactId: newContact.id.toString()
+    }));
+    setIsAddContactModalOpen(false);
+    setPendingEmail('');
   };
 
   // Prefill form when users are loaded and extensionUpdateData is present
@@ -163,7 +238,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
       newErrors.title = 'Title must be 50 characters or less';
     }
     
-    if (!formData.assigneeId) {
+    if (!formData.assigneeId && !formData.externalContactId) {
       newErrors.assigneeId = 'Assignee is required';
     }
     
@@ -209,7 +284,8 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
     // Prepare the data for creation
     const createData = {
       ...formData,
-      assigneeId: parseInt(formData.assigneeId),
+      assigneeId: formData.assigneeId ? parseInt(formData.assigneeId) : null,
+      externalContactId: formData.externalContactId ? parseInt(formData.externalContactId) : null,
       dueDate: convertLocalDateTimeToUTC(formData.dueDate) // Convert to UTC for server
     };
 
@@ -220,6 +296,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
         description: '',
         priority: 'MEDIUM',
         assigneeId: user ? user.id.toString() : '',
+        externalContactId: '',
         dueDate: getDefaultDueDate()
       });
       setErrors({});
@@ -234,6 +311,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
       description: '',
       priority: 'MEDIUM',
       assigneeId: user ? user.id.toString() : '',
+      externalContactId: '',
       dueDate: getDefaultDueDate()
     });
     setErrors({});
@@ -469,20 +547,51 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
               Assign To *
             </label>
             <SearchableDropdown
-              options={users}
-              value={formData.assigneeId}
+              options={allAssignees}
+              value={formData.assigneeId || (formData.externalContactId ? `contact_${formData.externalContactId}` : '')}
               onChange={(value) => {
-                setFormData(prev => ({ ...prev, assigneeId: value }));
-                // Track the selected employee as recent
-                const selectedEmployee = users.find(user => user.id.toString() === value);
-                if (selectedEmployee) {
-                  addToRecentEmployees(selectedEmployee);
+                if (value.startsWith('contact_')) {
+                  // Selected a contact
+                  const contactId = value.split('_')[1];
+                  setFormData(prev => ({
+                    ...prev,
+                    assigneeId: '',
+                    externalContactId: contactId
+                  }));
+                } else {
+                  // Selected an employee
+                  setFormData(prev => ({
+                    ...prev,
+                    assigneeId: value,
+                    externalContactId: ''
+                  }));
+                  const selectedEmployee = users.find(user => user.id.toString() === value);
+                  if (selectedEmployee) {
+                    addToRecentEmployees(selectedEmployee);
+                  }
                 }
               }}
-              placeholder="Select an employee"
-              disabled={isLoadingUsers}
+              placeholder="Select an employee or contact"
+              disabled={isLoadingUsers || isLoadingContacts}
               error={!!errors.assigneeId}
               recentEmployees={recentEmployees}
+              allowAddNew={!isPersonalAccount}
+              onAddNew={handleAddNewContact}
+              renderOption={(assignee) => (
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                  <span>{assignee.displayName || assignee.name}</span>
+                  <span style={{ color: 'var(--color-text-tertiary)' }}>({assignee.email})</span>
+                  {assignee.type === 'contact' && (
+                    <span className="text-xs px-2 py-0.5 rounded" style={{
+                      backgroundColor: 'var(--color-bg-tertiary)',
+                      color: 'var(--color-text-secondary)'
+                    }}>
+                      External
+                    </span>
+                  )}
+                </div>
+              )}
             />
             {errors.assigneeId && (
               <p className="text-red-400 text-sm mt-1">{errors.assigneeId}</p>
@@ -519,6 +628,19 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
           </div>
         </form>
       </div>
+
+      {/* Add Contact Modal */}
+      {isAddContactModalOpen && (
+        <AddContactModal
+          isOpen={isAddContactModalOpen}
+          onClose={() => {
+            setIsAddContactModalOpen(false);
+            setPendingEmail('');
+          }}
+          onContactAdded={handleContactAdded}
+          initialEmail={pendingEmail}
+        />
+      )}
     </div>,
     document.body
   );

@@ -20,13 +20,16 @@ const SearchableDropdown = ({
   const [filteredOptions, setFilteredOptions] = useState(options);
   const dropdownRef = useRef(null);
 
+  // Update filtered options when options change, but only if there's no active search
   useEffect(() => {
-    // Show recent employees first, then all others
-    const recentIds = recentEmployees.map(emp => emp.id);
-    const recentOptions = options.filter(option => recentIds.includes(option.id));
-    const otherOptions = options.filter(option => !recentIds.includes(option.id));
-    setFilteredOptions([...recentOptions, ...otherOptions]);
-  }, [options, recentEmployees]);
+    if (searchTerm.trim() === '') {
+      // Show recent employees first, then all others
+      const recentIds = recentEmployees.map(emp => emp.id);
+      const recentOptions = options.filter(option => recentIds.includes(option.id));
+      const otherOptions = options.filter(option => !recentIds.includes(option.id));
+      setFilteredOptions([...recentOptions, ...otherOptions]);
+    }
+  }, [options, recentEmployees, searchTerm]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

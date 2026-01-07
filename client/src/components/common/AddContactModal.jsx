@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import useContactStore from '../../stores/contactStore';
 import IconButton from './IconButton';
 import { FaTimes, FaCheck } from 'react-icons/fa';
@@ -77,10 +78,17 @@ const AddContactModal = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="modal modal-open backdrop-blur-sm">
+  const modalContent = (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200"
+        onClick={handleClose}
+      />
+      
+      {/* Modal */}
       <div
-        className="modal-box border transition-colors duration-200"
+        className="relative border rounded-lg shadow-xl p-6 w-full max-w-md mx-4 transition-all duration-300"
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)',
@@ -254,6 +262,8 @@ const AddContactModal = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default AddContactModal;

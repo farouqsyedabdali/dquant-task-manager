@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { usersAPI } from '../../services/api';
 import useUserStore from '../../stores/userStore';
+import useAuthStore from '../../context/authStore';
 import useContactStore from '../../stores/contactStore';
 import SearchableDropdown from '../common/SearchableDropdown';
+import AddContactModal from '../common/AddContactModal';
 import IconButton from '../common/IconButton';
 import { FaTimes, FaUserPlus } from 'react-icons/fa';
 
@@ -14,10 +16,16 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
   const [selectedType, setSelectedType] = useState(''); // 'user' or 'contact'
   const [selectedRole, setSelectedRole] = useState('co-assignee'); // 'co-assignee', 'lead-assignee', 'viewer'
   const [isAdding, setIsAdding] = useState(false);
+  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
   const { recentEmployees } = useUserStore();
+  const { user } = useAuthStore();
   const { fetchContacts } = useContactStore();
   const [allContacts, setAllContacts] = useState([]);
   const [hasInitializedContacts, setHasInitializedContacts] = useState(false);
+  
+  // Check if this is a personal account
+  const isPersonalAccount = user?.isPersonal || false;
 
   useEffect(() => {
     if (isOpen && !hasInitializedContacts) {
@@ -115,6 +123,21 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
     }
   };
 
+  const handleAddNewContact = (email) => {
+    setPendingEmail(email);
+    setIsAddContactModalOpen(true);
+  };
+
+  const handleContactAdded = async (newContact) => {
+    // Refresh contacts to include the new one
+    await fetchAllContacts();
+    // Set the selected contact
+    setSelectedId(newContact.id.toString());
+    setSelectedType('contact');
+    setIsAddContactModalOpen(false);
+    setPendingEmail('');
+  };
+
   const handleAdd = async () => {
     if (!selectedId || !taskId) return;
 
@@ -189,6 +212,8 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
                 recentEmployees={recentEmployees}
                 renderOption={renderOption}
                 getOptionValue={getOptionValue}
+                allowAddNew={!isPersonalAccount}
+                onAddNew={handleAddNewContact}
               />
               {allOptions.length === 0 && !isLoadingUsers && (
                 <p 
@@ -252,6 +277,19 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
           />
         </div>
       </div>
+
+      {/* Add Contact Modal */}
+      {isAddContactModalOpen && (
+        <AddContactModal
+          isOpen={isAddContactModalOpen}
+          onClose={() => {
+            setIsAddContactModalOpen(false);
+            setPendingEmail('');
+          }}
+          onContactAdded={handleContactAdded}
+          initialEmail={pendingEmail}
+        />
+      )}
     </div>
   );
 };

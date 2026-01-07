@@ -15,6 +15,7 @@ import TaskUpdatesModal from './TaskUpdatesModal';
 import SearchableDropdown from '../common/SearchableDropdown';
 import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
 import useContactStore from '../../stores/contactStore';
+import AddContactModal from '../common/AddContactModal';
 import IconButton from '../common/IconButton';
 import ConfirmModal from '../common/ConfirmModal';
 import { useToastContext } from '../../context/ToastContext';
@@ -55,6 +56,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [isAddTeamMemberModalOpen, setIsAddTeamMemberModalOpen] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
   const [activeTab, setActiveTab] = useState('team'); // 'team' or 'hierarchy'
   const { updateTask, isLoading, fetchTask } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
@@ -144,6 +147,24 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       setIsLoadingCoAssignees(false);
     }
   }, []);
+
+  const handleAddNewContact = (email) => {
+    setPendingEmail(email);
+    setIsAddContactModalOpen(true);
+  };
+
+  const handleContactAdded = async (newContact) => {
+    // Refresh contacts to include the new one
+    await fetchContactsForTask();
+    // Set the assignee to the new contact
+    setFormData(prev => ({
+      ...prev,
+      assigneeId: '',
+      externalContactId: newContact.id.toString()
+    }));
+    setIsAddContactModalOpen(false);
+    setPendingEmail('');
+  };
 
   const fetchContactsForTask = async () => {
     setIsLoadingContacts(true);
@@ -1474,6 +1495,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                               placeholder="Select an employee or contact"
                               disabled={isLoadingUsers || isLoadingContacts}
                               recentEmployees={recentEmployees}
+                              allowAddNew={!isPersonalAccount}
+                              onAddNew={handleAddNewContact}
                               renderOption={(assignee) => (
                                 <div className="flex items-center space-x-2">
                                   <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
@@ -1876,6 +1899,19 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                 onClose={() => setIsAddSubtaskOpen(false)}
                 parentTask={viewedTask}
                 extensionUpdateData={extensionUpdateData}
+              />
+            )}
+
+            {/* Add Contact Modal */}
+            {isAddContactModalOpen && (
+              <AddContactModal
+                isOpen={isAddContactModalOpen}
+                onClose={() => {
+                  setIsAddContactModalOpen(false);
+                  setPendingEmail('');
+                }}
+                onContactAdded={handleContactAdded}
+                initialEmail={pendingEmail}
               />
             )}
 

@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { projectsAPI, usersAPI, tasksAPI, contactsAPI, templatesAPI } from '../../services/api';
 import useAuthStore from '../../context/authStore';
+import useContactStore from '../../stores/contactStore';
 import { useToastContext } from '../../context/ToastContext';
 import AddProjectTaskModal from './AddProjectTaskModal';
 import TaskModal from '../tasks/TaskModal';
 import SaveAsTemplateModal from './SaveAsTemplateModal';
 import EditProjectModal from './EditProjectModal';
+import SearchableDropdown from '../common/SearchableDropdown';
+import AddContactModal from '../common/AddContactModal';
 import { FaTrash, FaPlus, FaPaperPlane, FaSave, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
 import IconButton from '../common/IconButton';
 import { formatDateForInput, convertLocalDateTimeToUTC } from '../../utils/dateUtils';
@@ -36,9 +39,16 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
     externalContactId: ''
   });
   const [taskTimeSettings, setTaskTimeSettings] = useState({}); // Track which tasks have time enabled
+  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [pendingTaskId, setPendingTaskId] = useState(null); // Track which task the contact is being added for
 
   const { user } = useAuthStore();
+  const { fetchContacts: fetchContactsFromStore } = useContactStore();
   const toast = useToastContext();
+  
+  // Check if this is a personal account
+  const isPersonalAccount = user?.isPersonal || false;
 
   useEffect(() => {
     if (isOpen && projectId) {
@@ -133,6 +143,70 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
     } catch (err) {
       console.error('Error fetching contacts:', err);
     }
+  };
+
+  // Create combined options for SearchableDropdown
+  const getAllAssignees = useCallback(() => {
+    return [
+      ...employees.map(emp => ({
+        ...emp,
+        type: 'internal',
+        displayName: emp.name,
+        email: emp.email,
+        id: emp.id
+      })),
+      ...contacts.map(contact => ({
+        ...contact,
+        type: 'external',
+        displayName: contact.name,
+        email: contact.email,
+        id: contact.id
+      }))
+    ];
+  }, [employees, contacts]);
+
+  const getOptionValue = useCallback((option) => `${option.type}:${option.id}`, []);
+
+  const renderOption = useCallback((option) => (
+    <div className="flex items-center space-x-2">
+      <div className={`w-2 h-2 rounded-full ${option.type === 'external' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+      <span>{option.displayName || option.name}</span>
+      <span
+        className="transition-colors duration-200"
+        style={{ color: 'var(--color-text-tertiary)' }}
+      >
+        ({option.email})
+      </span>
+      {option.type === 'external' && (
+        <span
+          className="text-xs px-2 py-0.5 rounded transition-colors duration-200"
+          style={{
+            backgroundColor: 'var(--color-bg-tertiary)',
+            color: 'var(--color-text-secondary)'
+          }}
+        >
+          External
+        </span>
+      )}
+    </div>
+  ), []);
+
+  const handleAddNewContact = (email, taskId) => {
+    setPendingEmail(email);
+    setPendingTaskId(taskId);
+    setIsAddContactModalOpen(true);
+  };
+
+  const handleContactAdded = async (newContact) => {
+    // Refresh contacts
+    await fetchContacts();
+    // If there's a pending task, assign the new contact to it
+    if (pendingTaskId) {
+      await handleQuickAssign(pendingTaskId, newContact.id.toString(), 'external');
+    }
+    setIsAddContactModalOpen(false);
+    setPendingEmail('');
+    setPendingTaskId(null);
   };
 
   const handleAddTask = async (taskData) => {
@@ -929,8 +1003,8 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                 </div>
                 <span className="ml-2">Task Name</span>
               </div>
-                <div className="col-span-3">Assigned To</div>
-                <div className="col-span-3 flex flex-col">
+                <div className="col-span-4">Assigned To</div>
+                <div className="col-span-2 flex flex-col">
                   <span>Due Date</span>
                   <label className="flex items-center mt-1 cursor-pointer">
                     <input
@@ -1074,59 +1148,45 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
                       {/* Assigned To Column */}
                       <div
-                        className="col-span-3"
+                        className="col-span-4"
                         onClick={(e) => {
                           // Stop propagation if clicking on dropdown
-                          if (e.target.tagName === 'SELECT' || e.target.closest('select')) {
+                          if (e.target.closest('.searchable-dropdown-container')) {
                             e.stopPropagation();
                           }
                         }}
                       >
-                        {/* Show dropdown for all tasks (draft or sent) */}
-                        <select
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => {
-                            const [type, id] = e.target.value.split(':');
-                            if (id) {
-                              handleQuickAssign(task.id, id, type);
+                        {/* Show SearchableDropdown for all tasks (draft or sent) */}
+                        <div className="searchable-dropdown-container w-full">
+                          <SearchableDropdown
+                            options={getAllAssignees()}
+                            value={
+                              // Prioritize externalContactId for display (handles accepted external users)
+                              task.externalContactId
+                                ? `external:${task.externalContactId}`
+                                : task.assigneeId
+                                  ? `internal:${task.assigneeId}`
+                                  : ''
                             }
-                          }}
-                          className="select select-sm select-bordered w-full"
-                          style={{
-                            backgroundColor: 'var(--color-bg-tertiary)',
-                            borderColor: 'var(--color-border-default)',
-                            color: 'var(--color-text-primary)',
-                          }}
-                          value={
-                            // Prioritize externalContactId for display (handles accepted external users)
-                            task.externalContactId
-                              ? `external:${task.externalContactId}`
-                              : task.assigneeId
-                                ? `internal:${task.assigneeId}`
-                                : ''
-                          }
-                        >
-                          <option value="">Assign to...</option>
-                          <optgroup label="Internal Team">
-                            {employees.map(emp => (
-                              <option key={emp.id} value={`internal:${emp.id}`}>
-                                {emp.name}
-                              </option>
-                            ))}
-                          </optgroup>
-                          <optgroup label="External Contacts">
-                            {contacts.map(contact => (
-                              <option key={contact.id} value={`external:${contact.id}`}>
-                                {contact.name}
-                              </option>
-                            ))}
-                          </optgroup>
-                        </select>
+                            onChange={(compositeValue) => {
+                              const [type, id] = compositeValue.split(':');
+                              if (id) {
+                                handleQuickAssign(task.id, id, type);
+                              }
+                            }}
+                            placeholder="Assign to..."
+                            renderOption={renderOption}
+                            getOptionValue={getOptionValue}
+                            allowAddNew={!isPersonalAccount}
+                            onAddNew={(email) => handleAddNewContact(email, task.id)}
+                            className="!text-sm w-full"
+                          />
+                        </div>
                       </div>
 
                       {/* Due Date Column */}
                       <div
-                        className="col-span-3"
+                        className="col-span-2"
                         onClick={(e) => {
                           // Stop propagation if clicking on date input
                           if (e.target.tagName === 'INPUT' || e.target.closest('input') || e.target.tagName === 'LABEL') {
@@ -1424,6 +1484,20 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
           onClose={() => setIsEditModalOpen(false)}
           project={project}
           onProjectUpdated={handleProjectEdited}
+        />
+      )}
+
+      {/* Add Contact Modal */}
+      {isAddContactModalOpen && (
+        <AddContactModal
+          isOpen={isAddContactModalOpen}
+          onClose={() => {
+            setIsAddContactModalOpen(false);
+            setPendingEmail('');
+            setPendingTaskId(null);
+          }}
+          onContactAdded={handleContactAdded}
+          initialEmail={pendingEmail}
         />
       )}
     </div>
