@@ -175,6 +175,9 @@ const TaskList = ({ tasks, onStatusChange, onPriorityChange, onDelete, onArchive
           onDelete={onDelete}
           onArchive={onArchive}
           onUnarchive={onUnarchive}
+          onTaskChange={(newTask) => {
+            setSelectedTask(newTask);
+          }}
         />
       )}
     </>

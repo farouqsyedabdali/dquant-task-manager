@@ -345,6 +345,9 @@ const TaskTable = () => {
           isOpen={isModalOpen}
           onClose={closeModal}
           isEdit={isAdmin()}
+          onTaskChange={(newTask) => {
+            setSelectedTask(newTask);
+          }}
         />
       )}
 

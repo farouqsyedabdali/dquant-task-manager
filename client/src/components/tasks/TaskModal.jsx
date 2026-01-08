@@ -59,7 +59,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
   const [activeTab, setActiveTab] = useState('team'); // 'team' or 'hierarchy'
-  const { updateTask, isLoading, fetchTask } = useTaskStore();
+  const { updateTask, isLoading } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
   const { fetchContacts } = useContactStore();
@@ -191,9 +191,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       if (lastManualTaskIdRef.current !== task.id) {
         console.log('useEffect: Updating viewedTask from task prop', task.id, task.title);
         setViewedTask(task);
-        // Reset the ref only after we've updated from an external prop change
-        // This allows the next prop change to be processed normally
-        lastManualTaskIdRef.current = null;
+        lastManualTaskIdRef.current = null; // Reset the ref
         if (isOpen) {
           if (!isPersonalAccount) {
             fetchUsers();
@@ -203,21 +201,10 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         }
       } else {
         console.log('useEffect: Task was manually set, skipping update', task.id);
-        // Don't reset the ref here - keep it set so subsequent prop changes from the same
-        // manual navigation are also skipped. The ref will be reset when:
-        // 1. The modal closes (handled in useEffect below)
-        // 2. A new manual navigation happens (handleTaskClick sets it to new ID)
-        // 3. An external prop change happens (the if branch above resets it)
+        lastManualTaskIdRef.current = null; // Reset after skipping
       }
     }
   }, [isOpen, task, fetchCoAssignees, isPersonalAccount]);
-
-  // Reset the ref when modal closes to allow fresh prop updates on next open
-  useEffect(() => {
-    if (!isOpen) {
-      lastManualTaskIdRef.current = null;
-    }
-  }, [isOpen]);
 
   const handleAddCoAssignee = async (userId) => {
     if (!userId || !viewedTask?.id) return;
@@ -282,52 +269,40 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   }, [extensionUpdateData]);
 
   // Click handler for parent/subtask
-  const handleTaskClick = async (taskId, event) => {
-    // Prevent any default behavior and stop propagation
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    
+  const handleTaskClick = async (taskId) => {
     if (!taskId) {
       console.log('handleTaskClick: No taskId provided');
       return;
     }
     console.log('handleTaskClick: Starting to fetch task', taskId);
     try {
-      const result = await fetchTask(taskId);
-      console.log('handleTaskClick: Fetch result', result);
-      if (result.success && result.data) {
-        const newTask = result.data;
-        console.log('handleTaskClick: Setting new task', newTask.id, newTask.title);
-        // Mark this as a manual task switch to prevent useEffect from overriding it
-        lastManualTaskIdRef.current = newTask.id;
-        setViewedTask(newTask);
-        setIsEditing(false);
-        setIsAddSubtaskOpen(false);
-        setIsDeleteModalOpen(false);
-        // Reset active tab to 'team' when switching tasks
-        setActiveTab('team');
-        // Fetch related data for the new task
-        if (!isPersonalAccount) {
-          fetchUsers();
-        }
-        fetchCoAssignees(newTask.id);
-        fetchContactsForTask();
-        // Notify parent component about task change
-        if (onTaskChange) {
-          console.log('handleTaskClick: Calling onTaskChange with task', newTask.id, newTask.title);
-          onTaskChange(newTask);
-        } else {
-          console.log('handleTaskClick: onTaskChange is not provided');
-        }
+      const response = await tasksAPI.getById(taskId);
+      const newTask = response.data;
+      console.log('handleTaskClick: Fetched new task', newTask.id, newTask.title);
+      // Mark this as a manual task switch to prevent useEffect from overriding it
+      lastManualTaskIdRef.current = newTask.id;
+      setViewedTask(newTask);
+      setIsEditing(false);
+      setIsAddSubtaskOpen(false);
+      setIsDeleteModalOpen(false);
+      // Reset active tab to 'team' when switching tasks
+      setActiveTab('team');
+      // Fetch related data for the new task
+      if (!isPersonalAccount) {
+        fetchUsers();
+      }
+      fetchCoAssignees(newTask.id);
+      fetchContactsForTask();
+      // Notify parent component about task change
+      if (onTaskChange) {
+        console.log('handleTaskClick: Calling onTaskChange with task', newTask.id, newTask.title);
+        onTaskChange(newTask);
       } else {
-        console.error('handleTaskClick: Fetch failed', result.error);
-        toast.error(result.error || 'Failed to load task');
+        console.log('handleTaskClick: onTaskChange is not provided');
       }
     } catch (error) {
       console.error('handleTaskClick: Error loading task:', error);
-      toast.error('Failed to load task. Please try again.');
+      toast.error(error.response?.data?.error || 'Failed to load task. Please try again.');
     }
   };
 
@@ -736,11 +711,11 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }} onClick={onClose}>
       <div
         className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto scrollbar-thin transition-colors duration-200"
-        onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header - Title and Action Buttons */}
         <div className="mb-6">
@@ -1840,7 +1815,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleTaskClick(viewedTask.parentTask.id, e);
+                              handleTaskClick(viewedTask.parentTask.id);
                             }}
                             title="Open parent task"
                           >
@@ -1908,7 +1883,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  handleTaskClick(subtask.id, e);
+                                  handleTaskClick(subtask.id);
                                 }}
                                 title="Open subtask"
                               >

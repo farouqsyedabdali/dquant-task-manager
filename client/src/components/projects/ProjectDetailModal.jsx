@@ -1528,6 +1528,9 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
           task={selectedTask}
           isOpen={isTaskModalOpen}
           onClose={handleTaskModalClose}
+          onTaskChange={(newTask) => {
+            setSelectedTask(newTask);
+          }}
         />
       )}
 

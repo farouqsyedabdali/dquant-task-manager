@@ -720,6 +720,9 @@ const PersonalDashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           onArchive={handleArchiveTask}
           onUnarchive={handleUnarchiveTask}
           extensionUpdateData={extensionUpdateData}
+          onTaskChange={(newTask) => {
+            setCurrentTask(newTask);
+          }}
         />
       )}
 
