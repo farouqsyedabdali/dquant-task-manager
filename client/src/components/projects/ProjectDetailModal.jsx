@@ -42,6 +42,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
   const [pendingTaskId, setPendingTaskId] = useState(null); // Track which task the contact is being added for
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
 
   const { user } = useAuthStore();
   const { fetchContacts: fetchContactsFromStore } = useContactStore();
@@ -1562,6 +1563,42 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
           onContactAdded={handleContactAdded}
           initialEmail={pendingEmail}
         />
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {isBulkDeleteConfirmOpen && (
+        <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 55 }}>
+          <div 
+            className="modal-box border"
+            style={{ 
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)'
+            }}
+          >
+            <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+              Confirm Bulk Delete
+            </h3>
+            <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+              Are you sure you want to delete {selectedCount} task{selectedCount > 1 ? 's' : ''}? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <IconButton
+                icon={<FaTimes />}
+                label="Cancel"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsBulkDeleteConfirmOpen(false)}
+              />
+              <IconButton
+                icon={<FaTrash />}
+                label={`Delete ${selectedCount} Task${selectedCount > 1 ? 's' : ''}`}
+                variant="danger"
+                size="sm"
+                onClick={confirmBulkDelete}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

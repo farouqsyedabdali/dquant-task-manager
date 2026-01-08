@@ -1,337 +1,304 @@
 // Legal Documents Data
-// Replace this content with your actual Terms of Service and Privacy Policy text
+// Updated from TIALZ.COM - Terms of Use (1).docx and TIALZ.COM - Privacy Policy (1).docx
+// EXACT wording preserved from source documents
 
 export const termsOfService = {
-  title: "Terms of Service",
-  lastUpdated: "January 2025",
+  title: "Terms of Use",
+  lastUpdated: "January 2, 2026",
   sections: [
     {
-      title: "1. Acceptance of Terms",
-      content: `By accessing and using Tialz Task Manager ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to these terms, please do not use the Service.`
-    },
-    {
-      title: "2. Description of Service",
-      content: `Tialz provides a comprehensive task management platform that enables individuals and organizations to organize, track, and manage their work efficiently. The Service includes features such as task creation, project management, team collaboration, and reporting tools.`
-    },
-    {
-      title: "3. User Accounts",
-      content: `To use certain features of the Service, you must register for an account. You agree to:
-      
-• Provide accurate, current, and complete information during registration
-• Maintain and promptly update your account information
-• Keep your password secure and confidential
-• Notify us immediately of any unauthorized use of your account
-• Be responsible for all activities that occur under your account`
-    },
-    {
-      title: "4. User Conduct",
-      content: `You agree not to use the Service to:
+      title: "Plain-English Summary (Non-Binding Overview)",
+      content: `This section provides a brief, informal summary of key points of the Terms. It is provided for convenience only and is not legally binding. Please read the full Terms below for the binding agreement.
 
-• Violate any applicable laws or regulations
-• Infringe upon the rights of others
-• Transmit any harmful, threatening, abusive, or defamatory content
-• Upload viruses or malicious code
-• Attempt to gain unauthorized access to the Service or its systems
-• Interfere with or disrupt the Service or servers
-• Use the Service for any commercial purpose without authorization`
-    },
-    {
-      title: "5. Intellectual Property",
-      content: `The Service and its original content, features, and functionality are owned by Tialz and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws. You may not copy, modify, distribute, sell, or lease any part of our Service without our express written permission.`
-    },
-    {
-      title: "6. User Content",
-      content: `You retain all rights to the content you submit, post, or display on or through the Service ("User Content"). By submitting User Content, you grant Tialz a worldwide, non-exclusive, royalty-free license to use, copy, reproduce, process, adapt, modify, publish, transmit, display, and distribute such content solely for the purpose of providing the Service to you.`
-    },
-    {
-      title: "7. Data Privacy",
-      content: `Your privacy is important to us. Please review our Privacy Policy to understand how we collect, use, and protect your personal information. By using the Service, you agree to the terms of our Privacy Policy.`
-    },
-    {
-      title: "8. Subscription and Payment",
-      content: `Certain features of the Service may require a paid subscription. By purchasing a subscription, you agree to:
+Who We Are: TIALZ.COM Inc. (a subsidiary of Distinova Technologies Inc.) operates TIALZ.COM (the "Service"), an AI-powered productivity and task management platform.
 
-• Pay all applicable fees as described at the time of purchase
-• Provide accurate and complete billing information
-• Authorize automatic renewal unless you cancel before the renewal date
-• Accept that refunds are subject to our refund policy
+Your Agreement: By creating an account, accessing, or using the Service, you agree to these Terms and our Privacy Policy.
 
-We reserve the right to change our pricing at any time with notice.`
+Beta & Commercial Releases: These Terms cover both our Beta versions and the final "Post-Release" commercial software. Both are provided "As Is" to the maximum extent permitted by law.
+
+Risk & Responsibility: Uploading sensitive or confidential data is prohibited. If you do so, you accept full responsibility for any consequences.
+
+AI & Data Use: We may use anonymized, aggregated, or derived data to train machine learning models and improve the Service.
+
+Liability: We aggressively limit our liability and disclaim warranties. You must indemnify us against claims arising from your content or use of the Service.
+
+Legal Jurisdiction: These Terms are governed by the laws of Ontario, Canada. Disputes will be resolved through binding arbitration in Toronto.`
     },
     {
-      title: "9. Termination",
-      content: `We may terminate or suspend your account and access to the Service immediately, without prior notice or liability, for any reason, including if you breach these Terms. Upon termination, your right to use the Service will immediately cease.
+      title: "1. Introduction and Acceptance",
+      content: `These Terms of Use ("Terms") constitute a binding agreement between you ("Customer," "you," or "your") and TIALZ.COM Inc. ("Company," "we," "us," or "our") governing your access to and use of TIALZ.COM (the "Service").
 
-You may terminate your account at any time through the Settings page. Upon termination, we will delete your data in accordance with our Privacy Policy and data retention policies.`
+By accessing or using the Service—including by creating an account, installing a mobile or desktop app, enabling an integration, using an API, or otherwise interacting with the platform—you acknowledge and agree that you have read, understood, and accepted these Terms and our Privacy Policy, which is incorporated herein by reference.
+
+If you do not agree with these Terms, you must not use the Service. If you accept these Terms on behalf of a company, organization, or other legal entity, you represent and warrant that you are authorized to bind that entity. All references to "you" or "Customer" in these Terms shall include such entity and its authorized users.`
     },
     {
-      title: "10. Disclaimers",
-      content: `THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+      title: "2. Definitions",
+      content: `To ensure consistency across our legal documents, the following terms are defined as follows:
 
-Tialz does not warrant that:
-• The Service will be uninterrupted, secure, or error-free
-• The results obtained from the Service will be accurate or reliable
-• Any errors in the Service will be corrected`
+"Account": means the unique account you create to access and use the Service.
+
+"Artificial Intelligence" or "AI": means any technology, including but not limited to machine learning, deep learning, large language models (LLMs), neural networks, and generative models, used to perform tasks that would otherwise require human intelligence.
+
+"AI Features": means any features, tools, or functionalities within the Service that utilize AI to process Customer Data or generate insights, recommendations, and content.
+
+"AI Outputs": means the results, text, data, summaries, or other content generated by the AI Features in response to prompts, inputs, or User-Generated Content.
+
+"Authorized User": means any individual authorized by you to access or use the Service under your Account.
+
+"Customer Data": means all information, data, files, text, documents, messages, and other content submitted, uploaded, transmitted, or otherwise made available through the Service by you or on your behalf.
+
+"Derived Data": means data generated from the processing, analysis, or aggregation of Customer Data, metadata, usage statistics, or other interactions with the Service, which does not directly identify any individual or entity.
+
+"Service": means the TIALZ.COM platform, including the web application, mobile apps, desktop apps, APIs, browser extensions, official integrations, related documentation, updates, and all associated components.
+
+"User-Generated Content" or "UGC": means any content, tasks, projects, notes, files, messages, or data created, uploaded, or submitted by you or your Authorized Users to the Service.`
+    },
+    {
+      title: "3. Eligibility and Access",
+      content: `3.1 Legal Capacity: The Service is intended for users who are at least the age of majority in their jurisdiction and capable of entering into a legally binding contract. By using the Service, you represent and warrant that you meet these requirements.
+
+3.2 Jurisdictional Restrictions: The Service is not intended for use in jurisdictions that require formal data processing agreements, local data residency, government registration, or prior governmental approval for cross-border data transfer.
+
+3.3 Beta and Pre-Release Features: Certain components of the Service may be offered as alpha, beta, trial, or pre-release features ("Pre-Release Features"). Such features are provided "as is," may contain bugs or incomplete functionality, and may change or be discontinued at any time.`
+    },
+    {
+      title: "4. Account Registration and Security",
+      content: `4.1 Account Creation: You must register for an Account to use most features. You agree to provide accurate, complete, and current information during registration and to maintain and promptly update such information.
+
+4.2 Organizational Accounts: If you register on behalf of a company or organization, you are responsible for managing Authorized Users. The organization is liable for all acts and omissions of its Authorized Users under these Terms.
+
+4.3 Account Security: You are responsible for maintaining the confidentiality of your login credentials. You must immediately notify us at support@tialz.com of any unauthorized access or suspected breach.`
+    },
+    {
+      title: "5. User-Generated Content (UGC) and Acceptable Use",
+      content: `5.1 Ownership of UGC: You retain all ownership rights, including copyrights, in the UGC you upload, create, or submit through the Service. Nothing in these Terms transfers ownership of your UGC to the Company.
+
+5.2 Prohibited Data and Upload Risks: The Service—including all Beta and Post-Release versions—is a general-purpose productivity tool and is not intended for the storage or processing of sensitive data.
+
+Prohibition: You are strictly prohibited from uploading, storing, or processing "Sensitive Personal Information" as defined under Ontario/Canadian law (PIPEDA) or US law (CCPA/CPRA), including but not limited to: financial account numbers, credit card data, medical/health records, biometric data, trade secrets, or government-issued identification.
+
+Assumption of Risk: Because the Service is provided on an "As Is" and "As Available" basis, we assume no responsibility or liability for the exposure, loss, or unauthorized disclosure of any such sensitive data. If you choose to upload such data in violation of these Terms, you do so at your own sole risk and expense.
+
+5.3 Prohibited Conduct and Harmful Content: You agree not to use the Service to create or transmit content that is illegal, tortious, harmful, threatening, harassing, hateful, or malicious (containing viruses or malware).
+
+5.4 No Obligation to Monitor: You acknowledge that TIALZ.COM Inc. does not actively monitor or pre-screen UGC. We act as a passive conduit and do not guarantee the completeness or reliability of any UGC. You are solely responsible for your content.
+
+5.5 Right to Remove: We reserve the right, but have no obligation, to remove or disable access to any UGC at our sole discretion if we believe it violates these Terms or applicable law.
+
+5.6 Account Termination for Misconduct: Violation of this Section may result in immediate suspension or termination without notice or refund.
+
+5.7 License Grant to Company: By uploading UGC, you grant TIALZ.COM Inc. and its parent, Distinova Technologies Inc., a worldwide, non-exclusive, royalty-free, perpetual, and sublicensable license to host, store, reproduce, and process such content solely for the purposes of providing, securing, and improving the Service (including the training of AI models as further described in Section 6).`
+    },
+    {
+      title: "6. Artificial Intelligence Features and Derivative Works",
+      content: `6.1 AI Outputs and Use: The Service uses AI technologies to generate AI Outputs. You acknowledge that:
+AI Outputs are automatically generated and may be inaccurate, incomplete, or biased.
+AI Outputs are provided for informational purposes only and do not constitute professional advice.
+You are solely responsible for reviewing and verifying any AI Outputs before relying on them.
+
+6.2 License to Use and Commercialize Derived Works: You acknowledge and agree that we may create Derived Works from Customer Data, metadata, usage logs, and AI Outputs. You agree that all Derived Works are and will remain the exclusive property of TIALZ.COM Inc. and may be used for any commercial purpose (including training future AI models or developing new products) without compensation or obligation to you.`
+    },
+    {
+      title: "7. Third-Party Services",
+      content: `The Service may integrate with third-party services. We do not control these services, and your use of them is solely at your own risk.`
+    },
+    {
+      title: "8. Intellectual Property",
+      content: `The Service, including all software, APIs, designs, documentation, and underlying intellectual property, is and will remain the exclusive property of TIALZ.COM Inc., its parent Distinova Technologies Inc., and its licensors.`
+    },
+    {
+      title: "9. Security and Data Handling",
+      content: `We implement commercially reasonable safeguards to protect the Service. However, no system is completely secure, and we cannot guarantee the prevention of all security incidents or breaches.`
+    },
+    {
+      title: "10. Disclaimers and Warranties",
+      content: `10.1 "As Is" Service: YOU EXPRESSLY ACKNOWLEDGE AND AGREE THAT THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTIES OF ANY KIND. TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE DISCLAIM ALL WARRANTIES, CONDITIONS, AND REPRESENTATIONS, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND ACCURACY OF AI OUTPUTS.
+
+10.2 No Professional Advice: AI Outputs are not intended as professional advice.
+
+10.3 Consumer Law Notice: If you are a consumer in Ontario or a similar jurisdiction, non-excludable rights may apply. For businesses, you agree that the Sale of Goods Act (Ontario) and the International Sale of Goods Act do not apply.`
     },
     {
       title: "11. Limitation of Liability",
-      content: `IN NO EVENT SHALL TIALZ, ITS DIRECTORS, EMPLOYEES, PARTNERS, AGENTS, SUPPLIERS, OR AFFILIATES BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM:
+      content: `11.1 Exclusion of Indirect Damages: TO THE MAXIMUM EXTENT PERMITTED BY LAW, NEITHER PARTY WILL BE LIABLE FOR ANY INDIRECT, CONSEQUENTIAL, OR PUNITIVE DAMAGES.
 
-• Your access to or use of or inability to access or use the Service
-• Any conduct or content of any third party on the Service
-• Any content obtained from the Service
-• Unauthorized access, use, or alteration of your transmissions or content
+11.2 Aggregate Liability Cap: EXCEPT FOR EXCLUDED CLAIMS, EACH PARTY'S TOTAL LIABILITY WILL NOT EXCEED THE GREATER OF THE AMOUNT PAID BY YOU IN THE TWELVE (12) MONTHS PRIOR TO THE EVENT, OR USD $100.
 
-Our total liability shall not exceed the amount you paid to us in the twelve (12) months prior to the claim.`
+11.3 Excluded Claims: The limitations above do not apply to IP infringement, payment obligations, indemnification, fraud, gross negligence, or death/personal injury where liability cannot be excluded by law.`
     },
     {
-      title: "12. Indemnification",
-      content: `You agree to indemnify, defend, and hold harmless Tialz and its officers, directors, employees, agents, and affiliates from and against any claims, liabilities, damages, losses, and expenses, including reasonable attorneys' fees, arising out of or in any way connected with your access to or use of the Service, your violation of these Terms, or your violation of any rights of another.`
+      title: "12. Pricing and Plan Changes",
+      content: `We reserve the right, at our sole discretion, to modify, introduce, or discontinue pricing, subscription plans, features, or services at any time, including with respect to accounts currently offered on a free or promotional basis. If such changes affect your existing access or pricing, we will provide reasonable advance notice through the Service, by email, or by other appropriate means. Continued use of the Service after the effective date of any pricing or plan change constitutes your acceptance of such changes.`
     },
     {
-      title: "13. Changes to Terms",
-      content: `We reserve the right to modify or replace these Terms at any time at our sole discretion. If a revision is material, we will provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.
+      title: "13. Indemnification",
+      content: `You will indemnify and hold harmless TIALZ.COM Inc. and Distinova Technologies Inc. from third-party claims arising from your UGC, your violation of these Terms, or your use of the Service.`
+    },
+    {
+      title: "14. Termination",
+      content: `We may suspend or terminate your access immediately if you violate these Terms. Upon termination, your right to use the Service ceases, but UGC license grants and our rights to Derived Data survive.`
+    },
+    {
+      title: "15. Dispute Resolution and Arbitration",
+      content: `15.1 Informal Resolution: Parties agree to attempt to resolve disputes informally first.
 
-By continuing to access or use the Service after revisions become effective, you agree to be bound by the revised terms.`
-    },
-    {
-      title: "14. Governing Law",
-      content: `These Terms shall be governed and construed in accordance with the laws of [Your Jurisdiction], without regard to its conflict of law provisions. Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights.`
-    },
-    {
-      title: "15. Contact Us",
-      content: `If you have any questions about these Terms, please contact us at:
+15.2 Binding Arbitration (ICDR Canada): Disputes shall be resolved by binding arbitration administered by ICDR Canada in accordance with its Canadian Arbitration Rules. The seat of arbitration shall be Toronto, Ontario, Canada. The language shall be English.
 
-Email: legal@tialz.com
-Website: www.tialz.com`
+15.3 Individual Basis: You waive any right to participate in a class action.
+
+15.4 Opt-Out Rights: You may opt out of arbitration within 30 days of accepting these Terms by emailing arbitration-optout@tialz.com.`
+    },
+    {
+      title: "16. Governing Law and Venue",
+      content: `These Terms are governed by the laws of the Province of Ontario and the federal laws of Canada applicable therein. You submit to the exclusive jurisdiction of the courts located in Toronto, Ontario.`
+    },
+    {
+      title: "17. Export Controls",
+      content: `You represent that you are not located in a sanctioned country and that you will comply with all applicable export control laws.`
+    },
+    {
+      title: "18. General Provisions",
+      content: `You may not assign these Terms without consent. If any provision is unenforceable, the remaining provisions remain in force. These Terms constitute the entire agreement.`
+    },
+    {
+      title: "19. Amendments and Modifications",
+      content: `We reserve the right to modify these Terms at any time. Material changes will be notified via the Service or email. Continued use constitutes acceptance.`
+    },
+    {
+      title: "20. Contact Information",
+      content: `Support: support@tialz.com
+Legal: legal@tialz.com`
     }
   ]
 };
 
 export const privacyPolicy = {
   title: "Privacy Policy",
-  lastUpdated: "January 2025",
+  lastUpdated: "January 2, 2026",
   sections: [
     {
-      title: "1. Introduction",
-      content: `Tialz ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our task management service ("the Service"). Please read this policy carefully to understand our practices regarding your personal data.`
+      title: "1. Overview",
+      content: `This Privacy Policy ("Policy") explains how TIALZ.COM Inc. collects, uses, processes, stores, shares, and protects personal information and other data in connection with your use of the TIALZ.COM platform (the "Service"). By accessing or using the Service, you acknowledge that you have read and understood this Policy and our Terms of Use.
+
+This Policy is designed to meet the expectations of global data protection standards, including the Personal Information Protection and Electronic Documents Act (PIPEDA) (Canada), the EU/UK GDPR, and the California Consumer Privacy Act (CCPA).`
     },
     {
-      title: "2. Information We Collect",
-      content: `We collect several types of information from and about users of our Service:
-
-**Personal Information:**
-• Name and email address
-• Company name and role
-• Profile information
-• Contact preferences
-
-**Usage Data:**
-• Tasks, projects, and content you create
-• Activity logs and interaction history
-• Device and browser information
-• IP address and location data
-
-**Technical Data:**
-• Cookies and similar tracking technologies
-• Log files and analytics data
-• Error reports and performance data`
+      title: "2. Scope of this Policy",
+      content: `This Policy applies to all data collected through the Service. It does not apply to third-party services that interoperate with TIALZ.COM, which are governed by their own respective privacy policies.`
     },
     {
-      title: "3. How We Collect Information",
-      content: `We collect information through various methods:
+      title: "3. Definitions",
+      content: `To ensure consistency with our Terms of Use, the following terms are defined as follows:
 
-**Directly from You:**
-• When you create an account
-• When you use the Service and create content
-• When you contact our support team
-• When you participate in surveys or feedback
+"Artificial Intelligence" or "AI": means any technology, including but not limited to machine learning, deep learning, large language models (LLMs), neural networks, and generative models, used to perform tasks that would otherwise require human intelligence.
 
-**Automatically:**
-• Through cookies and tracking technologies
-• Through your use of the Service
-• Through analytics tools and services`
+"AI Features": means any features, tools, or functionalities within the Service that utilize AI to process Customer Data or generate insights, recommendations, and content.
+
+"AI Outputs": means the results, text, data, summaries, or other content generated by the AI Features in response to prompts, inputs, or User-Generated Content.
+
+"Derived Data": means data generated from the processing, analysis, or aggregation of Customer Data, metadata, usage statistics, or other interactions with the Service, which does not directly identify any individual or entity.
+
+"Personal Data": Any information relating to an identified or identifiable natural person.
+
+"User-Generated Content" or "UGC": means any content, tasks, projects, notes, files, messages, or data created, uploaded, or submitted by you or your Authorized Users to the Service.`
     },
     {
-      title: "4. How We Use Your Information",
-      content: `We use the information we collect to:
+      title: "4. Categories of Data We Collect",
+      content: `4.1 Information You Provide Directly:
+Account Information: Name, email, password, and billing details.
+User-Generated Content (UGC): Tasks, projects, and attachments.
+Communications: Support requests and feedback.
+⚠️ Important: Uploading sensitive data (including but not limited to medical, financial, and biometric) is strictly prohibited. We do not monitor uploads and accept no responsibility for misuse of such data.
 
-• Provide, maintain, and improve the Service
-• Create and manage your account
-• Process your transactions and subscriptions
-• Send you administrative information and updates
-• Respond to your comments, questions, and support requests
-• Send you marketing communications (with your consent)
-• Monitor and analyze usage and trends
-• Detect, prevent, and address technical issues and security threats
-• Comply with legal obligations
-• Enforce our Terms of Service`
+4.2 Information Collected Automatically:
+Device & Usage Data: IP addresses, browser types, log files, and interaction metrics with AI models.
+Cookies: We use session and analytics cookies to maintain security and improve performance.
+
+4.3 AI Interaction Data: We collect prompts, inputs, and the resulting AI Outputs to refine algorithms and generate Derived Data.`
     },
     {
-      title: "5. Data Sharing and Disclosure",
-      content: `We may share your information in the following circumstances:
-
-**With Your Consent:**
-We may share your information when you give us explicit permission to do so.
-
-**Service Providers:**
-We may share your information with third-party service providers who perform services on our behalf, such as:
-• Cloud hosting providers
-• Analytics services
-• Email delivery services
-• Payment processors
-
-**Business Transfers:**
-If we are involved in a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction.
-
-**Legal Requirements:**
-We may disclose your information if required to do so by law or in response to valid requests by public authorities (e.g., court orders or subpoenas).
-
-**Protection of Rights:**
-We may disclose your information when we believe it is necessary to protect our rights, your safety, or the safety of others.
-
-**Team Members:**
-If you are part of a company account, your information may be visible to other members of your organization according to the access permissions set by your administrators.`
+      title: "5. Sensitive Data Policy",
+      content: `The Service is not designed to process sensitive personal data. You are prohibited from sharing such data (e.g., health info, political opinions, or genetic data). We disclaim all liability for exposure or misuse of such information.`
     },
     {
-      title: "6. Data Retention",
-      content: `We will retain your personal information for as long as necessary to fulfill the purposes outlined in this Privacy Policy, unless a longer retention period is required or permitted by law.
+      title: "6. Legal Bases for Processing",
+      content: `We process data based on the following frameworks:
 
-When you delete your account, we will delete or anonymize your personal information within 90 days, except where we are required to retain it for legal or regulatory purposes.
+6.1 Performance of Contract: To provide, maintain, and support the Service (hosting, payments, technical support).
 
-Archived tasks and projects may be retained according to your organization's retention settings, typically for 12 months after archival.`
+6.2 Legitimate Business Interests: For system integrity, fraud prevention, and Research and Development (R&D) (utilizing de-identified data to train models and develop new features).
+
+6.3 Compliance and Compelled Disclosure: To comply with laws (e.g., responding to subpoenas in Canada/US), protect assets, or during corporate transactions.
+
+6.4 Consent: We may seek explicit consent for specific activities like optional marketing.`
     },
     {
-      title: "7. Data Security",
-      content: `We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. These measures include:
+      title: "7. How We Use Data",
+      content: `7.1 Service Operations and AI Development: To provide core functionality, refine machine learning models, and improve security.
 
-• Encryption of data in transit and at rest
-• Regular security assessments and penetration testing
-• Access controls and authentication mechanisms
-• Employee training on data protection
-• Incident response procedures
+7.2 Communications: To send administrative messages (critical) and engagement content (optional).
 
-However, no method of transmission over the Internet or electronic storage is 100% secure. While we strive to protect your personal information, we cannot guarantee its absolute security.`
+7.3 User Choice: You may opt out of marketing emails, but not administrative messages or data processing required for security and AI development.`
     },
     {
-      title: "8. Your Rights and Choices",
-      content: `Depending on your location, you may have the following rights:
+      title: "8. AI, Machine Learning, and Derived Data",
+      content: `8.1 AI Processing and Model Training:
+License for Training: By providing UGC, you grant the Company a perpetual, royalty-free license to use such data to train, tune, and improve our proprietary AI models.
+De-identification: We take commercially reasonable steps to de-identify or aggregate UGC before using it for training so it is no longer "Personal Data".
+Third-Party Infrastructure: We may use third-party AI providers (e.g., LLM providers) under strict contractual safeguards.
 
-**Access and Portability:**
-You can request a copy of your personal information in a structured, commonly used format.
+8.2 Exclusive Ownership of Derived Data: All Derived Data and resulting trained AI models are the exclusive property of TIALZ.COM Inc. We reserve the right to use and commercialize Derived Data indefinitely.
 
-**Correction:**
-You can update or correct your personal information through your account settings or by contacting us.
+8.3 No Right to AI Models or Outputs: You have no ownership rights to the AI models. AI Outputs may be similar across users and may be inaccurate; you are responsible for verifying them.
 
-**Deletion:**
-You can request deletion of your personal information, subject to certain legal exceptions.
-
-**Objection and Restriction:**
-You can object to or request restriction of certain processing of your personal information.
-
-**Withdraw Consent:**
-Where we rely on your consent, you can withdraw it at any time.
-
-**Marketing Communications:**
-You can opt out of receiving marketing emails by following the unsubscribe instructions in those emails.
-
-To exercise these rights, please contact us at privacy@tialz.com.`
+8.4 Restrictions on AI Exploitation: You are prohibited from using AI Outputs to train competing models, reverse-engineering the AI, or scraping data.`
     },
     {
-      title: "9. Cookies and Tracking Technologies",
-      content: `We use cookies and similar tracking technologies to collect and track information about your use of the Service. Cookies are small data files stored on your device.
+      title: "9. Sharing and Disclosure of Information",
+      content: `9.1 No Sale of Personal Data: We do not sell your Personal Data to data brokers.
 
-**Types of Cookies We Use:**
+9.2 Service Providers (Subprocessors): We share data with trusted vendors for infrastructure, AI processing, and operations. We are not liable for their independent acts except as required by law.
 
-**Essential Cookies:**
-Required for the Service to function properly (e.g., authentication, security)
+9.3 Corporate Transactions: Data may be transferred to our parent company, Distinova Technologies Inc., or a successor in the event of a merger/acquisition.
 
-**Analytics Cookies:**
-Help us understand how you use the Service to improve performance
+9.4 Legal Compliance: We may disclose data to comply with valid legal requests or protect rights and safety.
 
-**Preference Cookies:**
-Remember your settings and preferences
-
-You can control cookie settings through your browser, but disabling certain cookies may affect the functionality of the Service.`
+9.5 Aggregated Data: We may share Derived Data (which is not Personal Data) with third parties for any purpose.`
     },
     {
-      title: "10. Third-Party Services",
-      content: `Our Service may contain links to third-party websites, plugins, or services that are not operated by us. We are not responsible for the privacy practices of these third parties. We encourage you to review the privacy policies of any third-party services you access through our Service.
-
-We may use third-party services such as:
-• Google Analytics for usage analytics
-• Stripe for payment processing
-• AWS for cloud hosting
-• SendGrid for email delivery
-
-These services have their own privacy policies governing how they collect and use information.`
+      title: "10. Data Retention and Deletion",
+      content: `We retain data as necessary for the Service. You may request account deletion via support@tialz.com. Exceptions: Derived Data and anonymized analytics will not be deleted.`
     },
     {
-      title: "11. Children's Privacy",
-      content: `Our Service is not intended for children under the age of 16. We do not knowingly collect personal information from children under 16. If you are a parent or guardian and you believe your child has provided us with personal information, please contact us immediately, and we will take steps to delete such information.`
+      title: "11. Your Privacy Rights",
+      content: `Depending on your jurisdiction (e.g., Ontario/Canada, US), you may have rights to access, correct, delete, or port your Personal Data. Contact support@tialz.com to exercise these rights.`
     },
     {
       title: "12. International Data Transfers",
-      content: `Your information may be transferred to and maintained on servers located outside of your state, province, country, or other governmental jurisdiction where data protection laws may differ from those of your jurisdiction.
-
-If you are located outside [Your Country] and choose to provide information to us, please note that we transfer the data to [Your Country] and process it there. By using the Service, you consent to this transfer and processing.`
+      content: `You consent to the transfer of your data to jurisdictions (including the United States) with different data protection laws.`
     },
     {
-      title: "13. California Privacy Rights",
-      content: `If you are a California resident, you have specific rights under the California Consumer Privacy Act (CCPA):
-
-• Right to know what personal information is collected
-• Right to know whether personal information is sold or disclosed
-• Right to say no to the sale of personal information
-• Right to access your personal information
-• Right to request deletion of personal information
-• Right to equal service and price
-
-We do not sell your personal information to third parties.
-
-To exercise your CCPA rights, please contact us at privacy@tialz.com.`
+      title: "13. Security Measures",
+      content: `We use encryption and access controls, but we cannot guarantee absolute security.`
     },
     {
-      title: "14. European Privacy Rights (GDPR)",
-      content: `If you are located in the European Economic Area (EEA), you have rights under the General Data Protection Regulation (GDPR):
-
-• Right of access to your personal data
-• Right to rectification of inaccurate data
-• Right to erasure ("right to be forgotten")
-• Right to restrict processing
-• Right to data portability
-• Right to object to processing
-• Rights related to automated decision-making
-
-Our legal basis for processing your personal data includes:
-• Contract performance (to provide the Service)
-• Legitimate interests (to improve and secure the Service)
-• Legal compliance
-• Your consent (for marketing communications)
-
-To exercise your GDPR rights or if you have questions, please contact our Data Protection Officer at dpo@tialz.com.`
+      title: "14. Cookies",
+      content: `We use essential and analytics cookies. We do not use cookies for cross-site tracking.`
     },
     {
-      title: "15. Changes to This Privacy Policy",
-      content: `We may update this Privacy Policy from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons. We will notify you of any material changes by:
-
-• Posting the new Privacy Policy on this page
-• Updating the "Last Updated" date
-• Sending you an email notification (for material changes)
-
-We encourage you to review this Privacy Policy periodically to stay informed about how we are protecting your information.`
+      title: "15. Children's Data",
+      content: `The Service is not intended for children under 13.`
     },
     {
-      title: "16. Contact Us",
-      content: `If you have any questions, concerns, or requests regarding this Privacy Policy or our privacy practices, please contact us at:
-
-**Email:** privacy@tialz.com
-**Website:** www.tialz.com
-**Mail:** [Your Physical Address]
-
-**Data Protection Officer:** dpo@tialz.com
-
-We will respond to your inquiry within 30 days.`
+      title: "16. Amendments",
+      content: `We reserve the right to update this Policy. Material changes will be notified. Continued use constitutes acceptance.`
+    },
+    {
+      title: "17. Contact Us",
+      content: `For privacy questions:
+Privacy: support@tialz.com
+Legal: legal@tialz.com`
     }
   ]
 };

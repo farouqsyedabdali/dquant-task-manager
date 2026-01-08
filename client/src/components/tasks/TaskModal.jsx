@@ -191,7 +191,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       if (lastManualTaskIdRef.current !== task.id) {
         console.log('useEffect: Updating viewedTask from task prop', task.id, task.title);
         setViewedTask(task);
-        lastManualTaskIdRef.current = null; // Reset the ref
+        // Reset the ref only after we've updated from an external prop change
+        // This allows the next prop change to be processed normally
+        lastManualTaskIdRef.current = null;
         if (isOpen) {
           if (!isPersonalAccount) {
             fetchUsers();
@@ -201,10 +203,21 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         }
       } else {
         console.log('useEffect: Task was manually set, skipping update', task.id);
-        lastManualTaskIdRef.current = null; // Reset after skipping
+        // Don't reset the ref here - keep it set so subsequent prop changes from the same
+        // manual navigation are also skipped. The ref will be reset when:
+        // 1. The modal closes (handled in useEffect below)
+        // 2. A new manual navigation happens (handleTaskClick sets it to new ID)
+        // 3. An external prop change happens (the if branch above resets it)
       }
     }
   }, [isOpen, task, fetchCoAssignees, isPersonalAccount]);
+
+  // Reset the ref when modal closes to allow fresh prop updates on next open
+  useEffect(() => {
+    if (!isOpen) {
+      lastManualTaskIdRef.current = null;
+    }
+  }, [isOpen]);
 
   const handleAddCoAssignee = async (userId) => {
     if (!userId || !viewedTask?.id) return;
@@ -269,7 +282,13 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   }, [extensionUpdateData]);
 
   // Click handler for parent/subtask
-  const handleTaskClick = async (taskId) => {
+  const handleTaskClick = async (taskId, event) => {
+    // Prevent any default behavior and stop propagation
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     if (!taskId) {
       console.log('handleTaskClick: No taskId provided');
       return;
@@ -717,11 +736,11 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }} onClick={onClose}>
       <div
         className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto scrollbar-thin transition-colors duration-200"
+        onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)',
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header - Title and Action Buttons */}
         <div className="mb-6">
@@ -1821,7 +1840,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleTaskClick(viewedTask.parentTask.id);
+                              handleTaskClick(viewedTask.parentTask.id, e);
                             }}
                             title="Open parent task"
                           >
@@ -1889,7 +1908,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  handleTaskClick(subtask.id);
+                                  handleTaskClick(subtask.id, e);
                                 }}
                                 title="Open subtask"
                               >
