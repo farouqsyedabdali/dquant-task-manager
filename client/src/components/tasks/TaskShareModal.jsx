@@ -153,7 +153,15 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
       setPermissionLevel('VIEWER');
     } catch (error) {
       console.error('Error sharing task:', error);
-      setError(error.response?.data?.error || 'Failed to share task');
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to share task';
+      console.error('Error details:', {
+        status: error.response?.status,
+        error: errorMessage,
+        taskId: task.id,
+        selectedRecipient,
+        recipientEmail
+      });
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

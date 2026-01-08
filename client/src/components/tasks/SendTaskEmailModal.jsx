@@ -35,10 +35,14 @@ const SendTaskEmailModal = ({ isOpen, onClose, task }) => {
       }
     } catch (err) {
       console.error('Error sending task invitation:', err);
-      setError(
-        err.response?.data?.error || 
-        'Failed to send invitation. Please try again.'
-      );
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to send invitation. Please try again.';
+      console.error('Error details:', {
+        status: err.response?.status,
+        error: errorMessage,
+        taskId: task.id,
+        recipientEmail
+      });
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

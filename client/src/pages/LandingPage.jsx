@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import ForgotPasswordModal from '../components/modals/ForgotPasswordModal';
+import LegalDocumentModal from '../components/legal/LegalDocumentModal';
+import tialzLogo from '../assets/Cover (1)-Photoroom.png';
 
 // Use VITE_API_URL environment variable, or detect environment
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
@@ -23,6 +25,7 @@ const LandingPage = () => {
   });
   const [loginErrors, setLoginErrors] = useState({});
   const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -249,27 +252,46 @@ const LandingPage = () => {
           0%, 100% { transform: translateY(0); opacity: 1; }
           50% { transform: translateY(-5px); opacity: 0.8; }
         }
+        
+        .fixed-logo {
+          position: absolute !important;
+          top: 1rem !important;
+          left: 1rem !important;
+          z-index: 9999 !important;
+          transform: none !important;
+        }
       `}</style>
       <div className="min-h-screen bg-gradient-to-br from-[#0a0a1f] via-[#15152b] to-[#1f1f35] text-white">
-      {/* Fixed Company Logo in Top Left */}
-      <div className="fixed top-4 left-4 z-50">
-        <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">CN</span>
-              </div>
-              <span className="text-white font-bold text-xl">Tialz</span>
+      {/* Company Logo in Top Left */}
+      <div 
+        className="fixed-logo absolute top-4 left-4 z-50" 
+        style={{ 
+          position: 'absolute',
+          top: '1rem',
+          left: '1rem',
+          zIndex: 9999,
+          pointerEvents: 'auto'
+        }}
+      >
+        <div className="flex items-center">
+          <img 
+            src={tialzLogo}
+            alt="TIALZ Logo"
+            className="h-20 w-auto object-contain"
+            style={{ maxHeight: '80px' }}
+          />
         </div>
       </div>
 
       {/* Fixed Launch App Button in Top Right */}
-      <div className="fixed top-4 right-4 z-50">
+      {/* <div className="fixed top-4 right-4 z-50">
         <button
           onClick={handleOpenInBrowser}
           className="bg-[#5865f2] hover:bg-[#4752c4] text-white px-4 py-2 rounded-lg font-semibold text-sm md:text-base"
         >
           Launch App
         </button>
-          </div>
+          </div> */}
 
 
       {/* Hero Section */}
@@ -455,16 +477,77 @@ const LandingPage = () => {
               </div>
             </div>
           </div>
-          
-          {/* Centered Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={handleOpenInBrowser}
-              className="bg-[#5865f2] hover:bg-[#4752c4] text-white px-8 py-3 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-colors"
-            >
-              <span>🚀</span>
-              Get Started Free
-            </button>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section className="py-8 px-4 sm:px-6 lg:px-8 border-t border-white/10">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            {/* Left Column - Contact Us Title */}
+            <div className="flex items-center justify-center md:justify-start md:self-center">
+              <h2 className="hero-title text-white tracking-tight">
+                Contact Us
+              </h2>
+            </div>
+
+            {/* Middle Column - Company Information */}
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold text-white mb-2">Company Information</h3>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-white/60 mb-0.5">Legal Company Name</p>
+                  <p className="text-white font-medium text-sm">TIALZ.COM INC.</p>
+                </div>
+                <div>
+                  <p className="text-xs text-white/60 mb-0.5">Business Address</p>
+                  <p className="text-white font-medium text-sm">7322 Rosehurst Dr</p>
+                </div>
+                <div>
+                  <p className="text-xs text-white/60 mb-0.5">Phone Number</p>
+                  <a
+                    href="tel:4168718834"
+                    className="text-[#5865f2] hover:text-[#4752c4] font-medium text-sm transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    (416) 871-8834
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Get in Touch */}
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold text-white mb-2">Get in Touch</h3>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-white/60 mb-0.5">Email Support</p>
+                  <a
+                    href="mailto:support@tialz.com"
+                    className="text-[#5865f2] hover:text-[#4752c4] font-medium text-sm transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    support@tialz.com
+                  </a>
+                </div>
+                <div>
+                  <p className="text-xs text-white/60 mb-0.5">Privacy Policy</p>
+                  <button
+                    onClick={() => setIsPrivacyModalOpen(true)}
+                    className="text-[#5865f2] hover:text-[#4752c4] font-medium text-sm transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    View Privacy Policy
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -473,6 +556,13 @@ const LandingPage = () => {
       <ForgotPasswordModal
         isOpen={isForgotPasswordModalOpen}
         onClose={() => setIsForgotPasswordModalOpen(false)}
+      />
+
+      {/* Privacy Policy Modal */}
+      <LegalDocumentModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+        documentType="privacy"
       />
     </div>
     </>

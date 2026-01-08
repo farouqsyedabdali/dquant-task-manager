@@ -223,12 +223,46 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const handleSendTask = async (taskId) => {
     try {
       setSendingTaskId(taskId);
+      
+      // Find the task in the project to validate before sending
+      const taskToSend = project?.tasks?.find(t => t.id === taskId);
+      if (taskToSend) {
+        // Frontend validation
+        if (!taskToSend.assigneeId && !taskToSend.externalContactId) {
+          setError('Task must have an assignee before it can be sent. Please assign the task to someone first.');
+          setSendingTaskId(null);
+          return;
+        }
+        
+        if (!taskToSend.dueDate) {
+          setError('Task must have a due date before it can be sent. Please set a due date first.');
+          setSendingTaskId(null);
+          return;
+        }
+        
+        const dueDateObj = new Date(taskToSend.dueDate);
+        const now = new Date();
+        if (dueDateObj <= now) {
+          setError('Task due date must be in the future before it can be sent. Please update the due date.');
+          setSendingTaskId(null);
+          return;
+        }
+      }
+      
       await projectsAPI.sendTask(projectId, taskId);
       await fetchProject();
       setSuccessMessage('Task sent successfully!');
     } catch (err) {
-      console.error('Error sending task:', err);
-      setError(err.response?.data?.error || 'Failed to send task');
+      console.error(`Error sending task ${taskId}:`, err);
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to send task';
+      console.error('Error details:', {
+        status: err.response?.status,
+        error: errorMessage,
+        taskId,
+        projectId,
+        responseData: err.response?.data
+      });
+      setError(errorMessage);
     } finally {
       setSendingTaskId(null);
     }
@@ -259,10 +293,39 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       // Send only draft tasks from selection
       for (const task of draftTasks) {
         try {
+          // Frontend validation before sending
+          if (!task.assigneeId && !task.externalContactId) {
+            console.warn(`Task ${task.id} cannot be sent: missing assignee`);
+            errorCount++;
+            continue;
+          }
+          
+          if (!task.dueDate) {
+            console.warn(`Task ${task.id} cannot be sent: missing due date`);
+            errorCount++;
+            continue;
+          }
+          
+          const dueDateObj = new Date(task.dueDate);
+          const now = new Date();
+          if (dueDateObj <= now) {
+            console.warn(`Task ${task.id} cannot be sent: due date is in the past`);
+            errorCount++;
+            continue;
+          }
+          
           await projectsAPI.sendTask(projectId, task.id);
           successCount++;
         } catch (err) {
           console.error(`Error sending task ${task.id}:`, err);
+          const errorMessage = err.response?.data?.error || err.message || 'Failed to send task';
+          console.error('Error details:', {
+            status: err.response?.status,
+            error: errorMessage,
+            taskId: task.id,
+            projectId,
+            responseData: err.response?.data
+          });
           errorCount++;
         }
       }

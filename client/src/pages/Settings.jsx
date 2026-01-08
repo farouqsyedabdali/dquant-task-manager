@@ -382,6 +382,27 @@ const Settings = () => {
                     >
                       {isPersonalAccount ? 'Account Management' : 'Company Management'}
                     </h2>
+                    <div className="space-y-4">
+                      <div>
+                        <p 
+                          className="text-sm mb-4"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          {isPersonalAccount 
+                            ? 'Permanently delete your account and all associated data.'
+                            : 'Permanently delete your company and all associated data. This action cannot be undone.'
+                          }
+                        </p>
+                        <IconButton
+                          onClick={() => setShowDeleteModal(true)}
+                          icon={<FaTrash />}
+                          label={isPersonalAccount ? 'Delete Account' : 'Delete Company'}
+                          variant="danger"
+                          size="sm"
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
