@@ -10,6 +10,7 @@ import SearchableDropdown from '../common/SearchableDropdown';
 import AddContactModal from '../common/AddContactModal';
 import IconButton from '../common/IconButton';
 import DatePicker from '../common/DatePicker';
+import AIModal from './AIModal';
 import { FaTimes, FaPlus, FaSave } from 'react-icons/fa';
 
 const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
@@ -27,6 +28,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
   const { createTask, isLoading } = useTaskStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
@@ -657,22 +659,30 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
            )}
 
            {/* Submit Buttons */}
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-between items-center pt-4">
             <IconButton
-              icon={<FaTimes />}
-              label="Cancel"
-              variant="secondary"
-              onClick={handleClose}
-              disabled={isLoading}
-            />
-            <IconButton
-              icon={<FaPlus />}
-              label={isLoading ? 'Creating...' : 'Create Task'}
+              label="AI Help"
               variant="primary"
-              type="submit"
+              onClick={() => setIsAIModalOpen(true)}
               disabled={isLoading}
-              loading={isLoading}
             />
+            <div className="flex space-x-3">
+              <IconButton
+                icon={<FaTimes />}
+                label="Cancel"
+                variant="secondary"
+                onClick={handleClose}
+                disabled={isLoading}
+              />
+              <IconButton
+                icon={<FaPlus />}
+                label={isLoading ? 'Creating...' : 'Create Task'}
+                variant="primary"
+                type="submit"
+                disabled={isLoading}
+                loading={isLoading}
+              />
+            </div>
           </div>
         </form>
       </div>
@@ -688,6 +698,11 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
         initialEmail={pendingEmail}
         message="This person is not in your contact list. Please add them as a contact."
       />
+
+      {/* AI Modal */}
+      {isAIModalOpen && (
+        <AIModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} />
+      )}
     </div>
   );
 };

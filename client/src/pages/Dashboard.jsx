@@ -1185,6 +1185,11 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           onUnarchive={handleUnarchiveTask}
           extensionUpdateData={extensionUpdateData}
           onTaskSwitch={extensionUpdateData?.taskFound ? handleTaskSwitch : null}
+          onTaskChange={(newTask) => {
+            console.log('Dashboard: onTaskChange called with task', newTask.id, newTask.title);
+            setCurrentTask(newTask);
+            console.log('Dashboard: currentTask updated to', newTask.id);
+          }}
         />
       )}
 

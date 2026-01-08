@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import useTaskStore from '../../stores/taskStore';
@@ -26,7 +26,7 @@ import {
   FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle, FaUsers, FaSitemap
 } from 'react-icons/fa';
 
-const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null, onTaskSwitch = null }) => {
+const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null, onTaskSwitch = null, onTaskChange = null }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -180,16 +180,28 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     }
   };
 
+  // Track the last task ID we manually set to prevent useEffect from overriding it
+  const lastManualTaskIdRef = useRef(null);
+
   // When the modal opens or the task prop changes, update viewedTask
+  // But only if we didn't just manually set it (to avoid resetting when switching tasks internally)
   useEffect(() => {
     if (isOpen && task) {
-      setViewedTask(task);
-      if (isOpen) {
-        if (!isPersonalAccount) {
-          fetchUsers();
+      // Only update if this isn't a task we just manually switched to
+      if (lastManualTaskIdRef.current !== task.id) {
+        console.log('useEffect: Updating viewedTask from task prop', task.id, task.title);
+        setViewedTask(task);
+        lastManualTaskIdRef.current = null; // Reset the ref
+        if (isOpen) {
+          if (!isPersonalAccount) {
+            fetchUsers();
+          }
+          fetchCoAssignees(task.id);
+          fetchContactsForTask(); // Fetch contacts for all account types
         }
-        fetchCoAssignees(task.id);
-        fetchContactsForTask(); // Fetch contacts for all account types
+      } else {
+        console.log('useEffect: Task was manually set, skipping update', task.id);
+        lastManualTaskIdRef.current = null; // Reset after skipping
       }
     }
   }, [isOpen, task, fetchCoAssignees, isPersonalAccount]);
@@ -258,13 +270,45 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   // Click handler for parent/subtask
   const handleTaskClick = async (taskId) => {
-    if (!taskId) return;
-    const result = await fetchTask(taskId);
-    if (result.success && result.data) {
-      setViewedTask(result.data);
-      setIsEditing(false);
-      setIsAddSubtaskOpen(false);
-      setIsDeleteModalOpen(false);
+    if (!taskId) {
+      console.log('handleTaskClick: No taskId provided');
+      return;
+    }
+    console.log('handleTaskClick: Starting to fetch task', taskId);
+    try {
+      const result = await fetchTask(taskId);
+      console.log('handleTaskClick: Fetch result', result);
+      if (result.success && result.data) {
+        const newTask = result.data;
+        console.log('handleTaskClick: Setting new task', newTask.id, newTask.title);
+        // Mark this as a manual task switch to prevent useEffect from overriding it
+        lastManualTaskIdRef.current = newTask.id;
+        setViewedTask(newTask);
+        setIsEditing(false);
+        setIsAddSubtaskOpen(false);
+        setIsDeleteModalOpen(false);
+        // Reset active tab to 'team' when switching tasks
+        setActiveTab('team');
+        // Fetch related data for the new task
+        if (!isPersonalAccount) {
+          fetchUsers();
+        }
+        fetchCoAssignees(newTask.id);
+        fetchContactsForTask();
+        // Notify parent component about task change
+        if (onTaskChange) {
+          console.log('handleTaskClick: Calling onTaskChange with task', newTask.id, newTask.title);
+          onTaskChange(newTask);
+        } else {
+          console.log('handleTaskClick: onTaskChange is not provided');
+        }
+      } else {
+        console.error('handleTaskClick: Fetch failed', result.error);
+        toast.error(result.error || 'Failed to load task');
+      }
+    } catch (error) {
+      console.error('handleTaskClick: Error loading task:', error);
+      toast.error('Failed to load task. Please try again.');
     }
   };
 
@@ -670,13 +714,14 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           animation: fadeIn 0.3s ease-out;
         }
       `}</style>
-      <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }}>
+      <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }} onClick={onClose}>
       <div
         className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto scrollbar-thin transition-colors duration-200"
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header - Title and Action Buttons */}
         <div className="mb-6">
@@ -1773,7 +1818,11 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             onMouseLeave={(e) => {
                               e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
                             }}
-                            onClick={() => handleTaskClick(viewedTask.parentTask.id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleTaskClick(viewedTask.parentTask.id);
+                            }}
                             title="Open parent task"
                           >
                             <div className="flex items-center gap-2">
@@ -1837,7 +1886,11 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                 onMouseLeave={(e) => {
                                   e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
                                 }}
-                                onClick={() => handleTaskClick(subtask.id)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleTaskClick(subtask.id);
+                                }}
                                 title="Open subtask"
                               >
                                 {/* Title */}

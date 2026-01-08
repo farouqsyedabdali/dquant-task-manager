@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { aiAPI } from '../../services/api';
-import { FaRobot, FaTimes, FaPaperPlane } from 'react-icons/fa';
+import { FaRobot, FaTimes, FaPlus, FaEdit, FaLayerGroup, FaProjectDiagram } from 'react-icons/fa';
 import useAuthStore from '../../context/authStore';
+import ProjectIdeaSelectionModal from '../projects/ProjectIdeaSelectionModal';
 
 const AIModal = ({ isOpen, onClose }) => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState(() => {
     // Load conversation from localStorage or start with welcome message
     const saved = localStorage.getItem('aiConversation');
@@ -18,13 +21,18 @@ const AIModal = ({ isOpen, onClose }) => {
     return [
       {
         role: 'assistant',
-        content: `Hi ${user?.name || 'there'}! I'm your AI assistant. I can help you with task management, create new tasks, analyze your workload, and more. How can I help you today?`
+        content: `Hi ${user?.name || 'there'}! Describe what you want to create or update, and I'll help you with it. Use the buttons below to get started!`
       }
     ];
   });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProjectIdeasModalOpen, setIsProjectIdeasModalOpen] = useState(false);
+  const [projectIdeas, setProjectIdeas] = useState([]);
+  const [isLoadingIdeas, setIsLoadingIdeas] = useState(false);
+  const [clipboardText, setClipboardText] = useState('');
   const messagesEndRef = useRef(null);
 
   // Save conversation to localStorage whenever it changes
@@ -40,32 +48,265 @@ const AIModal = ({ isOpen, onClose }) => {
     }
   }, [messages, isOpen]);
 
-  const handleSend = async (e) => {
-    e?.preventDefault();
-    if (!input.trim()) return;
-    
-    const userMessage = { role: 'user', content: input };
-    setMessages((msgs) => [...msgs, userMessage]);
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const res = await aiAPI.chat(input);
-      setMessages((msgs) => [...msgs, { role: 'assistant', content: res.data.response }]);
-    } catch (err) {
-      setError('AI service error');
-      // Remove the user message if AI failed
-      setMessages((msgs) => msgs.slice(0, -1));
+  const handleCreateTask = async () => {
+    if (!input.trim()) {
+      setError('Please describe what you want to create');
+      return;
     }
-    setInput('');
-    setLoading(false);
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const inputText = input.trim();
+
+      // Call AI to extract task data
+      const response = await aiAPI.extractTask(inputText);
+      
+      let taskData = null;
+      if (response.data.success && response.data.taskData) {
+        taskData = response.data.taskData;
+      } else {
+        taskData = {
+          title: inputText.substring(0, 50),
+          description: inputText.substring(0, 300),
+          priority: 'MEDIUM',
+          dueDate: null,
+          assignee: null
+        };
+      }
+      
+      // Store task data in localStorage
+      const popupData = {
+        type: 'create',
+        taskData: taskData,
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      // Navigate to dashboard with the storage key
+      setInput('');
+      navigate(`/dashboard?popupData=${storageKey}`);
+      onClose();
+    } catch (err) {
+      console.error('Create task error:', err);
+      setError(err.message || 'Failed to create task');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUpdateTask = async () => {
+    if (!input.trim()) {
+      setError('Please describe the update you want to make');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const inputText = input.trim();
+
+      // Call AI to identify task update
+      const response = await aiAPI.identifyTaskUpdate(inputText);
+      
+      let updateData = null;
+      if (response.data.success && response.data.updateData) {
+        updateData = response.data.updateData;
+      } else {
+        updateData = {
+          taskFound: false,
+          taskId: null,
+          confidence: 0,
+          updateType: 'manual_update',
+          updateContent: inputText.substring(0, 500),
+          suggestedActions: ['manual_task_selection'],
+          reasoning: 'AI could not identify specific task - manual selection required',
+          originalText: inputText
+        };
+      }
+      
+      // Store update data in localStorage
+      const popupData = {
+        type: 'update',
+        updateData: updateData,
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      // Navigate to dashboard with the storage key
+      setInput('');
+      navigate(`/dashboard?popupData=${storageKey}`);
+      onClose();
+    } catch (err) {
+      console.error('Update task error:', err);
+      setError(err.message || 'Failed to update task');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCreateProject = async () => {
+    if (!input.trim()) {
+      setError('Please describe the project or event you want to create');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const inputText = input.trim();
+      setClipboardText(inputText);
+      setIsLoadingIdeas(true);
+      setIsProjectIdeasModalOpen(true);
+      setIsProcessing(false);
+
+      // Call AI to suggest project ideas
+      const response = await aiAPI.suggestProjectIdeas(inputText);
+      
+      if (response.data.success && response.data.ideas) {
+        setProjectIdeas(response.data.ideas);
+      } else {
+        throw new Error('Failed to get project ideas');
+      }
+    } catch (err) {
+      console.error('Create project error:', err);
+      setError(err.message || 'Failed to get project ideas');
+      setIsProjectIdeasModalOpen(false);
+      setIsProcessing(false);
+    } finally {
+      setIsLoadingIdeas(false);
+    }
+  };
+
+  const handleProjectIdeaSelect = async (selectedIdea) => {
+    setIsProjectIdeasModalOpen(false);
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      // Call AI to create project from idea
+      const response = await aiAPI.createProjectFromIdea(
+        clipboardText,
+        selectedIdea,
+        null, // projectName - let AI generate it
+        null  // dueDate - let AI extract it
+      );
+
+      if (response.data.success && response.data.project) {
+        const project = response.data.project;
+        
+        // Navigate to projects page with project ID and success message
+        setInput('');
+        navigate('/projects', {
+          state: {
+            openProjectId: project.id,
+            successMessage: `Project "${project.name}" created successfully with ${project.tasks?.length || 0} tasks!`
+          }
+        });
+        onClose();
+      } else {
+        throw new Error('Failed to create project');
+      }
+    } catch (err) {
+      console.error('Create project from idea error:', err);
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to create project';
+      setError(errorMessage);
+      setIsProjectIdeasModalOpen(true); // Reopen modal so user can try again
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleAddSubtask = async () => {
+    if (!input.trim()) {
+      setError('Please describe the subtask you want to create');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const inputText = input.trim();
+
+      // 1. Find the relevant parent task
+      const identifyRes = await aiAPI.identifyTaskUpdate(inputText);
+      let updateData = null;
+      let subtaskData = null;
+      
+      if (identifyRes.data.success && identifyRes.data.updateData) {
+        updateData = identifyRes.data.updateData;
+      } else {
+        updateData = {
+          taskFound: false,
+          taskId: null,
+          confidence: 0,
+          updateType: 'manual_subtask',
+          updateContent: 'Manual subtask creation',
+          suggestedActions: ['manual_parent_selection'],
+          reasoning: 'AI could not identify parent task - manual selection required',
+          originalText: inputText
+        };
+      }
+      
+      // 2. Use AI to interpret the subtask details
+      try {
+        const extractRes = await aiAPI.extractTask(inputText);
+        if (extractRes.data.success && extractRes.data.taskData) {
+          subtaskData = extractRes.data.taskData;
+        } else {
+          throw new Error('AI extraction failed');
+        }
+      } catch (extractErr) {
+        subtaskData = {
+          title: inputText.substring(0, 50),
+          description: inputText.substring(0, 300),
+          priority: 'MEDIUM',
+          dueDate: null,
+          assignee: null
+        };
+      }
+
+      // 3. Store subtask data in localStorage
+      const popupData = {
+        type: 'addSubtask',
+        updateData: {
+          ...updateData,
+          subtaskData
+        },
+        originalText: inputText,
+        timestamp: Date.now()
+      };
+      
+      const storageKey = `taskPopup_${Date.now()}`;
+      localStorage.setItem(storageKey, JSON.stringify(popupData));
+      
+      // Navigate to dashboard with the storage key
+      setInput('');
+      navigate(`/dashboard?popupData=${storageKey}`);
+      onClose();
+    } catch (err) {
+      console.error('Add subtask error:', err);
+      setError(err.message || 'Failed to add subtask');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const clearConversation = () => {
     setMessages([
       {
         role: 'assistant',
-        content: `Hi ${user?.name || 'there'}! I'm your AI assistant. I can help you with task management, create new tasks, analyze your workload, and more. How can I help you today?`
+        content: `Hi ${user?.name || 'there'}! Describe what you want to create or update, and I'll help you with it. Use the buttons below to get started!`
       }
     ]);
     localStorage.removeItem('aiConversation');
@@ -164,56 +405,178 @@ const AIModal = ({ isOpen, onClose }) => {
             </div>
           ))}
           <div ref={messagesEndRef} />
+          
+          {/* Input Box - Close to first message */}
+          <div className="mt-4">
+            <textarea
+              className="w-full resize-none rounded-lg px-3 py-3 focus:outline-none transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                borderColor: 'var(--color-border-default)',
+                border: '1px solid',
+                minHeight: 60,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-primary)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border-default)';
+              }}
+              rows={3}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="Describe what you want to create or update..."
+              disabled={isProcessing}
+              maxLength={500}
+            />
+            
+            {/* AI Action Buttons */}
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              {/* Create Task */}
+              <button
+                onClick={handleCreateTask}
+                disabled={isProcessing}
+                className="w-full px-4 py-3 text-left flex items-center space-x-3 rounded-lg transition-colors duration-200 border"
+                style={{ 
+                  color: 'var(--color-text-primary)',
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isProcessing) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                }}
+              >
+                <FaPlus className="w-4 h-4 text-green-500" />
+                <div>
+                  <div className="font-medium">Create Task</div>
+                  <div 
+                    className="text-xs transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    Create a new task
+                  </div>
+                </div>
+              </button>
+
+              {/* Update Task */}
+              <button
+                onClick={handleUpdateTask}
+                disabled={isProcessing}
+                className="w-full px-4 py-3 text-left flex items-center space-x-3 rounded-lg transition-colors duration-200 border"
+                style={{ 
+                  color: 'var(--color-text-primary)',
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isProcessing) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                }}
+              >
+                <FaEdit className="w-4 h-4 text-blue-500" />
+                <div>
+                  <div className="font-medium">Add Update</div>
+                  <div 
+                    className="text-xs transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    Add update to task
+                  </div>
+                </div>
+              </button>
+
+              {/* Add Subtask */}
+              <button
+                onClick={handleAddSubtask}
+                disabled={isProcessing}
+                className="w-full px-4 py-3 text-left flex items-center space-x-3 rounded-lg transition-colors duration-200 border"
+                style={{ 
+                  color: 'var(--color-text-primary)',
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isProcessing) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                }}
+              >
+                <FaLayerGroup className="w-4 h-4 text-purple-500" />
+                <div>
+                  <div className="font-medium">Add Subtask</div>
+                  <div 
+                    className="text-xs transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    Create a subtask
+                  </div>
+                </div>
+              </button>
+
+              {/* Create Project */}
+              <button
+                onClick={handleCreateProject}
+                disabled={isProcessing}
+                className="w-full px-4 py-3 text-left flex items-center space-x-3 rounded-lg transition-colors duration-200 border"
+                style={{ 
+                  color: 'var(--color-text-primary)',
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isProcessing) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                }}
+              >
+                <FaProjectDiagram className="w-4 h-4 text-orange-500" />
+                <div>
+                  <div className="font-medium">Create Project</div>
+                  <div 
+                    className="text-xs transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    Create project or event
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
         {/* Error */}
-        {error && <div className="text-red-400 text-sm px-6">{error}</div>}
-        {/* Input */}
-        <form 
-          className="flex items-center px-6 py-4 border-t transition-colors duration-200"
-          style={{
-            borderColor: 'var(--color-border-default)',
-            backgroundColor: 'var(--color-bg-secondary)',
-          }}
-          onSubmit={handleSend}
-        >
-          <textarea
-            className="flex-1 resize-none rounded-lg px-3 py-3 mr-2 focus:outline-none transition-colors duration-200"
-            style={{
-              backgroundColor: 'var(--color-bg-tertiary)',
-              color: 'var(--color-text-primary)',
-              borderColor: 'var(--color-border-default)',
-              border: '1px solid',
-              minHeight: 40,
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'var(--color-primary)';
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'var(--color-border-default)';
-            }}
-            rows={2}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder="Ask me anything..."
-            disabled={loading}
-            maxLength={500}
-          />
-          <button
-            type="submit"
-            className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0 flex items-center justify-center px-5 py-2"
-            disabled={loading || !input.trim()}
-            style={{ minHeight: 40 }}
-          >
-            {loading ? (
-              <span className="loading loading-spinner loading-xs"></span>
-            ) : (
-              <FaPaperPlane size={18} />
-            )}
-          </button>
-        </form>
+        {error && <div className="text-red-400 text-sm px-6 pb-4">{error}</div>}
           </div>
         </div>
       </div>
+
+      {/* Project Ideas Selection Modal */}
+      <ProjectIdeaSelectionModal
+        isOpen={isProjectIdeasModalOpen}
+        onClose={() => {
+          setIsProjectIdeasModalOpen(false);
+          setProjectIdeas([]);
+          setClipboardText('');
+        }}
+        ideas={projectIdeas}
+        onSelect={handleProjectIdeaSelect}
+        isLoading={isLoadingIdeas}
+      />
     </div>
   );
 };

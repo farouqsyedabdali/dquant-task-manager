@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { projectsAPI, templatesAPI } from '../../services/api';
 import { formatDateForInput } from '../../utils/dateUtils';
 import IconButton from '../common/IconButton';
+import AIModal from '../tasks/AIModal';
 import { FaArrowLeft, FaTimes, FaCheck } from 'react-icons/fa';
 
 const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
@@ -39,6 +40,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
     dueDate: ''
   });
   const [isTemplateInfoExpanded, setIsTemplateInfoExpanded] = useState(false);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
   const colorOptions = [
     '#6366f1', // Indigo
@@ -942,14 +944,22 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
 
             {/* Actions */}
             <div className="flex justify-between pt-4 border-t" style={{ borderColor: 'var(--color-border-default)' }}>
-              <IconButton
-                type="button"
-                onClick={() => setStep(1)}
-                icon={<FaArrowLeft />}
-                label="Back"
-                variant="ghost"
-                size="sm"
-              />
+              <div className="flex items-center space-x-3">
+                <IconButton
+                  type="button"
+                  onClick={() => setStep(1)}
+                  icon={<FaArrowLeft />}
+                  label="Back"
+                  variant="ghost"
+                  size="sm"
+                />
+                <IconButton
+                  label="AI Help"
+                  variant="primary"
+                  onClick={() => setIsAIModalOpen(true)}
+                  disabled={isLoading}
+                />
+              </div>
               <div className="space-x-2">
                 <IconButton
                   type="button"
@@ -973,6 +983,11 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
           </form>
         )}
       </div>
+
+      {/* AI Modal */}
+      {isAIModalOpen && (
+        <AIModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} />
+      )}
     </div>
   );
 };

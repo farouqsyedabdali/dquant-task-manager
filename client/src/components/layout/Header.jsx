@@ -4,7 +4,7 @@ import useAuthStore from '../../context/authStore';
 import CalendarIcon from '../icons/CalendarIcon';
 import QuickActionsDropdown from './QuickActionsDropdown';
 import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaUserFriends, FaProjectDiagram } from 'react-icons/fa';
-import tialzLogo from '../../assets/TIALZ BETA (No Background).png';
+import tialzLogo from '../../assets/Cover (1)-Photoroom.png';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

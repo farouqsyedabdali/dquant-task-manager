@@ -457,6 +457,11 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
           onDelete={onDelete}
           onArchive={onArchive}
           onUnarchive={onUnarchive}
+          onTaskChange={(newTask) => {
+            // Update the task prop when switching tasks within TaskCard's modal
+            // This is a no-op for TaskCard since it doesn't manage task state
+            // But it prevents the "onTaskChange is not provided" warning
+          }}
         />
       )}
 
