@@ -701,7 +701,11 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
       {/* AI Modal */}
       {isAIModalOpen && (
-        <AIModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} />
+        <AIModal 
+          isOpen={isAIModalOpen} 
+          onClose={() => setIsAIModalOpen(false)}
+          onAction={() => onClose()}
+        />
       )}
     </div>
   );

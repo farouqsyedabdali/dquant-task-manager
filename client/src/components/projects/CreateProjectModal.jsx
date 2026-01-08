@@ -317,13 +317,23 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                 : 'Configure your project details'}
             </p>
           </div>
-          <button 
-            onClick={handleClose} 
-            className="btn btn-ghost btn-sm btn-circle"
-            style={{ color: 'var(--color-text-tertiary)' }}
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-3">
+            {step === 1 && (
+              <IconButton
+                label="AI Help"
+                variant="primary"
+                size="sm"
+                onClick={() => setIsAIModalOpen(true)}
+              />
+            )}
+            <button 
+              onClick={handleClose} 
+              className="btn btn-ghost btn-sm btn-circle"
+              style={{ color: 'var(--color-text-tertiary)' }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Step 1: Template Selection */}
@@ -986,7 +996,11 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
 
       {/* AI Modal */}
       {isAIModalOpen && (
-        <AIModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} />
+        <AIModal 
+          isOpen={isAIModalOpen} 
+          onClose={() => setIsAIModalOpen(false)}
+          onAction={() => onClose()}
+        />
       )}
     </div>
   );

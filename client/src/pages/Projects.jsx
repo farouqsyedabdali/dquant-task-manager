@@ -38,15 +38,33 @@ const Projects = () => {
 
   // Handle navigation from TaskModal or QuickActions with project ID
   useEffect(() => {
-    if (location.state?.openProjectId && projects.length > 0) {
-      const projectToOpen = projects.find(p => p.id === location.state.openProjectId);
-      if (projectToOpen) {
-        handleOpenProject(projectToOpen);
-        // Clear the state so it doesn't reopen on subsequent renders
-        window.history.replaceState({}, document.title);
-      }
+    const openProjectId = location.state?.openProjectId;
+    if (openProjectId) {
+      const openProject = async () => {
+        // First, refresh the projects list to ensure we have the latest data
+        try {
+          const params = filterStatus !== 'ALL' ? { status: filterStatus } : {};
+          const response = await projectsAPI.getAll(params);
+          const updatedProjects = response.data;
+          setProjects(updatedProjects);
+          
+          // After fetching, find and open the project
+          const projectToOpen = updatedProjects.find(p => p.id === openProjectId);
+          if (projectToOpen) {
+            handleOpenProject(projectToOpen);
+            if (location.state?.successMessage) {
+              setSuccessMessage(location.state.successMessage);
+            }
+            // Clear the state so it doesn't reopen on subsequent renders
+            window.history.replaceState({}, document.title);
+          }
+        } catch (err) {
+          console.error('Error fetching projects for open:', err);
+        }
+      };
+      openProject();
     }
-  }, [location.state, projects]);
+  }, [location.state?.openProjectId, location.state?.timestamp, filterStatus]);
 
   const fetchProjects = async () => {
     try {

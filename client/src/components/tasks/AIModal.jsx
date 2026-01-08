@@ -1,19 +1,31 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { aiAPI } from '../../services/api';
 import { FaRobot, FaTimes, FaPlus, FaEdit, FaLayerGroup, FaProjectDiagram } from 'react-icons/fa';
 import useAuthStore from '../../context/authStore';
 import ProjectIdeaSelectionModal from '../projects/ProjectIdeaSelectionModal';
+import IconButton from '../common/IconButton';
 
-const AIModal = ({ isOpen, onClose }) => {
+const AIModal = ({ isOpen, onClose, onAction }) => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [messages, setMessages] = useState(() => {
     // Load conversation from localStorage or start with welcome message
     const saved = localStorage.getItem('aiConversation');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Check if it's the old message format and replace it
+        if (parsed.length > 0 && parsed[0].role === 'assistant') {
+          const oldMessage = parsed[0].content;
+          // If it's the old welcome message, replace with new one
+          if (oldMessage.includes("Hi") && oldMessage.includes("I'm your AI assistant")) {
+            parsed[0].content = `Describe what's on your mind and press a button below. I'll assist you with the rest.`;
+            return parsed;
+          }
+        }
+        return parsed;
       } catch (e) {
         console.error('Failed to parse saved conversation:', e);
       }
@@ -21,7 +33,7 @@ const AIModal = ({ isOpen, onClose }) => {
     return [
       {
         role: 'assistant',
-        content: `Hi ${user?.name || 'there'}! Describe what you want to create or update, and I'll help you with it. Use the buttons below to get started!`
+        content: `Describe what's on your mind and press a button below. I'll assist you with the rest.`
       }
     ];
   });
@@ -89,6 +101,7 @@ const AIModal = ({ isOpen, onClose }) => {
       
       // Navigate to dashboard with the storage key
       setInput('');
+      if (onAction) onAction();
       navigate(`/dashboard?popupData=${storageKey}`);
       onClose();
     } catch (err) {
@@ -143,6 +156,7 @@ const AIModal = ({ isOpen, onClose }) => {
       
       // Navigate to dashboard with the storage key
       setInput('');
+      if (onAction) onAction();
       navigate(`/dashboard?popupData=${storageKey}`);
       onClose();
     } catch (err) {
@@ -206,11 +220,17 @@ const AIModal = ({ isOpen, onClose }) => {
         
         // Navigate to projects page with project ID and success message
         setInput('');
+        if (onAction) onAction();
+        
+        // If already on projects page, use replace: false to ensure state update triggers
+        const isOnProjectsPage = location.pathname === '/projects';
         navigate('/projects', {
           state: {
             openProjectId: project.id,
-            successMessage: `Project "${project.name}" created successfully with ${project.tasks?.length || 0} tasks!`
-          }
+            successMessage: `Project "${project.name}" created successfully with ${project.tasks?.length || 0} tasks!`,
+            timestamp: Date.now() // Add timestamp to force state update
+          },
+          replace: false // Always use replace: false to ensure state is updated
         });
         onClose();
       } else {
@@ -292,6 +312,7 @@ const AIModal = ({ isOpen, onClose }) => {
       
       // Navigate to dashboard with the storage key
       setInput('');
+      if (onAction) onAction();
       navigate(`/dashboard?popupData=${storageKey}`);
       onClose();
     } catch (err) {
@@ -306,7 +327,7 @@ const AIModal = ({ isOpen, onClose }) => {
     setMessages([
       {
         role: 'assistant',
-        content: `Hi ${user?.name || 'there'}! Describe what you want to create or update, and I'll help you with it. Use the buttons below to get started!`
+        content: `Describe what's on your mind and press a button below. I'll assist you with the rest.`
       }
     ]);
     localStorage.removeItem('aiConversation');
@@ -321,10 +342,10 @@ const AIModal = ({ isOpen, onClose }) => {
 
       {/* Animated container */}
       <div className="absolute inset-0 flex items-end sm:items-center justify-center">
-        <div className="w-full h-[90vh] sm:h-[80vh] sm:max-w-3xl transform transition-all duration-300 ease-out animate-[aimodal-enter_300ms_ease-out]">
+        <div className="w-full h-[calc(70vh+12px)] sm:h-[calc(60vh+12px)] sm:max-w-3xl transform transition-all duration-300 ease-out animate-[aimodal-enter_300ms_ease-out]">
           <style>{`@keyframes aimodal-enter{0%{opacity:0;transform:translateY(24px) scale(0.98)}100%{opacity:1;transform:translateY(0) scale(1)}}`}</style>
           <div 
-            className="border rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-full transition-colors duration-200"
+            className="border rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-full transition-colors duration-200 overflow-hidden"
             style={{
               backgroundColor: 'var(--color-bg-secondary)',
               borderColor: 'var(--color-border-default)',
@@ -354,20 +375,6 @@ const AIModal = ({ isOpen, onClose }) => {
           </div>
           <div className="flex items-center space-x-2">
             <button 
-              onClick={clearConversation} 
-              className="text-sm transition-colors duration-200"
-              style={{ color: 'var(--color-text-tertiary)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--color-text-primary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--color-text-tertiary)';
-              }}
-              title="Clear conversation"
-            >
-              Clear
-            </button>
-            <button 
               onClick={onClose} 
               className="transition-colors duration-200"
               style={{ color: 'var(--color-text-tertiary)' }}
@@ -384,7 +391,7 @@ const AIModal = ({ isOpen, onClose }) => {
         </div>
         {/* Conversation */}
         <div 
-          className="flex-1 overflow-y-auto px-6 py-4 space-y-4 transition-colors duration-200" 
+          className="flex-1 overflow-y-auto px-6 py-3 space-y-4 transition-colors duration-200" 
           style={{ 
             minHeight: 300,
             backgroundColor: 'var(--color-bg-tertiary)',
@@ -407,7 +414,7 @@ const AIModal = ({ isOpen, onClose }) => {
           <div ref={messagesEndRef} />
           
           {/* Input Box - Close to first message */}
-          <div className="mt-4">
+          <div className="mt-4 mb-2">
             <textarea
               className="w-full resize-none rounded-lg px-3 py-3 focus:outline-none transition-colors duration-200"
               style={{
@@ -415,7 +422,7 @@ const AIModal = ({ isOpen, onClose }) => {
                 color: 'var(--color-text-primary)',
                 borderColor: 'var(--color-border-default)',
                 border: '1px solid',
-                minHeight: 60,
+                minHeight: 180,
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = 'var(--color-primary)';
@@ -423,7 +430,7 @@ const AIModal = ({ isOpen, onClose }) => {
               onBlur={(e) => {
                 e.currentTarget.style.borderColor = 'var(--color-border-default)';
               }}
-              rows={3}
+              rows={8}
               value={input}
               onChange={e => setInput(e.target.value)}
               placeholder="Describe what you want to create or update..."
@@ -431,136 +438,49 @@ const AIModal = ({ isOpen, onClose }) => {
               maxLength={500}
             />
             
-            {/* AI Action Buttons */}
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              {/* Create Task */}
-              <button
+            {/* AI Action Buttons - Single Line */}
+            <div className="flex flex-wrap gap-2 mt-3 justify-center">
+              <IconButton
+                icon={<FaPlus />}
+                label="Create Task"
+                variant="success"
+                size="sm"
                 onClick={handleCreateTask}
                 disabled={isProcessing}
-                className="w-full px-4 py-3 text-left flex items-center space-x-3 rounded-lg transition-colors duration-200 border"
-                style={{ 
-                  color: 'var(--color-text-primary)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  borderColor: 'var(--color-border-default)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isProcessing) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                }}
-              >
-                <FaPlus className="w-4 h-4 text-green-500" />
-                <div>
-                  <div className="font-medium">Create Task</div>
-                  <div 
-                    className="text-xs transition-colors duration-200"
-                    style={{ color: 'var(--color-text-tertiary)' }}
-                  >
-                    Create a new task
-                  </div>
-                </div>
-              </button>
-
-              {/* Update Task */}
-              <button
+                loading={isProcessing}
+              />
+              <IconButton
+                icon={<FaEdit />}
+                label="Add Update"
+                variant="primary"
+                size="sm"
                 onClick={handleUpdateTask}
                 disabled={isProcessing}
-                className="w-full px-4 py-3 text-left flex items-center space-x-3 rounded-lg transition-colors duration-200 border"
-                style={{ 
-                  color: 'var(--color-text-primary)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  borderColor: 'var(--color-border-default)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isProcessing) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                }}
-              >
-                <FaEdit className="w-4 h-4 text-blue-500" />
-                <div>
-                  <div className="font-medium">Add Update</div>
-                  <div 
-                    className="text-xs transition-colors duration-200"
-                    style={{ color: 'var(--color-text-tertiary)' }}
-                  >
-                    Add update to task
-                  </div>
-                </div>
-              </button>
-
-              {/* Add Subtask */}
-              <button
+                loading={isProcessing}
+              />
+              <IconButton
+                icon={<FaLayerGroup />}
+                label="Add Subtask"
+                variant="warning"
+                size="sm"
                 onClick={handleAddSubtask}
                 disabled={isProcessing}
-                className="w-full px-4 py-3 text-left flex items-center space-x-3 rounded-lg transition-colors duration-200 border"
-                style={{ 
-                  color: 'var(--color-text-primary)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  borderColor: 'var(--color-border-default)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isProcessing) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                }}
-              >
-                <FaLayerGroup className="w-4 h-4 text-purple-500" />
-                <div>
-                  <div className="font-medium">Add Subtask</div>
-                  <div 
-                    className="text-xs transition-colors duration-200"
-                    style={{ color: 'var(--color-text-tertiary)' }}
-                  >
-                    Create a subtask
-                  </div>
-                </div>
-              </button>
-
-              {/* Create Project */}
-              <button
+                loading={isProcessing}
+              />
+              <IconButton
+                icon={<FaProjectDiagram />}
+                label="Create Project"
+                variant="danger"
+                size="sm"
                 onClick={handleCreateProject}
                 disabled={isProcessing}
-                className="w-full px-4 py-3 text-left flex items-center space-x-3 rounded-lg transition-colors duration-200 border"
-                style={{ 
-                  color: 'var(--color-text-primary)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  borderColor: 'var(--color-border-default)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isProcessing) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                }}
-              >
-                <FaProjectDiagram className="w-4 h-4 text-orange-500" />
-                <div>
-                  <div className="font-medium">Create Project</div>
-                  <div 
-                    className="text-xs transition-colors duration-200"
-                    style={{ color: 'var(--color-text-tertiary)' }}
-                  >
-                    Create project or event
-                  </div>
-                </div>
-              </button>
+                loading={isProcessing}
+              />
             </div>
           </div>
         </div>
         {/* Error */}
-        {error && <div className="text-red-400 text-sm px-6 pb-4">{error}</div>}
+        {error && <div className="text-red-400 text-sm px-6 pb-2">{error}</div>}
           </div>
         </div>
       </div>
