@@ -264,7 +264,13 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
       handleClose();
     } catch (err) {
       console.error('Error creating project:', err);
-      setError(err.response?.data?.error || 'Failed to create project');
+      const errorMessage = err.response?.data?.error || 'Failed to create project';
+      // Provide more specific error message for date validation errors
+      if (errorMessage.includes('due date') || errorMessage.includes('date') || errorMessage.includes('future')) {
+        setError('Failed to create project. Please ensure all your due dates are in the future.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }

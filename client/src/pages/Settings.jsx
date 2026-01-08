@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import useFontSizeStore from '../context/fontSizeStore';
 import useThemeStore from '../stores/themeStore';
@@ -27,6 +27,16 @@ const Settings = () => {
   const [legalDocumentType, setLegalDocumentType] = useState('terms'); // 'terms' or 'privacy'
   const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'preferences' | 'about' | 'feedback' | 'admin-tools'
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Check URL parameters for category on mount and when location changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const category = urlParams.get('category');
+    if (category && ['account', 'preferences', 'about', 'feedback', 'admin-tools'].includes(category)) {
+      setSelectedCategory(category);
+    }
+  }, [location.search]);
   
   // Feedback form state
   const [feedbackForm, setFeedbackForm] = useState({

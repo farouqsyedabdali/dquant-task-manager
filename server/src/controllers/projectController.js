@@ -267,7 +267,7 @@ const projectController = {
         return res.status(400).json({ error: 'Invalid due date format' });
       }
       if (dueDateObj <= now) {
-        return res.status(400).json({ error: 'Due date must be in the future' });
+        return res.status(400).json({ error: 'Due date must be in the future. Please ensure all your due dates are in the future.' });
       }
 
       // Get template data if specified

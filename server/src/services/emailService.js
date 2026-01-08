@@ -161,12 +161,12 @@ const emailService = {
     try {
       console.log('📧 Sending feedback email...');
       console.log('From:', process.env.EMAIL_FROM || 'onboarding@resend.dev');
-      console.log('To:', 'farouqsyedabdali@gmail.com');
+      console.log('To:', 'feedback@tialz.com');
       console.log('Subject:', `💬 New Feedback from ${name}`);
       
       const result = await resend.emails.send({
         from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
-        to: 'farouqsyedabdali@gmail.com', // Your feedback email
+        to: 'feedback@tialz.com', // Your feedback email
         subject: `💬 New Feedback from ${name}`,
         html,
         replyTo: email, // Allow you to reply directly to the user

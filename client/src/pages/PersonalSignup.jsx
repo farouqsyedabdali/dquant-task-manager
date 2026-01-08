@@ -4,6 +4,7 @@ import useAuthStore from '../context/authStore';
 import PasswordStrengthIndicator from '../components/common/PasswordStrengthIndicator';
 import LegalDocumentModal from '../components/legal/LegalDocumentModal';
 import { validatePassword } from '../utils/passwordValidation';
+import tialzLogo from '../assets/Cover (1)-Photoroom.png';
 
 const PersonalSignup = () => {
   const [formData, setFormData] = useState({
@@ -122,34 +123,13 @@ const PersonalSignup = () => {
       style={{ backgroundColor: 'var(--color-bg-primary)' }}
     >
       {/* Company Branding */}
-      <div className="absolute top-6 left-6 flex items-center space-x-3">
-        <div 
-          className="w-10 h-10 rounded-lg flex items-center justify-center"
-          style={{ 
-            background: 'linear-gradient(to right, var(--color-primary), #9333ea)'
-          }}
-        >
-          <span 
-            className="font-bold text-lg"
-            style={{ color: 'white' }}
-          >
-            CN
-          </span>
-        </div>
-        <div>
-          <h1 
-            className="text-2xl font-bold"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            Tialz
-          </h1>
-          <p 
-            className="text-sm"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Task Manager
-          </p>
-        </div>
+      <div className="absolute top-6 left-6 flex items-center">
+        <img 
+          src={tialzLogo}
+          alt="TIALZ Logo"
+          className="h-20 w-auto object-contain"
+          style={{ maxHeight: '80px' }}
+        />
       </div>
 
       <div className="max-w-2xl w-full animate-[fadeIn_0.4s_ease-out]">

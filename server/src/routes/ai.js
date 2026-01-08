@@ -4,6 +4,7 @@ const axios = require('axios');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
 const { validators, handleValidationErrors } = require('../middleware/validators');
+const { parseLocalDate } = require('../utils/dateUtils');
 
 const router = express.Router();
 
@@ -1010,13 +1011,15 @@ router.post('/create-project-from-idea',
     }
 
     // Optimized system prompt for AI to generate project with tasks
+    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     const systemPrompt = `You are an AI assistant that creates projects with tasks from ideas.
 
 Selected Project Idea: ${ideaName}
 Idea Description: ${ideaDescription}
 
 User's Original Text: "${text}"
-${projectDueDateForAI ? `Project Due Date: ${projectDueDateForAI} (ALL task dates must be BEFORE this date)` : 'No project due date specified'}
+Today's Date: ${todayStr}
+${projectDueDateForAI ? `Project Due Date: ${projectDueDateForAI} (MUST be after ${todayStr}, and ALL task dates must be BETWEEN ${todayStr} and ${projectDueDateForAI})` : 'No project due date specified - you must set a projectDueDate that is in the future'}
 
 Generate a complete project with EXACTLY 17-23 actionable tasks (aim for 19-21 tasks) based on the idea and text.
 
@@ -1038,9 +1041,11 @@ Return ONLY a JSON object:
 Guidelines:
 - Generate EXACTLY 17-23 tasks (aim for 19-21 tasks)
 - Tasks should be specific, actionable, and ordered logically
-- Extract dates from text (e.g., "by Friday" = calculate date, "March 15th" = 2024-03-15)
-- CRITICAL: All task due dates MUST be before the project due date (${projectDueDateForAI || 'N/A'})
-- If project due date is provided, distribute task dates evenly before it, with earlier tasks having earlier dates
+- Extract dates from text (e.g., "by Friday" = calculate date, "March 15th" = 2026-03-15). Always use the current year (2026) when dates don't include a year.
+- CRITICAL: Project due date MUST be in the future (after today's date: ${new Date().toISOString().split('T')[0]})
+- CRITICAL: All task due dates MUST be in the future AND before the project due date
+- CRITICAL: Task dates must be between today (${new Date().toISOString().split('T')[0]}) and the project due date (${projectDueDateForAI || 'N/A'})
+- If project due date is provided, distribute task dates evenly between today and the project due date, with earlier tasks having earlier dates
 - Set priority based on urgency cues in text
 - Make tasks relevant to the idea and text context
 - If no dates in text, set dueDate to null
@@ -1108,25 +1113,74 @@ Guidelines:
 
     // Parse dates
     let projectDueDateObj = null;
-    if (projectData.projectDueDate) {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    
+    // Helper function to fix date if it's in the past - ensures date is in the future
+    const fixDateToFuture = (dateStr) => {
+      if (!dateStr) return null;
       try {
-        projectDueDateObj = new Date(projectData.projectDueDate);
-        if (isNaN(projectDueDateObj.getTime())) {
-          projectDueDateObj = null;
+        const parsed = parseLocalDate(dateStr);
+        if (isNaN(parsed.getTime())) {
+          return null;
         }
+        
+        // If date is in the past, move it to the future
+        if (parsed <= now) {
+          // If it's a date-only format (YYYY-MM-DD), try to fix the year first
+          if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            // Try current year first
+            parsed.setFullYear(currentYear, month - 1, day);
+            if (parsed <= now) {
+              // If still in the past, use next year
+              parsed.setFullYear(currentYear + 1, month - 1, day);
+            }
+          } else {
+            // For other formats, add enough days to make it future
+            const daysToAdd = Math.ceil((now - parsed) / (1000 * 60 * 60 * 24)) + 1;
+            parsed.setDate(parsed.getDate() + daysToAdd);
+          }
+        }
+        
+        // Set to end of day
+        parsed.setHours(23, 59, 0, 0);
+        return parsed;
       } catch (e) {
-        projectDueDateObj = null;
+        return null;
       }
+    };
+    
+    if (projectData.projectDueDate) {
+      projectDueDateObj = fixDateToFuture(projectData.projectDueDate);
     }
     if (dueDate && !projectDueDateObj) {
-      try {
-        projectDueDateObj = new Date(dueDate);
-        if (isNaN(projectDueDateObj.getTime())) {
-          projectDueDateObj = null;
-        }
-      } catch (e) {
-        projectDueDateObj = null;
-      }
+      projectDueDateObj = fixDateToFuture(dueDate);
+    }
+    
+    // Default to 7 days after current date if no due date found
+    if (!projectDueDateObj) {
+      const defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + 7);
+      defaultDate.setHours(23, 59, 0, 0);
+      projectDueDateObj = defaultDate;
+    }
+    
+    // Final validation: ensure project due date is in the future
+    if (projectDueDateObj <= now) {
+      // Force to 7 days from now
+      projectDueDateObj = new Date();
+      projectDueDateObj.setDate(projectDueDateObj.getDate() + 7);
+      projectDueDateObj.setHours(23, 59, 0, 0);
+    }
+    
+    // Ensure the date is valid
+    if (isNaN(projectDueDateObj.getTime())) {
+      // Fallback: 7 days from now
+      const fallbackDate = new Date();
+      fallbackDate.setDate(fallbackDate.getDate() + 7);
+      fallbackDate.setHours(23, 59, 0, 0);
+      projectDueDateObj = fallbackDate;
     }
 
     // Validate tasks array
@@ -1189,30 +1243,58 @@ Guidelines:
             let taskDueDate = null;
             if (task.dueDate) {
               try {
-                // Parse date and ensure it's date-only (no time component)
-                // Extract just the date part (YYYY-MM-DD)
+                // Parse date using parseLocalDate for proper handling
                 const dateStr = task.dueDate.split('T')[0]; // Remove time if present
-                const dateParts = dateStr.split('-');
-                if (dateParts.length === 3) {
-                  // Create date at 11:59 PM (end of day) to indicate date-only
-                  taskDueDate = new Date(
-                    parseInt(dateParts[0]),
-                    parseInt(dateParts[1]) - 1,
-                    parseInt(dateParts[2]),
-                    23, 59, 0, 0
-                  );
+                const parsed = parseLocalDate(dateStr);
+                
+                if (!isNaN(parsed.getTime())) {
+                  // Set to end of day
+                  parsed.setHours(23, 59, 0, 0);
                   
-                  // Validate that task date is before project due date
-                  if (projectDueDateObj && taskDueDate > projectDueDateObj) {
-                    // If task date is after project date, set it to 1 day before project date
+                  // CRITICAL: Task date must be between today and project due date
+                  // If task date is in the past, set it to tomorrow (minimum)
+                  if (parsed <= now) {
+                    // Set to tomorrow at 11:59 PM
+                    parsed.setTime(now.getTime());
+                    parsed.setDate(parsed.getDate() + 1);
+                    parsed.setHours(23, 59, 0, 0);
+                  }
+                  
+                  // CRITICAL: Task date must be between today and project due date
+                  // First, ensure it's in the future (already done above)
+                  // Then, ensure it's before project due date
+                  if (projectDueDateObj && parsed >= projectDueDateObj) {
+                    // If task date is on or after project date, set it to 1 day before project date
                     const adjustedDate = new Date(projectDueDateObj);
                     adjustedDate.setDate(adjustedDate.getDate() - 1);
                     adjustedDate.setHours(23, 59, 0, 0);
+                    // Ensure it's still in the future and before project due date
+                    if (adjustedDate <= now) {
+                      // If 1 day before project is still in the past, calculate a date between now and project
+                      // Use a date that's 1/4 of the way from now to project due date
+                      const daysDiff = Math.ceil((projectDueDateObj - now) / (1000 * 60 * 60 * 24));
+                      if (daysDiff > 1) {
+                        adjustedDate.setTime(now.getTime());
+                        adjustedDate.setDate(adjustedDate.getDate() + Math.max(1, Math.floor(daysDiff / 4)));
+                        adjustedDate.setHours(23, 59, 0, 0);
+                      } else {
+                        // If project is too soon, use tomorrow (but this shouldn't happen if validation is correct)
+                        adjustedDate.setTime(now.getTime());
+                        adjustedDate.setDate(adjustedDate.getDate() + 1);
+                        adjustedDate.setHours(23, 59, 0, 0);
+                      }
+                    }
+                    // Final check: ensure adjusted date is before project due date
+                    if (adjustedDate >= projectDueDateObj) {
+                      // If still not before project, use 1 day before project
+                      adjustedDate.setTime(projectDueDateObj.getTime());
+                      adjustedDate.setDate(adjustedDate.getDate() - 1);
+                      adjustedDate.setHours(23, 59, 0, 0);
+                    }
                     taskDueDate = adjustedDate;
-                  }
-                  
-                  if (isNaN(taskDueDate.getTime())) {
-                    taskDueDate = null;
+                  } else {
+                    // Task date is valid (in future and before project due date)
+                    taskDueDate = parsed;
                   }
                 } else {
                   taskDueDate = null;
@@ -1270,7 +1352,13 @@ Guidelines:
 
   } catch (err) {
     console.error('Create project from idea error:', err);
-    res.status(500).json({ error: 'Failed to create project from idea' });
+    
+    // Provide more specific error message for date validation errors
+    if (err.message && (err.message.includes('due date') || err.message.includes('date') || err.message.includes('future'))) {
+      res.status(400).json({ error: 'Failed to create project. Please ensure all your due dates are in the future.' });
+    } else {
+      res.status(500).json({ error: 'Failed to create project from idea' });
+    }
   }
 });
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../context/authStore';
 import CalendarIcon from '../icons/CalendarIcon';
 import QuickActionsDropdown from './QuickActionsDropdown';
-import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaUserFriends, FaProjectDiagram } from 'react-icons/fa';
+import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaUserFriends, FaProjectDiagram, FaComment } from 'react-icons/fa';
 import tialzLogo from '../../assets/Cover (1)-Photoroom.png';
 
 const Header = () => {
@@ -346,6 +346,27 @@ const Header = () => {
                       <FaCog className="w-4 h-4" />
                       <span>Settings</span>
                     </button>
+                    <button
+                      onClick={() => {
+                        navigate('/settings?category=feedback');
+                        setIsProfileDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-md transition-colors duration-200 flex items-center space-x-2"
+                      style={{ 
+                        color: 'var(--color-text-secondary)',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = 'var(--color-text-primary)';
+                        e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--color-text-secondary)';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <FaComment className="w-4 h-4" />
+                      <span>Feedback</span>
+                    </button>
                     
                     <div 
                       className="border-t my-2"
@@ -553,6 +574,27 @@ const Header = () => {
                   >
                     <FaCog className="w-4 h-4" />
                     <span>Settings</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigate('/settings?category=feedback');
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-md transition-colors duration-200 flex items-center space-x-2"
+                    style={{ 
+                      color: 'var(--color-text-secondary)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--color-text-primary)';
+                      e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--color-text-secondary)';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <FaComment className="w-4 h-4" />
+                    <span>Feedback</span>
                   </button>
                   
                   <button

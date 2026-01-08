@@ -197,6 +197,8 @@ const DatePicker = ({
             backgroundColor: 'var(--color-bg-tertiary)',
             borderColor: 'var(--color-border-default)',
             color: 'var(--color-text-primary)',
+            // Hide native calendar icon
+            colorScheme: 'dark',
           }}
           onFocus={(e) => {
             e.currentTarget.style.borderColor = 'var(--color-primary)';
@@ -205,12 +207,23 @@ const DatePicker = ({
             e.currentTarget.style.borderColor = 'var(--color-border-default)';
           }}
         />
+        {/* Hide native calendar icon and add custom theme-aware one */}
+        <style>{`
+          input[type="date"]::-webkit-calendar-picker-indicator,
+          input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            display: none;
+            -webkit-appearance: none;
+          }
+        `}</style>
         <button
           type="button"
           onClick={handleCalendarClick}
           disabled={disabled}
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 transition-colors duration-200 hover:opacity-70 disabled:opacity-50"
-          style={{ color: 'var(--color-text-tertiary)' }}
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 transition-colors duration-200 hover:opacity-70 disabled:opacity-50 cursor-pointer"
+          style={{ 
+            color: 'var(--color-text-tertiary)',
+            pointerEvents: disabled ? 'none' : 'auto'
+          }}
           aria-label="Open calendar"
         >
           <FaCalendar className="w-4 h-4" />
@@ -227,14 +240,16 @@ const DatePicker = ({
             disabled={disabled}
             className="checkbox checkbox-sm mr-2"
             style={{
-              accentColor: 'var(--color-primary)'
+              border: '2px solid var(--color-text-tertiary)',
+              backgroundColor: includeTime ? 'var(--color-accent)' : 'transparent',
+              '--chkbg': 'var(--color-accent)'
             }}
           />
           <span 
             className="text-sm transition-colors duration-200"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            Set specific time
+            Set time
           </span>
         </label>
       )}

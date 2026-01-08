@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import ForgotPasswordModal from '../components/modals/ForgotPasswordModal';
+import tialzLogo from '../assets/Cover (1)-Photoroom.png';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -99,24 +100,13 @@ const Login = () => {
       style={{ backgroundColor: 'var(--color-bg-primary)' }}
     >
       {/* Company Branding */}
-      <div className="absolute top-6 left-6 flex items-center space-x-3">
-        <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-          <span className="font-bold text-lg text-white">CN</span>
-        </div>
-        <div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            Tialz
-          </h1>
-          <p
-            className="text-sm"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Task Manager
-          </p>
-        </div>
+      <div className="absolute top-6 left-6 flex items-center">
+        <img 
+          src={tialzLogo}
+          alt="TIALZ Logo"
+          className="h-20 w-auto object-contain"
+          style={{ maxHeight: '80px' }}
+        />
       </div>
 
       <div className="max-w-lg w-full space-y-8 animate-[fadeIn_0.4s_ease-out]">

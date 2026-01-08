@@ -261,7 +261,13 @@ const LandingPage = () => {
           transform: none !important;
         }
       `}</style>
-      <div className="min-h-screen bg-gradient-to-br from-[#0a0a1f] via-[#15152b] to-[#1f1f35] text-white">
+      <div 
+        className="min-h-screen transition-colors duration-200"
+        style={{
+          background: `linear-gradient(to bottom right, var(--color-bg-primary), var(--color-bg-secondary), var(--color-bg-tertiary))`,
+          color: 'var(--color-text-primary)'
+        }}
+      >
       {/* Company Logo in Top Left */}
       <div 
         className="fixed-logo absolute top-4 left-4 z-50" 
@@ -301,40 +307,56 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
             {/* Left - Text */}
             <div>
-              <h1 className="hero-title text-white mb-6 leading-tight">
-                AI-POWERED TASK MANAGEMENT FOR MODERN TEAMS
+              <h1 
+                className="hero-title mb-6 leading-tight transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                INTELLIGENT TASK, PROJECT, AND EVENT MANAGEMENT
               </h1>
-              <p className="text-lg md:text-xl text-white/70 leading-relaxed max-w-2xl">
-                Transform how you work with intelligent task management. Create tasks from any text, 
-                collaborate with your team in real-time, and let AI handle the complexity. 
-                Access from any browser, anywhere.
+              <p 
+                className="text-lg md:text-xl leading-relaxed max-w-2xl transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                An AI-powered platform designed for modern teams and individuals. Organize work, collaborate in real time, and stay productive.
               </p>
               </div>
 
             {/* Right - Login Form */}
             <div className="relative">
               <div
-                className="rounded-lg shadow-xl p-8 transition-all duration-300 w-full"
+                className="rounded-lg shadow-xl p-8 transition-all duration-300 w-full border"
                 style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  backgroundColor: 'var(--color-bg-secondary)',
                   backdropFilter: 'blur(10px)',
-                  borderColor: 'rgba(255, 255, 255, 0.2)',
-                  borderWidth: 1,
+                  borderColor: 'var(--color-border-default)',
                 }}
               >
                 {/* Header */}
                 <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold mb-2 text-white">
+                  <h2 
+                    className="text-3xl font-bold mb-2 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
                     Welcome Back
                   </h2>
-                  <p className="text-white/70">
+                  <p 
+                    className="transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
                     Sign in to your account to continue
                   </p>
                 </div>
 
                 {/* Error Alert */}
                 {error && (
-                  <div className="alert bg-red-900/50 border-red-700 text-red-200 mb-6">
+                  <div 
+                    className="alert border mb-6 transition-colors duration-200"
+                    style={{
+                      backgroundColor: 'var(--color-bg-tertiary)',
+                      borderColor: 'var(--color-accent)',
+                      color: 'var(--color-accent)'
+                    }}
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -346,7 +368,18 @@ const LandingPage = () => {
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
-                  className="btn border w-full mb-6 flex items-center justify-center gap-3 bg-white text-black hover:bg-gray-100"
+                  className="btn border w-full mb-6 flex items-center justify-center gap-3 transition-colors duration-200"
+                  style={{
+                    backgroundColor: 'var(--color-bg-primary)',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                  }}
                 >
                   <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
                     <g fill="none" fillRule="evenodd">
@@ -357,17 +390,28 @@ const LandingPage = () => {
                     </g>
                   </svg>
                   <span className="font-medium">Sign in with Google</span>
-                  <span className="text-sm text-gray-600">(Personal Accounts)</span>
+                  <span 
+                    className="text-sm transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    (Personal Accounts)
+                  </span>
                 </button>
 
-                <div className="divider text-white/50">OR</div>
+                <div 
+                  className="divider transition-colors duration-200"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                >
+                  OR
+                </div>
 
                 {/* Login Form */}
                 <form onSubmit={handleLoginSubmit} className="space-y-6">
                   <div>
                     <label 
                       htmlFor="email" 
-                      className="block text-sm font-medium mb-2 text-white/80"
+                      className="block text-sm font-medium mb-2 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-secondary)' }}
                     >
                       Your Email Address
                     </label>
@@ -379,23 +423,39 @@ const LandingPage = () => {
                       required
                       value={loginFormData.email}
                       onChange={handleLoginChange}
-                      className={`input w-full ${loginErrors.email ? 'border-red-500' : ''}`}
+                      className="input w-full transition-colors duration-200"
                       style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                        borderColor: loginErrors.email ? '#ef4444' : 'rgba(255, 255, 255, 0.2)',
-                        color: 'white',
+                        backgroundColor: 'var(--color-bg-tertiary)',
+                        borderColor: loginErrors.email ? 'var(--color-accent)' : 'var(--color-border-default)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                      onFocus={(e) => {
+                        if (!loginErrors.email) {
+                          e.currentTarget.style.borderColor = 'var(--color-primary)';
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (!loginErrors.email) {
+                          e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                        }
                       }}
                       placeholder="Enter your email"
                     />
                     {loginErrors.email && (
-                      <p className="text-red-400 text-sm mt-1">{loginErrors.email}</p>
+                      <p 
+                        className="text-sm mt-1 transition-colors duration-200"
+                        style={{ color: 'var(--color-accent)' }}
+                      >
+                        {loginErrors.email}
+                      </p>
                     )}
                   </div>
 
                   <div>
                     <label 
                       htmlFor="password" 
-                      className="block text-sm font-medium mb-2 text-white/80"
+                      className="block text-sm font-medium mb-2 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-secondary)' }}
                     >
                       Password
                     </label>
@@ -407,16 +467,31 @@ const LandingPage = () => {
                       required
                       value={loginFormData.password}
                       onChange={handleLoginChange}
-                      className={`input w-full ${loginErrors.password ? 'border-red-500' : ''}`}
+                      className="input w-full transition-colors duration-200"
                       style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                        borderColor: loginErrors.password ? '#ef4444' : 'rgba(255, 255, 255, 0.2)',
-                        color: 'white',
+                        backgroundColor: 'var(--color-bg-tertiary)',
+                        borderColor: loginErrors.password ? 'var(--color-accent)' : 'var(--color-border-default)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                      onFocus={(e) => {
+                        if (!loginErrors.password) {
+                          e.currentTarget.style.borderColor = 'var(--color-primary)';
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (!loginErrors.password) {
+                          e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                        }
                       }}
                       placeholder="Enter your password"
                     />
                     {loginErrors.password && (
-                      <p className="text-red-400 text-sm mt-1">{loginErrors.password}</p>
+                      <p 
+                        className="text-sm mt-1 transition-colors duration-200"
+                        style={{ color: 'var(--color-accent)' }}
+                      >
+                        {loginErrors.password}
+                      </p>
                     )}
                   </div>
 
@@ -428,19 +503,29 @@ const LandingPage = () => {
                         name="rememberMe"
                         checked={loginFormData.rememberMe}
                         onChange={handleLoginChange}
-                        className="h-4 w-4 rounded"
+                        className="h-4 w-4 rounded transition-colors duration-200"
                         style={{
-                          accentColor: '#5865f2',
+                          accentColor: 'var(--color-primary)',
                         }}
                       />
-                      <span className="ml-2 text-sm text-white/70">
+                      <span 
+                        className="ml-2 text-sm transition-colors duration-200"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
                         Remember me for 30 days
                       </span>
                     </label>
                     <button
                       type="button"
                       onClick={() => setIsForgotPasswordModalOpen(true)}
-                      className="text-sm font-medium text-[#5865f2] hover:text-[#4752c4] transition-colors"
+                      className="text-sm font-medium transition-colors duration-200"
+                      style={{ color: 'var(--color-primary)' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = 'var(--color-primary-hover)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--color-primary)';
+                      }}
                     >
                       Forgot password?
                     </button>
@@ -449,7 +534,21 @@ const LandingPage = () => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="btn bg-[#5865f2] hover:bg-[#4752c4] text-white border-0 w-full"
+                    className="btn border-0 w-full transition-colors duration-200"
+                    style={{
+                      backgroundColor: 'var(--color-primary)',
+                      color: 'white'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isLoading) {
+                        e.currentTarget.style.backgroundColor = 'var(--color-primary-hover)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isLoading) {
+                        e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+                      }
+                    }}
                   >
                     {isLoading ? (
                       <>
@@ -464,11 +563,21 @@ const LandingPage = () => {
 
                 {/* Signup Link */}
                 <div className="mt-6 text-center">
-                  <p className="text-white/70">
+                  <p 
+                    className="transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
                     Don't have an account?{' '}
                     <Link 
                       to="/signup" 
-                      className="font-medium text-[#5865f2] hover:text-[#4752c4] transition-colors"
+                      className="font-medium transition-colors duration-200"
+                      style={{ color: 'var(--color-primary)' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = 'var(--color-primary-hover)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--color-primary)';
+                      }}
                     >
                       Sign up now
                     </Link>
@@ -481,33 +590,58 @@ const LandingPage = () => {
       </section>
 
       {/* Contact Section */}
-      <section className="py-8 px-4 sm:px-6 lg:px-8 border-t border-white/10">
+      <section 
+        className="py-8 px-4 sm:px-6 lg:px-8 border-t transition-colors duration-200"
+        style={{ borderColor: 'var(--color-border-default)' }}
+      >
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
             {/* Left Column - Contact Us Title */}
             <div className="flex items-center justify-center md:justify-start md:self-center">
-              <h2 className="hero-title text-white tracking-tight">
+              <h2 
+                className="hero-title tracking-tight transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
                 Contact Us
               </h2>
             </div>
 
             {/* Middle Column - Company Information */}
             <div className="space-y-2">
-              <h3 className="text-base font-semibold text-white mb-2">Company Information</h3>
+              <h3 
+                className="text-base font-semibold mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                Company Information
+              </h3>
               <div className="space-y-2">
                 <div>
-                  <p className="text-xs text-white/60 mb-0.5">Legal Company Name</p>
-                  <p className="text-white font-medium text-sm">TIALZ.COM INC.</p>
+                  <p 
+                    className="font-medium text-sm transition-colors duration-200"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    TIALZ.COM INC.
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs text-white/60 mb-0.5">Business Address</p>
-                  <p className="text-white font-medium text-sm">7322 Rosehurst Dr</p>
+                  <p 
+                    className="font-medium text-sm transition-colors duration-200"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    7322 Rosehurst Dr
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs text-white/60 mb-0.5">Phone Number</p>
                   <a
                     href="tel:4168718834"
-                    className="text-[#5865f2] hover:text-[#4752c4] font-medium text-sm transition-colors inline-flex items-center gap-1.5"
+                    className="font-medium text-sm transition-colors duration-200 inline-flex items-center gap-1.5"
+                    style={{ color: 'var(--color-primary)' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--color-primary-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--color-primary)';
+                    }}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
@@ -520,13 +654,24 @@ const LandingPage = () => {
 
             {/* Right Column - Get in Touch */}
             <div className="space-y-2">
-              <h3 className="text-base font-semibold text-white mb-2">Get in Touch</h3>
+              <h3 
+                className="text-base font-semibold mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                Get in Touch
+              </h3>
               <div className="space-y-2">
                 <div>
-                  <p className="text-xs text-white/60 mb-0.5">Email Support</p>
                   <a
                     href="mailto:support@tialz.com"
-                    className="text-[#5865f2] hover:text-[#4752c4] font-medium text-sm transition-colors inline-flex items-center gap-1.5"
+                    className="font-medium text-sm transition-colors duration-200 inline-flex items-center gap-1.5"
+                    style={{ color: 'var(--color-primary)' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--color-primary-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--color-primary)';
+                    }}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -535,10 +680,16 @@ const LandingPage = () => {
                   </a>
                 </div>
                 <div>
-                  <p className="text-xs text-white/60 mb-0.5">Privacy Policy</p>
                   <button
                     onClick={() => setIsPrivacyModalOpen(true)}
-                    className="text-[#5865f2] hover:text-[#4752c4] font-medium text-sm transition-colors inline-flex items-center gap-1.5"
+                    className="font-medium text-sm transition-colors duration-200 inline-flex items-center gap-1.5"
+                    style={{ color: 'var(--color-primary)' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--color-primary-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--color-primary)';
+                    }}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />

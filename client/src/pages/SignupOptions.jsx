@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import tialzLogo from '../assets/Cover (1)-Photoroom.png';
 
 const SignupOptions = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -9,18 +10,20 @@ const SignupOptions = () => {
       id: 'personal',
       name: 'Personal',
       price: 'Free',
-      description: 'Perfect for individual task management',
+      description: 'Perfect for individual task management - Free forever',
       features: [
-        'Up to 10 tasks',
-        'Basic task management',
-        'Simple interface',
-        'Local storage',
-        'No collaboration'
+        'Unlimited tasks',
+        'AI quick actions: create tasks, updates, subtasks, projects',
+        'Solo workspace (no employees)',
+        'Assign to yourself or external contacts',
+        'Subtasks, priorities, due dates, comments',
+        'Share tasks via external invitations'
       ],
       limitations: [
-        'Limited to personal use only',
-        'No team features',
-        'No advanced analytics'
+        'No internal employees/teams',
+        'No role-based access control',
+        'No CSV import/export',
+        'No audit logs/advanced analytics'
       ],
       buttonText: 'Get Started',
       buttonVariant: 'btn-primary',
@@ -29,24 +32,23 @@ const SignupOptions = () => {
     {
       id: 'business',
       name: 'Business',
-      price: 'Starting at $9/month',
+      price: 'Free*',
       description: 'Complete team collaboration platform',
       features: [
         'Unlimited tasks and projects',
-        'Team collaboration',
-        'Role-based access control',
-        'Advanced analytics & reporting',
-        'CSV import/export',
+        'Unlimited team members',
+        'Role-based access control (EMPLOYEE, ADMIN, SYSDMIN)',
+        'AI quick actions: create tasks, updates, subtasks, projects',
+        'Audit logs & basic analytics',
+        'CSV employee import (export coming soon)',
         'Priority management',
         'Due date tracking',
         'Comment system',
         'Subtasks & hierarchies',
-        'Multi-tenant architecture'
+        'Multi-tenant architecture',
+        'Free during beta phase (6 months)'
       ],
-      limitations: [
-        'Requires company setup',
-        'Admin management required'
-      ],
+      limitations: [],
       buttonText: 'Get Started',
       buttonVariant: 'btn-primary',
       disabled: false
@@ -63,34 +65,13 @@ const SignupOptions = () => {
       style={{ backgroundColor: 'var(--color-bg-primary)' }}
     >
       {/* Company Branding */}
-      <div className="absolute top-6 left-6 flex items-center space-x-3">
-        <div 
-          className="w-10 h-10 rounded-lg flex items-center justify-center"
-          style={{ 
-            background: 'linear-gradient(to right, var(--color-primary), #9333ea)'
-          }}
-        >
-          <span 
-            className="font-bold text-lg"
-            style={{ color: 'white' }}
-          >
-            CN
-          </span>
-        </div>
-        <div>
-          <h1 
-            className="text-2xl font-bold"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            Tialz
-          </h1>
-          <p 
-            className="text-sm"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Task Manager
-          </p>
-        </div>
+      <div className="absolute top-6 left-6 flex items-center">
+        <img 
+          src={tialzLogo}
+          alt="TIALZ Logo"
+          className="h-20 w-auto object-contain"
+          style={{ maxHeight: '80px' }}
+        />
       </div>
 
       <div className="max-w-6xl w-full">
@@ -106,8 +87,7 @@ const SignupOptions = () => {
             className="text-xl max-w-2xl mx-auto"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            Select the plan that best fits your needs. Start with Business for full team collaboration, 
-            or wait for Personal plans coming soon.
+            Select the plan that best fits your needs. Both plans are free during our beta phase.
           </p>
         </div>
 
@@ -190,37 +170,6 @@ const SignupOptions = () => {
                 </ul>
               </div>
 
-              {/* Limitations */}
-              {plan.limitations.length > 0 && (
-                <div className="mb-8">
-                  <h3 
-                    className="text-lg font-semibold mb-4"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    Limitations:
-                  </h3>
-                  <ul className="space-y-2">
-                    {plan.limitations.map((limitation, index) => (
-                      <li 
-                        key={index} 
-                        className="flex items-center"
-                        style={{ color: 'var(--color-text-tertiary)' }}
-                      >
-                        <svg 
-                          className="w-4 h-4 text-yellow-400 mr-3 flex-shrink-0" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                        </svg>
-                        {limitation}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               {/* Action Button */}
               <div className="text-center">
                 {plan.id === 'business' ? (
@@ -293,7 +242,23 @@ const SignupOptions = () => {
             className="text-sm"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            Need help choosing? Contact our support team for guidance.
+            Need help choosing? Contact our{' '}
+            <a 
+              href="mailto:support@tialz.com"
+              className="font-medium"
+              style={{ color: 'var(--color-primary)' }}
+              onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+              onMouseLeave={(e) => e.target.style.opacity = '1'}
+            >
+              support team
+            </a>
+            {' '}for guidance.
+          </p>
+          <p 
+            className="text-xs mt-6 max-w-3xl mx-auto"
+            style={{ color: 'var(--color-text-tertiary)' }}
+          >
+            *Free during beta phase. By creating a Business account, you acknowledge and agree that TIALZ.COM INC. reserves the right to modify pricing and implement subscription fees upon conclusion of the beta development phase. You will be notified at least 30 days in advance of any pricing changes.
           </p>
         </div>
       </div>
