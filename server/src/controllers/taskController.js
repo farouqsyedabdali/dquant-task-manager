@@ -757,19 +757,20 @@ const updateTask = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Check permissions - company admin, assigner, or assignee
+    // Check permissions - company admin, system admin, assigner, or assignee
     const isCompanyAdmin = userRole === 'ADMIN' && task.companyId === companyId;
+    const isSystemAdmin = userRole === 'SYSDMIN';
     const isAssigner = task.assignerId === userId;
     const isAssignee = task.assigneeId === userId;
 
-    if (!isCompanyAdmin && !isAssigner && !isAssignee) {
+    if (!isCompanyAdmin && !isSystemAdmin && !isAssigner && !isAssignee) {
       return res.status(403).json({ error: 'You do not have permission to update this task' });
     }
 
     // Determine what can be updated
     let allowedUpdates = {};
     
-    if (isCompanyAdmin || isAssigner) {
+    if (isCompanyAdmin || isSystemAdmin || isAssigner) {
       // Validate due date if provided (allow past dates for editing existing tasks)
       if (updateData.dueDate !== undefined) {
         if (!updateData.dueDate) {
@@ -1151,11 +1152,12 @@ const deleteTask = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Check permissions - only company admins or task assigner can delete
+    // Check permissions - only company admins, system admins, or task assigner can delete
     const isCompanyAdmin = userRole === 'ADMIN' && task.companyId === companyId;
+    const isSystemAdmin = userRole === 'SYSDMIN';
     const isAssigner = task.assignerId === userId;
 
-    if (!isCompanyAdmin && !isAssigner) {
+    if (!isCompanyAdmin && !isSystemAdmin && !isAssigner) {
       return res.status(403).json({ error: 'You do not have permission to delete this task' });
     }
 
@@ -1234,10 +1236,11 @@ const updateTaskStatus = async (req, res) => {
 
     // Check permissions
     const isAdmin = userRole === 'ADMIN';
+    const isSystemAdmin = userRole === 'SYSDMIN';
     const isAssigner = task.assignerId === userId;
     const isAssignee = task.assigneeId === userId;
 
-    if (!isAdmin && !isAssigner && !isAssignee) {
+    if (!isAdmin && !isSystemAdmin && !isAssigner && !isAssignee) {
       return res.status(403).json({ error: 'You do not have permission to update this task status' });
     }
 
@@ -1336,9 +1339,10 @@ const updateTaskPriority = async (req, res) => {
 
     // Check permissions
     const isAdmin = userRole === 'ADMIN';
+    const isSystemAdmin = userRole === 'SYSDMIN';
     const isAssigner = task.assignerId === userId;
 
-    if (!isAdmin && !isAssigner) {
+    if (!isAdmin && !isSystemAdmin && !isAssigner) {
       return res.status(403).json({ error: 'You do not have permission to update this task priority' });
     }
 
@@ -1639,12 +1643,13 @@ const removeCoAssignee = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Check if current user is the lead assignee OR removing themselves
+    // Check if current user is the lead assignee, system admin, OR removing themselves
     const isRemovingSelf = parseInt(userId) === currentUserId;
     const isLeadAssignee = task.assigneeId === currentUserId;
-    
-    if (!isLeadAssignee && !isRemovingSelf) {
-      return res.status(403).json({ error: 'Only the lead assignee can remove other co-assignees, or you can remove yourself' });
+    const isSystemAdmin = req.user.role === 'SYSDMIN';
+
+    if (!isLeadAssignee && !isSystemAdmin && !isRemovingSelf) {
+      return res.status(403).json({ error: 'Only the lead assignee or system administrators can remove other co-assignees, or you can remove yourself' });
     }
     
     // Check if the user being removed is actually a co-assignee

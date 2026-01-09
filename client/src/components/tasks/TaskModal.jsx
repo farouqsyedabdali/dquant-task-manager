@@ -1324,8 +1324,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                           {coAssignee.user.email}
                         </div>
                       </div>
-                      {/* Remove button - only if user is lead assignee */}
-                      {viewedTask?.assigneeId === user?.id && (
+                      {/* Remove button - only if user is lead assignee or system admin */}
+                      {(viewedTask?.assigneeId === user?.id || user?.role === 'SYSDMIN') && (
                         <button
                           onClick={() => handleRemoveCoAssignee(coAssignee.userId)}
                           className="w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100"
