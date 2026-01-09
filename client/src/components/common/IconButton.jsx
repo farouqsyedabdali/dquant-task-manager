@@ -1,5 +1,6 @@
 import React from 'react';
 import Tooltip from './Tooltip';
+import tialzLogo from '../../assets/TIALZ Logo (No Background).png';
 
 /**
  * IconButton - A reusable button component that supports icons with optional text
@@ -126,7 +127,27 @@ const IconButton = ({
       ) : (
         <>
           {iconElement}
-          {!iconOnly && label && <span>{label}</span>}
+          {!iconOnly && label && (
+            <span className="flex items-center gap-1.5">
+              {label === 'AI Help' ? (
+                <>
+                  <img 
+                    src={tialzLogo} 
+                    alt="TIALZ" 
+                    className="object-contain"
+                    style={{ 
+                      height: `${iconSizes[size] * 1.2}px`,
+                      width: `${iconSizes[size] * 1.2}px`,
+                      maxWidth: 'none'
+                    }}
+                  />
+                  <span>AI Help</span>
+                </>
+              ) : (
+                <span>{label}</span>
+              )}
+            </span>
+          )}
         </>
       )}
     </button>

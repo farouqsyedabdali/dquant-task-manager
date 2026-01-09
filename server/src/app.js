@@ -116,7 +116,7 @@ const { authLimiter, apiLimiter, aiLimiter, feedbackLimiter } = require('./middl
 
 // Apply rate limiters to specific routes
 // Auth routes get strict rate limiting
-app.use('/api/auth', authLimiter)
+// app.use('/api/auth', authLimiter) // COMMENTED OUT: 15-minute IP rate limit
 
 // AI routes get special rate limiting (expensive operations)
 app.use('/api/ai', aiLimiter)
@@ -125,7 +125,7 @@ app.use('/api/ai', aiLimiter)
 app.use('/api/feedback', feedbackLimiter)
 
 // General API rate limiting (applied last, less strict)
-app.use('/api', apiLimiter)
+// app.use('/api', apiLimiter) // COMMENTED OUT: 15-minute IP rate limit
 
 // Routes
 app.use('/api/auth', authRoutes)

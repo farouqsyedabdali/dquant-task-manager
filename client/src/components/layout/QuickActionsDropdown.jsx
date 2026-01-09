@@ -4,6 +4,7 @@ import { aiAPI } from '../../services/api';
 import { FaPlus, FaEdit, FaLayerGroup, FaChevronDown, FaProjectDiagram, FaTimes } from 'react-icons/fa';
 import ProjectIdeaSelectionModal from '../projects/ProjectIdeaSelectionModal';
 import IconButton from '../common/IconButton';
+import tialzLogo from '../../assets/TIALZ Logo (No Background).png';
 
 const QuickActionsDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -327,7 +328,15 @@ const QuickActionsDropdown = () => {
           </>
         ) : (
           <>
-            <FaLayerGroup className="w-4 h-4" />
+            <img 
+              src={tialzLogo} 
+              alt="TIALZ" 
+              className="object-contain"
+              style={{ 
+                height: '24px',
+                width: '24px'
+              }}
+            />
             <span>AI Actions</span>
             <FaChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
           </>

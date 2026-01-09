@@ -155,6 +155,28 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const handleDeleteCompany = async (companyId) => {
+    const company = companies.find(c => c.id === companyId);
+    if (!company) return;
+
+    const confirmMessage = `Are you sure you want to delete the company "${company.name}"?\n\nThis will permanently delete:\n- ${company.userCount} users\n- ${company.taskCount} tasks\n- All projects, comments, and related data\n\nThis action cannot be undone.`;
+
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      setLoading(true);
+      await superAdminAPI.deleteCompany(companyId);
+      setMessage(`Company "${company.name}" deleted successfully`);
+      // Refresh the companies list
+      fetchCompanies(1, companySearch);
+    } catch (err) {
+      setError('Failed to delete company');
+      console.error('Delete company error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // User management handlers
   const handleResetPassword = async (userId) => {
     const newPassword = prompt('Enter new password for user:');
@@ -174,6 +196,28 @@ const SuperAdminDashboard = () => {
     if (user) {
       setSelectedUser(user);
       setShowUserModal(true);
+    }
+  };
+
+  const handleDeleteUserGlobally = async (userId) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    const confirmMessage = `Are you sure you want to delete the user "${user.name}" (${user.email})?\n\nThis will permanently delete the user and all their data. The user must not have any assigned tasks.\n\nThis action cannot be undone.`;
+
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      setLoading(true);
+      await superAdminAPI.deleteUserGlobally(userId);
+      setMessage(`User "${user.name}" deleted successfully`);
+      // Refresh the users list
+      fetchUsers(1, userSearch, userRoleFilter);
+    } catch (err) {
+      setError('Failed to delete user');
+      console.error('Delete user error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -288,15 +332,28 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  // Analytics data
+  const [analyticsData, setAnalyticsData] = useState(null);
+
   // Analytics handlers
   const handleGenerateRevenueReport = () => {
     setMessage('Revenue report generation feature coming soon!');
     setTimeout(() => setMessage(null), 3000);
   };
 
-  const handleUserEngagementAnalysis = () => {
-    setMessage('User engagement analysis feature coming soon!');
-    setTimeout(() => setMessage(null), 3000);
+  const handleUserEngagementAnalysis = async () => {
+    try {
+      setLoading(true);
+      const response = await superAdminAPI.getUserEngagementAnalytics({ days: 30 });
+      setAnalyticsData(response.data.data);
+      setMessage('User engagement analytics loaded successfully');
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      setError('Failed to load user engagement analytics');
+      console.error('Analytics error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFeatureUsageStatistics = () => {
@@ -577,12 +634,21 @@ const SuperAdminDashboard = () => {
                           {new Date(company.createdAt).toLocaleDateString()}
                         </td>
                         <td>
-                          <button 
-                            className="btn btn-sm btn-outline text-xs"
-                            onClick={() => handleManageCompany(company.id)}
-                          >
-                            Manage
-                          </button>
+                          <div className="flex space-x-1">
+                            <button
+                              className="btn btn-sm btn-outline text-xs"
+                              onClick={() => handleManageCompany(company.id)}
+                            >
+                              Manage
+                            </button>
+                            <button
+                              className="btn btn-sm btn-error text-xs"
+                              onClick={() => handleDeleteCompany(company.id)}
+                              disabled={loading}
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -747,17 +813,24 @@ const SuperAdminDashboard = () => {
                         </td>
                         <td>
                           <div className="flex space-x-1">
-                            <button 
+                            <button
                               className="btn btn-sm btn-outline text-xs"
                               onClick={() => handleResetPassword(user.id)}
                             >
                               Reset Password
                             </button>
-                            <button 
+                            <button
                               className="btn btn-sm btn-outline text-xs"
                               onClick={() => handleViewUser(user.id)}
                             >
                               View Details
+                            </button>
+                            <button
+                              className="btn btn-sm btn-error text-xs"
+                              onClick={() => handleDeleteUserGlobally(user.id)}
+                              disabled={loading}
+                            >
+                              Delete
                             </button>
                           </div>
                         </td>
@@ -949,52 +1022,106 @@ const SuperAdminDashboard = () => {
         {/* Analytics Tab */}
         {activeTab === 'analytics' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white">Analytics Dashboard</h2>
-            
-            {/* Analytics Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Growth Metrics</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">New Companies (30d)</span>
-                    <span className="text-white font-semibold">+{systemHealth?.overview?.recentCompanies || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">New Users (30d)</span>
-                    <span className="text-white font-semibold">+{systemHealth?.overview?.recentUsers || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">New Tasks (30d)</span>
-                    <span className="text-white font-semibold">+{systemHealth?.overview?.recentTasks || 0}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Subscription Analytics</h3>
-                <div className="space-y-3">
-                  {systemHealth?.subscriptionDistribution?.map((sub, index) => (
-                    <div key={index} className="flex justify-between">
-                      <span className="text-gray-400 capitalize">{sub.subscriptionPlan}</span>
-                      <span className="text-white font-semibold">{sub._count.subscriptionPlan}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">User Role Distribution</h3>
-                <div className="space-y-3">
-                  {systemHealth?.roleDistribution?.map((role, index) => (
-                    <div key={index} className="flex justify-between">
-                      <span className="text-gray-400">{role.role}</span>
-                      <span className="text-white font-semibold">{role._count.role}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-white">Analytics Dashboard</h2>
+              <button
+                onClick={handleUserEngagementAnalysis}
+                className="btn bg-indigo-600 hover:bg-indigo-700 text-white border-0"
+                disabled={loading}
+              >
+                {loading ? 'Loading...' : 'Load User Engagement Analytics'}
+              </button>
             </div>
+
+            {/* User Engagement Analytics */}
+            {analyticsData && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">User Activity</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">DAU (Today)</span>
+                      <span className="text-white font-semibold">{analyticsData.userActivity.dailyActiveUsers}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">WAU (7d)</span>
+                      <span className="text-white font-semibold">{analyticsData.userActivity.weeklyActiveUsers}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">MAU (30d)</span>
+                      <span className="text-white font-semibold">{analyticsData.userActivity.monthlyActiveUsers}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Retention (1w)</span>
+                      <span className="text-white font-semibold">{analyticsData.userActivity.retentionRate}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Task Metrics</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Created ({analyticsData.timeRange})</span>
+                      <span className="text-white font-semibold">{analyticsData.taskMetrics.totalTasksCreated}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Completed</span>
+                      <span className="text-white font-semibold">{analyticsData.taskMetrics.totalTasksCompleted}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Completion Rate</span>
+                      <span className="text-green-500 font-semibold">{analyticsData.taskMetrics.completionRate}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Growth Metrics</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">New Companies (30d)</span>
+                      <span className="text-white font-semibold">+{systemHealth?.overview?.recentCompanies || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">New Users (30d)</span>
+                      <span className="text-white font-semibold">+{analyticsData.growthMetrics.newUsersThisPeriod}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">New Tasks (30d)</span>
+                      <span className="text-white font-semibold">+{systemHealth?.overview?.recentTasks || 0}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Subscription Analytics</h3>
+                  <div className="space-y-3">
+                    {systemHealth?.subscriptionDistribution?.slice(0, 3).map((sub, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span className="text-gray-400 capitalize">{sub.subscriptionPlan}</span>
+                        <span className="text-white font-semibold">{sub._count.subscriptionPlan}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Feature Usage Statistics */}
+            {analyticsData && (
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Feature Usage Statistics ({analyticsData.timeRange})</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {analyticsData.featureUsage.map((feature, index) => (
+                    <div key={index} className="bg-gray-700 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-white">{feature.count}</div>
+                      <div className="text-sm text-gray-400 capitalize">{feature.description}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Charts Placeholder */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1027,29 +1154,37 @@ const SuperAdminDashboard = () => {
             <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Business Intelligence</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <button 
+                <button
                   onClick={handleGenerateRevenueReport}
-                  className="btn btn-outline w-full text-left"
+                  className="btn btn-outline w-full text-left opacity-50 cursor-not-allowed"
+                  disabled
                 >
                   📊 Generate Revenue Report
+                  <div className="text-xs opacity-70">Coming Soon</div>
                 </button>
-                <button 
+                <button
                   onClick={handleUserEngagementAnalysis}
                   className="btn btn-outline w-full text-left"
+                  disabled={loading}
                 >
                   📈 User Engagement Analysis
+                  <div className="text-xs opacity-70">Active</div>
                 </button>
-                <button 
+                <button
                   onClick={handleFeatureUsageStatistics}
-                  className="btn btn-outline w-full text-left"
+                  className="btn btn-outline w-full text-left opacity-50 cursor-not-allowed"
+                  disabled
                 >
                   🎯 Feature Usage Statistics
+                  <div className="text-xs opacity-70">Coming Soon</div>
                 </button>
-                <button 
+                <button
                   onClick={handleExportAnalyticsData}
-                  className="btn btn-outline w-full text-left"
+                  className="btn btn-outline w-full text-left opacity-50 cursor-not-allowed"
+                  disabled
                 >
                   📋 Export Analytics Data
+                  <div className="text-xs opacity-70">Coming Soon</div>
                 </button>
               </div>
             </div>

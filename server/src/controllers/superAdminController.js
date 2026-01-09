@@ -472,11 +472,468 @@ const toggleCompanyStatus = async (req, res) => {
   }
 };
 
+/**
+ * Delete company completely (Super Admin only)
+ */
+const deleteCompany = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+
+    const company = await prisma.company.findUnique({
+      where: { id: parseInt(companyId) },
+      include: {
+        users: true,
+        tasks: true,
+        projects: true
+      }
+    });
+
+    if (!company) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+
+    // Check for active tasks and users
+    const activeTasks = company.tasks.filter(task => task.status !== 'COMPLETED');
+    const activeUsers = company.users.length;
+
+    if (activeTasks.length > 0) {
+      return res.status(400).json({
+        error: `Cannot delete company with ${activeTasks.length} active tasks. Please complete or archive all tasks first.`
+      });
+    }
+
+    // Log audit action before deletion
+    await logAuditActionDirect(req, 'COMPANY_DELETED', 'Company', {
+      entityId: company.id,
+      companyName: company.name,
+      oldValues: {
+        name: company.name,
+        email: company.email,
+        subscriptionPlan: company.subscriptionPlan,
+        userCount: company.users.length,
+        taskCount: company.tasks.length,
+        projectCount: company.projects.length
+      },
+      metadata: {
+        deletedBy: req.user.name,
+        activeUsersCount: activeUsers,
+        activeTasksCount: activeTasks.length
+      }
+    });
+
+    // Delete in proper order to handle foreign key constraints
+    // Note: Prisma should handle most cascades, but we'll be explicit
+
+    // Delete task-related data first
+    await prisma.taskReminder.deleteMany({
+      where: { task: { companyId: parseInt(companyId) } }
+    });
+
+    await prisma.comment.deleteMany({
+      where: { companyId: parseInt(companyId) }
+    });
+
+    await prisma.notification.deleteMany({
+      where: { companyId: parseInt(companyId) }
+    });
+
+    await prisma.taskCoAssignee.deleteMany({
+      where: { companyId: parseInt(companyId) }
+    });
+
+    await prisma.taskCollaborator.deleteMany({
+      where: { companyId: parseInt(companyId) }
+    });
+
+    await prisma.taskInvitation.deleteMany({
+      where: { task: { companyId: parseInt(companyId) } }
+    });
+
+    await prisma.taskShare.deleteMany({
+      where: { companyId: parseInt(companyId) }
+    });
+
+    await prisma.taskArchive.deleteMany({
+      where: { task: { companyId: parseInt(companyId) } }
+    });
+
+    // Delete tasks
+    await prisma.task.deleteMany({
+      where: { companyId: parseInt(companyId) }
+    });
+
+    // Delete project-related data
+    await prisma.projectMember.deleteMany({
+      where: { project: { companyId: parseInt(companyId) } }
+    });
+
+    await prisma.project.deleteMany({
+      where: { companyId: parseInt(companyId) }
+    });
+
+    // Delete template-related data
+    await prisma.templateTask.deleteMany({
+      where: { template: { companyId: parseInt(companyId) } }
+    });
+
+    await prisma.projectTemplate.deleteMany({
+      where: { companyId: parseInt(companyId) }
+    });
+
+    // Delete user-related data
+    await prisma.contact.deleteMany({
+      where: { user: { companyId: parseInt(companyId) } }
+    });
+
+    // Delete audit logs for this company
+    await prisma.auditLog.deleteMany({
+      where: { companyId: parseInt(companyId) }
+    });
+
+    // Finally delete users and company
+    await prisma.user.deleteMany({
+      where: { companyId: parseInt(companyId) }
+    });
+
+    await prisma.company.delete({
+      where: { id: parseInt(companyId) }
+    });
+
+    res.json({
+      success: true,
+      message: `Company "${company.name}" and all associated data deleted successfully`,
+      data: {
+        deletedCompany: {
+          id: company.id,
+          name: company.name,
+          usersDeleted: company.users.length,
+          tasksDeleted: company.tasks.length,
+          projectsDeleted: company.projects.length
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Delete company error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * Delete user globally (Super Admin only)
+ */
+const deleteUserGlobally = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const userToDelete = await prisma.user.findUnique({
+      where: { id: parseInt(userId) },
+      include: {
+        company: true,
+        _count: {
+          select: {
+            assignedTasks: true,
+            createdTasks: true,
+            coAssignedTasks: true,
+            collaboratedTasks: true
+          }
+        }
+      }
+    });
+
+    if (!userToDelete) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if user has any assigned tasks
+    const assignedTasks = await prisma.task.findMany({
+      where: {
+        OR: [
+          { assigneeId: parseInt(userId) },
+          { assignerId: parseInt(userId) }
+        ]
+      }
+    });
+
+    if (assignedTasks.length > 0) {
+      return res.status(400).json({
+        error: `Cannot delete user with ${assignedTasks.length} assigned tasks. Please reassign or complete all tasks first.`,
+        taskCount: assignedTasks.length
+      });
+    }
+
+    // Log audit action before deletion
+    await logAuditActionDirect(req, 'USER_DELETED', 'User', {
+      entityId: userToDelete.id,
+      userName: userToDelete.name,
+      oldValues: {
+        name: userToDelete.name,
+        email: userToDelete.email,
+        role: userToDelete.role,
+        companyId: userToDelete.companyId
+      },
+      metadata: {
+        deletedBy: req.user.name,
+        companyName: userToDelete.company.name,
+        deletionType: 'global_super_admin',
+        assignedTasksCount: userToDelete._count.assignedTasks,
+        createdTasksCount: userToDelete._count.createdTasks,
+        coAssignedTasksCount: userToDelete._count.coAssignedTasks,
+        collaboratedTasksCount: userToDelete._count.collaboratedTasks
+      }
+    });
+
+    // Delete user-related data in proper order
+    // Delete task collaborations and co-assignments
+    await prisma.taskCoAssignee.deleteMany({
+      where: { userId: parseInt(userId) }
+    });
+
+    await prisma.taskCollaborator.deleteMany({
+      where: { userId: parseInt(userId) }
+    });
+
+    await prisma.taskShare.deleteMany({
+      where: { userId: parseInt(userId) }
+    });
+
+    // Delete contacts
+    await prisma.contact.deleteMany({
+      where: { userId: parseInt(userId) }
+    });
+
+    // Delete comments
+    await prisma.comment.deleteMany({
+      where: { authorId: parseInt(userId) }
+    });
+
+    // Delete notifications
+    await prisma.notification.deleteMany({
+      where: { userId: parseInt(userId) }
+    });
+
+    // Delete project memberships
+    await prisma.projectMember.deleteMany({
+      where: { userId: parseInt(userId) }
+    });
+
+    // Delete project templates
+    await prisma.projectTemplate.deleteMany({
+      where: { userId: parseInt(userId) }
+    });
+
+    // Delete audit logs for this user
+    await prisma.auditLog.deleteMany({
+      where: { userId: parseInt(userId) }
+    });
+
+    // Finally delete the user
+    await prisma.user.delete({
+      where: { id: parseInt(userId) }
+    });
+
+    res.json({
+      success: true,
+      message: `User "${userToDelete.name}" (${userToDelete.email}) deleted successfully`,
+      data: {
+        deletedUser: {
+          id: userToDelete.id,
+          name: userToDelete.name,
+          email: userToDelete.email,
+          companyName: userToDelete.company.name,
+          role: userToDelete.role
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Delete user globally error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * Get user engagement analytics (Super Admin only)
+ */
+const getUserEngagementAnalytics = async (req, res) => {
+  try {
+    const { days = 30 } = req.query;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+
+    // Calculate Daily Active Users (DAU) - users who logged in today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const dauResult = await prisma.auditLog.findMany({
+      where: {
+        action: 'USER_LOGIN',
+        createdAt: {
+          gte: today,
+          lt: tomorrow
+        }
+      },
+      select: {
+        userId: true
+      },
+      distinct: ['userId']
+    });
+
+    // Calculate Weekly Active Users (WAU) - users who logged in this week
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - 7);
+
+    const wauResult = await prisma.auditLog.findMany({
+      where: {
+        action: 'USER_LOGIN',
+        createdAt: {
+          gte: weekStart
+        }
+      },
+      select: {
+        userId: true
+      },
+      distinct: ['userId']
+    });
+
+    // Calculate Monthly Active Users (MAU) - users who logged in this month
+    const monthStart = new Date();
+    monthStart.setDate(monthStart.getDate() - 30);
+
+    const mauResult = await prisma.auditLog.findMany({
+      where: {
+        action: 'USER_LOGIN',
+        createdAt: {
+          gte: monthStart
+        }
+      },
+      select: {
+        userId: true
+      },
+      distinct: ['userId']
+    });
+
+    // Task completion rate
+    const totalTasks = await prisma.task.count({
+      where: {
+        createdAt: { gte: startDate }
+      }
+    });
+
+    const completedTasks = await prisma.task.count({
+      where: {
+        status: 'COMPLETED',
+        createdAt: { gte: startDate }
+      }
+    });
+
+    // User retention - users who logged in both last week and this week
+    const lastWeekStart = new Date();
+    lastWeekStart.setDate(lastWeekStart.getDate() - 14);
+    const thisWeekStart = new Date();
+    thisWeekStart.setDate(thisWeekStart.getDate() - 7);
+
+    const lastWeekUsers = await prisma.auditLog.findMany({
+      where: {
+        action: 'USER_LOGIN',
+        createdAt: {
+          gte: lastWeekStart,
+          lt: thisWeekStart
+        }
+      },
+      select: { userId: true },
+      distinct: ['userId']
+    });
+
+    const thisWeekUsers = await prisma.auditLog.findMany({
+      where: {
+        action: 'USER_LOGIN',
+        createdAt: {
+          gte: thisWeekStart
+        }
+      },
+      select: { userId: true },
+      distinct: ['userId']
+    });
+
+    const lastWeekUserIds = new Set(lastWeekUsers.map(u => u.userId));
+    const thisWeekUserIds = new Set(thisWeekUsers.map(u => u.userId));
+    const retainedUsers = [...lastWeekUserIds].filter(id => thisWeekUserIds.has(id));
+
+    // Feature usage statistics
+    const featureUsage = await prisma.auditLog.groupBy({
+      by: ['action'],
+      where: {
+        createdAt: { gte: startDate },
+        action: {
+          in: ['TASK_CREATED', 'TASK_UPDATED', 'TASK_COMPLETED', 'COMMENT_ADDED', 'PROJECT_CREATED']
+        }
+      },
+      _count: {
+        action: true
+      }
+    });
+
+    // User growth over time (daily signups)
+    const userGrowth = await prisma.user.findMany({
+      where: {
+        createdAt: { gte: startDate }
+      },
+      select: {
+        createdAt: true
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
+
+    // Group by day
+    const dailySignups = {};
+    userGrowth.forEach(user => {
+      const day = user.createdAt.toISOString().split('T')[0];
+      dailySignups[day] = (dailySignups[day] || 0) + 1;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        timeRange: `${days} days`,
+        userActivity: {
+          dailyActiveUsers: dauResult.length,
+          weeklyActiveUsers: wauResult.length,
+          monthlyActiveUsers: mauResult.length,
+          retentionRate: lastWeekUsers.length > 0 ? (retainedUsers.length / lastWeekUsers.length * 100).toFixed(1) : 0
+        },
+        taskMetrics: {
+          totalTasksCreated: totalTasks,
+          totalTasksCompleted: completedTasks,
+          completionRate: totalTasks > 0 ? (completedTasks / totalTasks * 100).toFixed(1) : 0
+        },
+        featureUsage: featureUsage.map(item => ({
+          action: item.action,
+          count: item._count.action,
+          description: item.action.replace(/_/g, ' ').toLowerCase()
+        })),
+        growthMetrics: {
+          newUsersThisPeriod: userGrowth.length,
+          dailySignups: dailySignups
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get user engagement analytics error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getAllCompanies,
   getCompanyById,
   searchUsersGlobally,
   getSystemHealth,
   resetUserPassword,
-  toggleCompanyStatus
+  toggleCompanyStatus,
+  deleteCompany,
+  deleteUserGlobally,
+  getUserEngagementAnalytics
 };

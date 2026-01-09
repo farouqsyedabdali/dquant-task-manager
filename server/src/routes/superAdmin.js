@@ -7,7 +7,10 @@ const {
   searchUsersGlobally,
   getSystemHealth,
   resetUserPassword,
-  toggleCompanyStatus
+  toggleCompanyStatus,
+  deleteCompany,
+  deleteUserGlobally,
+  getUserEngagementAnalytics
 } = require('../controllers/superAdminController');
 
 const router = express.Router();
@@ -29,12 +32,17 @@ router.use((req, res, next) => {
 router.get('/companies', getAllCompanies);
 router.get('/companies/:id', getCompanyById);
 router.put('/companies/:companyId/status', toggleCompanyStatus);
+router.delete('/companies/:companyId', deleteCompany);
 
 // User management routes
 router.get('/users/search', searchUsersGlobally);
 router.put('/users/:userId/reset-password', resetUserPassword);
+router.delete('/users/:userId', deleteUserGlobally);
 
 // System monitoring routes
 router.get('/system/health', getSystemHealth);
+
+// Analytics routes
+router.get('/analytics/user-engagement', getUserEngagementAnalytics);
 
 module.exports = router;

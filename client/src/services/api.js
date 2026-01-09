@@ -178,13 +178,18 @@ export const superAdminAPI = {
   getAllCompanies: (params) => api.get('/super-admin/companies', { params }),
   getCompanyById: (id) => api.get(`/super-admin/companies/${id}`),
   toggleCompanyStatus: (companyId, action) => api.put(`/super-admin/companies/${companyId}/status`, { action }),
-  
+  deleteCompany: (companyId) => api.delete(`/super-admin/companies/${companyId}`),
+
   // User management
   searchUsersGlobally: (params) => api.get('/super-admin/users/search', { params }),
   resetUserPassword: (userId, newPassword) => api.put(`/super-admin/users/${userId}/reset-password`, { newPassword }),
-  
+  deleteUserGlobally: (userId) => api.delete(`/super-admin/users/${userId}`),
+
   // System monitoring
   getSystemHealth: (params) => api.get('/super-admin/system/health', { params }),
+
+  // Analytics
+  getUserEngagementAnalytics: (params) => api.get('/super-admin/analytics/user-engagement', { params }),
 };
 
 // Security API (SUPER_ADMIN role required)
