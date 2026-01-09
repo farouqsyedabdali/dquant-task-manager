@@ -22,7 +22,7 @@ router.post('/register-company',
   validators.email('email'),
   validators.name('adminName'),
   validators.email('adminEmail'),
-  validators.password('password'),
+  validators.password('password', 6), // Match frontend requirement of 6 characters
   handleValidationErrors,
   registerCompany
 );
@@ -30,7 +30,7 @@ router.post('/register-company',
 router.post('/register-personal',
   validators.name('name'),
   validators.email('email'),
-  validators.password('password'),
+  validators.password('password', 6), // Match frontend requirement of 6 characters
   handleValidationErrors,
   registerPersonal
 );
