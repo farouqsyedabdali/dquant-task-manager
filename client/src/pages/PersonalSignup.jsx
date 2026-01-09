@@ -313,16 +313,17 @@ const PersonalSignup = () => {
 
             {/* Terms and Conditions */}
             <div>
-              <label className="flex items-start space-x-3">
+              <label className="flex items-center mt-2 cursor-pointer">
                 <input
                   type="checkbox"
                   name="acceptTerms"
                   checked={formData.acceptTerms}
                   onChange={handleChange}
-                  className={`checkbox mt-1 ${errors.acceptTerms ? 'checkbox-error' : ''}`}
+                  className={`checkbox checkbox-sm mr-2 ${errors.acceptTerms ? 'checkbox-error' : ''}`}
                   style={{
-                    accentColor: 'var(--color-primary)',
-                    borderColor: 'var(--color-border-default)'
+                    border: '2px solid var(--color-text-tertiary)',
+                    backgroundColor: formData.acceptTerms ? 'var(--color-accent)' : 'transparent',
+                    '--chkbg': 'var(--color-accent)'
                   }}
                 />
                 <span 
