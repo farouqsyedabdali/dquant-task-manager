@@ -10,19 +10,21 @@ const SignupOptions = () => {
       id: 'personal',
       name: 'Personal',
       price: 'Free',
-      description: 'Perfect for individual task management - Free forever',
+      description: 'Revolutionary AI-powered task management',
       features: [
-        'Unlimited tasks',
-        'AI quick actions: create tasks, updates, subtasks, projects',
-        'Solo workspace (no employees)',
-        'Assign to yourself or external contacts',
-        'Subtasks, priorities, due dates, comments',
-        'Share tasks via external invitations'
+        'AI creates tasks from any text automatically',
+        'One-click creation from browser extension',
+        'Assign to anyone via email',
+        'Share tasks via instant email invitations',
+        'Create up to 100 tasks/month, 5 projects/month',
+        'AI transforms ideas into structured project plans',
+        'AI matches text to existing tasks and suggests updates',
+        'Perfect for freelancers, consultants & solo professionals'
       ],
       limitations: [
         'No internal employees/teams',
         'No role-based access control',
-        'No CSV import/export',
+        'No bulk import/export',
         'No audit logs/advanced analytics'
       ],
       buttonText: 'Get Started',
@@ -33,20 +35,17 @@ const SignupOptions = () => {
       id: 'business',
       name: 'Business',
       price: 'Free*',
-      description: 'Complete team collaboration platform',
+      description: 'Enterprise-grade AI automation that transforms how teams work',
       features: [
-        'Unlimited tasks and projects',
-        'Unlimited team members',
-        'Role-based access control (EMPLOYEE, ADMIN, SYSDMIN)',
-        'AI quick actions: create tasks, updates, subtasks, projects',
-        'Audit logs & basic analytics',
-        'CSV employee import (export coming soon)',
-        'Priority management',
-        'Due date tracking',
-        'Comment system',
-        'Subtasks & hierarchies',
-        'Multi-tenant architecture',
-        'Free during beta phase (6 months)'
+        'AI transforms any text into tasks instantly',
+        'Create tasks from browser extension',
+        'Assign to external partners via email',
+        'Unlimited team members with role-based access control',
+        'Complete audit logs and analytics for compliance',
+        'Bulk import - onboard entire teams in minutes',
+        'Create up to 300 tasks/month/user, 15 projects/month/user',
+        'Real-time notifications and task invitations',
+        'Enterprise multi-tenant architecture with data isolation'
       ],
       limitations: [],
       buttonText: 'Get Started',
@@ -87,7 +86,7 @@ const SignupOptions = () => {
             className="text-xl max-w-2xl mx-auto"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            Select the plan that best fits your needs. Both plans are free during our beta phase.
+            The only task manager where AI creates tasks from any text automatically. Work with anyone via email - no signups required. Experience the future of productivity - completely free during our exclusive beta phase.
           </p>
         </div>
 

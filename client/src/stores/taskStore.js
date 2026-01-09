@@ -13,6 +13,7 @@ const useTaskStore = create((set, get) => ({
     search: '',
     dueDateFilter: '',
     taskType: '',
+    selectedProjectId: '',
     sortBy: 'urgency'
   },
 
@@ -186,7 +187,7 @@ const useTaskStore = create((set, get) => ({
 
   // Clear filters
   clearFilters: () => {
-    set({ filters: { status: '', priority: '', search: '', dueDateFilter: '', taskType: '', sortBy: 'urgency' } });
+    set({ filters: { status: '', priority: '', search: '', dueDateFilter: '', taskType: '', selectedProjectId: '', sortBy: 'urgency' } });
   },
 
   // Clear current task
@@ -246,6 +247,12 @@ const useTaskStore = create((set, get) => ({
             filteredTasks = filteredTasks.filter(task => 
               task.projectId !== null && task.projectId !== undefined
             );
+            // If a specific project is selected, filter by that project
+            if (filters.selectedProjectId) {
+              filteredTasks = filteredTasks.filter(task => 
+                task.projectId === parseInt(filters.selectedProjectId)
+              );
+            }
             break;
         }
       }
