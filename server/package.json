@@ -9,7 +9,8 @@
     "seed": "node src/utils/seed.js",
     "cleanup:tasks": "node scripts/cleanupOrphanedTasks.js",
     "cleanup:tasks:interactive": "node scripts/cleanupOrphanedTasksInteractive.js",
-    "update:google-accounts": "node scripts/updateGoogleAccountsToSysdmin.js"
+    "update:google-accounts": "node scripts/updateGoogleAccountsToSysdmin.js",
+    "delete:company-tasks": "node scripts/deleteCompanyTasks.js"
   },
   "keywords": [],
   "author": "",

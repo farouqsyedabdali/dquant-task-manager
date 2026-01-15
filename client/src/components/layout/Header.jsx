@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../context/authStore';
 import CalendarIcon from '../icons/CalendarIcon';
 import QuickActionsDropdown from './QuickActionsDropdown';
-import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaUserFriends, FaProjectDiagram, FaComment } from 'react-icons/fa';
+import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaUserFriends, FaProjectDiagram, FaComment, FaBook } from 'react-icons/fa';
+import UserManualModal from '../common/UserManualModal';
 import tialzLogo from '../../assets/Cover (1)-Photoroom.png';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [showUserManual, setShowUserManual] = useState(false);
   const profileDropdownRef = useRef(null);
   const { user, logout, isAdmin, isSysAdmin, isSuperAdmin } = useAuthStore();
   const navigate = useNavigate();
@@ -352,7 +354,7 @@ const Header = () => {
                         setIsProfileDropdownOpen(false);
                       }}
                       className="w-full text-left px-3 py-2 rounded-md transition-colors duration-200 flex items-center space-x-2"
-                      style={{ 
+                      style={{
                         color: 'var(--color-text-secondary)',
                       }}
                       onMouseEnter={(e) => {
@@ -367,8 +369,29 @@ const Header = () => {
                       <FaComment className="w-4 h-4" />
                       <span>Feedback</span>
                     </button>
-                    
-                    <div 
+                    <button
+                      onClick={() => {
+                        setShowUserManual(true);
+                        setIsProfileDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-md transition-colors duration-200 flex items-center space-x-2"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = 'var(--color-text-primary)';
+                        e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--color-text-secondary)';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <FaBook className="w-4 h-4" />
+                      <span>User Manual</span>
+                    </button>
+
+                    <div
                       className="border-t my-2"
                       style={{ borderColor: 'var(--color-border-default)' }}
                     ></div>
@@ -581,7 +604,7 @@ const Header = () => {
                       setIsMenuOpen(false);
                     }}
                     className="w-full text-left px-3 py-2 rounded-md transition-colors duration-200 flex items-center space-x-2"
-                    style={{ 
+                    style={{
                       color: 'var(--color-text-secondary)',
                     }}
                     onMouseEnter={(e) => {
@@ -596,7 +619,28 @@ const Header = () => {
                     <FaComment className="w-4 h-4" />
                     <span>Feedback</span>
                   </button>
-                  
+                  <button
+                    onClick={() => {
+                      setShowUserManual(true);
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-md transition-colors duration-200 flex items-center space-x-2"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--color-text-primary)';
+                      e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--color-text-secondary)';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <FaBook className="w-4 h-4" />
+                    <span>User Manual</span>
+                  </button>
+
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-3 py-2 rounded-md transition-colors duration-200 flex items-center space-x-2"
@@ -622,7 +666,12 @@ const Header = () => {
         )}
       </div>
 
-      
+
+      {/* User Manual Modal */}
+      <UserManualModal
+        isOpen={showUserManual}
+        onClose={() => setShowUserManual(false)}
+      />
     </header>
   );
 };
