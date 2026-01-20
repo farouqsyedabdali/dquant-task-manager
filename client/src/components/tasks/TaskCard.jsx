@@ -153,8 +153,8 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
 
         {/* Task Details */}
         <div className="space-y-3">
-          {/* Assigned To - Only show for company accounts */}
-          {!isPersonalAccount && (
+          {/* Assigned To */}
+          {true && (
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <span 

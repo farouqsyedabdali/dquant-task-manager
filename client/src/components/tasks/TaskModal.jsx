@@ -101,8 +101,12 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   // Check if current user is viewing a shared task (view-only access)
   const isSharedTask = viewedTask?.sharedWith?.some(share => share.userId === user?.id);
   
-  // Check if current user can share (lead assignee or assigner)
-  const canShare = viewedTask?.assigneeId === user?.id || viewedTask?.assignerId === user?.id;
+  // Check if current user can share (lead assignee, assigner, or admin)
+  const canShare = viewedTask?.assigneeId === user?.id ||
+                   viewedTask?.assignerId === user?.id ||
+                   isAdmin ||
+                   user?.role === 'SYSDMIN' ||
+                   user?.role === 'SUPER_ADMIN';
   
   // Check if user can archive/unarchive this task
   const canArchive = !isSharedTask && (
@@ -797,7 +801,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
               className="!bg-purple-600 hover:!bg-purple-700"
             />
             
-            {canShare && !isPersonalAccount && (
+            {canShare && (
               <IconButton
                 icon={<FaShareAlt />}
                 label="Share"
@@ -1144,8 +1148,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                 {/* Team & Sharing Tab */}
                 {activeTab === 'team' && (
                   <div className="space-y-4 animate-fadeIn">
-                    {/* Unified People List */}
-                    {!isPersonalAccount ? (
+                    {/* Unified People List - Show for all accounts, but limit functionality for personal accounts */}
+                    {true ? (
                 <div>
                         {/* Unified List */}
                         <div className="space-y-2">

@@ -34,7 +34,7 @@ const shareTask = async (req, res) => {
     }
 
     // Check if current user can share: lead assignee, assigner, admin, or sysadmin
-    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSADMIN';
+    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSDMIN' || req.user.role === 'SUPER_ADMIN';
     const isAssigner = task.assignerId === currentUserId;
     const isLeadAssignee = task.assigneeId === currentUserId;
     if (!(isLeadAssignee || isAssigner || isAdminOrSysadmin)) {
@@ -149,7 +149,7 @@ const unshareTask = async (req, res) => {
     }
 
     // In unshareTask, same permission logic:
-    const isAdminOrSysadminUnshare = req.user.role === 'ADMIN' || req.user.role === 'SYSADMIN';
+    const isAdminOrSysadminUnshare = req.user.role === 'ADMIN' || req.user.role === 'SYSDMIN' || req.user.role === 'SUPER_ADMIN';
     const isAssignerUnshare = task.assignerId === currentUserId;
     const isLeadAssigneeUnshare = task.assigneeId === currentUserId;
     if (!(isLeadAssigneeUnshare || isAssignerUnshare || isAdminOrSysadminUnshare)) {
@@ -230,7 +230,7 @@ const unshareTaskById = async (req, res) => {
     }
 
     // Check permissions: lead assignee, assigner, admin, or sysadmin
-    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSADMIN';
+    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSDMIN' || req.user.role === 'SUPER_ADMIN';
     const isAssigner = task.assignerId === currentUserId;
     const isLeadAssignee = task.assigneeId === currentUserId;
     if (!(isLeadAssignee || isAssigner || isAdminOrSysadmin)) {
@@ -475,7 +475,7 @@ const shareTaskWithContact = async (req, res) => {
     }
 
     // Check if current user can share
-    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSADMIN';
+    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSDMIN' || req.user.role === 'SUPER_ADMIN';
     const isAssigner = task.assignerId === currentUserId;
     const isLeadAssignee = task.assigneeId === currentUserId;
     if (!(isLeadAssignee || isAssigner || isAdminOrSysadmin)) {
@@ -604,7 +604,7 @@ const shareTaskWithEmail = async (req, res) => {
     }
 
     // Check if current user can share
-    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSADMIN';
+    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSDMIN' || req.user.role === 'SUPER_ADMIN';
     const isAssigner = task.assignerId === currentUserId;
     const isLeadAssignee = task.assigneeId === currentUserId;
     if (!(isLeadAssignee || isAssigner || isAdminOrSysadmin)) {

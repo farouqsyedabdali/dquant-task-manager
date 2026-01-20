@@ -24,6 +24,7 @@ const useAuthStore = create((set, get) => ({
   token: localStorage.getItem('token') || null,
   isLoading: false,
   error: null,
+  googleContactsStatus: null,
 
   login: async (credentials) => {
     set({ isLoading: true, error: null });
@@ -200,6 +201,10 @@ const useAuthStore = create((set, get) => ({
     }
     
     return true;
+  },
+
+  updateGoogleContactsStatus: (status) => {
+    set({ googleContactsStatus: status });
   },
 
   isSuperAdmin: () => {

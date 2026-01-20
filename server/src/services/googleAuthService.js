@@ -6,7 +6,7 @@ const client = new OAuth2Client(
   process.env.GOOGLE_REDIRECT_URI
 );
 
-// Get Google OAuth URL
+// Get Google OAuth URL (basic scopes only)
 const getAuthUrl = () => {
   return client.generateAuthUrl({
     access_type: 'offline',
@@ -15,6 +15,23 @@ const getAuthUrl = () => {
       'https://www.googleapis.com/auth/userinfo.profile'
     ],
     prompt: 'consent'
+  });
+};
+
+// Get Google OAuth URL with contacts scope (incremental authorization)
+const getContactsAuthUrl = () => {
+  const state = Buffer.from(JSON.stringify({ isIncrementalAuth: true })).toString('base64');
+
+  return client.generateAuthUrl({
+    access_type: 'offline',
+    scope: [
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/contacts.readonly'
+    ],
+    prompt: 'consent',
+    include_granted_scopes: true, // This enables incremental authorization
+    state // Pass incremental auth flag
   });
 };
 
@@ -32,13 +49,18 @@ const verifyToken = async (code) => {
     });
 
     const payload = ticket.getPayload();
-    
+
     return {
       googleId: payload.sub,
       email: payload.email,
       name: payload.name,
       picture: payload.picture,
-      emailVerified: payload.email_verified
+      emailVerified: payload.email_verified,
+      // Include token information for storage
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+      scopes: tokens.scope ? tokens.scope.split(' ') : []
     };
   } catch (error) {
     console.error('Google token verification error:', error);
@@ -48,6 +70,7 @@ const verifyToken = async (code) => {
 
 module.exports = {
   getAuthUrl,
+  getContactsAuthUrl,
   verifyToken
 };
 

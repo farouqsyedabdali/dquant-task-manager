@@ -12,6 +12,16 @@ const GoogleCallback = () => {
     const token = searchParams.get('token');
     const error = searchParams.get('error');
     const newUser = searchParams.get('newUser');
+    const incremental = searchParams.get('incremental');
+    const contacts = searchParams.get('contacts');
+
+    // Handle incremental authorization (user was already logged in)
+    if (incremental === 'true') {
+      console.log('Incremental auth completed, contacts access:', contacts);
+      // Redirect back to contacts page to continue the flow
+      navigate('/contacts?googleAuth=success');
+      return;
+    }
 
     if (error) {
       // Handle errors

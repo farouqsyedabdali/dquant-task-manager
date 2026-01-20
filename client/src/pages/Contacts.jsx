@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import useContactStore from '../stores/contactStore';
+import useAuthStore from '../context/authStore';
 import IconButton from '../components/common/IconButton';
 import SkeletonCard from '../components/common/SkeletonCard';
 import EmptyState from '../components/common/EmptyState';
-import { FaPlus, FaTimes, FaCheck, FaUserFriends } from 'react-icons/fa';
+import GoogleContactsModal from '../components/contacts/GoogleContactsModal';
+import { FaPlus, FaTimes, FaCheck, FaUserFriends, FaGoogle } from 'react-icons/fa';
 
 const Contacts = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
+  const [isGoogleContactsModalOpen, setIsGoogleContactsModalOpen] = useState(false);
+  const [googleContactsTaskId, setGoogleContactsTaskId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all', 'personal', 'business'
   const [successMessage, setSuccessMessage] = useState('');
@@ -28,6 +32,8 @@ const Contacts = () => {
     getContactDeletionPreview,
     clearError
   } = useContactStore();
+
+  const { user } = useAuthStore();
 
   useEffect(() => {
     fetchContacts({ type: filterType, search: searchTerm });
@@ -191,6 +197,20 @@ const Contacts = () => {
             icon={<FaPlus />}
             label="Add Contact"
             variant="primary"
+            size="sm"
+          />
+
+          {/* Import from Google Button */}
+          <IconButton
+            onClick={() => {
+              setIsGoogleContactsModalOpen(true);
+              // Clear any existing messages when opening modal
+              setSuccessMessage('');
+              setErrorMessage('');
+            }}
+            icon={<FaGoogle />}
+            label="Import from Google"
+            variant="outline"
             size="sm"
           />
         </div>
@@ -659,6 +679,29 @@ const Contacts = () => {
           </div>
         </div>
       )}
+
+      {/* Google Contacts Modal */}
+      <GoogleContactsModal
+        isOpen={isGoogleContactsModalOpen}
+        onClose={() => setIsGoogleContactsModalOpen(false)}
+        taskId={googleContactsTaskId}
+        onInvitationsSent={(results) => {
+          // Handle invitation results
+          const successful = results.successful?.length || 0;
+          const failed = results.failed?.length || 0;
+
+          if (successful > 0) {
+            setSuccessMessage(`Successfully sent ${successful} invitation${successful !== 1 ? 's' : ''}!`);
+          }
+
+          if (failed > 0) {
+            setErrorMessage(`Failed to send ${failed} invitation${failed !== 1 ? 's' : ''}.`);
+          }
+
+          // Refresh contacts list
+          fetchContacts({ type: filterType, search: searchTerm });
+        }}
+      />
     </div>
   );
 };

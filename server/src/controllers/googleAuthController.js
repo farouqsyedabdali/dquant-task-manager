@@ -29,23 +29,25 @@ const handleGoogleCallback = async (req, res) => {
   try {
     const { code, state } = req.query;
     const frontendUrl = getFrontendUrl();
-    
+
     if (!code) {
       return res.redirect(`${frontendUrl}/login?error=oauth_cancelled`);
     }
 
-    // Decode state to get signup type
+    // Decode state to get signup type and check if this is incremental auth
     let signupType = null;
+    let isIncrementalAuth = false;
     if (state) {
       try {
         const decoded = JSON.parse(Buffer.from(state, 'base64').toString());
         signupType = decoded.signupType;
+        isIncrementalAuth = decoded.isIncrementalAuth || false;
       } catch (e) {
         // State might not be in expected format
       }
     }
 
-    // Verify token and get user info
+    // Verify token and get user info (now returns tokens too)
     const googleUser = await verifyToken(code);
 
     // Check if user already exists by googleId
@@ -62,32 +64,48 @@ const handleGoogleCallback = async (req, res) => {
       });
     }
 
-    // If user exists, log them in
+    // If user exists, handle login or incremental auth
     if (user) {
       // Check if this is a company account - Google OAuth is only for personal accounts
       if (!user.company.isPersonal) {
         return res.redirect(`${frontendUrl}/login?error=Google Sign-In is only available for personal accounts. Please sign in with your email and password.`);
       }
 
-      // Update googleId if not set
-      if (!user.googleId) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { 
-            googleId: googleUser.googleId,
-            authProvider: 'google'
-          }
-        });
+      // Update googleId and tokens if not set
+      const updateData = {
+        googleId: googleUser.googleId,
+        authProvider: 'google'
+      };
+
+      // Always update tokens to ensure we have fresh ones
+      if (googleUser.accessToken) {
+        updateData.googleAccessToken = googleUser.accessToken;
+        updateData.googleRefreshToken = googleUser.refreshToken;
+        updateData.googleTokenExpiry = googleUser.tokenExpiry;
+        // Update contacts scope based on granted scopes
+        updateData.googleContactsScope = googleUser.scopes.includes('https://www.googleapis.com/auth/contacts.readonly');
       }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: updateData
+      });
 
       // Check if company is suspended
       if (user.company.markedForDeletion) {
         return res.redirect(`${frontendUrl}/login?error=company_suspended`);
       }
 
-      // Generate JWT token
+      // Handle incremental authorization (user was already logged in)
+      if (isIncrementalAuth) {
+        console.log('🔄 Incremental auth completed for user:', user.id, 'contacts scope:', updateData.googleContactsScope);
+        // Redirect back to the frontend with success indicator
+        return res.redirect(`${frontendUrl}/auth/google/callback?incremental=true&contacts=${updateData.googleContactsScope}`);
+      }
+
+      // Generate JWT token for regular login
       const token = jwt.sign(
-        { 
+        {
           userId: user.id,
           companyId: user.companyId,
           role: user.role
@@ -131,7 +149,12 @@ const handleGoogleCallback = async (req, res) => {
           authProvider: 'google',
           role: 'SYSDMIN', // Personal accounts get SYSDMIN role (same as regular signup)
           companyId: company.id,
-          isEmailVerified: googleUser.emailVerified || true
+          isEmailVerified: googleUser.emailVerified || true,
+          // Store Google tokens
+          googleAccessToken: googleUser.accessToken,
+          googleRefreshToken: googleUser.refreshToken,
+          googleTokenExpiry: googleUser.tokenExpiry,
+          googleContactsScope: googleUser.scopes.includes('https://www.googleapis.com/auth/contacts.readonly')
         },
         include: { company: true }
       });
@@ -170,7 +193,12 @@ const handleGoogleCallback = async (req, res) => {
           authProvider: 'google',
           role: 'SYSDMIN', // Personal accounts get SYSDMIN role (same as regular signup)
           companyId: company.id,
-          isEmailVerified: googleUser.emailVerified || true
+          isEmailVerified: googleUser.emailVerified || true,
+          // Store Google tokens
+          googleAccessToken: googleUser.accessToken,
+          googleRefreshToken: googleUser.refreshToken,
+          googleTokenExpiry: googleUser.tokenExpiry,
+          googleContactsScope: googleUser.scopes.includes('https://www.googleapis.com/auth/contacts.readonly')
         },
         include: { company: true }
       });
