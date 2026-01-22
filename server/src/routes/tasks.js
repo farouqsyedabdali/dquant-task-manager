@@ -113,7 +113,7 @@ router.delete('/:id/co-assignees/:userId',
 // Send task invitation via email
 router.post('/:taskId/send-invitation',
   validators.id('taskId'),
-  validators.email('email'),
+  validators.email('recipientEmail'),
   handleValidationErrors,
   sendInvitation
 );

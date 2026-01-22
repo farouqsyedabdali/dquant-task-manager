@@ -59,11 +59,12 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
   const [activeTab, setActiveTab] = useState('team'); // 'team' or 'hierarchy'
-  const { updateTask, isLoading } = useTaskStore();
+  const { updateTask, fetchTask, isLoading } = useTaskStore();
   const { user, isAdmin } = useAuthStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
   const { fetchContacts } = useContactStore();
   const navigate = useNavigate();
+  const toast = useToastContext();
   
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
@@ -210,28 +211,69 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     }
   }, [isOpen, task, fetchCoAssignees, isPersonalAccount]);
 
-  const handleAddCoAssignee = async (userId) => {
-    if (!userId || !viewedTask?.id) return;
+  const handleAddCoAssignee = async (selectedId, selectedType, selectedRole) => {
+    if (!selectedId || !viewedTask?.id) return;
 
     try {
       setIsAddingCoAssignee(true);
-      await tasksAPI.addCoAssignee(viewedTask.id, userId);
 
-      // Track as recent employee
-      const selectedUser = users.find(u => u.id.toString() === userId.toString());
-      if (selectedUser) {
-        addToRecentEmployees(selectedUser);
-      }
+      if (selectedType === 'user') {
+        // Add company user as co-assignee
+        // selectedId is in format "user_${userId}", so extract the actual ID
+        const userId = selectedId.startsWith('user_') ? selectedId.substring(5) : selectedId;
 
-      // Refresh co-assignees list and task data
-      await fetchCoAssignees(viewedTask.id);
-      const result = await fetchTask(viewedTask.id);
-      if (result.success && result.data) {
-        setViewedTask(result.data);
+        await tasksAPI.addCoAssignee(viewedTask.id, userId);
+
+        // Track as recent employee
+        const selectedUser = users.find(u => u.id.toString() === userId.toString());
+        if (selectedUser) {
+          addToRecentEmployees(selectedUser);
+        }
+
+        // Refresh co-assignees list and task data
+        await fetchCoAssignees(viewedTask.id);
+        const result = await fetchTask(viewedTask.id);
+        if (result.success && result.data) {
+          setViewedTask(result.data);
+        }
+
+        toast.success('Co-assignee added successfully!');
+      } else if (selectedType === 'contact') {
+        // Send invitation to external contact
+        // selectedId is already the raw contact ID (e.g., '36')
+        const contactId = selectedId;
+        const contact = contacts.find(c => c.id.toString() === contactId.toString());
+
+        if (contact) {
+          // Validate that contact has a valid email
+          if (!contact.email || !contact.email.includes('@')) {
+            console.error('Contact has invalid email:', contact.email);
+            toast.error('Contact does not have a valid email address');
+            return;
+          }
+
+          const invitationData = {
+            recipientEmail: contact.email,
+            message: `Hi ${contact.name}, I'd like to invite you to collaborate on this task: "${viewedTask.title}"`
+          };
+
+          await tasksAPI.sendInvitation(viewedTask.id, invitationData);
+
+          // Refresh task data to show invitation status
+          const result = await fetchTask(viewedTask.id);
+          if (result.success && result.data) {
+            setViewedTask(result.data);
+          }
+
+          toast.success('Invitation sent successfully!');
+        } else {
+          console.error('Contact not found:', { contactId, availableContacts: contacts.length });
+          toast.error('Contact not found. Please refresh and try again.');
+        }
       }
     } catch (error) {
-      console.error('Error adding co-assignee:', error);
-      toast.error(error.response?.data?.error || 'Failed to add co-assignee');
+      console.error('Error adding team member:', error);
+      toast.error(error.response?.data?.error || 'Failed to add team member');
       throw error; // Re-throw so modal can handle it
     } finally {
       setIsAddingCoAssignee(false);
@@ -1218,7 +1260,13 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                               {/* Add Person Button - Only show if user is lead assignee */}
                               {viewedTask?.assigneeId === user?.id && !isEditing && (
                                 <button
-                                  onClick={() => setIsAddTeamMemberModalOpen(true)}
+                                  onClick={async () => {
+                                    // Ensure contacts are loaded before opening modal
+                                    if (contacts.length === 0 && !isLoadingContacts) {
+                                      await fetchContactsForTask();
+                                    }
+                                    setIsAddTeamMemberModalOpen(true);
+                                  }}
                                   className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0"
                                   style={{
                                     backgroundColor: 'var(--color-primary)',
@@ -1241,7 +1289,13 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             viewedTask?.assigneeId === user?.id && !isEditing && (
                               <div className="flex items-center justify-end">
                                 <button
-                                  onClick={() => setIsAddTeamMemberModalOpen(true)}
+                                  onClick={async () => {
+                                    // Ensure contacts are loaded before opening modal
+                                    if (contacts.length === 0 && !isLoadingContacts) {
+                                      await fetchContactsForTask();
+                                    }
+                                    setIsAddTeamMemberModalOpen(true);
+                                  }}
                                   className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0"
                                   style={{
                                     backgroundColor: 'var(--color-primary)',
@@ -2105,20 +2159,22 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       />
 
       {/* Add Team Member Modal */}
-      {!isPersonalAccount && (
-        <AddTeamMemberModal
-          isOpen={isAddTeamMemberModalOpen}
-          onClose={() => setIsAddTeamMemberModalOpen(false)}
-          onAdd={handleAddCoAssignee}
-          taskId={viewedTask?.id}
-          excludeUserIds={[
-            viewedTask?.assigneeId,
-            ...(coAssignees.map(co => co.userId) || []),
-            ...(viewedTask?.collaborators?.map(c => c.userId) || []),
-            ...(viewedTask?.sharedWith?.map(s => s.userId).filter(Boolean) || [])
-          ].filter(Boolean)}
-        />
-      )}
+      <AddTeamMemberModal
+        isOpen={isAddTeamMemberModalOpen}
+        onClose={() => setIsAddTeamMemberModalOpen(false)}
+        onAdd={handleAddCoAssignee}
+        taskId={viewedTask?.id}
+        contacts={contacts}
+        excludeUserIds={[
+          viewedTask?.assigneeId,
+          ...(coAssignees.map(co => co.userId) || []),
+          ...(viewedTask?.collaborators?.map(c => c.userId) || []),
+          ...(viewedTask?.sharedWith?.map(s => s.userId).filter(Boolean) || [])
+        ].filter(Boolean)}
+        excludeContactIds={[
+          ...(viewedTask?.sharedWith?.map(s => s.contactId).filter(Boolean) || [])
+        ]}
+      />
 
       {/* Task Summary Modal */}
       {isSummaryModalOpen && summaryData && (

@@ -31,10 +31,11 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
     if (isOpen && !hasInitializedContacts) {
       setHasInitializedContacts(true);
       fetchUsers();
-      if (contacts.length === 0) {
-        fetchAllContacts();
-      } else {
+      // Always use the contacts prop if available, otherwise fetch our own
+      if (contacts && contacts.length > 0) {
         setAllContacts(contacts);
+      } else {
+        fetchAllContacts();
       }
       setSelectedId('');
       setSelectedType('');
@@ -43,7 +44,7 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
       // Reset initialization flag when modal closes
       setHasInitializedContacts(false);
     }
-  }, [isOpen, hasInitializedContacts]); // Only run when modal opens or initialization state changes
+  }, [isOpen, hasInitializedContacts, contacts]); // Include contacts in dependency
 
   // Memoized values - must be called before any early returns
   const availableUsers = useMemo(() => users.filter(u =>
