@@ -18,9 +18,10 @@ import useContactStore from '../../stores/contactStore';
 import AddContactModal from '../common/AddContactModal';
 import IconButton from '../common/IconButton';
 import ConfirmModal from '../common/ConfirmModal';
+import AIWarning from '../common/AIWarning';
 import { useToastContext } from '../../context/ToastContext';
-import { 
-  FaTimes, FaEdit, FaTrash, FaArchive, FaShareAlt, FaChartBar, 
+import {
+  FaTimes, FaEdit, FaTrash, FaArchive, FaShareAlt, FaChartBar,
   FaMagic, FaSave, FaPlus, FaUserPlus, FaCheck,
   FaCircle, FaSpinner, FaCheckCircle, FaPauseCircle, FaTimesCircle,
   FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle, FaUsers, FaSitemap
@@ -65,7 +66,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const { fetchContacts } = useContactStore();
   const navigate = useNavigate();
   const toast = useToastContext();
-  
+
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
 
@@ -101,25 +102,25 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   // Check if current user is viewing a shared task (view-only access)
   const isSharedTask = viewedTask?.sharedWith?.some(share => share.userId === user?.id);
-  
+
   // Check if current user can share (lead assignee, assigner, or admin)
   const canShare = viewedTask?.assigneeId === user?.id ||
-                   viewedTask?.assignerId === user?.id ||
-                   isAdmin ||
-                   user?.role === 'SYSDMIN' ||
-                   user?.role === 'SUPER_ADMIN';
-  
+    viewedTask?.assignerId === user?.id ||
+    isAdmin ||
+    user?.role === 'SYSDMIN' ||
+    user?.role === 'SUPER_ADMIN';
+
   // Check if user can archive/unarchive this task
   const canArchive = !isSharedTask && (
-    isAdmin || 
-    user?.role === 'SYSDMIN' || 
+    isAdmin ||
+    user?.role === 'SYSDMIN' ||
     viewedTask?.assignerId === user?.id
   );
 
   // Check if current user is an accepted external assignee
   // This means they accepted a task invitation and now have assigneeId set
-  const isAcceptedExternalAssignee = 
-    viewedTask?.assigneeId === user?.id && 
+  const isAcceptedExternalAssignee =
+    viewedTask?.assigneeId === user?.id &&
     viewedTask?.externalContactId !== null &&
     viewedTask?.assignerId !== user?.id; // Not the creator
 
@@ -141,7 +142,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   const fetchCoAssignees = useCallback(async (taskId) => {
     if (!taskId) return;
-    
+
     try {
       setIsLoadingCoAssignees(true);
       const response = await tasksAPI.getCoAssignees(taskId);
@@ -354,7 +355,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Apply character limits
     let limitedValue = value;
     if (name === 'title' && value.length > 50) {
@@ -362,12 +363,12 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     } else if (name === 'description' && value.length > 300) {
       limitedValue = value.slice(0, 300);
     }
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: limitedValue
     }));
-    
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -378,17 +379,17 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
     } else if (formData.title.length > 50) {
       newErrors.title = 'Title must be 50 characters or less';
     }
-    
+
     if (formData.description && formData.description.length > 300) {
       newErrors.description = 'Description must be 300 characters or less';
     }
-    
+
     // Validate due date is required (but allow past dates for editing existing tasks)
     if (!formData.dueDate || !formData.dueDate.trim()) {
       newErrors.dueDate = 'Due date is required';
@@ -400,21 +401,21 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         const datePart = dateToCheck.split('T')[0];
         dateToCheck = `${datePart}T23:59:00`;
       }
-      
+
       const selectedDate = new Date(dateToCheck);
       if (isNaN(selectedDate.getTime())) {
         newErrors.dueDate = 'Invalid due date format';
       }
       // Removed future date check - allow past dates for editing existing tasks
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -447,7 +448,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   const handleUnaccept = async () => {
     if (!viewedTask?.id) return;
-    
+
     setIsUnaccepting(true);
     try {
       const response = await tasksAPI.unaccessTask(viewedTask.id);
@@ -469,7 +470,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   // Handle task summarization
   const handleSummarizeTask = async () => {
     if (!viewedTask) return;
-    
+
     setIsLoadingSummary(true);
     try {
       const summary = await createTaskSummary(viewedTask);
@@ -491,7 +492,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       const now = new Date();
       const diffTime = date.getTime() - now.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
+
       if (diffDays < 0) {
         return `Overdue by ${Math.abs(diffDays)} day(s)`;
       } else if (diffDays === 0) {
@@ -536,14 +537,14 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     // Create AI-style intelligent summary
     const generateIntelligentSummary = () => {
       let summary = '';
-      
+
       // Analyze task status and urgency
       const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED';
       const isUrgent = task.priority === 'URGENT' || task.priority === 'HIGH';
       const hasSubtasks = task.subtasks && task.subtasks.length > 0;
       const hasParent = task.parentTask;
       const hasComments = comments.length > 0;
-      
+
       // Start with task overview
       if (task.status === 'COMPLETED') {
         summary += `✅ This task "${task.title}" has been completed`;
@@ -554,16 +555,16 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       } else {
         summary += `📋 "${task.title}" is currently ${task.status.toLowerCase().replace('_', ' ')}`;
       }
-      
+
       // Add urgency context
       if (isOverdue) {
         summary += ' and is OVERDUE';
       } else if (isUrgent && task.status !== 'COMPLETED') {
         summary += ` with ${task.priority.toLowerCase()} priority`;
       }
-      
+
       summary += '.';
-      
+
       // Add assignment context
       if (task.assignee && task.assigner) {
         if (task.assignee.id === task.assigner.id) {
@@ -576,13 +577,13 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       } else if (task.assigner) {
         summary += ` Created by ${task.assigner.name} but unassigned`;
       }
-      
+
       // Add due date context
       if (task.dueDate) {
         const dueDate = new Date(task.dueDate);
         const now = new Date();
         const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
+
         if (diffDays < 0) {
           summary += ` and was due ${Math.abs(diffDays)} day(s) ago`;
         } else if (diffDays === 0) {
@@ -595,9 +596,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           summary += ` with a due date of ${dueDate.toLocaleDateString()}`;
         }
       }
-      
+
       summary += '.';
-      
+
       // Add description context if available
       if (task.description && task.description.trim()) {
         const descLength = task.description.length;
@@ -607,7 +608,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           summary += ` Additional context: "${task.description.substring(0, 80)}${descLength > 80 ? '...' : ''}"`;
         }
       }
-      
+
       // Add hierarchy context
       if (hasParent && hasSubtasks) {
         summary += ` This is a mid-level task with ${task.subtasks.length} subtask(s) and is part of "${task.parentTask.title}".`;
@@ -616,12 +617,12 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       } else if (hasSubtasks) {
         summary += ` This is a parent task managing ${task.subtasks.length} subtask(s).`;
       }
-      
+
       // Add collaboration context
       if (hasComments) {
         const recentComments = comments.slice(0, 3);
         const uniqueCommenters = [...new Set(recentComments.map(c => c.author?.name).filter(Boolean))];
-        
+
         if (uniqueCommenters.length > 1) {
           summary += ` Active collaboration with ${comments.length} comment(s) from ${uniqueCommenters.length} team member(s).`;
         } else if (comments.length > 1) {
@@ -630,7 +631,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           summary += ` Has ${comments.length} comment for additional context.`;
         }
       }
-      
+
       // Add actionable insight
       if (task.status !== 'COMPLETED') {
         if (isOverdue && isUrgent) {
@@ -645,7 +646,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       } else {
         summary += ' ✨ Task successfully completed.';
       }
-      
+
       return summary;
     };
 
@@ -755,1109 +756,1045 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         }
       `}</style>
       <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }} onClick={onClose}>
-      <div
-        className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto scrollbar-thin transition-colors duration-200"
-        style={{
-          backgroundColor: 'var(--color-bg-secondary)',
-          borderColor: 'var(--color-border-default)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header - Title and Action Buttons */}
-        <div className="mb-6">
-          <div className="flex justify-between items-start mb-4">
-            {/* Left: Title */}
-            <div className="flex-1 pr-4">
-              {isEditing ? (
-                <div>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleChange}
-                    maxLength={50}
-                    className="text-2xl font-bold rounded px-3 py-2 w-full transition-colors duration-200"
-                    style={{
-                      color: 'var(--color-text-primary)',
-                      backgroundColor: 'var(--color-bg-tertiary)',
-                      borderColor: 'var(--color-border-default)',
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-primary)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                    }}
-                    placeholder="Enter task title"
-                  />
-                  <div 
-                    className="text-xs mt-1 transition-colors duration-200"
-                    style={{ color: 'var(--color-text-tertiary)' }}
-                  >
-                    {formData.title.length}/50 characters
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <div className="flex items-center space-x-2 mb-2">
-                    <h3 
-                      className="text-2xl font-bold transition-colors duration-200"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      {viewedTask.title}
-                    </h3>
-                  </div>
-                  <div 
-                    className="flex items-center space-x-4 text-sm transition-colors duration-200"
-                    style={{ color: 'var(--color-text-tertiary)' }}
-                  >
-                    {shouldShowCreator && <span>Created by {viewedTask.assigner?.name}</span>}
-                    {shouldShowCreator && <span>•</span>}
-                    <span>{new Date(viewedTask.createdAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right: Action Buttons and Close */}
-            <div className="flex items-start gap-2 flex-shrink-0">
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-2">
-            <IconButton
-              icon={<FaChartBar />}
-              label="Updates"
-              variant="primary"
-              size="sm"
-              onClick={() => setIsUpdatesModalOpen(true)}
-              className="!bg-blue-600 hover:!bg-blue-700"
-            />
-            
-            <IconButton
-              icon={<FaMagic />}
-              label="Summary"
-              variant="primary"
-              size="sm"
-              onClick={handleSummarizeTask}
-              disabled={isLoadingSummary}
-              loading={isLoadingSummary}
-              className="!bg-purple-600 hover:!bg-purple-700"
-            />
-            
-            {canShare && (
-              <IconButton
-                icon={<FaShareAlt />}
-                label="Share"
-                variant="primary"
-                size="sm"
-                onClick={() => setIsShareModalOpen(true)}
-              />
-            )}
-            
-            {canArchive && (
-              <IconButton
-                icon={<FaArchive />}
-                label={viewedTask.archived ? 'Unarchive' : 'Archive'}
-                variant={viewedTask.archived ? 'success' : 'warning'}
-                size="sm"
-                onClick={() => {
-                  if (viewedTask.archived) {
-                    onUnarchive?.(viewedTask.id);
-                  } else {
-                    onArchive?.(viewedTask.id);
-                  }
-                }}
-              />
-            )}
-
-            {isAcceptedExternalAssignee && viewedTask.status !== 'COMPLETED' && (
-              <IconButton
-                icon={<FaTimesCircle />}
-                label="Withdraw"
-                variant="danger"
-                size="sm"
-                onClick={() => setIsUnaccessConfirmOpen(true)}
-                className="!bg-red-600 hover:!bg-red-700"
-              />
-            )}
-            
-            {/* Edit/Save/Cancel Buttons */}
-            {((isAdmin() && viewedTask.companyId === user?.companyId) || viewedTask.assignerId === user?.id) && !isSharedTask && (
-              <>
+        <div
+          className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto scrollbar-thin transition-colors duration-200"
+          style={{
+            backgroundColor: 'var(--color-bg-secondary)',
+            borderColor: 'var(--color-border-default)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header - Title and Action Buttons */}
+          <div className="mb-6">
+            <div className="flex justify-between items-start mb-4">
+              {/* Left: Title */}
+              <div className="flex-1 pr-4">
                 {isEditing ? (
-                  <>
+                  <div>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleChange}
+                      maxLength={50}
+                      className="text-2xl font-bold rounded px-3 py-2 w-full transition-colors duration-200"
+                      style={{
+                        color: 'var(--color-text-primary)',
+                        backgroundColor: 'var(--color-bg-tertiary)',
+                        borderColor: 'var(--color-border-default)',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                      }}
+                      placeholder="Enter task title"
+                    />
+                    <div
+                      className="text-xs mt-1 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                    >
+                      {formData.title.length}/50 characters
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <h3
+                        className="text-2xl font-bold transition-colors duration-200"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {viewedTask.title}
+                      </h3>
+                    </div>
+                    <div
+                      className="flex items-center space-x-4 text-sm transition-colors duration-200"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                    >
+                      {shouldShowCreator && <span>Created by {viewedTask.assigner?.name}</span>}
+                      {shouldShowCreator && <span>•</span>}
+                      <span>{new Date(viewedTask.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                )}
+                {/* AI Warning when using AI data */}
+                {extensionUpdateData && (
+                  <AIWarning className="mt-2" />
+                )}
+              </div>
+
+              {/* Right: Action Buttons and Close */}
+              <div className="flex items-start gap-2 flex-shrink-0">
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <IconButton
+                    icon={<FaChartBar />}
+                    label="Updates"
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setIsUpdatesModalOpen(true)}
+                    className="!bg-blue-600 hover:!bg-blue-700"
+                  />
+
+                  <IconButton
+                    icon={<FaMagic />}
+                    label="Summary"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleSummarizeTask}
+                    disabled={isLoadingSummary}
+                    loading={isLoadingSummary}
+                    className="!bg-purple-600 hover:!bg-purple-700"
+                  />
+
+                  {canShare && (
                     <IconButton
-                      icon={<FaCheck />}
-                      label={isLoading ? 'Saving...' : 'Save Changes'}
+                      icon={<FaShareAlt />}
+                      label="Share"
                       variant="primary"
                       size="sm"
-                      onClick={handleSave}
-                      disabled={isLoading}
-                      loading={isLoading}
+                      onClick={() => setIsShareModalOpen(true)}
                     />
+                  )}
+
+                  {canArchive && (
                     <IconButton
-                      icon={<FaTimes />}
-                      label="Cancel"
-                      variant="secondary"
+                      icon={<FaArchive />}
+                      label={viewedTask.archived ? 'Unarchive' : 'Archive'}
+                      variant={viewedTask.archived ? 'success' : 'warning'}
                       size="sm"
-                      onClick={() => setIsEditing(false)}
-                      disabled={isLoading}
+                      onClick={() => {
+                        if (viewedTask.archived) {
+                          onUnarchive?.(viewedTask.id);
+                        } else {
+                          onArchive?.(viewedTask.id);
+                        }
+                      }}
                     />
-                  </>
-                ) : (
-                  <>
-              <IconButton
-                icon={<FaEdit />}
-                      label="Edit"
-                variant="secondary"
-                size="sm"
-                      onClick={() => setIsEditing(true)}
-              />
-              <IconButton
-                icon={<FaTrash />}
-                label="Delete"
-                variant="danger"
-                size="sm"
-                onClick={handleDelete}
-              />
-                  </>
-                )}
-              </>
-            )}
-          </div>
-          
-          {/* Close Button */}
-          <IconButton
-            icon={<FaTimes />}
-            label="Close"
-            iconOnly={true}
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="!p-2 !rounded-full"
-          />
-        </div>
-      </div>
-    </div>
+                  )}
 
-        {/* Two Column Layout: Left (Task Details) and Right (Comments) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-          {/* LEFT COLUMN - Task Details */}
-          <div 
-            className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin transition-colors duration-200"
-            style={{
-              scrollbarThumbColor: 'var(--color-scrollbar-thumb)',
-              scrollbarTrackColor: 'var(--color-scrollbar-track)',
-            }}
-          >
-            {/* Description */}
-            <div>
-              <h4 
-                className="text-sm font-semibold mb-2 transition-colors duration-200"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Description
-              </h4>
-              {isEditing ? (
-                <div>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    maxLength={300}
-                    rows={4}
-                    className="textarea textarea-sm w-full rounded-lg transition-colors duration-200"
-                    style={{
-                      backgroundColor: 'var(--color-bg-tertiary)',
-                      borderColor: 'var(--color-border-default)',
-                      color: 'var(--color-text-primary)',
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-primary)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                    }}
-                    placeholder="Enter task description"
-                  />
-                  <div 
-                    className="text-xs mt-1 transition-colors duration-200"
-                    style={{ color: 'var(--color-text-tertiary)' }}
-                  >
-                    {formData.description.length}/300 characters
-                  </div>
+                  {isAcceptedExternalAssignee && viewedTask.status !== 'COMPLETED' && (
+                    <IconButton
+                      icon={<FaTimesCircle />}
+                      label="Withdraw"
+                      variant="danger"
+                      size="sm"
+                      onClick={() => setIsUnaccessConfirmOpen(true)}
+                      className="!bg-red-600 hover:!bg-red-700"
+                    />
+                  )}
+
+                  {/* Edit/Save/Cancel Buttons */}
+                  {((isAdmin() && viewedTask.companyId === user?.companyId) || viewedTask.assignerId === user?.id) && !isSharedTask && (
+                    <>
+                      {isEditing ? (
+                        <>
+                          <IconButton
+                            icon={<FaCheck />}
+                            label={isLoading ? 'Saving...' : 'Save Changes'}
+                            variant="primary"
+                            size="sm"
+                            onClick={handleSave}
+                            disabled={isLoading}
+                            loading={isLoading}
+                          />
+                          <IconButton
+                            icon={<FaTimes />}
+                            label="Cancel"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setIsEditing(false)}
+                            disabled={isLoading}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <IconButton
+                            icon={<FaEdit />}
+                            label="Edit"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setIsEditing(true)}
+                          />
+                          <IconButton
+                            icon={<FaTrash />}
+                            label="Delete"
+                            variant="danger"
+                            size="sm"
+                            onClick={handleDelete}
+                          />
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
-              ) : (
-                <div 
-                  className="border rounded-lg p-3 transition-colors duration-200"
-                  style={{
-                    backgroundColor: 'var(--color-bg-tertiary)',
-                    borderColor: 'var(--color-border-default)',
-                  }}
-                >
-                  <p 
-                    className="text-sm transition-colors duration-200"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {viewedTask.description || 'No description provided'}
-                  </p>
-                </div>
-              )}
+
+                {/* Close Button */}
+                <IconButton
+                  icon={<FaTimes />}
+                  label="Close"
+                  iconOnly={true}
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  className="!p-2 !rounded-full"
+                />
+              </div>
             </div>
+          </div>
 
-            {/* Status, Priority, Due Date - Inline */}
-            <div className="grid grid-cols-3 gap-4">
-              {/* Status */}
+          {/* Two Column Layout: Left (Task Details) and Right (Comments) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+            {/* LEFT COLUMN - Task Details */}
+            <div
+              className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin transition-colors duration-200"
+              style={{
+                scrollbarThumbColor: 'var(--color-scrollbar-thumb)',
+                scrollbarTrackColor: 'var(--color-scrollbar-track)',
+              }}
+            >
+              {/* Description */}
               <div>
-                <h4 
-                  className="text-base font-semibold mb-3 transition-colors duration-200"
+                <h4
+                  className="text-sm font-semibold mb-2 transition-colors duration-200"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  Status
-                </h4>
-                {isEditing ? (
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="select w-full transition-colors duration-200"
-                    style={{
-                      backgroundColor: 'var(--color-bg-tertiary)',
-                      borderColor: 'var(--color-border-default)',
-                      color: 'var(--color-text-primary)',
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-primary)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                    }}
-                  >
-                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className={`px-3 py-2 rounded-full text-sm font-medium uppercase ${getStatusColor(viewedTask.status)} w-fit`}>
-                    {STATUS_LABELS[viewedTask.status].toUpperCase()}
-                  </span>
-                )}
-              </div>
-
-              {/* Priority */}
-              <div>
-                <h4 
-                  className="text-base font-semibold mb-3 transition-colors duration-200"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Priority
-                </h4>
-                {isEditing ? (
-                  <select
-                    name="priority"
-                    value={formData.priority}
-                    onChange={handleChange}
-                    className="select w-full transition-colors duration-200"
-                    style={{
-                      backgroundColor: 'var(--color-bg-tertiary)',
-                      borderColor: 'var(--color-border-default)',
-                      color: 'var(--color-text-primary)',
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-primary)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                    }}
-                  >
-                    {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className={`px-3 py-2 rounded-full text-sm font-medium uppercase ${getPriorityColor(viewedTask.priority)} w-fit`}>
-                    {PRIORITY_LABELS[viewedTask.priority].toUpperCase()}
-                  </span>
-                )}
-              </div>
-
-              {/* Due Date */}
-              <div>
-                <h4 
-                  className="text-base font-semibold mb-3 transition-colors duration-200"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Due Date
+                  Description
                 </h4>
                 {isEditing ? (
                   <div>
-                  <input
-                    type="datetime-local"
-                    name="dueDate"
-                    value={formData.dueDate}
-                    onChange={handleChange}
-                      className={`input w-full transition-colors duration-200 ${errors.dueDate ? 'input-error' : ''}`}
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      maxLength={300}
+                      rows={4}
+                      className="textarea textarea-sm w-full rounded-lg transition-colors duration-200"
+                      style={{
+                        backgroundColor: 'var(--color-bg-tertiary)',
+                        borderColor: 'var(--color-border-default)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                      }}
+                      placeholder="Enter task description"
+                    />
+                    <div
+                      className="text-xs mt-1 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                    >
+                      {formData.description.length}/300 characters
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="border rounded-lg p-3 transition-colors duration-200"
                     style={{
                       backgroundColor: 'var(--color-bg-tertiary)',
-                        borderColor: errors.dueDate ? '#ef4444' : 'var(--color-border-default)',
-                      color: 'var(--color-text-primary)',
+                      borderColor: 'var(--color-border-default)',
                     }}
-                      required
-                      min={new Date().toISOString().slice(0, 16)}
-                    onFocus={(e) => {
-                        e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-primary)';
-                    }}
-                    onBlur={(e) => {
-                        e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-border-default)';
-                    }}
-                  />
-                    {errors.dueDate && (
-                      <label className="label">
-                        <span className="label-text-alt text-error">{errors.dueDate}</span>
-                      </label>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-col">
-                    {viewedTask.dueDate ? (
-                      <>
-                        <span 
-                          className="text-base transition-colors duration-200"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
-                          {new Date(viewedTask.dueDate).toLocaleDateString()}
-                        </span>
-                        <span 
-                          className="text-sm transition-colors duration-200"
-                          style={{ color: 'var(--color-text-tertiary)' }}
-                        >
-                          {new Date(viewedTask.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        {new Date(viewedTask.dueDate) < new Date() && viewedTask.status !== 'COMPLETED' && (
-                          <span className="text-red-400 text-sm mt-1">Overdue</span>
-                        )}
-                      </>
-                    ) : (
-                      <span 
-                        className="text-base transition-colors duration-200 text-error"
-                      >
-                        No due date set
-                      </span>
-                    )}
+                  >
+                    <p
+                      className="text-sm transition-colors duration-200"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      {viewedTask.description || 'No description provided'}
+                    </p>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Tabbed Interface for Team & Hierarchy */}
-            <div className="border-t pt-4 mt-4" style={{ borderColor: 'var(--color-border-default)' }}>
-              {/* Tab Headers */}
-              <div className="flex gap-2 mb-4">
-                <button
-                  onClick={() => setActiveTab('team')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                    activeTab === 'team'
-                      ? 'shadow-md'
-                      : 'hover:opacity-80'
-                  }`}
-                  style={{
-                    backgroundColor: activeTab === 'team' ? 'var(--color-primary)' : 'var(--color-bg-tertiary)',
-                    color: activeTab === 'team' ? 'white' : 'var(--color-text-secondary)',
-                  }}
-                >
-                  <FaUsers className="w-4 h-4" />
-                  <span>Team & Sharing</span>
-                </button>
-                
-                <button
-                  onClick={() => setActiveTab('hierarchy')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                    activeTab === 'hierarchy'
-                      ? 'shadow-md'
-                      : 'hover:opacity-80'
-                  }`}
-                  style={{
-                    backgroundColor: activeTab === 'hierarchy' ? 'var(--color-primary)' : 'var(--color-bg-tertiary)',
-                    color: activeTab === 'hierarchy' ? 'white' : 'var(--color-text-secondary)',
-                  }}
-                >
-                  <FaSitemap className="w-4 h-4" />
-                  <span>Task Hierarchy</span>
-                </button>
-              </div>
-
-              {/* Tab Content */}
-              <div className="min-h-[200px]">
-                {/* Team & Sharing Tab */}
-                {activeTab === 'team' && (
-                  <div className="space-y-4 animate-fadeIn">
-                    {/* Unified People List - Show for all accounts, but limit functionality for personal accounts */}
-                    {true ? (
+              {/* Status, Priority, Due Date - Inline */}
+              <div className="grid grid-cols-3 gap-4">
+                {/* Status */}
                 <div>
-                        {/* Unified List */}
-                        <div className="space-y-2">
-                          {/* Lead Assignee */}
-                          {viewedTask.assignee ? (
-                            <div className="flex items-center justify-between gap-3 group relative">
-                              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                            <div 
-                                  className="text-white rounded-full flex items-center justify-center flex-shrink-0"
-                                  style={{ 
-                                    backgroundColor: 'var(--color-primary)',
-                                    width: '32px',
-                                    height: '32px',
-                                    minWidth: '32px',
-                                    minHeight: '32px',
-                                    maxWidth: '32px',
-                                    maxHeight: '32px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    lineHeight: '1'
-                                  }}
-                            >
-                                  <span 
-                                    className="text-sm"
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      lineHeight: '1'
-                                    }}
-                                  >
-                                    {viewedTask.assignee.name.charAt(0)}
-                                  </span>
-                          </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                            <span 
-                                      className="text-sm block truncate transition-colors duration-200"
-                              style={{ color: 'var(--color-text-primary)' }}
-                            >
-                              {viewedTask.assignee.name}
-                            </span>
-                                    <span 
-                                      className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
-                                      style={{
-                                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                                        color: '#a5b4fc',
-                                      }}
-                                    >
-                                      LEAD
-                                    </span>
-                                  </div>
-                          </div>
-                          {/* Email tooltip */}
-                          <div 
-                            className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                            style={{
-                              backgroundColor: 'var(--color-bg-primary)',
-                              color: 'var(--color-text-primary)',
-                            }}
-                          >
-                            {viewedTask.assignee.email}
-                          </div>
-                        </div>
-                              {/* Add Person Button - Only show if user is lead assignee */}
-                              {viewedTask?.assigneeId === user?.id && !isEditing && (
-                                <button
-                                  onClick={async () => {
-                                    // Ensure contacts are loaded before opening modal
-                                    if (contacts.length === 0 && !isLoadingContacts) {
-                                      await fetchContactsForTask();
-                                    }
-                                    setIsAddTeamMemberModalOpen(true);
-                                  }}
-                                  className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0"
-                                  style={{
-                                    backgroundColor: 'var(--color-primary)',
-                                    color: 'white',
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'scale(1.1)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'scale(1)';
-                                  }}
-                                  title="Add person to task"
-                                >
-                                  <FaPlus className="w-3 h-3" />
-                                </button>
-                              )}
-                    </div>
-                          ) : (
-                            /* No assignee - show Add button on its own row */
-                            viewedTask?.assigneeId === user?.id && !isEditing && (
-                              <div className="flex items-center justify-end">
-                                <button
-                                  onClick={async () => {
-                                    // Ensure contacts are loaded before opening modal
-                                    if (contacts.length === 0 && !isLoadingContacts) {
-                                      await fetchContactsForTask();
-                                    }
-                                    setIsAddTeamMemberModalOpen(true);
-                                  }}
-                                  className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0"
-                                  style={{
-                                    backgroundColor: 'var(--color-primary)',
-                                    color: 'white',
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'scale(1.1)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'scale(1)';
-                                  }}
-                                  title="Add person to task"
-                                >
-                                  <FaPlus className="w-3 h-3" />
-                                </button>
-                              </div>
-                            )
+                  <h4
+                    className="text-base font-semibold mb-3 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Status
+                  </h4>
+                  {isEditing ? (
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      className="select w-full transition-colors duration-200"
+                      style={{
+                        backgroundColor: 'var(--color-bg-tertiary)',
+                        borderColor: 'var(--color-border-default)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                      }}
+                    >
+                      {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className={`px-3 py-2 rounded-full text-sm font-medium uppercase ${getStatusColor(viewedTask.status)} w-fit`}>
+                      {STATUS_LABELS[viewedTask.status].toUpperCase()}
+                    </span>
                   )}
+                </div>
 
-                {/* Co-Assignees */}
-                {isLoadingCoAssignees ? (
-                  <div className="flex justify-center py-2">
-                    <span className="loading loading-spinner loading-sm"></span>
-                  </div>
-                ) : (
-                  coAssignees.map((coAssignee) => (
-                    <div key={coAssignee.id} className="flex items-center justify-between gap-3 group relative">
-                      <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <div
-                          className="text-white rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{
-                            backgroundColor: '#10b981',
-                            width: '32px',
-                            height: '32px',
-                            minWidth: '32px',
-                            minHeight: '32px',
-                            maxWidth: '32px',
-                            maxHeight: '32px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            lineHeight: '1'
-                          }}
-                        >
-                          <span
-                            className="text-sm"
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              lineHeight: '1'
-                            }}
-                          >
-                            {coAssignee.user.name.charAt(0)}
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="text-sm block truncate transition-colors duration-200"
-                              style={{ color: 'var(--color-text-primary)' }}
-                            >
-                              {coAssignee.user.name}
-                            </span>
-                            <span
-                              className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
-                              style={{
-                                backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                                color: '#6ee7b7',
-                              }}
-                            >
-                              CO-ASSIGNEE
-                            </span>
-                          </div>
-                        </div>
-                        {/* Email tooltip */}
-                        <div
-                          className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                          style={{
-                            backgroundColor: 'var(--color-bg-primary)',
-                            color: 'var(--color-text-primary)',
-                          }}
-                        >
-                          {coAssignee.user.email}
-                        </div>
-                      </div>
-                      {/* Remove button - only if user is lead assignee or system admin */}
-                      {(viewedTask?.assigneeId === user?.id || user?.role === 'SYSDMIN') && (
-                        <button
-                          onClick={() => handleRemoveCoAssignee(coAssignee.userId)}
-                          className="w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100"
-                          style={{
-                            backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                            color: '#ef4444',
-                          }}
-                          title="Remove co-assignee"
-                        >
-                          <FaTimes className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  ))
-                )}
+                {/* Priority */}
+                <div>
+                  <h4
+                    className="text-base font-semibold mb-3 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Priority
+                  </h4>
+                  {isEditing ? (
+                    <select
+                      name="priority"
+                      value={formData.priority}
+                      onChange={handleChange}
+                      className="select w-full transition-colors duration-200"
+                      style={{
+                        backgroundColor: 'var(--color-bg-tertiary)',
+                        borderColor: 'var(--color-border-default)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                      }}
+                    >
+                      {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className={`px-3 py-2 rounded-full text-sm font-medium uppercase ${getPriorityColor(viewedTask.priority)} w-fit`}>
+                      {PRIORITY_LABELS[viewedTask.priority].toUpperCase()}
+                    </span>
+                  )}
+                </div>
 
-                {/* Collaborators */}
-                {viewedTask.collaborators && viewedTask.collaborators.map((collaborator) => (
-                  <div key={collaborator.id} className="flex items-center justify-between gap-3 group relative">
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
-                      <div
-                        className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                {/* Due Date */}
+                <div>
+                  <h4
+                    className="text-base font-semibold mb-3 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Due Date
+                  </h4>
+                  {isEditing ? (
+                    <div>
+                      <input
+                        type="datetime-local"
+                        name="dueDate"
+                        value={formData.dueDate}
+                        onChange={handleChange}
+                        className={`input w-full transition-colors duration-200 ${errors.dueDate ? 'input-error' : ''}`}
                         style={{
-                          backgroundColor: '#3b82f6',
-                          width: '32px',
-                          height: '32px',
-                          minWidth: '32px',
-                          minHeight: '32px',
-                          maxWidth: '32px',
-                          maxHeight: '32px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          lineHeight: '1'
-                        }}
-                      >
-                        <span
-                          className="text-sm"
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            lineHeight: '1'
-                          }}
-                        >
-                          {collaborator.user.name.charAt(0)}
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="text-sm block truncate transition-colors duration-200"
-                            style={{ color: 'var(--color-text-primary)' }}
-                          >
-                            {collaborator.user.name}
-                          </span>
-                          <span
-                            className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
-                            style={{
-                              backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                              color: '#93c5fd',
-                            }}
-                          >
-                            {collaborator.isExternal ? 'EXTERNAL ' : ''}{collaborator.permissionLevel}
-                          </span>
-                        </div>
-                      </div>
-                      {/* Email tooltip */}
-                      <div
-                        className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                        style={{
-                          backgroundColor: 'var(--color-bg-primary)',
+                          backgroundColor: 'var(--color-bg-tertiary)',
+                          borderColor: errors.dueDate ? '#ef4444' : 'var(--color-border-default)',
                           color: 'var(--color-text-primary)',
                         }}
-                      >
-                        {collaborator.user.email}
-                      </div>
+                        required
+                        min={new Date().toISOString().slice(0, 16)}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-primary)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-border-default)';
+                        }}
+                      />
+                      {errors.dueDate && (
+                        <label className="label">
+                          <span className="label-text-alt text-error">{errors.dueDate}</span>
+                        </label>
+                      )}
                     </div>
-                  </div>
-                ))}
-
-                {/* Shared With Users */}
-                {viewedTask.sharedWith && viewedTask.sharedWith.map((share) => {
-                  // Skip if user is already in the list as assignee, co-assignee, or collaborator
-                  if (share.userId === viewedTask.assigneeId ||
-                      coAssignees.some(co => co.userId === share.userId) ||
-                      viewedTask.collaborators?.some(c => c.userId === share.userId)) {
-                    return null;
-                  }
-
-                  return (
-                    <div key={share.id} className="flex items-center justify-between gap-3 group relative">
-                      <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <div
-                          className="text-white rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{
-                            backgroundColor: '#8b5cf6',
-                            width: '32px',
-                            height: '32px',
-                            minWidth: '32px',
-                            minHeight: '32px',
-                            maxWidth: '32px',
-                            maxHeight: '32px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            lineHeight: '1'
-                          }}
-                        >
+                  ) : (
+                    <div className="flex flex-col">
+                      {viewedTask.dueDate ? (
+                        <>
                           <span
-                            className="text-sm"
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              lineHeight: '1'
-                            }}
+                            className="text-base transition-colors duration-200"
+                            style={{ color: 'var(--color-text-primary)' }}
                           >
-                            {share.user?.name?.charAt(0) || '?'}
+                            {new Date(viewedTask.dueDate).toLocaleDateString()}
                           </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="text-sm block truncate transition-colors duration-200"
-                              style={{ color: 'var(--color-text-primary)' }}
-                            >
-                              {share.user?.name || share.email || 'Unknown'}
-                            </span>
-                            <span
-                              className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
-                              style={{
-                                backgroundColor: 'rgba(139, 92, 246, 0.2)',
-                                color: '#c4b5fd',
-                              }}
-                            >
-                              {share.isExternal ? 'EXTERNAL ' : ''}{share.permissionLevel || 'VIEWER'}
-                            </span>
-                          </div>
-                        </div>
-                        {/* Email tooltip */}
-                        {(share.user?.email || share.email) && (
-                          <div
-                            className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                            style={{
-                              backgroundColor: 'var(--color-bg-primary)',
-                              color: 'var(--color-text-primary)',
-                            }}
+                          <span
+                            className="text-sm transition-colors duration-200"
+                            style={{ color: 'var(--color-text-tertiary)' }}
                           >
-                            {share.user?.email || share.email}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Empty State */}
-                {!viewedTask.assignee &&
-                 (!coAssignees || coAssignees.length === 0) &&
-                 (!viewedTask.collaborators || viewedTask.collaborators.length === 0) &&
-                 (!viewedTask.sharedWith || viewedTask.sharedWith.length === 0) && (
-                  <p
-                    className="text-sm text-center py-4 transition-colors duration-200"
-                    style={{ color: 'var(--color-text-tertiary)' }}
-                  >
-                    No people assigned
-                  </p>
-                )}
-                      </div>
-
-                        {/* Edit Mode - Assignee Selection */}
-                        {isEditing && (
-                          <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--color-border-default)' }}>
-                            <h4 
-                              className="text-sm font-semibold mb-2 transition-colors duration-200"
-                              style={{ color: 'var(--color-text-secondary)' }}
-                            >
-                              Change Assignee
-                            </h4>
-                            <SearchableDropdown
-                              options={allAssignees}
-                              value={formData.assigneeId || (formData.externalContactId ? `contact_${formData.externalContactId}` : '')}
-                              onChange={(value) => {
-                                if (value.startsWith('contact_')) {
-                                  // Selected a contact
-                                  const contactId = value.split('_')[1];
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    assigneeId: '',
-                                    externalContactId: contactId
-                                  }));
-                                } else {
-                                  // Selected an employee
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    assigneeId: value,
-                                    externalContactId: ''
-                                  }));
-                                  const selectedEmployee = users.find(user => user.id.toString() === value);
-                                  if (selectedEmployee) {
-                                    addToRecentEmployees(selectedEmployee);
-                                  }
-                                }
-                              }}
-                              placeholder="Select an employee or contact"
-                              disabled={isLoadingUsers || isLoadingContacts}
-                              recentEmployees={recentEmployees}
-                              allowAddNew={!isPersonalAccount}
-                              onAddNew={handleAddNewContact}
-                              renderOption={(assignee) => (
-                                <div className="flex items-center space-x-2">
-                                  <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                                  <span>{assignee.displayName || assignee.name}</span>
-                                  <span style={{ color: 'var(--color-text-tertiary)' }}>({assignee.email})</span>
-                                  {assignee.type === 'contact' && (
-                                    <span className="text-xs px-2 py-0.5 rounded" style={{
-                                      backgroundColor: 'var(--color-bg-tertiary)',
-                                      color: 'var(--color-text-secondary)'
-                                    }}>
-                                      External
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      /* Personal Account */
-                      <div>
-                        {isEditing ? (
-                          <div className="space-y-3">
-                        <h4 
-                          className="text-base font-semibold mb-3 transition-colors duration-200"
-                          style={{ color: 'var(--color-text-secondary)' }}
+                            {new Date(viewedTask.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          {new Date(viewedTask.dueDate) < new Date() && viewedTask.status !== 'COMPLETED' && (
+                            <span className="text-red-400 text-sm mt-1">Overdue</span>
+                          )}
+                        </>
+                      ) : (
+                        <span
+                          className="text-base transition-colors duration-200 text-error"
                         >
-                          Assigned To
-                        </h4>
-                            <SearchableDropdown
-                              options={contacts}
-                              value={formData.externalContactId || ''}
-                              onChange={(value) => {
-                                setFormData(prev => ({ ...prev, externalContactId: value }));
-                              }}
-                              placeholder="Select a contact (optional)"
-                              disabled={isLoadingContacts}
-                              renderOption={(contact) => (
-                                <div className="flex items-center space-x-2">
-                                  <div className={`w-2 h-2 rounded-full ${contact.isPersonal ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                                  <span>{contact.name}</span>
-                                  <span 
-                                    className="transition-colors duration-200"
-                                    style={{ color: 'var(--color-text-tertiary)' }}
-                                  >
-                                    ({contact.email})
-                                  </span>
-                                  {contact.company && (
-                                    <span 
-                                      className="transition-colors duration-200"
-                                      style={{ color: 'var(--color-text-muted)' }}
-                                    >
-                                      - {contact.company}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            />
-                            <p 
-                              className="text-sm transition-colors duration-200"
-                              style={{ color: 'var(--color-text-tertiary)' }}
-                            >
-                              Leave blank to assign to yourself
-                            </p>
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="space-y-2">
-                            {viewedTask.externalContact ? (
-                              <div className="flex items-center space-x-3 group relative">
-                                  <div 
-                                  className="text-white rounded-full flex items-center justify-center flex-shrink-0"
-                                  style={{ 
-                                    backgroundColor: '#3b82f6',
-                                    width: '32px',
-                                    height: '32px',
-                                    minWidth: '32px',
-                                    minHeight: '32px',
-                                    maxWidth: '32px',
-                                    maxHeight: '32px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    lineHeight: '1'
-                                  }}
-                                  >
-                                  <span 
-                                    className="text-sm"
+                          No due date set
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tabbed Interface for Team & Hierarchy */}
+              <div className="border-t pt-4 mt-4" style={{ borderColor: 'var(--color-border-default)' }}>
+                {/* Tab Headers */}
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => setActiveTab('team')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${activeTab === 'team'
+                      ? 'shadow-md'
+                      : 'hover:opacity-80'
+                      }`}
+                    style={{
+                      backgroundColor: activeTab === 'team' ? 'var(--color-primary)' : 'var(--color-bg-tertiary)',
+                      color: activeTab === 'team' ? 'white' : 'var(--color-text-secondary)',
+                    }}
+                  >
+                    <FaUsers className="w-4 h-4" />
+                    <span>Team & Sharing</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('hierarchy')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${activeTab === 'hierarchy'
+                      ? 'shadow-md'
+                      : 'hover:opacity-80'
+                      }`}
+                    style={{
+                      backgroundColor: activeTab === 'hierarchy' ? 'var(--color-primary)' : 'var(--color-bg-tertiary)',
+                      color: activeTab === 'hierarchy' ? 'white' : 'var(--color-text-secondary)',
+                    }}
+                  >
+                    <FaSitemap className="w-4 h-4" />
+                    <span>Task Hierarchy</span>
+                  </button>
+                </div>
+
+                {/* Tab Content */}
+                <div className="min-h-[200px]">
+                  {/* Team & Sharing Tab */}
+                  {activeTab === 'team' && (
+                    <div className="space-y-4 animate-fadeIn">
+                      {/* Unified People List - Show for all accounts, but limit functionality for personal accounts */}
+                      {true ? (
+                        <div>
+                          {/* Unified List */}
+                          <div className="space-y-2">
+                            {/* Lead Assignee */}
+                            {viewedTask.assignee ? (
+                              <div className="flex items-center justify-between gap-3 group relative">
+                                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                  <div
+                                    className="text-white rounded-full flex items-center justify-center flex-shrink-0"
                                     style={{
+                                      backgroundColor: 'var(--color-primary)',
+                                      width: '32px',
+                                      height: '32px',
+                                      minWidth: '32px',
+                                      minHeight: '32px',
+                                      maxWidth: '32px',
+                                      maxHeight: '32px',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
                                       lineHeight: '1'
                                     }}
                                   >
-                                    {viewedTask.externalContact.name.charAt(0)}
-                                  </span>
-                                </div>
-                                  <div className="flex items-center gap-2">
-                                  <span 
-                                      className="text-sm transition-colors duration-200"
-                                    style={{ color: 'var(--color-text-primary)' }}
-                                  >
-                                    {viewedTask.externalContact.name}
-                                  </span>
-                                    <span 
-                                      className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
+                                    <span
+                                      className="text-sm"
                                       style={{
-                                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                                        color: '#93c5fd',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: '1'
                                       }}
-                                  >
-                                      EXTERNAL CONTACT
+                                    >
+                                      {viewedTask.assignee.name.charAt(0)}
                                     </span>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="text-sm block truncate transition-colors duration-200"
+                                        style={{ color: 'var(--color-text-primary)' }}
+                                      >
+                                        {viewedTask.assignee.name}
+                                      </span>
+                                      <span
+                                        className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
+                                        style={{
+                                          backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                                          color: '#a5b4fc',
+                                        }}
+                                      >
+                                        LEAD
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {/* Email tooltip */}
+                                  <div
+                                    className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                    style={{
+                                      backgroundColor: 'var(--color-bg-primary)',
+                                      color: 'var(--color-text-primary)',
+                                    }}
+                                  >
+                                    {viewedTask.assignee.email}
+                                  </div>
                                 </div>
-                                {/* Email tooltip */}
-                                <div 
-                                  className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
-                                  style={{
-                                    backgroundColor: 'var(--color-bg-primary)',
-                                    color: 'var(--color-text-primary)',
-                                  }}
-                                >
-                                  {viewedTask.externalContact.email}
-                                </div>
+                                {/* Add Person Button - Only show if user is lead assignee */}
+                                {viewedTask?.assigneeId === user?.id && !isEditing && (
+                                  <button
+                                    onClick={async () => {
+                                      // Ensure contacts are loaded before opening modal
+                                      if (contacts.length === 0 && !isLoadingContacts) {
+                                        await fetchContactsForTask();
+                                      }
+                                      setIsAddTeamMemberModalOpen(true);
+                                    }}
+                                    className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0"
+                                    style={{
+                                      backgroundColor: 'var(--color-primary)',
+                                      color: 'white',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.transform = 'scale(1.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.transform = 'scale(1)';
+                                    }}
+                                    title="Add person to task"
+                                  >
+                                    <FaPlus className="w-3 h-3" />
+                                  </button>
+                                )}
                               </div>
                             ) : (
-                              <div className="flex items-center space-x-3 group relative">
-                                  <div 
-                                  className="text-white rounded-full flex items-center justify-center flex-shrink-0"
-                                  style={{ 
-                                    backgroundColor: 'var(--color-primary)',
-                                    width: '32px',
-                                    height: '32px',
-                                    minWidth: '32px',
-                                    minHeight: '32px',
-                                    maxWidth: '32px',
-                                    maxHeight: '32px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    lineHeight: '1'
-                                  }}
-                                  >
-                                  <span 
-                                    className="text-sm"
+                              /* No assignee - show Add button on its own row */
+                              viewedTask?.assigneeId === user?.id && !isEditing && (
+                                <div className="flex items-center justify-end">
+                                  <button
+                                    onClick={async () => {
+                                      // Ensure contacts are loaded before opening modal
+                                      if (contacts.length === 0 && !isLoadingContacts) {
+                                        await fetchContactsForTask();
+                                      }
+                                      setIsAddTeamMemberModalOpen(true);
+                                    }}
+                                    className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0"
                                     style={{
+                                      backgroundColor: 'var(--color-primary)',
+                                      color: 'white',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.transform = 'scale(1.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.transform = 'scale(1)';
+                                    }}
+                                    title="Add person to task"
+                                  >
+                                    <FaPlus className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )
+                            )}
+
+                            {/* Co-Assignees */}
+                            {isLoadingCoAssignees ? (
+                              <div className="flex justify-center py-2">
+                                <span className="loading loading-spinner loading-sm"></span>
+                              </div>
+                            ) : (
+                              coAssignees.map((coAssignee) => (
+                                <div key={coAssignee.id} className="flex items-center justify-between gap-3 group relative">
+                                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                    <div
+                                      className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                                      style={{
+                                        backgroundColor: '#10b981',
+                                        width: '32px',
+                                        height: '32px',
+                                        minWidth: '32px',
+                                        minHeight: '32px',
+                                        maxWidth: '32px',
+                                        maxHeight: '32px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: '1'
+                                      }}
+                                    >
+                                      <span
+                                        className="text-sm"
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          lineHeight: '1'
+                                        }}
+                                      >
+                                        {coAssignee.user.name.charAt(0)}
+                                      </span>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span
+                                          className="text-sm block truncate transition-colors duration-200"
+                                          style={{ color: 'var(--color-text-primary)' }}
+                                        >
+                                          {coAssignee.user.name}
+                                        </span>
+                                        <span
+                                          className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
+                                          style={{
+                                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                            color: '#6ee7b7',
+                                          }}
+                                        >
+                                          CO-ASSIGNEE
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {/* Email tooltip */}
+                                    <div
+                                      className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                      style={{
+                                        backgroundColor: 'var(--color-bg-primary)',
+                                        color: 'var(--color-text-primary)',
+                                      }}
+                                    >
+                                      {coAssignee.user.email}
+                                    </div>
+                                  </div>
+                                  {/* Remove button - only if user is lead assignee or system admin */}
+                                  {(viewedTask?.assigneeId === user?.id || user?.role === 'SYSDMIN') && (
+                                    <button
+                                      onClick={() => handleRemoveCoAssignee(coAssignee.userId)}
+                                      className="w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100"
+                                      style={{
+                                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                                        color: '#ef4444',
+                                      }}
+                                      title="Remove co-assignee"
+                                    >
+                                      <FaTimes className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              ))
+                            )}
+
+                            {/* Collaborators */}
+                            {viewedTask.collaborators && viewedTask.collaborators.map((collaborator) => (
+                              <div key={collaborator.id} className="flex items-center justify-between gap-3 group relative">
+                                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                  <div
+                                    className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                                    style={{
+                                      backgroundColor: '#3b82f6',
+                                      width: '32px',
+                                      height: '32px',
+                                      minWidth: '32px',
+                                      minHeight: '32px',
+                                      maxWidth: '32px',
+                                      maxHeight: '32px',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
                                       lineHeight: '1'
                                     }}
                                   >
-                                    {user?.name?.charAt(0)}
-                                  </span>
-                                </div>
-                                  <div className="flex items-center gap-2">
-                                  <span 
-                                      className="text-sm transition-colors duration-200"
-                                    style={{ color: 'var(--color-text-primary)' }}
-                                  >
-                                      {user?.name || 'You'}
-                                  </span>
-                                    <span 
-                                      className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
+                                    <span
+                                      className="text-sm"
                                       style={{
-                                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                                        color: '#a5b4fc',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: '1'
                                       }}
-                                  >
-                                      YOU
+                                    >
+                                      {collaborator.user.name.charAt(0)}
                                     </span>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="text-sm block truncate transition-colors duration-200"
+                                        style={{ color: 'var(--color-text-primary)' }}
+                                      >
+                                        {collaborator.user.name}
+                                      </span>
+                                      <span
+                                        className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
+                                        style={{
+                                          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                          color: '#93c5fd',
+                                        }}
+                                      >
+                                        {collaborator.isExternal ? 'EXTERNAL ' : ''}{collaborator.permissionLevel}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {/* Email tooltip */}
+                                  <div
+                                    className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                    style={{
+                                      backgroundColor: 'var(--color-bg-primary)',
+                                      color: 'var(--color-text-primary)',
+                                    }}
+                                  >
+                                    {collaborator.user.email}
+                                  </div>
                                 </div>
                               </div>
-                            )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                            ))}
 
-                {/* Task Hierarchy Tab */}
-                {activeTab === 'hierarchy' && (
-                  <div className="animate-fadeIn">
-                    {/* Project Information - Only show if no parent task and user is project owner */}
-                    {viewedTask.project && !viewedTask.parentTask && viewedTask.project.ownerId === user?.id && (
-                      <div className="mb-6">
-                        <div className="flex items-center justify-between mb-2 h-8">
-                          <h4
-                            className="text-sm font-semibold transition-colors duration-200"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                          >
-                            Project
-                          </h4>
-                        </div>
-                        <div
-                          className="border rounded-lg p-3 cursor-pointer transition text-sm transition-colors duration-200"
-                          style={{
-                            backgroundColor: 'var(--color-bg-tertiary)',
-                            borderColor: 'var(--color-border-default)',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
-                            e.currentTarget.style.borderColor = 'var(--color-primary)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                            e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                          }}
-                          onClick={() => {
-                            // Close task modal and navigate to project with state
-                            onClose();
-                            navigate('/projects', { 
-                              state: { openProjectId: viewedTask.project.id } 
-                            });
-                          }}
-                          title="Open project"
-                        >
-                          <div className="flex items-center space-x-3">
-                            {viewedTask.project.icon && (
-                              <div
-                                className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                                style={{ backgroundColor: viewedTask.project.color || '#6366f1' }}
-                              >
-                                {viewedTask.project.icon}
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <FaSitemap className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+                            {/* Shared With Users */}
+                            {viewedTask.sharedWith && viewedTask.sharedWith.map((share) => {
+                              // Skip if user is already in the list as assignee, co-assignee, or collaborator
+                              if (share.userId === viewedTask.assigneeId ||
+                                coAssignees.some(co => co.userId === share.userId) ||
+                                viewedTask.collaborators?.some(c => c.userId === share.userId)) {
+                                return null;
+                              }
+
+                              return (
+                                <div key={share.id} className="flex items-center justify-between gap-3 group relative">
+                                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                    <div
+                                      className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                                      style={{
+                                        backgroundColor: '#8b5cf6',
+                                        width: '32px',
+                                        height: '32px',
+                                        minWidth: '32px',
+                                        minHeight: '32px',
+                                        maxWidth: '32px',
+                                        maxHeight: '32px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: '1'
+                                      }}
+                                    >
+                                      <span
+                                        className="text-sm"
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          lineHeight: '1'
+                                        }}
+                                      >
+                                        {share.user?.name?.charAt(0) || '?'}
+                                      </span>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span
+                                          className="text-sm block truncate transition-colors duration-200"
+                                          style={{ color: 'var(--color-text-primary)' }}
+                                        >
+                                          {share.user?.name || share.email || 'Unknown'}
+                                        </span>
+                                        <span
+                                          className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
+                                          style={{
+                                            backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                                            color: '#c4b5fd',
+                                          }}
+                                        >
+                                          {share.isExternal ? 'EXTERNAL ' : ''}{share.permissionLevel || 'VIEWER'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {/* Email tooltip */}
+                                    {(share.user?.email || share.email) && (
+                                      <div
+                                        className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                        style={{
+                                          backgroundColor: 'var(--color-bg-primary)',
+                                          color: 'var(--color-text-primary)',
+                                        }}
+                                      >
+                                        {share.user?.email || share.email}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {/* Empty State */}
+                            {!viewedTask.assignee &&
+                              (!coAssignees || coAssignees.length === 0) &&
+                              (!viewedTask.collaborators || viewedTask.collaborators.length === 0) &&
+                              (!viewedTask.sharedWith || viewedTask.sharedWith.length === 0) && (
                                 <p
-                                  className="font-medium transition-colors duration-200 truncate"
-                                  style={{ color: 'var(--color-text-primary)' }}
+                                  className="text-sm text-center py-4 transition-colors duration-200"
+                                  style={{ color: 'var(--color-text-tertiary)' }}
                                 >
-                                  {viewedTask.project.name}
+                                  No people assigned
                                 </p>
-                              </div>
+                              )}
+                          </div>
+
+                          {/* Edit Mode - Assignee Selection */}
+                          {isEditing && (
+                            <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--color-border-default)' }}>
+                              <h4
+                                className="text-sm font-semibold mb-2 transition-colors duration-200"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                              >
+                                Change Assignee
+                              </h4>
+                              <SearchableDropdown
+                                options={allAssignees}
+                                value={formData.assigneeId || (formData.externalContactId ? `contact_${formData.externalContactId}` : '')}
+                                onChange={(value) => {
+                                  if (value.startsWith('contact_')) {
+                                    // Selected a contact
+                                    const contactId = value.split('_')[1];
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      assigneeId: '',
+                                      externalContactId: contactId
+                                    }));
+                                  } else {
+                                    // Selected an employee
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      assigneeId: value,
+                                      externalContactId: ''
+                                    }));
+                                    const selectedEmployee = users.find(user => user.id.toString() === value);
+                                    if (selectedEmployee) {
+                                      addToRecentEmployees(selectedEmployee);
+                                    }
+                                  }
+                                }}
+                                placeholder="Select an employee or contact"
+                                disabled={isLoadingUsers || isLoadingContacts}
+                                recentEmployees={recentEmployees}
+                                allowAddNew={!isPersonalAccount}
+                                onAddNew={handleAddNewContact}
+                                renderOption={(assignee) => (
+                                  <div className="flex items-center space-x-2">
+                                    <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                                    <span>{assignee.displayName || assignee.name}</span>
+                                    <span style={{ color: 'var(--color-text-tertiary)' }}>({assignee.email})</span>
+                                    {assignee.type === 'contact' && (
+                                      <span className="text-xs px-2 py-0.5 rounded" style={{
+                                        backgroundColor: 'var(--color-bg-tertiary)',
+                                        color: 'var(--color-text-secondary)'
+                                      }}>
+                                        External
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        /* Personal Account */
+                        <div>
+                          {isEditing ? (
+                            <div className="space-y-3">
+                              <h4
+                                className="text-base font-semibold mb-3 transition-colors duration-200"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                              >
+                                Assigned To
+                              </h4>
+                              <SearchableDropdown
+                                options={contacts}
+                                value={formData.externalContactId || ''}
+                                onChange={(value) => {
+                                  setFormData(prev => ({ ...prev, externalContactId: value }));
+                                }}
+                                placeholder="Select a contact (optional)"
+                                disabled={isLoadingContacts}
+                                renderOption={(contact) => (
+                                  <div className="flex items-center space-x-2">
+                                    <div className={`w-2 h-2 rounded-full ${contact.isPersonal ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                                    <span>{contact.name}</span>
+                                    <span
+                                      className="transition-colors duration-200"
+                                      style={{ color: 'var(--color-text-tertiary)' }}
+                                    >
+                                      ({contact.email})
+                                    </span>
+                                    {contact.company && (
+                                      <span
+                                        className="transition-colors duration-200"
+                                        style={{ color: 'var(--color-text-muted)' }}
+                                      >
+                                        - {contact.company}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              />
                               <p
-                                className="text-xs mt-1 transition-colors duration-200"
+                                className="text-sm transition-colors duration-200"
                                 style={{ color: 'var(--color-text-tertiary)' }}
                               >
-                                Click to view project
+                                Leave blank to assign to yourself
                               </p>
                             </div>
-                          </div>
+                          ) : (
+                            <div>
+                              <div className="space-y-2">
+                                {viewedTask.externalContact ? (
+                                  <div className="flex items-center space-x-3 group relative">
+                                    <div
+                                      className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                                      style={{
+                                        backgroundColor: '#3b82f6',
+                                        width: '32px',
+                                        height: '32px',
+                                        minWidth: '32px',
+                                        minHeight: '32px',
+                                        maxWidth: '32px',
+                                        maxHeight: '32px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: '1'
+                                      }}
+                                    >
+                                      <span
+                                        className="text-sm"
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          lineHeight: '1'
+                                        }}
+                                      >
+                                        {viewedTask.externalContact.name.charAt(0)}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="text-sm transition-colors duration-200"
+                                        style={{ color: 'var(--color-text-primary)' }}
+                                      >
+                                        {viewedTask.externalContact.name}
+                                      </span>
+                                      <span
+                                        className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
+                                        style={{
+                                          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                          color: '#93c5fd',
+                                        }}
+                                      >
+                                        EXTERNAL CONTACT
+                                      </span>
+                                    </div>
+                                    {/* Email tooltip */}
+                                    <div
+                                      className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                      style={{
+                                        backgroundColor: 'var(--color-bg-primary)',
+                                        color: 'var(--color-text-primary)',
+                                      }}
+                                    >
+                                      {viewedTask.externalContact.email}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center space-x-3 group relative">
+                                    <div
+                                      className="text-white rounded-full flex items-center justify-center flex-shrink-0"
+                                      style={{
+                                        backgroundColor: 'var(--color-primary)',
+                                        width: '32px',
+                                        height: '32px',
+                                        minWidth: '32px',
+                                        minHeight: '32px',
+                                        maxWidth: '32px',
+                                        maxHeight: '32px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: '1'
+                                      }}
+                                    >
+                                      <span
+                                        className="text-sm"
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          lineHeight: '1'
+                                        }}
+                                      >
+                                        {user?.name?.charAt(0)}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="text-sm transition-colors duration-200"
+                                        style={{ color: 'var(--color-text-primary)' }}
+                                      >
+                                        {user?.name || 'You'}
+                                      </span>
+                                      <span
+                                        className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
+                                        style={{
+                                          backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                                          color: '#a5b4fc',
+                                        }}
+                                      >
+                                        YOU
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Parent Task */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2 h-8">
-                          <h4 
-                            className="text-sm font-semibold transition-colors duration-200"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                          >
-                            Parent Task
-                          </h4>
-                        </div>
-                        {viewedTask.parentTask ? (
+                  {/* Task Hierarchy Tab */}
+                  {activeTab === 'hierarchy' && (
+                    <div className="animate-fadeIn">
+                      {/* Project Information - Only show if no parent task and user is project owner */}
+                      {viewedTask.project && !viewedTask.parentTask && viewedTask.project.ownerId === user?.id && (
+                        <div className="mb-6">
+                          <div className="flex items-center justify-between mb-2 h-8">
+                            <h4
+                              className="text-sm font-semibold transition-colors duration-200"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              Project
+                            </h4>
+                          </div>
                           <div
                             className="border rounded-lg p-3 cursor-pointer transition text-sm transition-colors duration-200"
                             style={{
@@ -1866,444 +1803,510 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                              e.currentTarget.style.borderColor = 'var(--color-primary)';
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                              e.currentTarget.style.borderColor = 'var(--color-border-default)';
                             }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleTaskClick(viewedTask.parentTask.id);
+                            onClick={() => {
+                              // Close task modal and navigate to project with state
+                              onClose();
+                              navigate('/projects', {
+                                state: { openProjectId: viewedTask.project.id }
+                              });
                             }}
-                            title="Open parent task"
+                            title="Open project"
                           >
-                            <div className="flex items-center gap-2">
-                              <FaSitemap className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
-                              <span 
-                                className="font-medium transition-colors duration-200"
-                                style={{ color: 'var(--color-text-primary)' }}
-                              >
-                                {viewedTask.parentTask.title}
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div 
-                            className="text-center py-8 border rounded-lg transition-colors duration-200"
-                            style={{
-                              backgroundColor: 'var(--color-bg-tertiary)',
-                              borderColor: 'var(--color-border-default)',
-                              color: 'var(--color-text-tertiary)',
-                            }}
-                          >
-                            <FaSitemap className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                            <p className="text-xs">No parent task</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Subtasks */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2 h-8">
-                          <h4 
-                            className="text-sm font-semibold transition-colors duration-200"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                          >
-                            Subtasks {viewedTask.subtasks && viewedTask.subtasks.length > 0 && `(${viewedTask.subtasks.length})`}
-                          </h4>
-                          {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
-                            <IconButton
-                              icon={<FaPlus />}
-                              label="Add"
-                              variant="primary"
-                              size="sm"
-                              onClick={() => setIsAddSubtaskOpen(true)}
-                            />
-                          )}
-                        </div>
-                        
-                        {viewedTask.subtasks && viewedTask.subtasks.length > 0 ? (
-                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin">
-                            {viewedTask.subtasks.map((subtask) => (
-                              <div
-                                key={subtask.id}
-                                className="border rounded-lg p-3 cursor-pointer transition transition-colors duration-200"
-                                style={{
-                                  backgroundColor: 'var(--color-bg-tertiary)',
-                                  borderColor: 'var(--color-border-default)',
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                                }}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleTaskClick(subtask.id);
-                                }}
-                                title="Open subtask"
-                              >
-                                {/* Title */}
-                                <div className="mb-2">
-                                  <span 
-                                    className="text-sm font-medium transition-colors duration-200"
+                            <div className="flex items-center space-x-3">
+                              {viewedTask.project.icon && (
+                                <div
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                                  style={{ backgroundColor: viewedTask.project.color || '#6366f1' }}
+                                >
+                                  {viewedTask.project.icon}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <FaSitemap className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+                                  <p
+                                    className="font-medium transition-colors duration-200 truncate"
                                     style={{ color: 'var(--color-text-primary)' }}
                                   >
-                                    {subtask.title}
-                                  </span>
+                                    {viewedTask.project.name}
+                                  </p>
                                 </div>
-                                
-                                {/* Assignee */}
-                                {!isPersonalAccount && subtask.assignee && (
-                                  <div 
-                                    className="text-xs flex items-center gap-1 mb-2 transition-colors duration-200"
-                                    style={{ color: 'var(--color-text-tertiary)' }}
-                                  >
-                                    <FaUsers className="w-3 h-3" />
-                                    {subtask.assignee.name}
-                                  </div>
-                                )}
-                                
-                                {/* Status Badge */}
-                                <div>
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${getStatusColor(subtask.status)} inline-block`}>
-                                    {STATUS_LABELS[subtask.status].toUpperCase()}
-                                  </span>
-                                </div>
+                                <p
+                                  className="text-xs mt-1 transition-colors duration-200"
+                                  style={{ color: 'var(--color-text-tertiary)' }}
+                                >
+                                  Click to view project
+                                </p>
                               </div>
-                            ))}
+                            </div>
                           </div>
-                        ) : (
-                          <div 
-                            className="text-center py-8 border rounded-lg transition-colors duration-200"
-                            style={{
-                              backgroundColor: 'var(--color-bg-tertiary)',
-                              borderColor: 'var(--color-border-default)',
-                              color: 'var(--color-text-tertiary)',
-                            }}
-                          >
-                            <FaSitemap className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                            <p className="text-xs">No subtasks yet</p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Parent Task */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2 h-8">
+                            <h4
+                              className="text-sm font-semibold transition-colors duration-200"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              Parent Task
+                            </h4>
+                          </div>
+                          {viewedTask.parentTask ? (
+                            <div
+                              className="border rounded-lg p-3 cursor-pointer transition text-sm transition-colors duration-200"
+                              style={{
+                                backgroundColor: 'var(--color-bg-tertiary)',
+                                borderColor: 'var(--color-border-default)',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                              }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleTaskClick(viewedTask.parentTask.id);
+                              }}
+                              title="Open parent task"
+                            >
+                              <div className="flex items-center gap-2">
+                                <FaSitemap className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+                                <span
+                                  className="font-medium transition-colors duration-200"
+                                  style={{ color: 'var(--color-text-primary)' }}
+                                >
+                                  {viewedTask.parentTask.title}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              className="text-center py-8 border rounded-lg transition-colors duration-200"
+                              style={{
+                                backgroundColor: 'var(--color-bg-tertiary)',
+                                borderColor: 'var(--color-border-default)',
+                                color: 'var(--color-text-tertiary)',
+                              }}
+                            >
+                              <FaSitemap className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                              <p className="text-xs">No parent task</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Subtasks */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2 h-8">
+                            <h4
+                              className="text-sm font-semibold transition-colors duration-200"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              Subtasks {viewedTask.subtasks && viewedTask.subtasks.length > 0 && `(${viewedTask.subtasks.length})`}
+                            </h4>
                             {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
-                              <p className="text-xs mt-1">Click "Add" to create</p>
+                              <IconButton
+                                icon={<FaPlus />}
+                                label="Add"
+                                variant="primary"
+                                size="sm"
+                                onClick={() => setIsAddSubtaskOpen(true)}
+                              />
                             )}
                           </div>
-                        )}
+
+                          {viewedTask.subtasks && viewedTask.subtasks.length > 0 ? (
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin">
+                              {viewedTask.subtasks.map((subtask) => (
+                                <div
+                                  key={subtask.id}
+                                  className="border rounded-lg p-3 cursor-pointer transition transition-colors duration-200"
+                                  style={{
+                                    backgroundColor: 'var(--color-bg-tertiary)',
+                                    borderColor: 'var(--color-border-default)',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                                  }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleTaskClick(subtask.id);
+                                  }}
+                                  title="Open subtask"
+                                >
+                                  {/* Title */}
+                                  <div className="mb-2">
+                                    <span
+                                      className="text-sm font-medium transition-colors duration-200"
+                                      style={{ color: 'var(--color-text-primary)' }}
+                                    >
+                                      {subtask.title}
+                                    </span>
+                                  </div>
+
+                                  {/* Assignee */}
+                                  {!isPersonalAccount && subtask.assignee && (
+                                    <div
+                                      className="text-xs flex items-center gap-1 mb-2 transition-colors duration-200"
+                                      style={{ color: 'var(--color-text-tertiary)' }}
+                                    >
+                                      <FaUsers className="w-3 h-3" />
+                                      {subtask.assignee.name}
+                                    </div>
+                                  )}
+
+                                  {/* Status Badge */}
+                                  <div>
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${getStatusColor(subtask.status)} inline-block`}>
+                                      {STATUS_LABELS[subtask.status].toUpperCase()}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div
+                              className="text-center py-8 border rounded-lg transition-colors duration-200"
+                              style={{
+                                backgroundColor: 'var(--color-bg-tertiary)',
+                                borderColor: 'var(--color-border-default)',
+                                color: 'var(--color-text-tertiary)',
+                              }}
+                            >
+                              <FaSitemap className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                              <p className="text-xs">No subtasks yet</p>
+                              {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
+                                <p className="text-xs mt-1">Click "Add" to create</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* AddSubtaskModal */}
+              {isAddSubtaskOpen && (
+                <AddSubtaskModal
+                  isOpen={isAddSubtaskOpen}
+                  onClose={() => setIsAddSubtaskOpen(false)}
+                  parentTask={viewedTask}
+                  extensionUpdateData={extensionUpdateData}
+                />
+              )}
+
+              {/* Add Contact Modal */}
+              {isAddContactModalOpen && (
+                <AddContactModal
+                  isOpen={isAddContactModalOpen}
+                  onClose={() => {
+                    setIsAddContactModalOpen(false);
+                    setPendingEmail('');
+                  }}
+                  onContactAdded={handleContactAdded}
+                  initialEmail={pendingEmail}
+                />
+              )}
+
+            </div>
+
+            {/* RIGHT COLUMN - Comments */}
+            <div
+              className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin transition-colors duration-200"
+              style={{
+                scrollbarThumbColor: 'var(--color-scrollbar-thumb)',
+                scrollbarTrackColor: 'var(--color-scrollbar-track)',
+              }}
+            >
+              <h4
+                className="text-lg font-semibold mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                Comments
+              </h4>
+              <div className="overflow-y-auto pr-2">
+                <CommentSection
+                  taskId={viewedTask.id}
+                  task={viewedTask}
+                  extensionUpdateData={extensionUpdateData}
+                  onTaskSwitch={onTaskSwitch}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={confirmDelete}
+          taskTitle={viewedTask.title}
+          isLoading={isLoading}
+        />
+
+        {/* Unaccept Confirmation Modal */}
+        {isUnaccessConfirmOpen && createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
+            <div
+              className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+              style={{
+                backgroundColor: 'var(--color-bg-primary)',
+                border: '1px solid var(--color-border)'
+              }}
+            >
+              <div className="flex items-start gap-3 mb-4">
+                <div className="flex-shrink-0">
+                  <FaExclamationTriangle className="text-3xl text-yellow-500" />
+                </div>
+                <div className="flex-1">
+                  <h3
+                    className="text-xl font-bold mb-2"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    Withdraw from Task?
+                  </h3>
+                  <p
+                    className="text-sm mb-3"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    You will withdraw from this task and it will no longer appear in your dashboard. The task creator ({viewedTask?.assigner?.name}) will be notified.
+                  </p>
+                  <div
+                    className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 mb-4"
+                    style={{
+                      backgroundColor: 'var(--color-warning-bg)',
+                      borderColor: 'var(--color-warning-border)'
+                    }}
+                  >
+                    <p
+                      className="text-xs font-medium"
+                      style={{ color: 'var(--color-warning-text)' }}
+                    >
+                      <strong>Note:</strong> This action will remove you as the assignee and reset the task status to TODO. The task will need to be reassigned.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setIsUnaccessConfirmOpen(false)}
+                  disabled={isUnaccepting}
+                  className="px-4 py-2 rounded-md font-medium transition-colors"
+                  style={{
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-border)'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUnaccept}
+                  disabled={isUnaccepting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isUnaccepting ? (
+                    <>
+                      <FaSpinner className="animate-spin" />
+                      Withdrawing...
+                    </>
+                  ) : (
+                    <>
+                      <FaTimesCircle />
+                      Withdraw
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* Task Share Modal */}
+        <TaskShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          task={viewedTask}
+          onShareUpdate={() => {
+            // Refresh the task data to show updated shared users
+            if (task) {
+              fetchTask(task.id);
+            }
+          }}
+        />
+
+
+        {/* Task Updates Modal */}
+        <TaskUpdatesModal
+          isOpen={isUpdatesModalOpen}
+          onClose={() => setIsUpdatesModalOpen(false)}
+          task={viewedTask}
+        />
+
+        {/* Add Team Member Modal */}
+        <AddTeamMemberModal
+          isOpen={isAddTeamMemberModalOpen}
+          onClose={() => setIsAddTeamMemberModalOpen(false)}
+          onAdd={handleAddCoAssignee}
+          taskId={viewedTask?.id}
+          contacts={contacts}
+          excludeUserIds={[
+            viewedTask?.assigneeId,
+            ...(coAssignees.map(co => co.userId) || []),
+            ...(viewedTask?.collaborators?.map(c => c.userId) || []),
+            ...(viewedTask?.sharedWith?.map(s => s.userId).filter(Boolean) || [])
+          ].filter(Boolean)}
+          excludeContactIds={[
+            ...(viewedTask?.sharedWith?.map(s => s.contactId).filter(Boolean) || [])
+          ]}
+        />
+
+        {/* Task Summary Modal */}
+        {isSummaryModalOpen && summaryData && (
+          <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 60 }}>
+            <div
+              className="modal-box max-w-6xl max-h-[95vh] overflow-y-auto"
+              style={{
+                backgroundColor: 'var(--color-bg-secondary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+            >
+              <div className="flex justify-between items-start mb-6">
+                <h3
+                  className="text-2xl font-bold"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  Task Summary
+                </h3>
+                <IconButton
+                  icon={<FaTimes />}
+                  label="Close"
+                  iconOnly={true}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsSummaryModalOpen(false);
+                    setSummaryData(null);
+                  }}
+                  className="!p-2 !rounded-full"
+                />
+              </div>
+
+              <div className="space-y-6">
+                {/* AI Analysis Section */}
+                <div
+                  className="rounded-lg p-4"
+                  style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                >
+                  <h4
+                    className="text-lg font-semibold mb-3"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    Content Summary
+                  </h4>
+                  <div
+                    className="rounded p-3 leading-relaxed"
+                    style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}
+                  >
+                    {summaryData.textSummary}
+                  </div>
+                </div>
+
+                {/* Task Details Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Status & Priority */}
+                  <div
+                    className="rounded-lg p-4"
+                    style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                  >
+                    <h4
+                      className="text-lg font-semibold mb-3"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      📊 Status &amp; Priority
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span style={{ color: 'var(--color-text-secondary)' }}>Status:</span>
+                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.status}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span style={{ color: 'var(--color-text-secondary)' }}>Priority:</span>
+                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.priority}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span style={{ color: 'var(--color-text-secondary)' }}>Due Date:</span>
+                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.dueDate}</span>
                       </div>
                     </div>
                   </div>
-                )}
+
+                  {/* Assignment */}
+                  <div
+                    className="rounded-lg p-4"
+                    style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
+                  >
+                    <h4
+                      className="text-lg font-semibold mb-3"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      👥 Assignment
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span style={{ color: 'var(--color-text-secondary)' }}>Created By:</span>
+                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.createdBy}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span style={{ color: 'var(--color-text-secondary)' }}>Assigned To:</span>
+                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.assignedTo}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span style={{ color: 'var(--color-text-secondary)' }}>Created:</span>
+                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.createdAt}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Activity */}
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <h4 className="text-lg font-semibold text-white mb-3">📈 Activity</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">Comments:</span>
+                        <span className="text-white">{summaryData.comments}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">Subtasks:</span>
+                        <span className="text-white">{summaryData.subtasks}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            {/* AddSubtaskModal */}
-            {isAddSubtaskOpen && (
-              <AddSubtaskModal
-                isOpen={isAddSubtaskOpen}
-                onClose={() => setIsAddSubtaskOpen(false)}
-                parentTask={viewedTask}
-                extensionUpdateData={extensionUpdateData}
-              />
-            )}
-
-            {/* Add Contact Modal */}
-            {isAddContactModalOpen && (
-              <AddContactModal
-                isOpen={isAddContactModalOpen}
-                onClose={() => {
-                  setIsAddContactModalOpen(false);
-                  setPendingEmail('');
-                }}
-                onContactAdded={handleContactAdded}
-                initialEmail={pendingEmail}
-              />
-            )}
-
           </div>
-
-        {/* RIGHT COLUMN - Comments */}
-        <div 
-          className="space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin transition-colors duration-200"
-          style={{
-            scrollbarThumbColor: 'var(--color-scrollbar-thumb)',
-            scrollbarTrackColor: 'var(--color-scrollbar-track)',
-          }}
-        >
-          <h4 
-            className="text-lg font-semibold mb-2 transition-colors duration-200"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            Comments
-          </h4>
-          <div className="overflow-y-auto pr-2">
-            <CommentSection 
-              taskId={viewedTask.id} 
-              task={viewedTask}
-              extensionUpdateData={extensionUpdateData} 
-              onTaskSwitch={onTaskSwitch}
-            />
-          </div>
-        </div>
-        </div>
+        )}
       </div>
-
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={confirmDelete}
-        taskTitle={viewedTask.title}
-        isLoading={isLoading}
-      />
-
-      {/* Unaccept Confirmation Modal */}
-      {isUnaccessConfirmOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
-          <div 
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
-            style={{
-              backgroundColor: 'var(--color-bg-primary)',
-              border: '1px solid var(--color-border)'
-            }}
-          >
-            <div className="flex items-start gap-3 mb-4">
-              <div className="flex-shrink-0">
-                <FaExclamationTriangle className="text-3xl text-yellow-500" />
-              </div>
-              <div className="flex-1">
-                <h3 
-                  className="text-xl font-bold mb-2"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  Withdraw from Task?
-                </h3>
-                <p 
-                  className="text-sm mb-3"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  You will withdraw from this task and it will no longer appear in your dashboard. The task creator ({viewedTask?.assigner?.name}) will be notified.
-                </p>
-                <div 
-                  className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 mb-4"
-                  style={{ 
-                    backgroundColor: 'var(--color-warning-bg)',
-                    borderColor: 'var(--color-warning-border)'
-                  }}
-                >
-                  <p 
-                    className="text-xs font-medium"
-                    style={{ color: 'var(--color-warning-text)' }}
-                  >
-                    <strong>Note:</strong> This action will remove you as the assignee and reset the task status to TODO. The task will need to be reassigned.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setIsUnaccessConfirmOpen(false)}
-                disabled={isUnaccepting}
-                className="px-4 py-2 rounded-md font-medium transition-colors"
-                style={{
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  color: 'var(--color-text-primary)',
-                  border: '1px solid var(--color-border)'
-                }}
-              >
-                Cancel
-              </button>
-                <button
-                onClick={handleUnaccept}
-                disabled={isUnaccepting}
-                className="px-4 py-2 bg-red-600 text-white rounded-md font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {isUnaccepting ? (
-                  <>
-                    <FaSpinner className="animate-spin" />
-                    Withdrawing...
-                  </>
-                ) : (
-                  <>
-                    <FaTimesCircle />
-                    Withdraw
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Task Share Modal */}
-      <TaskShareModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        task={viewedTask}
-        onShareUpdate={() => {
-          // Refresh the task data to show updated shared users
-          if (task) {
-            fetchTask(task.id);
-          }
-        }}
-      />
-
-
-      {/* Task Updates Modal */}
-      <TaskUpdatesModal
-        isOpen={isUpdatesModalOpen}
-        onClose={() => setIsUpdatesModalOpen(false)}
-        task={viewedTask}
-      />
-
-      {/* Add Team Member Modal */}
-      <AddTeamMemberModal
-        isOpen={isAddTeamMemberModalOpen}
-        onClose={() => setIsAddTeamMemberModalOpen(false)}
-        onAdd={handleAddCoAssignee}
-        taskId={viewedTask?.id}
-        contacts={contacts}
-        excludeUserIds={[
-          viewedTask?.assigneeId,
-          ...(coAssignees.map(co => co.userId) || []),
-          ...(viewedTask?.collaborators?.map(c => c.userId) || []),
-          ...(viewedTask?.sharedWith?.map(s => s.userId).filter(Boolean) || [])
-        ].filter(Boolean)}
-        excludeContactIds={[
-          ...(viewedTask?.sharedWith?.map(s => s.contactId).filter(Boolean) || [])
-        ]}
-      />
-
-      {/* Task Summary Modal */}
-      {isSummaryModalOpen && summaryData && (
-        <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 60 }}>
-          <div
-            className="modal-box max-w-6xl max-h-[95vh] overflow-y-auto"
-            style={{
-              backgroundColor: 'var(--color-bg-secondary)',
-              borderColor: 'var(--color-border-default)',
-              color: 'var(--color-text-primary)',
-            }}
-          >
-            <div className="flex justify-between items-start mb-6">
-              <h3
-                className="text-2xl font-bold"
-                style={{ color: 'var(--color-text-primary)' }}
-              >
-                Task Summary
-              </h3>
-              <IconButton
-                icon={<FaTimes />}
-                label="Close"
-                iconOnly={true}
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setIsSummaryModalOpen(false);
-                  setSummaryData(null);
-                }}
-                className="!p-2 !rounded-full"
-              />
-            </div>
-            
-              <div className="space-y-6">
-              {/* AI Analysis Section */}
-              <div
-                className="rounded-lg p-4"
-                style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-              >
-                <h4
-                  className="text-lg font-semibold mb-3"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  Content Summary
-                </h4>
-                <div
-                  className="rounded p-3 leading-relaxed"
-                  style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}
-                >
-                  {summaryData.textSummary}
-                </div>
-              </div>
-
-              {/* Task Details Section */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Status & Priority */}
-                <div
-                  className="rounded-lg p-4"
-                  style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-                >
-                  <h4
-                    className="text-lg font-semibold mb-3"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    📊 Status &amp; Priority
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span style={{ color: 'var(--color-text-secondary)' }}>Status:</span>
-                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.status}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: 'var(--color-text-secondary)' }}>Priority:</span>
-                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.priority}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: 'var(--color-text-secondary)' }}>Due Date:</span>
-                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.dueDate}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Assignment */}
-                <div
-                  className="rounded-lg p-4"
-                  style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-                >
-                  <h4
-                    className="text-lg font-semibold mb-3"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    👥 Assignment
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span style={{ color: 'var(--color-text-secondary)' }}>Created By:</span>
-                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.createdBy}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: 'var(--color-text-secondary)' }}>Assigned To:</span>
-                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.assignedTo}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: 'var(--color-text-secondary)' }}>Created:</span>
-                      <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.createdAt}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Activity */}
-                <div className="bg-gray-700 rounded-lg p-4">
-                  <h4 className="text-lg font-semibold text-white mb-3">📈 Activity</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-300">Comments:</span>
-                      <span className="text-white">{summaryData.comments}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-300">Subtasks:</span>
-                      <span className="text-white">{summaryData.subtasks}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
     </>
   );
 

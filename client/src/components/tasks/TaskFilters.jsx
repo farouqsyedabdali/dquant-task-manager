@@ -7,7 +7,7 @@ import { projectsAPI } from '../../services/api';
 
 const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
   const { user } = useAuthStore();
-  
+
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
   const [isTaskTypeDropdownOpen, setIsTaskTypeDropdownOpen] = useState(false);
@@ -28,7 +28,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
   // Fetch projects when dropdown opens
   useEffect(() => {
-    if (isTaskTypeDropdownOpen && !isPersonalAccount && projects.length === 0 && !isLoadingProjects) {
+    if (isTaskTypeDropdownOpen && projects.length === 0 && !isLoadingProjects) {
       setIsLoadingProjects(true);
       projectsAPI.getAll()
         .then(response => {
@@ -52,7 +52,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
       const clickedInPriority = priorityDropdownRef.current?.contains(event.target);
       const clickedInDueDate = dueDateDropdownRef.current?.contains(event.target);
       const clickedInSortBy = sortByDropdownRef.current?.contains(event.target);
-      
+
       if (!clickedInTaskType && !clickedInSubmenu && !clickedInStatus && !clickedInPriority && !clickedInDueDate && !clickedInSortBy) {
         setIsTaskTypeDropdownOpen(false);
         setIsProjectsSubmenuOpen(false);
@@ -67,7 +67,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
     };
 
     const anyDropdownOpen = isTaskTypeDropdownOpen || isStatusDropdownOpen || isPriorityDropdownOpen || isDueDateDropdownOpen || isSortByDropdownOpen;
-    
+
     if (anyDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
@@ -150,17 +150,17 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
   const hasActiveFilters = filters.status || filters.priority || filters.search || filters.dueDateFilter || filters.taskType || filters.selectedProjectId || filters.sortBy;
 
   return (
-    <div 
+    <div
       className="border rounded-lg shadow-lg p-6 transition-colors duration-200"
       style={{
         backgroundColor: 'var(--color-bg-secondary)',
         borderColor: 'var(--color-border-default)',
       }}
     >
-      <div className={`grid grid-cols-1 gap-4 ${isPersonalAccount ? 'md:grid-cols-6' : 'md:grid-cols-7'}`}>
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
         {/* Search */}
         <div>
-          <label 
+          <label
             className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
             style={{ color: 'var(--color-text-secondary)' }}
           >
@@ -168,7 +168,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
             <span>Search</span>
           </label>
           <div className="relative">
-            <FaSearch 
+            <FaSearch
               className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-200"
               style={{ color: 'var(--color-text-tertiary)' }}
             />
@@ -195,7 +195,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
         {/* Status Filter */}
         <div className="relative" ref={statusDropdownRef}>
-          <label 
+          <label
             className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
             style={{ color: 'var(--color-text-secondary)' }}
           >
@@ -234,7 +234,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           </button>
 
           {isStatusDropdownOpen && (
-            <div 
+            <div
               className="absolute z-50 w-[120%] mt-1 rounded-lg shadow-lg"
               style={{
                 backgroundColor: 'var(--color-bg-secondary)',
@@ -324,7 +324,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
         {/* Priority Filter */}
         <div className="relative" ref={priorityDropdownRef}>
-          <label 
+          <label
             className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
             style={{ color: 'var(--color-text-secondary)' }}
           >
@@ -363,7 +363,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           </button>
 
           {isPriorityDropdownOpen && (
-            <div 
+            <div
               className="absolute z-50 w-[120%] mt-1 rounded-lg shadow-lg"
               style={{
                 backgroundColor: 'var(--color-bg-secondary)',
@@ -429,7 +429,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
         {/* Due Date Filter */}
         <div className="relative" ref={dueDateDropdownRef}>
-          <label 
+          <label
             className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
             style={{ color: 'var(--color-text-secondary)' }}
           >
@@ -468,7 +468,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           </button>
 
           {isDueDateDropdownOpen && (
-            <div 
+            <div
               className="absolute z-50 w-[120%] mt-1 rounded-lg shadow-lg"
               style={{
                 backgroundColor: 'var(--color-bg-secondary)',
@@ -538,267 +538,265 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           )}
         </div>
 
-        {/* Task Type Filter - Only show for company accounts */}
-        {!isPersonalAccount && (
-          <div className="relative" ref={taskTypeDropdownRef}>
-            <label 
-              className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              <FaFilter className="w-4 h-4" />
-              <span>Task Type</span>
-            </label>
-            <button
-              type="button"
-              onClick={() => {
-                setIsStatusDropdownOpen(false);
-                setIsPriorityDropdownOpen(false);
-                setIsDueDateDropdownOpen(false);
-                setIsSortByDropdownOpen(false);
-                setIsTaskTypeDropdownOpen(!isTaskTypeDropdownOpen);
-              }}
-              className="w-full text-left px-3 py-2 rounded-lg focus:outline-none focus:ring-1 transition-colors duration-200 h-10 flex items-center justify-between"
+        {/* Task Type Filter */}
+        <div className="relative" ref={taskTypeDropdownRef}>
+          <label
+            className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            <FaFilter className="w-4 h-4" />
+            <span>Task Type</span>
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              setIsStatusDropdownOpen(false);
+              setIsPriorityDropdownOpen(false);
+              setIsDueDateDropdownOpen(false);
+              setIsSortByDropdownOpen(false);
+              setIsTaskTypeDropdownOpen(!isTaskTypeDropdownOpen);
+            }}
+            className="w-full text-left px-3 py-2 rounded-lg focus:outline-none focus:ring-1 transition-colors duration-200 h-10 flex items-center justify-between"
+            style={{
+              backgroundColor: 'var(--color-bg-tertiary)',
+              borderColor: 'var(--color-border-default)',
+              color: 'var(--color-text-primary)',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-primary)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'var(--color-border-default)';
+            }}
+          >
+            <span className="truncate flex-1 mr-2">{getTaskTypeLabel()}</span>
+            <svg className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {isTaskTypeDropdownOpen && (
+            <div
+              className="absolute z-50 w-[120%] mt-1 rounded-lg shadow-lg"
               style={{
-                backgroundColor: 'var(--color-bg-tertiary)',
+                backgroundColor: 'var(--color-bg-secondary)',
                 borderColor: 'var(--color-border-default)',
-                color: 'var(--color-text-primary)',
                 borderWidth: '1px',
                 borderStyle: 'solid',
               }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-primary)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-border-default)';
-              }}
             >
-              <span className="truncate flex-1 mr-2">{getTaskTypeLabel()}</span>
-              <svg className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {isTaskTypeDropdownOpen && (
-              <div 
-                className="absolute z-50 w-[120%] mt-1 rounded-lg shadow-lg"
+              <button
+                type="button"
+                onClick={() => handleTaskTypeSelect('')}
+                className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
                 style={{
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  borderColor: 'var(--color-border-default)',
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
+                  color: filters.taskType === '' ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                  backgroundColor: filters.taskType === '' ? 'var(--color-bg-tertiary)' : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (filters.taskType !== '') {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (filters.taskType !== '') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                All Tasks
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTaskTypeSelect('shared')}
+                className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
+                style={{
+                  color: filters.taskType === 'shared' ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                  backgroundColor: filters.taskType === 'shared' ? 'var(--color-bg-tertiary)' : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (filters.taskType !== 'shared') {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (filters.taskType !== 'shared') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                Shared with me
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTaskTypeSelect('assigned')}
+                className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
+                style={{
+                  color: filters.taskType === 'assigned' ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                  backgroundColor: filters.taskType === 'assigned' ? 'var(--color-bg-tertiary)' : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (filters.taskType !== 'assigned') {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (filters.taskType !== 'assigned') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                Assigned to me
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTaskTypeSelect('created')}
+                className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
+                style={{
+                  color: filters.taskType === 'created' ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                  backgroundColor: filters.taskType === 'created' ? 'var(--color-bg-tertiary)' : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (filters.taskType !== 'created') {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (filters.taskType !== 'created') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                Created by me
+              </button>
+              <div
+                className="relative"
+                onMouseEnter={() => {
+                  if (projectsSubmenuTimeoutRef.current) {
+                    clearTimeout(projectsSubmenuTimeoutRef.current);
+                  }
+                  setIsProjectsSubmenuOpen(true);
+                }}
+                onMouseLeave={() => {
+                  // Add a delay before closing to allow moving to submenu
+                  projectsSubmenuTimeoutRef.current = setTimeout(() => {
+                    setIsProjectsSubmenuOpen(false);
+                  }, 200);
                 }}
               >
                 <button
                   type="button"
-                  onClick={() => handleTaskTypeSelect('')}
-                  className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
+                  onClick={() => handleTaskTypeSelect('projects')}
+                  className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200 flex items-center justify-between"
                   style={{
-                    color: filters.taskType === '' ? 'var(--color-primary)' : 'var(--color-text-primary)',
-                    backgroundColor: filters.taskType === '' ? 'var(--color-bg-tertiary)' : 'transparent',
+                    color: filters.taskType === 'projects' ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                    backgroundColor: filters.taskType === 'projects' ? 'var(--color-bg-tertiary)' : 'transparent',
                   }}
                   onMouseEnter={(e) => {
-                    if (filters.taskType !== '') {
-                      e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (filters.taskType !== '') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  All Tasks
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleTaskTypeSelect('shared')}
-                  className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
-                  style={{
-                    color: filters.taskType === 'shared' ? 'var(--color-primary)' : 'var(--color-text-primary)',
-                    backgroundColor: filters.taskType === 'shared' ? 'var(--color-bg-tertiary)' : 'transparent',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (filters.taskType !== 'shared') {
-                      e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (filters.taskType !== 'shared') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  Shared with me
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleTaskTypeSelect('assigned')}
-                  className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
-                  style={{
-                    color: filters.taskType === 'assigned' ? 'var(--color-primary)' : 'var(--color-text-primary)',
-                    backgroundColor: filters.taskType === 'assigned' ? 'var(--color-bg-tertiary)' : 'transparent',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (filters.taskType !== 'assigned') {
-                      e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (filters.taskType !== 'assigned') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  Assigned to me
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleTaskTypeSelect('created')}
-                  className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
-                  style={{
-                    color: filters.taskType === 'created' ? 'var(--color-primary)' : 'var(--color-text-primary)',
-                    backgroundColor: filters.taskType === 'created' ? 'var(--color-bg-tertiary)' : 'transparent',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (filters.taskType !== 'created') {
-                      e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (filters.taskType !== 'created') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  Created by me
-                </button>
-                <div
-                  className="relative"
-                  onMouseEnter={() => {
                     if (projectsSubmenuTimeoutRef.current) {
                       clearTimeout(projectsSubmenuTimeoutRef.current);
                     }
                     setIsProjectsSubmenuOpen(true);
+                    if (filters.taskType !== 'projects') {
+                      e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                    }
                   }}
-                  onMouseLeave={() => {
-                    // Add a delay before closing to allow moving to submenu
-                    projectsSubmenuTimeoutRef.current = setTimeout(() => {
-                      setIsProjectsSubmenuOpen(false);
-                    }, 200);
+                  onMouseLeave={(e) => {
+                    if (filters.taskType !== 'projects') {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => handleTaskTypeSelect('projects')}
-                    className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200 flex items-center justify-between"
+                  <span>Projects and Events only</span>
+                  <FaChevronRight className="w-3 h-3" style={{ color: 'var(--color-text-tertiary)' }} />
+                </button>
+
+                {isProjectsSubmenuOpen && (
+                  <div
+                    ref={projectsSubmenuRef}
+                    className="absolute left-full top-0 ml-0 rounded-lg shadow-lg min-w-[200px] max-h-60 overflow-y-auto"
                     style={{
-                      color: filters.taskType === 'projects' ? 'var(--color-primary)' : 'var(--color-text-primary)',
-                      backgroundColor: filters.taskType === 'projects' ? 'var(--color-bg-tertiary)' : 'transparent',
+                      backgroundColor: 'var(--color-bg-secondary)',
+                      borderColor: 'var(--color-border-default)',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      zIndex: 10001,
                     }}
-                    onMouseEnter={(e) => {
+                    onMouseEnter={() => {
                       if (projectsSubmenuTimeoutRef.current) {
                         clearTimeout(projectsSubmenuTimeoutRef.current);
                       }
                       setIsProjectsSubmenuOpen(true);
-                      if (filters.taskType !== 'projects') {
-                        e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                      }
                     }}
-                    onMouseLeave={(e) => {
-                      if (filters.taskType !== 'projects') {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }
+                    onMouseLeave={() => {
+                      projectsSubmenuTimeoutRef.current = setTimeout(() => {
+                        setIsProjectsSubmenuOpen(false);
+                      }, 200);
                     }}
                   >
-                    <span>Projects and Events only</span>
-                    <FaChevronRight className="w-3 h-3" style={{ color: 'var(--color-text-tertiary)' }} />
-                  </button>
-                  
-                  {isProjectsSubmenuOpen && (
-                    <div
-                      ref={projectsSubmenuRef}
-                      className="absolute left-full top-0 ml-0 rounded-lg shadow-lg min-w-[200px] max-h-60 overflow-y-auto"
+                    <button
+                      type="button"
+                      onClick={() => handleProjectSelect('')}
+                      className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
                       style={{
-                        backgroundColor: 'var(--color-bg-secondary)',
-                        borderColor: 'var(--color-border-default)',
-                        borderWidth: '1px',
-                        borderStyle: 'solid',
-                        zIndex: 10001,
+                        color: filters.taskType === 'projects' && !filters.selectedProjectId ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                        backgroundColor: filters.taskType === 'projects' && !filters.selectedProjectId ? 'var(--color-bg-tertiary)' : 'transparent',
                       }}
-                      onMouseEnter={() => {
-                        if (projectsSubmenuTimeoutRef.current) {
-                          clearTimeout(projectsSubmenuTimeoutRef.current);
+                      onMouseEnter={(e) => {
+                        if (!(filters.taskType === 'projects' && !filters.selectedProjectId)) {
+                          e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
                         }
-                        setIsProjectsSubmenuOpen(true);
                       }}
-                      onMouseLeave={() => {
-                        projectsSubmenuTimeoutRef.current = setTimeout(() => {
-                          setIsProjectsSubmenuOpen(false);
-                        }, 200);
+                      onMouseLeave={(e) => {
+                        if (!(filters.taskType === 'projects' && !filters.selectedProjectId)) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
                       }}
                     >
-                      <button
-                        type="button"
-                        onClick={() => handleProjectSelect('')}
-                        className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
-                        style={{
-                          color: filters.taskType === 'projects' && !filters.selectedProjectId ? 'var(--color-primary)' : 'var(--color-text-primary)',
-                          backgroundColor: filters.taskType === 'projects' && !filters.selectedProjectId ? 'var(--color-bg-tertiary)' : 'transparent',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!(filters.taskType === 'projects' && !filters.selectedProjectId)) {
-                            e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!(filters.taskType === 'projects' && !filters.selectedProjectId)) {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                          }
-                        }}
-                      >
-                        All
-                      </button>
-                      {isLoadingProjects ? (
-                        <div className="px-3 py-2 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-                          Loading projects...
-                        </div>
-                      ) : (
-                        projects.map((project) => (
-                          <button
-                            key={project.id}
-                            type="button"
-                            onClick={() => handleProjectSelect(project.id.toString())}
-                            className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
-                            style={{
-                              color: filters.selectedProjectId === project.id.toString() ? 'var(--color-primary)' : 'var(--color-text-primary)',
-                              backgroundColor: filters.selectedProjectId === project.id.toString() ? 'var(--color-bg-tertiary)' : 'transparent',
-                            }}
-                            onMouseEnter={(e) => {
-                              if (filters.selectedProjectId !== project.id.toString()) {
-                                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (filters.selectedProjectId !== project.id.toString()) {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                              }
-                            }}
-                          >
-                            {project.name}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
+                      All
+                    </button>
+                    {isLoadingProjects ? (
+                      <div className="px-3 py-2 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+                        Loading projects...
+                      </div>
+                    ) : (
+                      projects.map((project) => (
+                        <button
+                          key={project.id}
+                          type="button"
+                          onClick={() => handleProjectSelect(project.id.toString())}
+                          className="w-full text-left px-3 py-2 focus:outline-none transition-colors duration-200"
+                          style={{
+                            color: filters.selectedProjectId === project.id.toString() ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                            backgroundColor: filters.selectedProjectId === project.id.toString() ? 'var(--color-bg-tertiary)' : 'transparent',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (filters.selectedProjectId !== project.id.toString()) {
+                              e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (filters.selectedProjectId !== project.id.toString()) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                          }}
+                        >
+                          {project.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
         {/* Sort By Filter */}
         <div className="relative" ref={sortByDropdownRef}>
-          <label 
+          <label
             className="block text-sm font-medium mb-2 flex items-center space-x-2 transition-colors duration-200"
             style={{ color: 'var(--color-text-secondary)' }}
           >
@@ -837,7 +835,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           </button>
 
           {isSortByDropdownOpen && (
-            <div 
+            <div
               className="absolute z-50 w-[120%] mt-1 rounded-lg shadow-lg"
               style={{
                 backgroundColor: 'var(--color-bg-secondary)',
@@ -909,7 +907,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           )}
           {filters.status && (
             <div className="status-badge bg-blue-600 text-white gap-2 border-0 flex items-center">
-              Status: {filters.status.includes(',') 
+              Status: {filters.status.includes(',')
                 ? filters.status.split(',').map(s => STATUS_OPTIONS.find(opt => opt.value === s.trim())?.label).join(', ')
                 : STATUS_OPTIONS.find(opt => opt.value === filters.status)?.label}
               <IconButton
@@ -939,11 +937,11 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           )}
           {filters.dueDateFilter && (
             <div className="status-badge bg-purple-600 text-white gap-2 border-0 flex items-center">
-              Due Date: {filters.dueDateFilter === 'overdue' ? 'Overdue' : 
-                         filters.dueDateFilter === 'due-today' ? 'Due Today' :
-                         filters.dueDateFilter === 'due-this-week' ? 'Due This Week' :
-                         filters.dueDateFilter === 'due-this-month' ? 'Due This Month' :
-                         filters.dueDateFilter === 'no-due-date' ? 'No Due Date' : filters.dueDateFilter}
+              Due Date: {filters.dueDateFilter === 'overdue' ? 'Overdue' :
+                filters.dueDateFilter === 'due-today' ? 'Due Today' :
+                  filters.dueDateFilter === 'due-this-week' ? 'Due This Week' :
+                    filters.dueDateFilter === 'due-this-month' ? 'Due This Month' :
+                      filters.dueDateFilter === 'no-due-date' ? 'No Due Date' : filters.dueDateFilter}
               <IconButton
                 icon={<FaTimes />}
                 label="Remove due date filter"
@@ -958,13 +956,13 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
           {filters.taskType && (
             <div className="status-badge bg-green-600 text-white gap-2 border-0 flex items-center">
               Type: {filters.taskType === 'shared' ? 'Shared with me' :
-                     filters.taskType === 'assigned' ? 'Assigned to me' :
-                     filters.taskType === 'created' ? 'Created by me' :
-                     filters.taskType === 'projects' ? (
-                       filters.selectedProjectId 
-                         ? `Project: ${projects.find(p => p.id === parseInt(filters.selectedProjectId))?.name || 'Unknown'}`
-                         : 'Projects and Events only'
-                     ) : filters.taskType}
+                filters.taskType === 'assigned' ? 'Assigned to me' :
+                  filters.taskType === 'created' ? 'Created by me' :
+                    filters.taskType === 'projects' ? (
+                      filters.selectedProjectId
+                        ? `Project: ${projects.find(p => p.id === parseInt(filters.selectedProjectId))?.name || 'Unknown'}`
+                        : 'Projects and Events only'
+                    ) : filters.taskType}
               <IconButton
                 icon={<FaTimes />}
                 label="Remove task type filter"
@@ -999,4 +997,4 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
   );
 };
 
-export default TaskFilters; 
+export default TaskFilters;

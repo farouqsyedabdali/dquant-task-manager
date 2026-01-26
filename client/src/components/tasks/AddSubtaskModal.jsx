@@ -11,6 +11,7 @@ import SearchableDropdown from '../common/SearchableDropdown';
 import AddContactModal from '../common/AddContactModal';
 import DatePicker from '../common/DatePicker';
 import IconButton from '../common/IconButton';
+import AIWarning from '../common/AIWarning';
 import { FaTimes, FaCheck } from 'react-icons/fa';
 
 const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = null }) => {
@@ -36,7 +37,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
   const { recentEmployees, addToRecentEmployees } = useUserStore();
   const { user } = useAuthStore();
   const { fetchContacts } = useContactStore();
-  
+
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
 
@@ -68,11 +69,11 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
   const fetchAvailableTasks = async () => {
     try {
       const response = await tasksAPI.getAll();
-      
+
       // Filter out completed tasks - only show live (not completed) tasks as potential parents
       // (A subtask can also be a parent to other subtasks)
       const liveTasks = response.data.filter(task => task.status !== 'COMPLETED');
-      
+
       setAvailableTasks(liveTasks);
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
@@ -135,7 +136,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
       if (extensionUpdateData.taskId) {
         setSelectedParentId(extensionUpdateData.taskId.toString());
       }
-      
+
       if (extensionUpdateData.subtaskData) {
         const { title, description, priority, assignee, dueDate } = extensionUpdateData.subtaskData;
         let assigneeId = '';
@@ -207,7 +208,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Apply character limits
     let limitedValue = value;
     if (name === 'title' && value.length > 50) {
@@ -215,12 +216,12 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
     } else if (name === 'description' && value.length > 300) {
       limitedValue = value.slice(0, 300);
     }
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: limitedValue
     }));
-    
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -231,21 +232,21 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
     } else if (formData.title.length > 50) {
       newErrors.title = 'Title must be 50 characters or less';
     }
-    
+
     if (!formData.assigneeId && !formData.externalContactId) {
       newErrors.assigneeId = 'Assignee is required';
     }
-    
+
     if (formData.description && formData.description.length > 300) {
       newErrors.description = 'Description must be 300 characters or less';
     }
-    
+
     // Validate due date is required and in the future
     if (!formData.dueDate || !formData.dueDate.trim()) {
       newErrors.dueDate = 'Due date is required';
@@ -257,21 +258,21 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
         const datePart = dateToCheck.split('T')[0];
         dateToCheck = `${datePart}T23:59:00`;
       }
-      
+
       const selectedDate = new Date(dateToCheck);
       const now = new Date();
       if (selectedDate <= now) {
         newErrors.dueDate = 'Due date must be in the future';
       }
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -342,12 +343,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
               Create Subtask
             </h3>
             {extensionUpdateData && (
-              <p
-                className="text-sm mt-1 transition-colors duration-200"
-                style={{ color: 'var(--color-primary-light)' }}
-              >
-                AI can make mistakes. Please double check the information.
-              </p>
+              <AIWarning className="mt-2" />
             )}
             <p
               className="text-sm mt-1"
@@ -434,7 +430,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
           {/* Description */}
           <div>
-            <label 
+            <label
               className="block text-sm font-medium mb-2 transition-colors duration-200"
               style={{ color: 'var(--color-text-secondary)' }}
             >
@@ -469,7 +465,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
           <div className="grid grid-cols-2 gap-4">
             {/* Priority */}
             <div>
-              <label 
+              <label
                 className="block text-sm font-medium mb-2 transition-colors duration-200"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
@@ -500,7 +496,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
             {/* Due Date */}
             <div>
-              <label 
+              <label
                 className="block text-sm font-medium mb-2 transition-colors duration-200"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
@@ -528,7 +524,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
                 style={errors.dueDate ? { borderColor: '#ef4444' } : {}}
               />
               {errors.dueDate && (
-                <p 
+                <p
                   className="text-sm mt-1 transition-colors duration-200"
                   style={{ color: 'var(--color-danger)' }}
                 >
@@ -540,7 +536,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
 
           {/* Assign To */}
           <div>
-            <label 
+            <label
               className="block text-sm font-medium mb-2 transition-colors duration-200"
               style={{ color: 'var(--color-text-secondary)' }}
             >
@@ -597,7 +593,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
               <p className="text-red-400 text-sm mt-1">{errors.assigneeId}</p>
             )}
             {isLoadingUsers && (
-              <p 
+              <p
                 className="text-sm mt-1 transition-colors duration-200"
                 style={{ color: 'var(--color-text-tertiary)' }}
               >

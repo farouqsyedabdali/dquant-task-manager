@@ -30,6 +30,7 @@ import ToastContainer from './components/common/ToastContainer';
 import { ToastProvider, useToastContext } from './context/ToastContext';
 import { FaRobot } from 'react-icons/fa';
 import AuthRedirect from './components/AuthRedirect';
+import tialzLogo from './assets/TIALZ Logo (No Background).png';
 import './App.css';
 
 function AppContent() {
@@ -71,192 +72,183 @@ function AppContent() {
     <FontSizeProvider>
       <Router>
         <div className="App min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-        
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<AuthRedirect />} />
-          <Route path="/landing" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignupOptions />} />
-          <Route path="/company-signup" element={<CompanySignup />} />
-          <Route path="/personal-signup" element={<PersonalSignup />} />
-          <Route path="/auth/google/callback" element={<GoogleCallback />} />
-          <Route path="/task-invitation/:token" element={<TaskInvitation />} />
-          <Route path="/verify-email" element={<EmailVerification />} />
-          <Route path="/complete-employee-setup" element={<EmployeeSetup />} />
-          
-          {/* Popup Route (no header/layout) */}
-          <Route path="/popup" element={<TaskPopup />} />
-          
-          {/* Color Palette Tester (no auth required) */}
-          <Route path="/test" element={<ColorPaletteTester />} />
-          
-          {/* Protected Routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                  <Header />
-                  <div className="pt-16">
-                    <Dashboard taskbarAction={taskbarAction} onTaskbarActionHandled={() => setTaskbarAction(null)} />
+
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<AuthRedirect />} />
+            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignupOptions />} />
+            <Route path="/company-signup" element={<CompanySignup />} />
+            <Route path="/personal-signup" element={<PersonalSignup />} />
+            <Route path="/auth/google/callback" element={<GoogleCallback />} />
+            <Route path="/task-invitation/:token" element={<TaskInvitation />} />
+            <Route path="/verify-email" element={<EmailVerification />} />
+            <Route path="/complete-employee-setup" element={<EmployeeSetup />} />
+
+            {/* Popup Route (no header/layout) */}
+            <Route path="/popup" element={<TaskPopup />} />
+
+            {/* Color Palette Tester (no auth required) */}
+            <Route path="/test" element={<ColorPaletteTester />} />
+
+            {/* Protected Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+                    <Header />
+                    <div className="pt-16">
+                      <Dashboard taskbarAction={taskbarAction} onTaskbarActionHandled={() => setTaskbarAction(null)} />
+                    </div>
                   </div>
-                </div>
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/personal-dashboard"
-            element={
-              <ProtectedRoute>
-                <PersonalDashboard taskbarAction={taskbarAction} onTaskbarActionHandled={() => setTaskbarAction(null)} />
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
-                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                  <Header />
-                  <Dashboard />
-                </div>
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/employees"
-            element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
-                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                  <Header />
-                  <div className="pt-16">
-                    <Employees />
-                  </div>
-                </div>
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/super-admin"
-            element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-                <SuperAdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                  <Header />
-                  <div className="pt-16">
-                    <Settings />
-                  </div>
-                </div>
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/calendar"
-            element={
-              <ProtectedRoute>
-                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                  <Header />
-                  <div className="pt-16">
-                    <Calendar />
-                  </div>
-                </div>
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/contacts"
-            element={
-              <ProtectedRoute>
-                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                  <Header />
-                  <div className="pt-16">
-                    <Contacts />
-                  </div>
-                </div>
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/projects"
-            element={
-              <ProtectedRoute>
-                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                  <Header />
-                  <div className="pt-16">
-                    <Projects />
-                  </div>
-                </div>
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/employee"
-            element={
-              <ProtectedRoute allowedRoles={['EMPLOYEE']}>
-                <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                  <Header />
-                  <div className="pt-16">
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/personal-dashboard"
+              element={
+                <ProtectedRoute>
+                  <PersonalDashboard taskbarAction={taskbarAction} onTaskbarActionHandled={() => setTaskbarAction(null)} />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
+                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+                    <Header />
                     <Dashboard />
                   </div>
-                </div>
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* Default redirect for unknown routes */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+                </ProtectedRoute>
+              }
+            />
 
-        {/* Floating AI Button - Only show when authenticated and not on popup */}
-        {/* Button is hidden but code is preserved for future use */}
-        {false && isAuthenticated() && window.location.pathname !== '/popup' && (
-          <button
-            className="fixed bottom-6 right-6 z-50 text-white rounded-full p-4 shadow-lg flex items-center justify-center transition-all duration-200"
-            style={{ 
-              backgroundColor: 'var(--color-primary)',
-              boxShadow: '0 4px 24px rgba(99, 102, 241, 0.4)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.filter = 'brightness(0.9)';
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.filter = 'brightness(1)';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-            onClick={() => setIsAIModalOpen(true)}
-            title="Open AI Assistant"
-          >
-            <FaRobot size={28} />
-          </button>
-        )}
+            <Route
+              path="/employees"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
+                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+                    <Header />
+                    <div className="pt-16">
+                      <Employees />
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
 
-        {/* AI Modal */}
-        {isAIModalOpen && (
-          <AIModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} />
-        )}
+            <Route
+              path="/super-admin"
+              element={
+                <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                  <SuperAdminDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-        {/* Toast Container */}
-        <ToastContainer toasts={toasts} onClose={hideToast} />
-      </div>
-    </Router>
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+                    <Header />
+                    <div className="pt-16">
+                      <Settings />
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/calendar"
+              element={
+                <ProtectedRoute>
+                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+                    <Header />
+                    <div className="pt-16">
+                      <Calendar />
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/contacts"
+              element={
+                <ProtectedRoute>
+                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+                    <Header />
+                    <div className="pt-16">
+                      <Contacts />
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/projects"
+              element={
+                <ProtectedRoute>
+                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+                    <Header />
+                    <div className="pt-16">
+                      <Projects />
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/employee"
+              element={
+                <ProtectedRoute allowedRoles={['EMPLOYEE']}>
+                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+                    <Header />
+                    <div className="pt-16">
+                      <Dashboard />
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Default redirect for unknown routes */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+
+          {/* Floating AI Button - Only show when authenticated and not on popup */}
+          {isAuthenticated() && window.location.pathname !== '/popup' && (
+            <button
+              className="fixed bottom-6 right-6 z-50 text-white rounded-full p-4 shadow-lg flex items-center justify-center floating-ai-button"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+                boxShadow: '0 4px 24px rgba(79, 102, 241, 0.4)',
+              }}
+              onClick={() => setIsAIModalOpen(true)}
+              title="Open AI Assistant"
+            >
+              <img src={tialzLogo} alt="TIALZ" className="w-8 h-8 object-contain" />
+            </button>
+          )}
+
+          {/* AI Modal */}
+          {isAIModalOpen && (
+            <AIModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} />
+          )}
+
+          {/* Toast Container */}
+          <ToastContainer toasts={toasts} onClose={hideToast} />
+        </div>
+      </Router>
     </FontSizeProvider>
   );
 }

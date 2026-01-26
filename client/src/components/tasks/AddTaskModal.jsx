@@ -11,6 +11,7 @@ import AddContactModal from '../common/AddContactModal';
 import IconButton from '../common/IconButton';
 import DatePicker from '../common/DatePicker';
 import AIModal from './AIModal';
+import AIWarning from '../common/AIWarning';
 import { FaTimes, FaPlus, FaSave } from 'react-icons/fa';
 
 const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
@@ -34,18 +35,18 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
   const { recentEmployees, addToRecentEmployees } = useUserStore();
   const { user } = useAuthStore();
   const { fetchContacts } = useContactStore();
-  
+
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
 
-   useEffect(() => {
-     if (isOpen) {
-       if (!isPersonalAccount) {
-         fetchUsers();
-       }
-       fetchContactsForAssignment();
-     }
-   }, [isOpen, isPersonalAccount, user?.id]); // Only depend on user.id, not the whole user object
+  useEffect(() => {
+    if (isOpen) {
+      if (!isPersonalAccount) {
+        fetchUsers();
+      }
+      fetchContactsForAssignment();
+    }
+  }, [isOpen, isPersonalAccount, user?.id]); // Only depend on user.id, not the whole user object
 
   const fetchContactsForAssignment = async () => {
     setIsLoadingContacts(true);
@@ -153,7 +154,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Apply character limits
     let limitedValue = value;
     if (name === 'title' && value.length > 50) {
@@ -161,12 +162,12 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
     } else if (name === 'description' && value.length > 300) {
       limitedValue = value.slice(0, 300);
     }
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: limitedValue
     }));
-    
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -177,22 +178,22 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
     } else if (formData.title.length > 50) {
       newErrors.title = 'Title must be 50 characters or less';
     }
-    
-     if (!isPersonalAccount && !formData.assignee) {
-       newErrors.assignee = 'Assignee is required';
-     }
-     // Personal accounts: contact assignment is optional (no validation needed)
-    
+
+    if (!isPersonalAccount && !formData.assignee) {
+      newErrors.assignee = 'Assignee is required';
+    }
+    // Personal accounts: contact assignment is optional (no validation needed)
+
     if (formData.description && formData.description.length > 300) {
       newErrors.description = 'Description must be 300 characters or less';
     }
-    
+
     // Validate due date is required and in the future
     if (!formData.dueDate || !formData.dueDate.trim()) {
       newErrors.dueDate = 'Due date is required';
@@ -204,48 +205,48 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
         const datePart = dateToCheck.split('T')[0];
         dateToCheck = `${datePart}T23:59:00`;
       }
-      
+
       const selectedDate = new Date(dateToCheck);
       const now = new Date();
       if (selectedDate <= now) {
         newErrors.dueDate = 'Due date must be in the future';
       }
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
-     // Prepare the data for creation
-     let assigneeId = null;
-     let externalContactId = null;
+    // Prepare the data for creation
+    let assigneeId = null;
+    let externalContactId = null;
 
-     if (formData.assignee) {
-       const [type, id] = formData.assignee.split('_');
-       if (type === 'user') {
-         assigneeId = parseInt(id);
-       } else if (type === 'contact') {
-         externalContactId = parseInt(id);
-       }
-     } else if (isPersonalAccount) {
-       // For personal accounts, if no assignee selected, assign to self
-       assigneeId = user.id;
-     }
+    if (formData.assignee) {
+      const [type, id] = formData.assignee.split('_');
+      if (type === 'user') {
+        assigneeId = parseInt(id);
+      } else if (type === 'contact') {
+        externalContactId = parseInt(id);
+      }
+    } else if (isPersonalAccount) {
+      // For personal accounts, if no assignee selected, assign to self
+      assigneeId = user.id;
+    }
 
-     // Convert local datetime to UTC ISO string for server
-     const createData = {
-       ...formData,
-       assigneeId,
-       externalContactId,
-       dueDate: convertLocalDateTimeToUTC(formData.dueDate) // Convert to UTC for server
-     };
+    // Convert local datetime to UTC ISO string for server
+    const createData = {
+      ...formData,
+      assigneeId,
+      externalContactId,
+      dueDate: convertLocalDateTimeToUTC(formData.dueDate) // Convert to UTC for server
+    };
 
 
     const result = await createTask(createData);
@@ -292,7 +293,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
   return (
     <div className="modal modal-open backdrop-blur-sm">
-      <div 
+      <div
         className="modal-box max-w-2xl border transition-all duration-300"
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
@@ -302,19 +303,14 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-          <h3 
-            className="text-2xl font-bold transition-colors duration-200"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            Create New Task
-          </h3>
+            <h3
+              className="text-2xl font-bold transition-colors duration-200"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              Create New Task
+            </h3>
             {initialData && (
-              <p 
-                className="text-sm mt-1 transition-colors duration-200"
-                style={{ color: 'var(--color-primary-light)' }}
-              >
-                AI can make mistakes. Please double check the information.
-              </p>
+              <AIWarning className="mt-2" />
             )}
           </div>
           <IconButton
@@ -332,7 +328,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div>
-            <label 
+            <label
               className="block text-sm font-medium mb-2 transition-colors duration-200"
               style={{ color: 'var(--color-text-secondary)' }}
             >
@@ -369,7 +365,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
           {/* Description */}
           <div>
-            <label 
+            <label
               className="block text-sm font-medium mb-2 transition-colors duration-200"
               style={{ color: 'var(--color-text-secondary)' }}
             >
@@ -404,7 +400,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
           <div className="grid grid-cols-2 gap-4">
             {/* Priority */}
             <div>
-              <label 
+              <label
                 className="block text-sm font-medium mb-2 transition-colors duration-200"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
@@ -435,7 +431,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
             {/* Due Date */}
             <div>
-              <label 
+              <label
                 className="block text-sm font-medium mb-2 transition-colors duration-200"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
@@ -467,198 +463,198 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
             </div>
           </div>
 
-           {/* Assignee Selection - Show for company accounts */}
-           {!isPersonalAccount && (
-             <div>
-               <label
-                 className="block text-sm font-medium mb-2 transition-colors duration-200"
-                 style={{ color: 'var(--color-text-secondary)' }}
-               >
-                 Assign To *
-               </label>
-               <SearchableDropdown
-                 options={allAssignees}
-                 value={formData.assignee}
-                 onChange={(value) => {
-                   setFormData(prev => ({ ...prev, assignee: value }));
-                   // Track the selected employee as recent (only for users)
-                   if (value && value.startsWith('user_')) {
-                     const userId = value.split('_')[1];
-                     const selectedEmployee = users.find(user => user.id.toString() === userId);
-                     if (selectedEmployee) {
-                       addToRecentEmployees(selectedEmployee);
-                     }
-                   }
-                 }}
-                 placeholder="Select an employee or contact"
-                 disabled={isLoadingUsers || isLoadingContacts}
-                 error={!!errors.assignee}
-                 recentEmployees={recentEmployees}
-                 getOptionValue={(option) => option.id}
-                 allowAddNew={!isPersonalAccount}
-                 onAddNew={handleAddNewContact}
-                 renderOption={(assignee) => (
-                   <div className="flex items-center space-x-2">
-                     <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                     <span>{assignee.displayName}</span>
-                     <span
-                       className="transition-colors duration-200"
-                       style={{ color: 'var(--color-text-tertiary)' }}
-                     >
-                       ({assignee.email})
-                     </span>
-                     {assignee.company && (
-                       <span
-                         className="transition-colors duration-200"
-                         style={{ color: 'var(--color-text-muted)' }}
-                       >
-                         - {assignee.company}
-                       </span>
-                     )}
-                     {assignee.type === 'contact' && (
-                       <span
-                         className="text-xs px-2 py-0.5 rounded transition-colors duration-200"
-                         style={{
-                           backgroundColor: 'var(--color-bg-tertiary)',
-                           color: 'var(--color-text-secondary)'
-                         }}
-                       >
-                         External
-                       </span>
-                     )}
-                   </div>
-                 )}
-               />
-               {errors.assignee && (
-                 <p className="text-red-400 text-sm mt-1">{errors.assignee}</p>
-               )}
-               {(isLoadingUsers || isLoadingContacts) && (
-                 <p
-                   className="text-sm mt-1 transition-colors duration-200"
-                   style={{ color: 'var(--color-text-tertiary)' }}
-                 >
-                   Loading assignees...
-                 </p>
-               )}
-               {allAssignees.length === 0 && !isLoadingUsers && !isLoadingContacts && (
-                 <p
-                   className="text-sm mt-1 transition-colors duration-200"
-                   style={{ color: 'var(--color-text-tertiary)' }}
-                 >
-                   No assignees available. <a
-                     href="/contacts"
-                     className="transition-colors duration-200"
-                     style={{ color: 'var(--color-primary-light)' }}
-                     onMouseEnter={(e) => {
-                       e.currentTarget.style.color = 'var(--color-primary)';
-                     }}
-                     onMouseLeave={(e) => {
-                       e.currentTarget.style.color = 'var(--color-primary-light)';
-                     }}
-                   >
-                     Add contacts
-                   </a> to assign tasks externally.
-                 </p>
-               )}
-             </div>
-           )}
+          {/* Assignee Selection - Show for company accounts */}
+          {!isPersonalAccount && (
+            <div>
+              <label
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Assign To *
+              </label>
+              <SearchableDropdown
+                options={allAssignees}
+                value={formData.assignee}
+                onChange={(value) => {
+                  setFormData(prev => ({ ...prev, assignee: value }));
+                  // Track the selected employee as recent (only for users)
+                  if (value && value.startsWith('user_')) {
+                    const userId = value.split('_')[1];
+                    const selectedEmployee = users.find(user => user.id.toString() === userId);
+                    if (selectedEmployee) {
+                      addToRecentEmployees(selectedEmployee);
+                    }
+                  }
+                }}
+                placeholder="Select an employee or contact"
+                disabled={isLoadingUsers || isLoadingContacts}
+                error={!!errors.assignee}
+                recentEmployees={recentEmployees}
+                getOptionValue={(option) => option.id}
+                allowAddNew={!isPersonalAccount}
+                onAddNew={handleAddNewContact}
+                renderOption={(assignee) => (
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                    <span>{assignee.displayName}</span>
+                    <span
+                      className="transition-colors duration-200"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                    >
+                      ({assignee.email})
+                    </span>
+                    {assignee.company && (
+                      <span
+                        className="transition-colors duration-200"
+                        style={{ color: 'var(--color-text-muted)' }}
+                      >
+                        - {assignee.company}
+                      </span>
+                    )}
+                    {assignee.type === 'contact' && (
+                      <span
+                        className="text-xs px-2 py-0.5 rounded transition-colors duration-200"
+                        style={{
+                          backgroundColor: 'var(--color-bg-tertiary)',
+                          color: 'var(--color-text-secondary)'
+                        }}
+                      >
+                        External
+                      </span>
+                    )}
+                  </div>
+                )}
+              />
+              {errors.assignee && (
+                <p className="text-red-400 text-sm mt-1">{errors.assignee}</p>
+              )}
+              {(isLoadingUsers || isLoadingContacts) && (
+                <p
+                  className="text-sm mt-1 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                >
+                  Loading assignees...
+                </p>
+              )}
+              {allAssignees.length === 0 && !isLoadingUsers && !isLoadingContacts && (
+                <p
+                  className="text-sm mt-1 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                >
+                  No assignees available. <a
+                    href="/contacts"
+                    className="transition-colors duration-200"
+                    style={{ color: 'var(--color-primary-light)' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--color-primary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--color-primary-light)';
+                    }}
+                  >
+                    Add contacts
+                  </a> to assign tasks externally.
+                </p>
+              )}
+            </div>
+          )}
 
-           {/* Optional Contact Assignment - Only for personal accounts */}
-           {isPersonalAccount && (
-             <div>
-               <label
-                 className="block text-sm font-medium mb-2 transition-colors duration-200"
-                 style={{ color: 'var(--color-text-secondary)' }}
-               >
-                 Assign to Contact (Optional)
-               </label>
-               <div className="mb-2">
-                 <p
-                   className="text-sm mb-3 transition-colors duration-200"
-                   style={{ color: 'var(--color-text-tertiary)' }}
-                 >
-                   Leave blank to assign to yourself, or select a contact to assign to them.
-                 </p>
-                 <SearchableDropdown
-                   options={allAssignees}
-                   value={formData.assignee}
-                   onChange={(value) => {
-                     setFormData(prev => ({ ...prev, assignee: value }));
-                   }}
-                   placeholder="Select a contact (optional)"
-                   disabled={isLoadingContacts}
-                   error={!!errors.assignee}
-                   getOptionValue={(option) => option.id}
-                   allowAddNew={true}
-                   onAddNew={handleAddNewContact}
-                   renderOption={(assignee) => (
-                     <div className="flex items-center space-x-2">
-                       <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                       <span>{assignee.displayName}</span>
-                       <span
-                         className="transition-colors duration-200"
-                         style={{ color: 'var(--color-text-tertiary)' }}
-                       >
-                         ({assignee.email})
-                       </span>
-                       {assignee.company && (
-                         <span
-                           className="transition-colors duration-200"
-                           style={{ color: 'var(--color-text-muted)' }}
-                         >
-                           - {assignee.company}
-                         </span>
-                       )}
-                       {assignee.type === 'contact' && (
-                         <span
-                           className="text-xs px-2 py-0.5 rounded transition-colors duration-200"
-                           style={{
-                             backgroundColor: 'var(--color-bg-tertiary)',
-                             color: 'var(--color-text-secondary)'
-                           }}
-                         >
-                           External
-                         </span>
-                       )}
-                     </div>
-                   )}
-                 />
-                 {errors.assignee && (
-                   <p className="text-red-400 text-sm mt-1">{errors.assignee}</p>
-                 )}
-                 {isLoadingContacts && (
-                   <p
-                     className="text-sm mt-1 transition-colors duration-200"
-                     style={{ color: 'var(--color-text-tertiary)' }}
-                   >
-                     Loading contacts...
-                   </p>
-                 )}
-                 {allAssignees.length === 0 && !isLoadingContacts && (
-                   <p
-                     className="text-sm mt-1 transition-colors duration-200"
-                     style={{ color: 'var(--color-text-tertiary)' }}
-                   >
-                     No contacts available. <a
-                       href="/contacts"
-                       className="transition-colors duration-200"
-                       style={{ color: 'var(--color-primary-light)' }}
-                       onMouseEnter={(e) => {
-                         e.currentTarget.style.color = 'var(--color-primary)';
-                       }}
-                       onMouseLeave={(e) => {
-                         e.currentTarget.style.color = 'var(--color-primary-light)';
-                       }}
-                     >
-                       Add contacts
-                     </a> to assign tasks to them.
-                   </p>
-                 )}
-               </div>
-             </div>
-           )}
+          {/* Optional Contact Assignment - Only for personal accounts */}
+          {isPersonalAccount && (
+            <div>
+              <label
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Assign to Contact (Optional)
+              </label>
+              <div className="mb-2">
+                <p
+                  className="text-sm mb-3 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                >
+                  Leave blank to assign to yourself, or select a contact to assign to them.
+                </p>
+                <SearchableDropdown
+                  options={allAssignees}
+                  value={formData.assignee}
+                  onChange={(value) => {
+                    setFormData(prev => ({ ...prev, assignee: value }));
+                  }}
+                  placeholder="Select a contact (optional)"
+                  disabled={isLoadingContacts}
+                  error={!!errors.assignee}
+                  getOptionValue={(option) => option.id}
+                  allowAddNew={true}
+                  onAddNew={handleAddNewContact}
+                  renderOption={(assignee) => (
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-2 h-2 rounded-full ${assignee.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                      <span>{assignee.displayName}</span>
+                      <span
+                        className="transition-colors duration-200"
+                        style={{ color: 'var(--color-text-tertiary)' }}
+                      >
+                        ({assignee.email})
+                      </span>
+                      {assignee.company && (
+                        <span
+                          className="transition-colors duration-200"
+                          style={{ color: 'var(--color-text-muted)' }}
+                        >
+                          - {assignee.company}
+                        </span>
+                      )}
+                      {assignee.type === 'contact' && (
+                        <span
+                          className="text-xs px-2 py-0.5 rounded transition-colors duration-200"
+                          style={{
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            color: 'var(--color-text-secondary)'
+                          }}
+                        >
+                          External
+                        </span>
+                      )}
+                    </div>
+                  )}
+                />
+                {errors.assignee && (
+                  <p className="text-red-400 text-sm mt-1">{errors.assignee}</p>
+                )}
+                {isLoadingContacts && (
+                  <p
+                    className="text-sm mt-1 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    Loading contacts...
+                  </p>
+                )}
+                {allAssignees.length === 0 && !isLoadingContacts && (
+                  <p
+                    className="text-sm mt-1 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    No contacts available. <a
+                      href="/contacts"
+                      className="transition-colors duration-200"
+                      style={{ color: 'var(--color-primary-light)' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = 'var(--color-primary)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--color-primary-light)';
+                      }}
+                    >
+                      Add contacts
+                    </a> to assign tasks to them.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
-           {/* Submit Buttons */}
+          {/* Submit Buttons */}
           <div className="flex justify-between items-center pt-4">
             <IconButton
               label="AI Help"
@@ -701,8 +697,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
 
       {/* AI Modal */}
       {isAIModalOpen && (
-        <AIModal 
-          isOpen={isAIModalOpen} 
+        <AIModal
+          isOpen={isAIModalOpen}
           onClose={() => setIsAIModalOpen(false)}
           onAction={() => onClose()}
         />

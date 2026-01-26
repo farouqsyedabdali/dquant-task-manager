@@ -47,7 +47,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const { user } = useAuthStore();
   const { fetchContacts: fetchContactsFromStore } = useContactStore();
   const toast = useToastContext();
-  
+
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
 
@@ -59,7 +59,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       // Set initial success message if provided
       if (initialSuccessMessage) {
         setSuccessMessage(initialSuccessMessage);
-    }
+      }
     }
   }, [isOpen, projectId, initialSuccessMessage]);
 
@@ -79,7 +79,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   // Computed selection analysis
   const selectedTaskObjects = project?.tasks?.filter(t => selectedTasks.has(t.id)) || [];
   const selectedCount = selectedTasks.size;
-  
+
   // Analyze what's selected
   const allDrafts = selectedTaskObjects.length > 0 && selectedTaskObjects.every(t => t.isDraft);
   const allActive = selectedTaskObjects.length > 0 && selectedTaskObjects.every(t => !t.isDraft && t.status !== 'COMPLETED');
@@ -87,7 +87,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const allTodo = selectedTaskObjects.length > 0 && selectedTaskObjects.every(t => t.status === 'TODO' && !t.isDraft);
   const allInProgress = selectedTaskObjects.length > 0 && selectedTaskObjects.every(t => t.status === 'IN_PROGRESS');
   const allOnHold = selectedTaskObjects.length > 0 && selectedTaskObjects.every(t => t.status === 'ON_HOLD');
-  
+
   // Get counts by type
   const draftTasks = selectedTaskObjects.filter(t => t.isDraft);
   const activeTasks = selectedTaskObjects.filter(t => !t.isDraft && (t.status === 'TODO' || t.status === 'IN_PROGRESS'));
@@ -99,7 +99,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       setIsLoading(true);
       const response = await projectsAPI.getById(projectId);
       setProject(response.data);
-      
+
       // Initialize taskTimeSettings based on existing task times
       // Preserve existing settings to prevent checkbox from auto-ticking on refresh
       setTaskTimeSettings(prev => {
@@ -118,7 +118,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
         });
         return newTimeSettings;
       });
-      
+
       setError(null);
     } catch (err) {
       console.error('Error fetching project:', err);
@@ -224,7 +224,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const handleSendTask = async (taskId) => {
     try {
       setSendingTaskId(taskId);
-      
+
       // Find the task in the project to validate before sending
       const taskToSend = project?.tasks?.find(t => t.id === taskId);
       if (taskToSend) {
@@ -234,13 +234,13 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
           setSendingTaskId(null);
           return;
         }
-        
+
         if (!taskToSend.dueDate) {
           setError('Task must have a due date before it can be sent. Please set a due date first.');
           setSendingTaskId(null);
           return;
         }
-        
+
         const dueDateObj = new Date(taskToSend.dueDate);
         const now = new Date();
         if (dueDateObj <= now) {
@@ -249,7 +249,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
           return;
         }
       }
-      
+
       await projectsAPI.sendTask(projectId, taskId);
       await fetchProject();
       setSuccessMessage('Task sent successfully!');
@@ -300,13 +300,13 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
             errorCount++;
             continue;
           }
-          
+
           if (!task.dueDate) {
             console.warn(`Task ${task.id} cannot be sent: missing due date`);
             errorCount++;
             continue;
           }
-          
+
           const dueDateObj = new Date(task.dueDate);
           const now = new Date();
           if (dueDateObj <= now) {
@@ -314,7 +314,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
             errorCount++;
             continue;
           }
-          
+
           await projectsAPI.sendTask(projectId, task.id);
           successCount++;
         } catch (err) {
@@ -395,7 +395,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       await tasksAPI.updateStatus(taskId, newStatus);
       setProject(prev => ({
         ...prev,
-        tasks: prev.tasks.map(t => 
+        tasks: prev.tasks.map(t =>
           t.id === taskId ? { ...t, status: newStatus } : t
         )
       }));
@@ -411,7 +411,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
   const confirmDeleteTask = async () => {
     if (!pendingDeleteTaskId) return;
-    
+
     setIsDeleteTaskConfirmOpen(false);
     const taskId = pendingDeleteTaskId;
     setPendingDeleteTaskId(null);
@@ -459,11 +459,11 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
   const confirmBulkDelete = async () => {
     setIsBulkDeleteConfirmOpen(false);
-    
+
     const selectedTaskObjects = Array.from(selectedTasks)
       .map(id => project.tasks.find(t => t.id === id))
       .filter(Boolean);
-    
+
     const count = selectedTaskObjects.length;
     if (count === 0) return;
 
@@ -517,22 +517,22 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
         assigneeId: assignmentType === 'internal' ? parseInt(assigneeId) : null,
         externalContactId: assignmentType === 'external' ? parseInt(assigneeId) : null
       };
-      
+
       await tasksAPI.update(taskId, updateData);
-      
+
       // Update the task in local state without full reload
       setProject(prev => ({
         ...prev,
         tasks: prev.tasks.map(task => {
           if (task.id === taskId) {
             // Find the assignee info
-            const assignee = assignmentType === 'internal' 
+            const assignee = assignmentType === 'internal'
               ? employees.find(e => e.id === parseInt(assigneeId))
               : null;
             const externalContact = assignmentType === 'external'
               ? contacts.find(c => c.id === parseInt(assigneeId))
               : null;
-            
+
             return {
               ...task,
               assigneeId: assignmentType === 'internal' ? parseInt(assigneeId) : null,
@@ -555,12 +555,12 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       // If time is not enabled for this task, append T23:59
       const includeTime = taskTimeSettings[taskId] || false;
       let finalDate = newDueDate;
-      
+
       if (newDueDate && !includeTime) {
         // Set to 11:59 PM for date-only
         finalDate = `${newDueDate}T23:59`;
       }
-      
+
       // Convert local datetime to UTC ISO string for server
       const utcDate = convertLocalDateTimeToUTC(finalDate);
       await tasksAPI.update(taskId, { dueDate: utcDate });
@@ -583,13 +583,13 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const handleTimeToggle = async (taskId, checked) => {
     // Update local state immediately for UI responsiveness
     setTaskTimeSettings(prev => ({ ...prev, [taskId]: checked }));
-    
+
     // If task has a due date, update it with or without time
     const task = project?.tasks?.find(t => t.id === taskId);
     if (task?.dueDate) {
       const date = new Date(task.dueDate);
       let newValue;
-      
+
       if (!checked) {
         // Set to 11:59 PM
         date.setHours(23, 59, 0, 0);
@@ -604,7 +604,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
           newValue = date.toISOString();
         }
       }
-      
+
       try {
         await tasksAPI.update(taskId, { dueDate: newValue });
         setProject(prev => ({
@@ -628,7 +628,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
         assigneeId: reassignForm.assignmentType === 'internal' ? parseInt(reassignForm.assigneeId) : null,
         externalContactId: reassignForm.assignmentType === 'external' ? parseInt(reassignForm.externalContactId) : null
       };
-      
+
       await projectsAPI.reassignTask(projectId, reassignTask.id, data);
       await fetchProject();
       setSuccessMessage('Task reassigned successfully! Remember to send it.');
@@ -703,7 +703,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const getTaskStatusIcon = (task) => {
     if (task.isDraft) return '📝';
     if (task.status === 'COMPLETED') return '✓';
-    
+
     // Check if this is an external contact invitation that hasn't been accepted yet
     // If assigneeId is set, external contact has accepted (we keep both fields)
     if (task.externalContactId && !task.assigneeId) {
@@ -713,7 +713,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       if (invitation.status === 'ACCEPTED') return '✅';
       if (invitation.status === 'DECLINED') return '❌';
     }
-    
+
     // Internal task or accepted external contact
     if (task.status === 'IN_PROGRESS') return '⏳';
     return '○';
@@ -722,7 +722,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const getTaskStatusText = (task) => {
     if (task.isDraft) return 'Draft';
     if (task.status === 'COMPLETED') return 'Completed';
-    
+
     // Check if this is an external contact invitation that hasn't been accepted yet
     // If assigneeId is set, external contact has accepted (we keep both fields)
     if (task.externalContactId && !task.assigneeId) {
@@ -731,7 +731,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       if (invitation.status === 'ACCEPTED') return 'Accepted';
       if (invitation.status === 'DECLINED') return 'Declined';
     }
-    
+
     return task.status.replace('_', ' ');
   };
 
@@ -775,7 +775,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
     <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 50 }}>
       <div
         className="modal-box max-w-6xl max-h-[90vh] border"
-        style={{ 
+        style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)'
         }}
@@ -799,7 +799,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                 >
                   {project.icon}
                 </div>
-                
+
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
                     {project.name}
@@ -819,8 +819,8 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                   <div className="text-right">
                     <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Project Due</p>
                     <p className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                      {new Date(project.dueDate).toLocaleDateString('en-US', { 
-                        month: 'short', 
+                      {new Date(project.dueDate).toLocaleDateString('en-US', {
+                        month: 'short',
                         day: 'numeric',
                         year: 'numeric'
                       })}
@@ -886,7 +886,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                   {project.progress}%
                 </span>
               </div>
-              <div 
+              <div
                 className="w-full h-3 rounded-full overflow-hidden"
                 style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
               >
@@ -914,11 +914,11 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       className="!bg-indigo-600 hover:!bg-indigo-700"
                     />
 
-                    {/* Send Drafts Button - Shows when no selection OR drafts are selected */}
+                    {/* Send Tasks Button - Shows when no selection OR drafts are selected */}
                     {(draftCount > 0 && selectedCount === 0) && (
                       <IconButton
                         icon={<FaPaperPlane />}
-                        label={sendingAll ? "Sending..." : `Send All Drafts (${draftCount})`}
+                        label={sendingAll ? "Sending..." : `Send All Tasks (${draftCount})`}
                         variant="primary"
                         size="sm"
                         onClick={handleSendAllDrafts}
@@ -931,11 +931,11 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                     {/* SMART ACTION BUTTONS - Based on Selection */}
                     {selectedCount > 0 && (
                       <>
-                        {/* Send Drafts (if any drafts selected) */}
+                        {/* Send Tasks (if any drafts selected) */}
                         {draftTasks.length > 0 && (
                           <IconButton
                             icon={<FaPaperPlane />}
-                            label={sendingSelected ? "Sending..." : `Send Drafts (${draftTasks.length})`}
+                            label={sendingSelected ? "Sending..." : `Send Tasks (${draftTasks.length})`}
                             variant="primary"
                             size="sm"
                             onClick={handleSendSelectedDrafts}
@@ -1023,19 +1023,18 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                 )}
               </div>
 
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                project.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' :
-                project.status === 'COMPLETED' ? 'bg-blue-500/20 text-blue-400' :
-                'bg-gray-500/20 text-gray-400'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${project.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' :
+                  project.status === 'COMPLETED' ? 'bg-blue-500/20 text-blue-400' :
+                    'bg-gray-500/20 text-gray-400'
+                }`}>
                 {project.status}
               </span>
             </div>
 
             {/* 3-Column Task Table */}
-            <div 
+            <div
               className="rounded-lg border overflow-hidden"
-              style={{ 
+              style={{
                 backgroundColor: 'var(--color-bg-tertiary)',
                 borderColor: 'var(--color-border-default)'
               }}
@@ -1049,24 +1048,24 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                   color: 'var(--color-text-secondary)'
                 }}
               >
-              <div className="col-span-4 flex items-center">
-                <div className="w-6 flex justify-center">
-                  {project.tasks && project.tasks.length > 0 && project.canManage && (
-                    <input
-                      type="checkbox"
-                      checked={project.tasks.length > 0 && project.tasks.every(task => selectedTasks.has(task.id))}
-                      onChange={handleSelectAll}
-                      className="checkbox checkbox-sm"
-                      style={{
-                        border: '2px solid var(--color-text-tertiary)',
-                        backgroundColor: (project.tasks.length > 0 && project.tasks.every(task => selectedTasks.has(task.id))) ? 'var(--color-accent)' : 'transparent',
-                        '--chkbg': 'var(--color-accent)'
-                      }}
-                    />
-                  )}
+                <div className="col-span-4 flex items-center">
+                  <div className="w-6 flex justify-center">
+                    {project.tasks && project.tasks.length > 0 && project.canManage && (
+                      <input
+                        type="checkbox"
+                        checked={project.tasks.length > 0 && project.tasks.every(task => selectedTasks.has(task.id))}
+                        onChange={handleSelectAll}
+                        className="checkbox checkbox-sm"
+                        style={{
+                          border: '2px solid var(--color-text-tertiary)',
+                          backgroundColor: (project.tasks.length > 0 && project.tasks.every(task => selectedTasks.has(task.id))) ? 'var(--color-accent)' : 'transparent',
+                          '--chkbg': 'var(--color-accent)'
+                        }}
+                      />
+                    )}
+                  </div>
+                  <span className="ml-2">Task Name</span>
                 </div>
-                <span className="ml-2">Task Name</span>
-              </div>
                 <div className="col-span-4">Assigned To</div>
                 <div className="col-span-2 flex flex-col">
                   <span>Due Date</span>
@@ -1076,27 +1075,27 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       checked={project.tasks?.length > 0 && project.tasks.every(t => taskTimeSettings[t.id])}
                       onChange={async (e) => {
                         const checked = e.target.checked;
-                        
+
                         // Update all task time settings immediately
                         const newSettings = {};
                         project.tasks?.forEach(task => {
                           newSettings[task.id] = checked;
                         });
                         setTaskTimeSettings(newSettings);
-                        
+
                         // Only update tasks that have dates
                         const tasksWithDates = project.tasks?.filter(task => task.dueDate) || [];
-                        
+
                         if (tasksWithDates.length === 0) {
                           // No tasks with dates, just update local state
                           return;
                         }
-                        
+
                         // Update all tasks with dates
                         const updatePromises = tasksWithDates.map(async (task) => {
                           const date = new Date(task.dueDate);
                           let newValue;
-                          
+
                           if (!checked) {
                             date.setHours(23, 59, 0, 0);
                             newValue = date.toISOString();
@@ -1109,7 +1108,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                               newValue = date.toISOString();
                             }
                           }
-                          
+
                           try {
                             await tasksAPI.update(task.id, { dueDate: newValue });
                             return { id: task.id, dueDate: new Date(newValue) };
@@ -1118,10 +1117,10 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                             return null;
                           }
                         });
-                        
+
                         // Wait for all updates to complete
                         const results = await Promise.all(updatePromises);
-                        
+
                         // Update local state with new dates
                         setProject(prev => ({
                           ...prev,
@@ -1263,16 +1262,16 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                           type={taskTimeSettings[task.id] ? 'datetime-local' : 'date'}
                           onClick={(e) => e.stopPropagation()}
                           value={task.dueDate ? (
-                            taskTimeSettings[task.id] 
+                            taskTimeSettings[task.id]
                               ? (() => {
-                                  const date = new Date(task.dueDate);
-                                  const year = date.getFullYear();
-                                  const month = String(date.getMonth() + 1).padStart(2, '0');
-                                  const day = String(date.getDate()).padStart(2, '0');
-                                  const hours = String(date.getHours()).padStart(2, '0');
-                                  const minutes = String(date.getMinutes()).padStart(2, '0');
-                                  return `${year}-${month}-${day}T${hours}:${minutes}`;
-                                })()
+                                const date = new Date(task.dueDate);
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const hours = String(date.getHours()).padStart(2, '0');
+                                const minutes = String(date.getMinutes()).padStart(2, '0');
+                                return `${year}-${month}-${day}T${hours}:${minutes}`;
+                              })()
                               : formatDateForInput(task.dueDate)
                           ) : ''}
                           onChange={(e) => handleQuickDueDateChange(task.id, e.target.value)}
@@ -1283,9 +1282,9 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                             color: 'var(--color-text-primary)',
                           }}
                         />
-                        
+
                         {/* Time checkbox */}
-                        <label 
+                        <label
                           className="flex items-center mt-1 cursor-pointer"
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -1301,7 +1300,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                               backgroundColor: taskTimeSettings[task.id] ? 'var(--color-accent)' : 'transparent'
                             }}
                           />
-                          <span 
+                          <span
                             className="text-xs"
                             style={{ color: 'var(--color-text-tertiary)' }}
                           >
@@ -1389,9 +1388,9 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       {/* Reassign Modal */}
       {isReassigning && reassignTask && (
         <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 55 }}>
-          <div 
+          <div
             className="modal-box border"
-            style={{ 
+            style={{
               backgroundColor: 'var(--color-bg-secondary)',
               borderColor: 'var(--color-border-default)'
             }}
@@ -1399,13 +1398,13 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
             <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--color-text-primary)' }}>
               Reassign Task
             </h3>
-            
+
             <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
               Task: <strong>{reassignTask.title}</strong>
             </p>
 
             {reassignTask.declinedReason && (
-              <div 
+              <div
                 className="p-3 rounded-lg mb-4"
                 style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
               >
@@ -1423,7 +1422,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                   Reassign to:
                 </label>
-                
+
                 <div className="space-y-3">
                   <label className="flex items-center">
                     <input
@@ -1487,7 +1486,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                 </div>
               </div>
 
-              <div 
+              <div
                 className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30"
               >
                 <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
@@ -1571,9 +1570,9 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       {/* Bulk Delete Confirmation Modal */}
       {isBulkDeleteConfirmOpen && (
         <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 55 }}>
-          <div 
+          <div
             className="modal-box border"
-            style={{ 
+            style={{
               backgroundColor: 'var(--color-bg-secondary)',
               borderColor: 'var(--color-border-default)'
             }}

@@ -203,6 +203,7 @@ const projectController = {
               }
             },
             orderBy: [
+              { dueDate: 'asc' },
               { isDraft: 'desc' },
               { status: 'asc' },
               { priority: 'desc' },
