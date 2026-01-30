@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { usersAPI, contactsAPI } from '../../services/api';
+import { usersAPI, contactsAPI, aiAPI } from '../../services/api';
 import DatePicker from '../common/DatePicker';
 import { formatDateForInput, convertLocalDateTimeToUTC } from '../../utils/dateUtils';
 import IconButton from '../common/IconButton';
-import { FaArrowLeft, FaArrowRight, FaTimes, FaCheck } from 'react-icons/fa';
+import SearchableDropdown from '../common/SearchableDropdown';
+import { FaTimes, FaCheck, FaMagic, FaUser, FaUserFriends, FaInfoCircle } from 'react-icons/fa';
+import AIWarning from '../common/AIWarning';
 
 const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
-  const [step, setStep] = useState(1);
   const [employees, setEmployees] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -49,7 +51,6 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
   };
 
   const handleClose = () => {
-    setStep(1);
     setFormData({
       title: '',
       description: '',
@@ -64,59 +65,34 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
     onClose();
   };
 
-  const handleNext = () => {
-    if (step === 1) {
-      if (!formData.title.trim()) {
-      setError('Task title is required');
+  const handleAiHelp = async () => {
+    if (!formData.title.trim() && !formData.description.trim()) {
+      setError('Please enter a title or description for the AI to help you.');
       return;
     }
-      
-      // Validate due date is required and in the future
-      if (!formData.dueDate || !formData.dueDate.trim()) {
-        setError('Due date is required');
-        return;
-      }
 
-      // If only date is provided (no time), set default time to 11:59 PM for validation
-      let dateToCheck = formData.dueDate;
-      if (!dateToCheck.includes('T') || (dateToCheck.includes('T') && !dateToCheck.includes(':'))) {
-        // Date only, add 11:59 PM
-        const datePart = dateToCheck.split('T')[0];
-        dateToCheck = `${datePart}T23:59:00`;
-      }
-      
-      const selectedDate = new Date(dateToCheck);
-      const now = new Date();
-      if (isNaN(selectedDate.getTime())) {
-        setError('Invalid due date format');
-        return;
-      }
-      if (selectedDate <= now) {
-        setError('Due date must be in the future');
-        return;
-      }
-    }
-    
-    if (step === 2) {
-      // Validate assignment before moving to review
-      if (formData.assignmentType === 'internal' && !formData.assigneeId) {
-        setError('Please select an employee');
-        return;
-      }
-
-      if (formData.assignmentType === 'external' && !formData.externalContactId) {
-        setError('Please select an external contact');
-        return;
-      }
-    }
-    
+    setIsAiLoading(true);
     setError(null);
-    setStep(step + 1);
-  };
+    try {
+      const response = await aiAPI.extractTasks({
+        text: `Based on this: Title: ${formData.title}, Description: ${formData.description}. Provide one detailed task with title, description, and suggested priority.`
+      });
 
-  const handleBack = () => {
-    setError(null);
-    setStep(step - 1);
+      if (response.data && response.data.tasks && response.data.tasks.length > 0) {
+        const aiTask = response.data.tasks[0];
+        setFormData(prev => ({
+          ...prev,
+          title: aiTask.title || prev.title,
+          description: aiTask.description || prev.description,
+          priority: aiTask.priority || prev.priority
+        }));
+      }
+    } catch (err) {
+      console.error('AI Help error:', err);
+      setError('Failed to get AI help. Please try again.');
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -135,11 +111,10 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
     // If only date is provided (no time), set default time to 11:59 PM for validation
     let dateToCheck = formData.dueDate;
     if (!dateToCheck.includes('T') || (dateToCheck.includes('T') && !dateToCheck.includes(':'))) {
-      // Date only, add 11:59 PM
       const datePart = dateToCheck.split('T')[0];
       dateToCheck = `${datePart}T23:59:00`;
     }
-    
+
     const selectedDate = new Date(dateToCheck);
     const now = new Date();
     if (isNaN(selectedDate.getTime())) {
@@ -169,9 +144,10 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
         title: formData.title,
         description: formData.description || null,
         priority: formData.priority,
-        dueDate: convertLocalDateTimeToUTC(formData.dueDate), // Convert to UTC for server
+        dueDate: convertLocalDateTimeToUTC(formData.dueDate),
         assigneeId: formData.assignmentType === 'internal' ? parseInt(formData.assigneeId) : null,
-        externalContactId: formData.assignmentType === 'external' ? parseInt(formData.externalContactId) : null
+        externalContactId: formData.assignmentType === 'external' ? parseInt(formData.externalContactId) : null,
+        customMessage: formData.customMessage || null
       };
 
       await onTaskAdded(taskData);
@@ -188,9 +164,9 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
 
   return (
     <div className="modal modal-open backdrop-blur-sm">
-      <div 
+      <div
         className="modal-box max-w-2xl border"
-        style={{ 
+        style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)'
         }}
@@ -202,11 +178,11 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
               Add Task to Project
             </h3>
             <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-              Step {step} of 3
+              Fill in the details to add a new task draft to this project.
             </p>
           </div>
-          <button 
-            onClick={handleClose} 
+          <button
+            onClick={handleClose}
             className="btn btn-ghost btn-sm btn-circle"
             style={{ color: 'var(--color-text-tertiary)' }}
           >
@@ -216,21 +192,36 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
 
         {/* Error Display */}
         {error && (
-          <div className="alert alert-error mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+          <div className="alert alert-error mb-4 py-2 min-h-0 text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span>{error}</span>
           </div>
         )}
 
-        {/* Step 1: Task Details */}
-        {step === 1 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left Side: Task Info */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-                Task Title *
-              </label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                  Task Title *
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAiHelp}
+                  disabled={isAiLoading || (!formData.title && !formData.description)}
+                  className="btn btn-xs btn-ghost text-indigo-400 hover:text-indigo-300 gap-1"
+                >
+                  {isAiLoading ? (
+                    <span className="loading loading-spinner loading-xs"></span>
+                  ) : (
+                    <FaMagic className="text-xs" />
+                  )}
+                  {isAiLoading ? 'Improving...' : 'AI Help'}
+                </button>
+              </div>
               <input
                 type="text"
                 value={formData.title}
@@ -253,7 +244,7 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="textarea textarea-bordered w-full h-24"
+                className="textarea textarea-bordered w-full h-32"
                 style={{
                   backgroundColor: 'var(--color-bg-tertiary)',
                   borderColor: 'var(--color-border-default)',
@@ -263,28 +254,7 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-                  Priority
-                </label>
-                <select
-                  value={formData.priority}
-                  onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value }))}
-                  className="select select-bordered w-full"
-                  style={{
-                    backgroundColor: 'var(--color-bg-tertiary)',
-                    borderColor: 'var(--color-border-default)',
-                    color: 'var(--color-text-primary)',
-                  }}
-                >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="URGENT">Urgent</option>
-                </select>
-              </div>
-
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                   Due Date *
@@ -298,245 +268,150 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
                   minDate={formatDateForInput(new Date())}
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                  Priority
+                </label>
+                <div className="flex gap-2">
+                  {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, priority: p }))}
+                      className={`flex-1 py-1.5 rounded text-[10px] font-bold border transition-all ${formData.priority === p
+                        ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+                        : 'border-transparent bg-var(--color-bg-tertiary) text-var(--color-text-tertiary)'
+                        }`}
+                      style={{
+                        backgroundColor: formData.priority === p ? 'rgba(99, 102, 241, 0.1)' : 'var(--color-bg-tertiary)',
+                        borderColor: formData.priority === p ? '#6366f1' : 'var(--color-border-default)',
+                        color: formData.priority === p ? '#818cf8' : 'var(--color-text-secondary)'
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Step 2: Assignment */}
-        {step === 2 && (
-          <div className="space-y-6">
+          {/* Right Side: Assignment */}
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                Who will work on this task? *
+                Who will work on this? *
               </label>
-              
-              <div className="space-y-4">
-                {/* Internal Employee Option */}
-                <label 
-                  className="flex items-start p-4 rounded-lg border-2 cursor-pointer transition-all"
+
+              <div className="flex bg-var(--color-bg-tertiary) rounded-lg p-1 mb-4" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, assignmentType: 'internal', externalContactId: '' }))}
+                  className={`flex-1 py-1.5 rounded flex items-center justify-center gap-2 text-xs font-medium transition-all ${formData.assignmentType === 'internal'
+                    ? 'bg-var(--color-bg-secondary) shadow-sm text-indigo-400'
+                    : 'text-var(--color-text-tertiary)'
+                    }`}
                   style={{
-                    backgroundColor: formData.assignmentType === 'internal' ? 'var(--color-bg-tertiary)' : 'transparent',
-                    borderColor: formData.assignmentType === 'internal' ? '#6366f1' : 'var(--color-border-default)'
+                    backgroundColor: formData.assignmentType === 'internal' ? 'var(--color-bg-secondary)' : 'transparent',
+                    color: formData.assignmentType === 'internal' ? '#818cf8' : 'var(--color-text-secondary)'
                   }}
                 >
-                  <input
-                    type="radio"
-                    name="assignmentType"
-                    value="internal"
-                    checked={formData.assignmentType === 'internal'}
-                    onChange={(e) => setFormData(prev => ({ ...prev, assignmentType: e.target.value }))}
-                    className="radio radio-primary mt-1"
-                  />
-                  <div className="ml-3 flex-1">
-                    <p className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                      Internal Employee
-                    </p>
-                    <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                      Assign to someone in your company
-                    </p>
-                    
-                    {formData.assignmentType === 'internal' && (
-                      <div className="mt-3">
-                        <select
-                          value={formData.assigneeId}
-                          onChange={(e) => setFormData(prev => ({ ...prev, assigneeId: e.target.value }))}
-                          className="select select-bordered w-full"
-                          style={{
-                            backgroundColor: 'var(--color-bg-secondary)',
-                            borderColor: 'var(--color-border-default)',
-                            color: 'var(--color-text-primary)',
-                          }}
-                          required
-                        >
-                          <option value="">Select employee... *</option>
-                          {employees.map(emp => (
-                            <option key={emp.id} value={emp.id}>
-                              {emp.name} - {emp.email}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                </label>
-
-                {/* External Contact Option */}
-                <label 
-                  className="flex items-start p-4 rounded-lg border-2 cursor-pointer transition-all"
+                  <FaUser className="text-xs" /> Internal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, assignmentType: 'external', assigneeId: '' }))}
+                  className={`flex-1 py-1.5 rounded flex items-center justify-center gap-2 text-xs font-medium transition-all ${formData.assignmentType === 'external'
+                    ? 'bg-var(--color-bg-secondary) shadow-sm text-emerald-400'
+                    : 'text-var(--color-text-tertiary)'
+                    }`}
                   style={{
-                    backgroundColor: formData.assignmentType === 'external' ? 'var(--color-bg-tertiary)' : 'transparent',
-                    borderColor: formData.assignmentType === 'external' ? '#6366f1' : 'var(--color-border-default)'
+                    backgroundColor: formData.assignmentType === 'external' ? 'var(--color-bg-secondary)' : 'transparent',
+                    color: formData.assignmentType === 'external' ? '#34d399' : 'var(--color-text-secondary)'
                   }}
                 >
-                  <input
-                    type="radio"
-                    name="assignmentType"
-                    value="external"
-                    checked={formData.assignmentType === 'external'}
-                    onChange={(e) => setFormData(prev => ({ ...prev, assignmentType: e.target.value }))}
-                    className="radio radio-primary mt-1"
-                  />
-                  <div className="ml-3 flex-1">
-                    <p className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                      External Contact
-                    </p>
-                    <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                      Send to an external collaborator (they can accept or decline)
-                    </p>
-                    
-                    {formData.assignmentType === 'external' && (
-                      <div className="mt-3 space-y-3">
-                        <select
-                          value={formData.externalContactId}
-                          onChange={(e) => setFormData(prev => ({ ...prev, externalContactId: e.target.value }))}
-                          className="select select-bordered w-full"
-                          style={{
-                            backgroundColor: 'var(--color-bg-secondary)',
-                            borderColor: 'var(--color-border-default)',
-                            color: 'var(--color-text-primary)',
-                          }}
-                          required
-                        >
-                          <option value="">Select contact... *</option>
-                          {contacts.map(contact => (
-                            <option key={contact.id} value={contact.id}>
-                              {contact.name} - {contact.email}
-                              {contact.company ? ` (${contact.company})` : ''}
-                            </option>
-                          ))}
-                        </select>
-
-                        <div>
-                          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                            Optional message to include
-                          </label>
-                          <textarea
-                            value={formData.customMessage}
-                            onChange={(e) => setFormData(prev => ({ ...prev, customMessage: e.target.value }))}
-                            className="textarea textarea-bordered w-full h-20 text-sm"
-                            style={{
-                              backgroundColor: 'var(--color-bg-secondary)',
-                              borderColor: 'var(--color-border-default)',
-                              color: 'var(--color-text-primary)',
-                            }}
-                            placeholder="Add a personal note (optional)"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </label>
+                  <FaUserFriends className="text-xs" /> External
+                </button>
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* Step 3: Review */}
-        {step === 3 && (
-          <div className="space-y-6">
-            <div 
-              className="p-4 rounded-lg"
-              style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-            >
-              <h4 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-                Review Task
-              </h4>
-              
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span style={{ color: 'var(--color-text-secondary)' }}>Title:</span>
-                  <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{formData.title}</span>
-                </div>
-                
-                {formData.description && (
-                  <div className="flex justify-between">
-                    <span style={{ color: 'var(--color-text-secondary)' }}>Description:</span>
-                    <span className="font-medium max-w-xs text-right" style={{ color: 'var(--color-text-primary)' }}>
-                      {formData.description.length > 100 
-                        ? formData.description.substring(0, 100) + '...' 
-                        : formData.description}
-                    </span>
-                  </div>
-                )}
-                
-                <div className="flex justify-between">
-                  <span style={{ color: 'var(--color-text-secondary)' }}>Priority:</span>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                    formData.priority === 'LOW' ? 'bg-gray-500/20 text-gray-400' :
-                    formData.priority === 'MEDIUM' ? 'bg-blue-500/20 text-blue-400' :
-                    formData.priority === 'HIGH' ? 'bg-orange-500/20 text-orange-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    {formData.priority}
-                  </span>
-                </div>
-                
-                  <div className="flex justify-between">
-                    <span style={{ color: 'var(--color-text-secondary)' }}>Due Date:</span>
-                    <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                    {formData.dueDate 
-                      ? new Date(formData.dueDate).toLocaleDateString()
-                      : <span className="text-error">Required</span>}
-                    </span>
-                  </div>
-                
-                <div className="flex justify-between">
-                  <span style={{ color: 'var(--color-text-secondary)' }}>Assigned To:</span>
-                  <span className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                    {formData.assignmentType === 'internal' && formData.assigneeId
-                      ? employees.find(e => e.id === parseInt(formData.assigneeId))?.name
-                      : formData.assignmentType === 'external' && formData.externalContactId
-                      ? contacts.find(c => c.id === parseInt(formData.externalContactId))?.name
-                      : <span className="text-error">Required</span>}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span style={{ color: 'var(--color-text-secondary)' }}>Type:</span>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                    formData.assignmentType === 'internal' 
-                      ? 'bg-indigo-500/20 text-indigo-400' 
-                      : 'bg-emerald-500/20 text-emerald-400'
-                  }`}>
-                    {formData.assignmentType === 'internal' ? 'Internal Employee' : 'External Contact'}
-                  </span>
-                </div>
+              <div>
+                <SearchableDropdown
+                  options={formData.assignmentType === 'internal'
+                    ? employees.map(e => ({ id: e.id, name: e.name, email: e.email }))
+                    : contacts.map(c => ({ id: c.id, name: c.name, email: c.email, company: c.company }))
+                  }
+                  value={formData.assignmentType === 'internal' ? formData.assigneeId : formData.externalContactId}
+                  onChange={(val) => setFormData(prev => ({
+                    ...prev,
+                    [formData.assignmentType === 'internal' ? 'assigneeId' : 'externalContactId']: val
+                  }))}
+                  placeholder={formData.assignmentType === 'internal' ? "Select employee..." : "Select contact..."}
+                  label=""
+                />
               </div>
             </div>
 
-            <div 
-              className="p-3 rounded-lg border"
-              style={{ 
+            {formData.assignmentType === 'external' && (
+              <div className="animate-fadeIn">
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                  Optional message to include
+                </label>
+                <textarea
+                  value={formData.customMessage}
+                  onChange={(e) => setFormData(prev => ({ ...prev, customMessage: e.target.value }))}
+                  className="textarea textarea-bordered w-full h-24 text-sm"
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                  placeholder="Add a personal note (optional)"
+                />
+              </div>
+            )}
+
+            <AIWarning
+              message="AI suggestions are based on title and description. Always review before saving."
+              className="mt-auto"
+            />
+
+            <div
+              className="p-3 rounded-lg border mt-4"
+              style={{
                 backgroundColor: 'var(--color-bg-quaternary)',
                 borderColor: 'var(--color-border-light)'
               }}
             >
-              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                <span className="font-medium">Note:</span> This task will be saved as a <strong>draft</strong>. 
-                You'll need to send it from the project dashboard for the assignee to receive it.
-              </p>
+              <div className="flex gap-2">
+                <FaInfoCircle className="text-indigo-400 mt-1 shrink-0" />
+                <p className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+                  This task will be saved as a <span className="text-indigo-400 font-bold">draft</span>.
+                  You'll need to send it from the project dashboard for the assignee to receive it.
+                </p>
+              </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Actions */}
-        <div className="flex justify-between mt-8 pt-4 border-t" style={{ borderColor: 'var(--color-border-default)' }}>
+        <div className="flex justify-end gap-3 mt-8 pt-4 border-t" style={{ borderColor: 'var(--color-border-default)' }}>
           <IconButton
-            onClick={step === 1 ? handleClose : handleBack}
-            icon={step === 1 ? <FaTimes /> : <FaArrowLeft />}
-            label={step === 1 ? 'Cancel' : 'Back'}
+            onClick={handleClose}
+            icon={<FaTimes />}
+            label="Cancel"
             variant="secondary"
             size="sm"
             disabled={isLoading}
           />
-          
+
           <IconButton
-            onClick={step === 3 ? handleSubmit : handleNext}
-            icon={step === 3 ? <FaCheck /> : <FaArrowRight />}
-            label={isLoading ? 'Adding...' : step === 3 ? 'Add Task as Draft' : 'Next'}
+            onClick={handleSubmit}
+            icon={<FaCheck />}
+            label={isLoading ? 'Saving...' : 'Add Task Draft'}
             variant="primary"
             size="sm"
-            disabled={isLoading}
+            disabled={isLoading || isAiLoading}
             loading={isLoading}
           />
         </div>
@@ -546,7 +421,3 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
 };
 
 export default AddProjectTaskModal;
-
-
-
-

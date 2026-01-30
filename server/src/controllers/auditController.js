@@ -6,15 +6,15 @@ const prisma = require('../lib/prisma');
 const getAuditLogs = async (req, res) => {
   try {
     const { companyId } = req.user;
-    const { 
-      page = 1, 
-      limit = 50, 
-      action, 
-      entityType, 
-      userId, 
-      startDate, 
+    const {
+      page = 1,
+      limit = 50,
+      action,
+      entityType,
+      userId,
+      startDate,
       endDate,
-      search 
+      search
     } = req.query;
 
     // Build where clause
@@ -117,9 +117,9 @@ const getAuditLogs = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching audit logs:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch audit logs' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch audit logs'
     });
   }
 };
@@ -162,9 +162,9 @@ const getAuditLogById = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching audit log:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch audit log' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch audit log'
     });
   }
 };
@@ -283,9 +283,9 @@ const getAuditStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching audit stats:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch audit statistics' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch audit statistics'
     });
   }
 };
@@ -342,15 +342,14 @@ const getTaskAuditLogs = async (req, res) => {
       }
     });
 
-    // Get comment audit logs related to this task
-    // Comments store the task title in their description
+    // For Comment entity, filter by metadata->>taskId
     const commentLogs = await prisma.auditLog.findMany({
       where: {
         entityType: 'Comment',
         companyId: companyId,
-        description: {
-          contains: task.title,
-          mode: 'insensitive'
+        metadata: {
+          path: ['taskId'],
+          equals: parseInt(taskId)
         }
       },
       include: {
@@ -363,19 +362,17 @@ const getTaskAuditLogs = async (req, res) => {
           }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      orderBy: { createdAt: 'desc' },
     });
 
-    // Get co-assignee logs
+    // For TaskCoAssignee, filter by metadata->>taskId
     const coAssigneeLogs = await prisma.auditLog.findMany({
       where: {
         entityType: 'TaskCoAssignee',
         companyId: companyId,
-        description: {
-          contains: task.title,
-          mode: 'insensitive'
+        metadata: {
+          path: ['taskId'],
+          equals: parseInt(taskId)
         }
       },
       include: {
@@ -393,14 +390,14 @@ const getTaskAuditLogs = async (req, res) => {
       }
     });
 
-    // Get task share logs
+    // For TaskShare, filter by metadata->>taskId
     const shareLogs = await prisma.auditLog.findMany({
       where: {
         entityType: 'TaskShare',
         companyId: companyId,
-        description: {
-          contains: task.title,
-          mode: 'insensitive'
+        metadata: {
+          path: ['taskId'],
+          equals: parseInt(taskId)
         }
       },
       include: {
@@ -442,12 +439,12 @@ const getTaskAuditLogs = async (req, res) => {
 const exportAuditLogs = async (req, res) => {
   try {
     const { companyId } = req.user;
-    const { 
-      action, 
-      entityType, 
-      userId, 
-      startDate, 
-      endDate 
+    const {
+      action,
+      entityType,
+      userId,
+      startDate,
+      endDate
     } = req.query;
 
     // Build where clause (same as getAuditLogs)
@@ -487,7 +484,7 @@ const exportAuditLogs = async (req, res) => {
       const date = new Date(log.createdAt);
       const dateStr = date.toISOString().split('T')[0];
       const timeStr = date.toTimeString().split(' ')[0];
-      
+
       return [
         dateStr,
         timeStr,
@@ -506,13 +503,13 @@ const exportAuditLogs = async (req, res) => {
     // Set headers for file download
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${new Date().toISOString().split('T')[0]}.csv"`);
-    
+
     res.send(csvContent);
   } catch (error) {
     console.error('Error exporting audit logs:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to export audit logs' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to export audit logs'
     });
   }
 };

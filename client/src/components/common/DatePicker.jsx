@@ -34,8 +34,16 @@ const DatePicker = ({
 
   useEffect(() => {
     setLocalValue(value || '');
-    // Keep includeTime as false by default (unchecked)
-    // Don't auto-detect time from existing values
+
+    // Auto-detect includeTime based on value
+    if (timeOptional && value) {
+      const date = new Date(value);
+      // If time is Not 23:59:00, then it has a specific time set
+      const isDateOnly = date.getHours() === 23 && date.getMinutes() === 59;
+      setIncludeTime(!isDateOnly);
+    } else {
+      setIncludeTime(false);
+    }
   }, [value, timeOptional]);
 
   useEffect(() => {
@@ -56,17 +64,17 @@ const DatePicker = ({
 
   const formatDateForDisplay = (dateString) => {
     if (!dateString) return '';
-    
+
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return dateString;
-      
+
       const dateStr = date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
       });
-      
+
       if (showTime) {
         const timeStr = date.toLocaleTimeString('en-US', {
           hour: '2-digit',
@@ -75,7 +83,7 @@ const DatePicker = ({
         });
         return `${dateStr} at ${timeStr}`;
       }
-      
+
       return dateStr;
     } catch (e) {
       return dateString;
@@ -94,7 +102,7 @@ const DatePicker = ({
 
   const formatForInput = (dateString, showTimeInput = true) => {
     if (!dateString) return '';
-    
+
     // If already in datetime-local format, return as is
     if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dateString)) {
       if (showTimeInput) {
@@ -103,15 +111,15 @@ const DatePicker = ({
         return dateString.slice(0, 10); // Just date YYYY-MM-DD
       }
     }
-    
+
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return '';
-      
+
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
-      
+
       if (showTimeInput) {
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
@@ -127,13 +135,13 @@ const DatePicker = ({
   const handleDateChange = (e) => {
     const newValue = e.target.value;
     let finalValue = newValue;
-    
+
     // If timeOptional and includeTime is false, set time to 11:59 PM
     if (timeOptional && !includeTime && newValue) {
       // Convert date-only to datetime with 11:59 PM
       finalValue = `${newValue}T23:59`;
     }
-    
+
     setLocalValue(finalValue);
     if (onChange) {
       onChange({
@@ -148,24 +156,30 @@ const DatePicker = ({
   const handleTimeToggle = (e) => {
     const checked = e.target.checked;
     setIncludeTime(checked);
-    
+
     if (localValue) {
-      let newValue = localValue;
       const date = new Date(localValue);
-      
+
       if (!checked) {
         // Set to 11:59 PM
         date.setHours(23, 59, 0, 0);
-        newValue = date.toISOString();
       } else {
-        // Keep current time or set to current time if it was 11:59 PM
+        // Set to current time if it was 11:59 PM (date only)
         if (date.getHours() === 23 && date.getMinutes() === 59) {
           const now = new Date();
           date.setHours(now.getHours(), now.getMinutes(), 0, 0);
-          newValue = date.toISOString();
         }
+        // Otherwise keep existing time
       }
-      
+
+      // Use local format for consistency with handleDateChange
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const newValue = `${year}-${month}-${day}T${hours}:${minutes}`;
+
       setLocalValue(newValue);
       if (onChange) {
         onChange({
@@ -220,7 +234,7 @@ const DatePicker = ({
           onClick={handleCalendarClick}
           disabled={disabled}
           className="absolute right-2 top-1/2 transform -translate-y-1/2 transition-colors duration-200 hover:opacity-70 disabled:opacity-50 cursor-pointer"
-          style={{ 
+          style={{
             color: 'var(--color-text-tertiary)',
             pointerEvents: disabled ? 'none' : 'auto'
           }}
@@ -229,7 +243,7 @@ const DatePicker = ({
           <FaCalendar className="w-4 h-4" />
         </button>
       </div>
-      
+
       {/* Time Optional Checkbox */}
       {timeOptional && (
         <label className="flex items-center mt-2 cursor-pointer">
@@ -245,7 +259,7 @@ const DatePicker = ({
               '--chkbg': 'var(--color-accent)'
             }}
           />
-          <span 
+          <span
             className="text-sm transition-colors duration-200"
             style={{ color: 'var(--color-text-secondary)' }}
           >

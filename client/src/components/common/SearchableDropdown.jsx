@@ -58,7 +58,7 @@ const SearchableDropdown = ({
     const handleClickOutside = (event) => {
       const clickedInsideButton = buttonRef.current && buttonRef.current.contains(event.target);
       const clickedInsideDropdown = dropdownRef.current && dropdownRef.current.contains(event.target);
-      
+
       if (!clickedInsideButton && !clickedInsideDropdown) {
         setIsOpen(false);
         setSearchTerm('');
@@ -80,7 +80,7 @@ const SearchableDropdown = ({
     document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('scroll', handleScroll, true);
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('scroll', handleScroll, true);
@@ -101,7 +101,7 @@ const SearchableDropdown = ({
         const name = option.displayName || option.name || '';
         const email = option.email || '';
         return name.toLowerCase().includes(term.toLowerCase()) ||
-               email.toLowerCase().includes(term.toLowerCase());
+          email.toLowerCase().includes(term.toLowerCase());
       });
 
       // Check if search term looks like an email and no matches found
@@ -194,7 +194,7 @@ const SearchableDropdown = ({
       </div>
 
       {isOpen && dropdownPosition && createPortal(
-        <div 
+        <div
           ref={dropdownRef}
           className="fixed rounded-lg shadow-lg max-h-60 overflow-hidden"
           style={{
@@ -209,7 +209,7 @@ const SearchableDropdown = ({
           }}
         >
           {/* Search Input */}
-          <div 
+          <div
             className="p-2"
             style={{
               borderBottomColor: 'var(--color-border-default)',
@@ -219,7 +219,7 @@ const SearchableDropdown = ({
           >
             <input
               type="text"
-              placeholder="Search employees..."
+              placeholder="Search..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-1 transition-colors duration-200"
@@ -248,7 +248,7 @@ const SearchableDropdown = ({
           </div>
 
           {/* Options List */}
-          <div 
+          <div
             className="max-h-48 overflow-y-auto"
             style={{
               scrollbarThumbColor: 'var(--color-scrollbar-thumb)',
@@ -256,7 +256,7 @@ const SearchableDropdown = ({
             }}
           >
             {filteredOptions.length === 0 ? (
-              <div 
+              <div
                 className="px-3 py-2 text-sm transition-colors duration-200"
                 style={{ color: 'var(--color-text-tertiary)' }}
               >
@@ -385,7 +385,7 @@ const SearchableDropdown = ({
             )}
           </div>
         </div>
-      , document.body)}
+        , document.body)}
     </>
   );
 };

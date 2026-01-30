@@ -28,8 +28,8 @@ const Employees = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isResendConfirmOpen, setIsResendConfirmOpen] = useState(false);
   const [pendingResendEmployee, setPendingResendEmployee] = useState(null);
-      const { users, fetchUsers, deleteEmployee, createEmployee, resendEmployeeInvitation, isLoading, error } = useUserStore();
-    const { user, isAdmin, isSysAdmin } = useAuthStore();
+  const { users, fetchUsers, deleteEmployee, createEmployee, resendEmployeeInvitation, isLoading, error } = useUserStore();
+  const { user, isAdmin, isSysAdmin } = useAuthStore();
   const toast = useToastContext();
 
   useEffect(() => {
@@ -85,11 +85,11 @@ const Employees = () => {
 
   // Apply search filter (include all users including current user)
   const filteredUsers = users.filter(u =>
-    (u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     u.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     u.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     u.position.toLowerCase().includes(searchTerm.toLowerCase()))
+  (u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.position.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // CSV Import Handler
@@ -121,7 +121,7 @@ const Employees = () => {
     try {
       const text = await file.text();
       const lines = text.split('\n').filter(line => line.trim());
-      
+
       if (lines.length < 2) {
         throw new Error('CSV file must have at least a header row and one data row');
       }
@@ -139,7 +139,7 @@ const Employees = () => {
       // Parse data rows
       const employees = [];
       const errors = [];
-      
+
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
@@ -167,7 +167,7 @@ const Employees = () => {
           errors.push(`Row ${i + 1}: Invalid role: ${role}. Must be EMPLOYEE, ADMIN, or SYSDMIN`);
           continue;
         }
-        
+
         // Only SYSDMIN can create other SYSDMIN users
         if (role && role.toUpperCase() === 'SYSDMIN' && !isSysAdmin()) {
           errors.push(`Row ${i + 1}: Only System Administrators can create other System Administrators`);
@@ -286,16 +286,16 @@ const Employees = () => {
 
   const confirmResendInvitation = async () => {
     if (!pendingResendEmployee) return;
-    
+
     setIsResendConfirmOpen(false);
     const { id: employeeId, name: employeeName } = pendingResendEmployee;
     setPendingResendEmployee(null);
 
     try {
-    const result = await resendEmployeeInvitation(employeeId);
-    if (result.success) {
+      const result = await resendEmployeeInvitation(employeeId);
+      if (result.success) {
         toast.success(`Invitation resent successfully to ${employeeName}`);
-    } else {
+      } else {
         toast.error(`Failed to resend invitation: ${result.error}`);
       }
     } catch (error) {
@@ -314,13 +314,13 @@ const Employees = () => {
         <div className="mb-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 
+              <h1
                 className="text-3xl font-bold"
                 style={{ color: 'var(--color-text-primary)' }}
               >
                 Employee Management
               </h1>
-              <p 
+              <p
                 className="mt-2"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
@@ -362,7 +362,7 @@ const Employees = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search employees by name, email, or role..."
+                  placeholder="Search by name, email, or role..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="input input-bordered w-full focus:border-indigo-500 focus:ring-indigo-500"
@@ -372,11 +372,11 @@ const Employees = () => {
                     color: 'var(--color-text-primary)',
                   }}
                 />
-                <svg 
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5" 
+                <svg
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
                   style={{ color: 'var(--color-text-tertiary)' }}
-                  fill="none" 
-                  stroke="currentColor" 
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -425,7 +425,7 @@ const Employees = () => {
               Company Employees ({filteredUsers.length})
             </h2>
           </div>
-          
+
           {isLoading ? (
             <SkeletonList count={5} variant="default" />
           ) : filteredUsers.length === 0 ? (
@@ -495,9 +495,9 @@ const Employees = () => {
                     >
                       <td className="py-4">
                         <div className="flex items-center space-x-3">
-                          <div 
+                          <div
                             className="rounded-full text-white flex items-center justify-center flex-shrink-0"
-                            style={{ 
+                            style={{
                               backgroundColor: 'var(--color-primary)',
                               width: '40px',
                               height: '40px',
@@ -511,7 +511,7 @@ const Employees = () => {
                               lineHeight: '1'
                             }}
                           >
-                            <span 
+                            <span
                               className="text-sm"
                               style={{
                                 display: 'flex',
@@ -604,7 +604,7 @@ const Employees = () => {
                               </svg>
                             </button>
                           )}
-                          
+
                           {/* Show delete button for employees and other admins (but not for current user) */}
                           {employee.id !== user?.id && (
                             <button
@@ -612,11 +612,10 @@ const Employees = () => {
                                 e.stopPropagation();
                                 handleDelete(employee.id, employee.name, employee.role);
                               }}
-                              className={`btn btn-sm text-white border-0 ${
-                                employee.role === 'ADMIN' 
-                                  ? 'bg-purple-600 hover:bg-purple-700' 
+                              className={`btn btn-sm text-white border-0 ${employee.role === 'ADMIN'
+                                  ? 'bg-purple-600 hover:bg-purple-700'
                                   : 'bg-red-600 hover:bg-red-700'
-                              }`}
+                                }`}
                               title={employee.role === 'ADMIN' ? 'Delete Admin' : 'Delete Employee'}
                             >
                               {employee.role === 'ADMIN' ? 'Delete Admin' : 'Delete'}
@@ -636,15 +635,15 @@ const Employees = () => {
       {/* CSV Import Modal */}
       {isCsvImportModalOpen && (
         <div className="modal modal-open backdrop-blur-sm animate-fadeIn">
-          <div 
+          <div
             className="modal-box max-w-4xl border"
-            style={{ 
+            style={{
               backgroundColor: 'var(--color-bg-secondary)',
               borderColor: 'var(--color-border-default)'
             }}
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 
+              <h3
                 className="text-2xl font-bold"
                 style={{ color: 'var(--color-text-primary)' }}
               >
@@ -660,11 +659,11 @@ const Employees = () => {
             </div>
 
             <div className="mb-6">
-              <p 
+              <p
                 className="text-sm mb-4"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                Import multiple employees from a CSV file. The file should have columns: name, email, role (optional, defaults to EMPLOYEE). 
+                Import multiple employees from a CSV file. The file should have columns: name, email, role (optional, defaults to EMPLOYEE).
                 <br />
                 <span className="text-yellow-400">Note: Imported employees will have randomly generated passwords. They should reset their password on first login.</span>
               </p>
@@ -675,18 +674,18 @@ const Employees = () => {
               <div>
                 <fieldset className="fieldset">
                   <legend className="fieldset-legend">Pick a file</legend>
-                  <input 
-                    type="file" 
-                    className="file-input" 
+                  <input
+                    type="file"
+                    className="file-input"
                     accept=".csv"
                     onChange={handleCSVImport}
                   />
                   <label className="label">Max size 2MB</label>
                 </fieldset>
               </div>
-              
+
               <div className="flex items-center">
-                <div 
+                <div
                   className="text-sm"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
@@ -720,7 +719,7 @@ const Employees = () => {
               <button
                 onClick={downloadCSVTemplate}
                 className="btn btn-outline"
-                style={{ 
+                style={{
                   borderColor: 'var(--color-border-default)',
                   color: 'var(--color-text-secondary)'
                 }}
@@ -733,7 +732,7 @@ const Employees = () => {
               <button
                 onClick={() => setIsCsvImportModalOpen(false)}
                 className="btn border-0"
-                style={{ 
+                style={{
                   backgroundColor: 'var(--color-bg-tertiary)',
                   color: 'var(--color-text-primary)'
                 }}
@@ -812,7 +811,7 @@ const Employees = () => {
           variant="info"
         />
       )}
-      
+
     </div>
   );
 };
