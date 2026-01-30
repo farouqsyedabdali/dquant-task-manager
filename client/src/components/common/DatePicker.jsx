@@ -34,16 +34,8 @@ const DatePicker = ({
 
   useEffect(() => {
     setLocalValue(value || '');
-
-    // Auto-detect includeTime based on value
-    if (timeOptional && value) {
-      const date = new Date(value);
-      // If time is Not 23:59:00, then it has a specific time set
-      const isDateOnly = date.getHours() === 23 && date.getMinutes() === 59;
-      setIncludeTime(!isDateOnly);
-    } else {
-      setIncludeTime(false);
-    }
+    // Keep includeTime as false by default (unchecked)
+    // Don't auto-detect time from existing values
   }, [value, timeOptional]);
 
   useEffect(() => {
@@ -158,27 +150,21 @@ const DatePicker = ({
     setIncludeTime(checked);
 
     if (localValue) {
+      let newValue = localValue;
       const date = new Date(localValue);
 
       if (!checked) {
         // Set to 11:59 PM
         date.setHours(23, 59, 0, 0);
+        newValue = date.toISOString();
       } else {
-        // Set to current time if it was 11:59 PM (date only)
+        // Keep current time or set to current time if it was 11:59 PM
         if (date.getHours() === 23 && date.getMinutes() === 59) {
           const now = new Date();
           date.setHours(now.getHours(), now.getMinutes(), 0, 0);
+          newValue = date.toISOString();
         }
-        // Otherwise keep existing time
       }
-
-      // Use local format for consistency with handleDateChange
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const newValue = `${year}-${month}-${day}T${hours}:${minutes}`;
 
       setLocalValue(newValue);
       if (onChange) {

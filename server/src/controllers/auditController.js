@@ -342,37 +342,15 @@ const getTaskAuditLogs = async (req, res) => {
       }
     });
 
-    // For Comment entity, filter by metadata->>taskId
+    // Get comment audit logs related to this task
+    // Comments store the task title in their description
     const commentLogs = await prisma.auditLog.findMany({
       where: {
         entityType: 'Comment',
         companyId: companyId,
-        metadata: {
-          path: ['taskId'],
-          equals: parseInt(taskId)
-        }
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    // For TaskCoAssignee, filter by metadata->>taskId
-    const coAssigneeLogs = await prisma.auditLog.findMany({
-      where: {
-        entityType: 'TaskCoAssignee',
-        companyId: companyId,
-        metadata: {
-          path: ['taskId'],
-          equals: parseInt(taskId)
+        description: {
+          contains: task.title,
+          mode: 'insensitive'
         }
       },
       include: {
@@ -390,14 +368,39 @@ const getTaskAuditLogs = async (req, res) => {
       }
     });
 
-    // For TaskShare, filter by metadata->>taskId
+    // Get co-assignee logs
+    const coAssigneeLogs = await prisma.auditLog.findMany({
+      where: {
+        entityType: 'TaskCoAssignee',
+        companyId: companyId,
+        description: {
+          contains: task.title,
+          mode: 'insensitive'
+        }
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Get task share logs
     const shareLogs = await prisma.auditLog.findMany({
       where: {
         entityType: 'TaskShare',
         companyId: companyId,
-        metadata: {
-          path: ['taskId'],
-          equals: parseInt(taskId)
+        description: {
+          contains: task.title,
+          mode: 'insensitive'
         }
       },
       include: {

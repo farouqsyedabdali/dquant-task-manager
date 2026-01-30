@@ -219,7 +219,7 @@ const SearchableDropdown = ({
           >
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search employees..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-1 transition-colors duration-200"

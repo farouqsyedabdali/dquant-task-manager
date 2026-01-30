@@ -362,7 +362,7 @@ const Employees = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search by name, email, or role..."
+                  placeholder="Search employees by name, email, or role..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="input input-bordered w-full focus:border-indigo-500 focus:ring-indigo-500"
