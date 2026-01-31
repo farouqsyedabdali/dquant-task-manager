@@ -462,9 +462,9 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
                 <div className="flex justify-between">
                   <span style={{ color: 'var(--color-text-secondary)' }}>Priority:</span>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${formData.priority === 'LOW' ? 'bg-gray-500/20 text-gray-400' :
-                      formData.priority === 'MEDIUM' ? 'bg-blue-500/20 text-blue-400' :
-                        formData.priority === 'HIGH' ? 'bg-orange-500/20 text-orange-400' :
-                          'bg-red-500/20 text-red-400'
+                    formData.priority === 'MEDIUM' ? 'bg-blue-500/20 text-blue-400' :
+                      formData.priority === 'HIGH' ? 'bg-orange-500/20 text-orange-400' :
+                        'bg-red-500/20 text-red-400'
                     }`}>
                     {formData.priority}
                   </span>
@@ -493,8 +493,8 @@ const AddProjectTaskModal = ({ isOpen, onClose, onTaskAdded, projectId }) => {
                 <div className="flex justify-between">
                   <span style={{ color: 'var(--color-text-secondary)' }}>Type:</span>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${formData.assignmentType === 'internal'
-                      ? 'bg-indigo-500/20 text-indigo-400'
-                      : 'bg-emerald-500/20 text-emerald-400'
+                    ? 'bg-indigo-500/20 text-indigo-400'
+                    : 'bg-emerald-500/20 text-emerald-400'
                     }`}>
                     {formData.assignmentType === 'internal' ? 'Internal Employee' : 'External Contact'}
                   </span>

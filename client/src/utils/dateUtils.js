@@ -35,17 +35,17 @@ export function getTodayFormatted() {
  */
 export function convertLocalDateTimeToUTC(localDateTimeString) {
   if (!localDateTimeString) return null;
-  
+
   // If it's already a full ISO string with timezone, return as-is
   if (localDateTimeString.includes('Z') || localDateTimeString.match(/[+-]\d{2}:\d{2}$/)) {
     return localDateTimeString;
   }
-  
+
   // If it's date-only (YYYY-MM-DD), append T23:59:00 and convert
   if (!localDateTimeString.includes('T')) {
     localDateTimeString = `${localDateTimeString}T23:59:00`;
   }
-  
+
   // Parse as local time and convert to UTC ISO string
   // When you do new Date("2024-01-15T14:00"), JavaScript interprets it as LOCAL time
   // Then toISOString() converts it to UTC
@@ -53,6 +53,6 @@ export function convertLocalDateTimeToUTC(localDateTimeString) {
   if (isNaN(localDate.getTime())) {
     return null;
   }
-  
+
   return localDate.toISOString();
 }

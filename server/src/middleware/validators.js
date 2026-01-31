@@ -46,7 +46,7 @@ const validators = {
       .withMessage('Invalid email format')
       .isLength({ max: 255 })
       .withMessage('Email must be less than 255 characters');
-    
+
     if (optional) {
       return [validator.optional({ nullable: true, checkFalsy: true })];
     }
@@ -78,7 +78,7 @@ const validators = {
       .withMessage(`${field} must be between 1 and ${maxLength} characters`)
       .matches(/^[a-zA-Z0-9\s\-'\.]+$/)
       .withMessage(`${field} contains invalid characters`);
-    
+
     if (optional) {
       return [validator.optional({ nullable: true, checkFalsy: true })];
     }
@@ -92,7 +92,7 @@ const validators = {
       .escape()
       .isLength({ min: 1, max: maxLength })
       .withMessage(`${field} must be between 1 and ${maxLength} characters`);
-    
+
     if (optional) {
       return [validator.optional({ nullable: true, checkFalsy: true })];
     }
@@ -107,7 +107,7 @@ const validators = {
       .escape()
       .isLength({ max: maxLength })
       .withMessage(`${field} must be less than ${maxLength} characters`);
-    
+
     if (!optional) {
       return [validator.notEmpty().withMessage(`${field} is required`)];
     }
@@ -146,7 +146,7 @@ const validators = {
       .isISO8601()
       .withMessage(`${field} must be a valid ISO 8601 date`)
       .toDate();
-    
+
     if (!optional) {
       return [validator.notEmpty().withMessage(`${field} is required`)];
     }
@@ -167,7 +167,7 @@ const validators = {
       .isInt({ min })
       .withMessage(`${field} must be a positive integer`)
       .toInt();
-    
+
     if (optional) {
       return [validator.optional({ nullable: true, checkFalsy: true })];
     }
@@ -184,7 +184,7 @@ const validators = {
       .withMessage('Phone number must be less than 20 characters')
       .matches(/^[\d\s\-\+\(\)]+$/)
       .withMessage('Phone number contains invalid characters');
-    
+
     return [validator];
   },
 

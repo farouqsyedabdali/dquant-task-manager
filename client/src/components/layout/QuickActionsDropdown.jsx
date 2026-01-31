@@ -61,7 +61,7 @@ const QuickActionsDropdown = () => {
 
       // Call AI to extract task data
       const response = await aiAPI.extractTask(inputText);
-      
+
       let taskData = null;
       if (response.data.success && response.data.taskData) {
         taskData = response.data.taskData;
@@ -76,7 +76,7 @@ const QuickActionsDropdown = () => {
           assignee: null
         };
       }
-      
+
       // Store task data in localStorage
       const popupData = {
         type: 'create',
@@ -84,15 +84,15 @@ const QuickActionsDropdown = () => {
         originalText: inputText,
         timestamp: Date.now()
       };
-      
+
       const storageKey = `taskPopup_${Date.now()}`;
       localStorage.setItem(storageKey, JSON.stringify(popupData));
-      
+
       console.log('QuickActions: Stored data in localStorage with key:', storageKey);
-      
+
       // Navigate to dashboard with the storage key
       navigate(`/dashboard?popupData=${storageKey}`);
-      
+
     } catch (err) {
       console.error('Create task error:', err);
       setError(err.message || 'Failed to create task');
@@ -111,7 +111,7 @@ const QuickActionsDropdown = () => {
 
       // Call AI to identify task update
       const response = await aiAPI.identifyTaskUpdate(inputText);
-      
+
       let updateData = null;
       if (response.data.success && response.data.updateData) {
         updateData = response.data.updateData;
@@ -129,7 +129,7 @@ const QuickActionsDropdown = () => {
           originalText: inputText
         };
       }
-      
+
       // Store update data in localStorage
       const popupData = {
         type: 'update',
@@ -137,15 +137,15 @@ const QuickActionsDropdown = () => {
         originalText: inputText,
         timestamp: Date.now()
       };
-      
+
       const storageKey = `taskPopup_${Date.now()}`;
       localStorage.setItem(storageKey, JSON.stringify(popupData));
-      
+
       console.log('QuickActions: Stored update data in localStorage with key:', storageKey);
-      
+
       // Navigate to dashboard with the storage key
       navigate(`/dashboard?popupData=${storageKey}`);
-      
+
     } catch (err) {
       console.error('Update task error:', err);
       setError(err.message || 'Failed to update task');
@@ -168,7 +168,7 @@ const QuickActionsDropdown = () => {
 
       // Call AI to suggest project ideas
       const response = await aiAPI.suggestProjectIdeas(inputText);
-      
+
       if (response.data.success && response.data.ideas) {
         setProjectIdeas(response.data.ideas);
         console.log('QuickActions: AI suggested project ideas:', response.data.ideas);
@@ -202,7 +202,7 @@ const QuickActionsDropdown = () => {
       if (response.data.success && response.data.project) {
         const project = response.data.project;
         console.log('QuickActions: Project created successfully:', project);
-        
+
         // Navigate to projects page with project ID and success message
         navigate('/projects', {
           state: {
@@ -238,7 +238,7 @@ const QuickActionsDropdown = () => {
       const identifyRes = await aiAPI.identifyTaskUpdate(inputText);
       let updateData = null;
       let subtaskData = null;
-      
+
       if (identifyRes.data.success && identifyRes.data.updateData) {
         updateData = identifyRes.data.updateData;
         console.log('QuickActions: AI successfully identified parent task for subtask:', updateData);
@@ -255,7 +255,7 @@ const QuickActionsDropdown = () => {
           originalText: inputText
         };
       }
-      
+
       // 2. Use AI to interpret the subtask details
       try {
         const extractRes = await aiAPI.extractTask(inputText);
@@ -286,15 +286,15 @@ const QuickActionsDropdown = () => {
         originalText: inputText,
         timestamp: Date.now()
       };
-      
+
       const storageKey = `taskPopup_${Date.now()}`;
       localStorage.setItem(storageKey, JSON.stringify(popupData));
-      
+
       console.log('QuickActions: Stored subtask data in localStorage with key:', storageKey);
-      
+
       // Navigate to dashboard with the storage key
       navigate(`/dashboard?popupData=${storageKey}`);
-      
+
     } catch (err) {
       console.error('Add subtask error:', err);
       setError(err.message || 'Failed to add subtask');
@@ -328,11 +328,11 @@ const QuickActionsDropdown = () => {
           </>
         ) : (
           <>
-            <img 
-              src={tialzLogo} 
-              alt="TIALZ" 
+            <img
+              src={tialzLogo}
+              alt="TIALZ"
               className="object-contain"
-              style={{ 
+              style={{
                 height: '24px',
                 width: '24px'
               }}
@@ -368,7 +368,7 @@ const QuickActionsDropdown = () => {
               <FaPlus className="w-4 h-4 text-green-500" />
               <div>
                 <div className="font-medium">Create Task</div>
-                <div 
+                <div
                   className="text-xs transition-colors duration-200"
                   style={{ color: 'var(--color-text-tertiary)' }}
                 >
@@ -392,7 +392,7 @@ const QuickActionsDropdown = () => {
               <FaEdit className="w-4 h-4 text-blue-500" />
               <div>
                 <div className="font-medium">Add Update</div>
-                <div 
+                <div
                   className="text-xs transition-colors duration-200"
                   style={{ color: 'var(--color-text-tertiary)' }}
                 >
@@ -416,7 +416,7 @@ const QuickActionsDropdown = () => {
               <FaLayerGroup className="w-4 h-4 text-purple-500" />
               <div>
                 <div className="font-medium">Add Subtask</div>
-                <div 
+                <div
                   className="text-xs transition-colors duration-200"
                   style={{ color: 'var(--color-text-tertiary)' }}
                 >
@@ -440,7 +440,7 @@ const QuickActionsDropdown = () => {
               <FaProjectDiagram className="w-4 h-4 text-orange-500" />
               <div>
                 <div className="font-medium">Create Project</div>
-                <div 
+                <div
                   className="text-xs transition-colors duration-200"
                   style={{ color: 'var(--color-text-tertiary)' }}
                 >
