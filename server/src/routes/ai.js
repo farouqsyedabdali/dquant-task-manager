@@ -92,7 +92,7 @@ ${userTasks.map((task, idx) => `#${idx + 1}: ${task.title} (${task.status}, ${ta
 
       // Stream from OpenRouter API with Gemma 3 27B
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'google/gemma-3-12b-it:free',
+        model: 'arcee-ai/trinity-large-preview:free',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
@@ -390,7 +390,7 @@ Output: {"title": "Update website homepage", "description": "Update the website 
 
       // Call OpenRouter for task extraction
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'google/gemma-3-12b-it:free',
+        model: 'arcee-ai/trinity-large-preview:free',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Extract task information from this text: "${text}"` }
@@ -506,6 +506,27 @@ Output: {"title": "Update website homepage", "description": "Update the website 
 
     } catch (err) {
       console.error('Task extraction error:', err);
+
+      // Try to read the actual error response body from the stream
+      if (err.response?.data && typeof err.response.data.read === 'function') {
+        try {
+          let errorBody = '';
+          err.response.data.on('data', chunk => {
+            errorBody += chunk.toString();
+          });
+          err.response.data.on('end', () => {
+            console.error('OpenRouter actual error message:', errorBody);
+          });
+        } catch (readError) {
+          console.error('Could not read error stream:', readError);
+        }
+      }
+
+      console.error('OpenRouter error details:', {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        headers: err.response?.headers
+      });
       return res.status(500).json({ error: 'Failed to extract task data' });
     }
   });
@@ -601,7 +622,7 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
 
       // Call OpenRouter for task update identification
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'google/gemma-3-12b-it:free',
+        model: 'arcee-ai/trinity-large-preview:free',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Analyze this text for task updates: "${text}"` }
@@ -810,7 +831,7 @@ STRICT RULES:
 
       // Context-aware API call: analyze text context and generate appropriate suggestions
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'google/gemma-3-12b-it:free',
+        model: 'arcee-ai/trinity-large-preview:free',
         messages: [
           { role: 'system', content: systemPrompt },
           {
@@ -1055,7 +1076,7 @@ Guidelines:
 
       // Optimized API call
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'google/gemma-3-12b-it:free',
+        model: 'arcee-ai/trinity-large-preview:free',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Create project "${ideaName}" from: "${text.substring(0, 500)}"` }
