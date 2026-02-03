@@ -24,6 +24,7 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Contacts from './pages/Contacts';
 import Projects from './pages/Projects';
 import ColorPaletteTester from './pages/ColorPaletteTester';
+import TestStaging from './pages/TestStaging';
 import GoogleCallback from './pages/GoogleCallback';
 import AIModal from './components/tasks/AIModal';
 import ToastContainer from './components/common/ToastContainer';
@@ -91,6 +92,9 @@ function AppContent() {
 
             {/* Color Palette Tester (no auth required) */}
             <Route path="/test" element={<ColorPaletteTester />} />
+
+            {/* Staging Test Page (no auth required) */}
+            <Route path="/test-staging" element={<TestStaging />} />
 
             {/* Protected Routes */}
             <Route
