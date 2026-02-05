@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { projectsAPI, templatesAPI } from '../../services/api';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { projectsAPI, templatesAPI, aiAPI } from '../../services/api';
 import { formatDateForInput } from '../../utils/dateUtils';
 import IconButton from '../common/IconButton';
-import AIModal from '../tasks/AIModal';
-import { FaArrowLeft, FaTimes, FaCheck } from 'react-icons/fa';
+import ProjectIdeaSelectionModal from './ProjectIdeaSelectionModal';
+import { FaArrowLeft, FaTimes, FaCheck, FaRobot } from 'react-icons/fa';
+import { useToastContext } from '../../context/ToastContext';
 
 const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   const [step, setStep] = useState(1); // 1: choose template or scratch, 2: project details
@@ -40,7 +42,14 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
     dueDate: ''
   });
   const [isTemplateInfoExpanded, setIsTemplateInfoExpanded] = useState(false);
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isProjectIdeasModalOpen, setIsProjectIdeasModalOpen] = useState(false);
+  const [projectIdeas, setProjectIdeas] = useState([]);
+  const [isLoadingIdeas, setIsLoadingIdeas] = useState(false);
+  const [clipboardText, setClipboardText] = useState('');
+  
+  const navigate = useNavigate();
+  const location = useLocation();
+  const toast = useToastContext();
 
   const colorOptions = [
     '#6366f1', // Indigo
@@ -276,6 +285,85 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
     }
   };
 
+  const handleAIGenerateProject = async () => {
+    try {
+      // 1. Read clipboard
+      const text = await navigator.clipboard.readText();
+      
+      if (!text || text.trim().length === 0) {
+        toast.warning('📋 Please copy some text first describing your project');
+        return;
+      }
+      
+      setClipboardText(text);
+      setIsLoadingIdeas(true);
+      setIsProjectIdeasModalOpen(true);
+
+      // 2. Call AI to suggest project ideas
+      const response = await aiAPI.suggestProjectIdeas(text);
+
+      if (response.data.success && response.data.ideas) {
+        setProjectIdeas(response.data.ideas);
+      } else {
+        throw new Error('Failed to get project ideas');
+      }
+    } catch (err) {
+      console.error('AI Generate project error:', err);
+      if (err.name === 'NotAllowedError') {
+        toast.error('📋 Clipboard access denied. Please paste text manually.');
+      } else {
+        toast.error('❌ Failed to generate ideas: ' + (err.response?.data?.error || err.message));
+      }
+      setIsProjectIdeasModalOpen(false);
+    } finally {
+      setIsLoadingIdeas(false);
+    }
+  };
+
+  const handleProjectIdeaSelect = async (selectedIdea) => {
+    setIsProjectIdeasModalOpen(false);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Call AI to create project from idea
+      const response = await aiAPI.createProjectFromIdea(
+        clipboardText,
+        selectedIdea,
+        null, // projectName - let AI generate it
+        null  // dueDate - let AI extract it
+      );
+
+      if (response.data.success && response.data.project) {
+        const project = response.data.project;
+
+        toast.success(`🎉 Project "${project.name}" created with ${project.tasks?.length || 0} tasks!`);
+        
+        // Navigate to projects page with project ID
+        navigate('/projects', {
+          state: {
+            openProjectId: project.id,
+            successMessage: `Project "${project.name}" created successfully with ${project.tasks?.length || 0} tasks!`,
+            timestamp: Date.now()
+          },
+          replace: false
+        });
+        
+        onClose();
+      } else {
+        throw new Error('Failed to create project');
+      }
+    } catch (err) {
+      console.error('Create project from idea error:', err);
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to create project';
+      setError(errorMessage);
+      toast.error('❌ ' + errorMessage);
+      setIsProjectIdeasModalOpen(true); // Reopen modal so user can try again
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleClose = () => {
     setStep(1);
     setSelectedTemplate(null);
@@ -326,10 +414,14 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
           <div className="flex items-center gap-3">
             {step === 1 && (
               <IconButton
-                label="AI Help"
+                icon={<FaRobot />}
+                label="AI Generate Project"
                 variant="primary"
                 size="sm"
-                onClick={() => setIsAIModalOpen(true)}
+                onClick={handleAIGenerateProject}
+                disabled={isLoadingIdeas}
+                loading={isLoadingIdeas}
+                title="Generate project from clipboard description"
               />
             )}
             <button 
@@ -970,10 +1062,13 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                   size="sm"
                 />
                 <IconButton
-                  label="AI Help"
+                  icon={<FaRobot />}
+                  label="AI Generate Project"
                   variant="primary"
-                  onClick={() => setIsAIModalOpen(true)}
-                  disabled={isLoading}
+                  onClick={handleAIGenerateProject}
+                  disabled={isLoading || isLoadingIdeas}
+                  loading={isLoadingIdeas}
+                  title="Generate project from clipboard description"
                 />
               </div>
               <div className="space-x-2">
@@ -1000,14 +1095,18 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
         )}
       </div>
 
-      {/* AI Modal */}
-      {isAIModalOpen && (
-        <AIModal 
-          isOpen={isAIModalOpen} 
-          onClose={() => setIsAIModalOpen(false)}
-          onAction={() => onClose()}
-        />
-      )}
+      {/* Project Ideas Selection Modal */}
+      <ProjectIdeaSelectionModal
+        isOpen={isProjectIdeasModalOpen}
+        onClose={() => {
+          setIsProjectIdeasModalOpen(false);
+          setProjectIdeas([]);
+          setClipboardText('');
+        }}
+        ideas={projectIdeas}
+        onSelect={handleProjectIdeaSelect}
+        isLoading={isLoadingIdeas}
+      />
     </div>
   );
 };

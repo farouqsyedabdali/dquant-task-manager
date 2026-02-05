@@ -10,9 +10,10 @@ import SearchableDropdown from '../common/SearchableDropdown';
 import AddContactModal from '../common/AddContactModal';
 import IconButton from '../common/IconButton';
 import DatePicker from '../common/DatePicker';
-import AIModal from './AIModal';
 import AIWarning from '../common/AIWarning';
-import { FaTimes, FaPlus, FaSave } from 'react-icons/fa';
+import { FaTimes, FaPlus, FaSave, FaRobot } from 'react-icons/fa';
+import { aiAPI, projectsAPI } from '../../services/api';
+import { useToastContext } from '../../context/ToastContext';
 
 const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null }) => {
   const [formData, setFormData] = useState({
@@ -29,12 +30,14 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isPreFilling, setIsPreFilling] = useState(false);
+  const [showAIWarning, setShowAIWarning] = useState(false);
 
   const { createTask, isLoading } = useTaskStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
   const { user } = useAuthStore();
   const { fetchContacts } = useContactStore();
+  const toast = useToastContext();
 
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
@@ -242,31 +245,57 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
 
 
 
-    // Convert local datetime to UTC ISO string for server
-    const createData = {
-      ...formData,
-      assigneeId,
-      externalContactId,
-      dueDate: convertLocalDateTimeToUTC(formData.dueDate) // Convert to UTC for server
-    };
-
-    // If projectId is provided, mark this task as a draft for the project
+    // If projectId is provided, use projectsAPI.addTask instead of createTask
     if (projectId) {
-      createData.projectId = projectId;
-      createData.isDraft = true;
-    }
-
-    const result = await createTask(createData);
-    if (result.success) {
-      setFormData({
-        title: '',
-        description: '',
-        priority: 'MEDIUM',
-        assignee: !isPersonalAccount && user ? `user_${user.id.toString()}` : '',
-        dueDate: getDefaultDueDate()
-      });
-      setErrors({});
-      onClose();
+      // Prepare data for project task creation (API expects specific fields)
+      const projectTaskData = {
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
+        assigneeId,
+        externalContactId,
+        dueDate: convertLocalDateTimeToUTC(formData.dueDate)
+      };
+      
+      try {
+        await projectsAPI.addTask(projectId, projectTaskData);
+        setFormData({
+          title: '',
+          description: '',
+          priority: 'MEDIUM',
+          assignee: !isPersonalAccount && user ? `user_${user.id.toString()}` : '',
+          dueDate: getDefaultDueDate()
+        });
+        setErrors({});
+        toast.success('Task added to project as draft!');
+        onClose();
+      } catch (err) {
+        console.error('Error adding task to project:', err);
+        toast.error(err.response?.data?.error || 'Failed to add task to project');
+      }
+    } else {
+      // Regular task creation (not in a project)
+      const createData = {
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
+        assigneeId,
+        externalContactId,
+        dueDate: convertLocalDateTimeToUTC(formData.dueDate)
+      };
+      
+      const result = await createTask(createData);
+      if (result.success) {
+        setFormData({
+          title: '',
+          description: '',
+          priority: 'MEDIUM',
+          assignee: !isPersonalAccount && user ? `user_${user.id.toString()}` : '',
+          dueDate: getDefaultDueDate()
+        });
+        setErrors({});
+        onClose();
+      }
     }
   };
 
@@ -282,6 +311,64 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
     setFormData(prev => ({ ...prev, assignee: `contact_${newContact.id}` }));
     setIsAddContactModalOpen(false);
     setPendingEmail('');
+  };
+
+  const handleAIPreFill = async () => {
+    setIsPreFilling(true);
+    setErrors({});
+    
+    try {
+      // 1. Read clipboard
+      const clipboardText = await navigator.clipboard.readText();
+      
+      if (!clipboardText || clipboardText.trim().length === 0) {
+        toast.warning('📋 Please copy some text first, then click Smart Pre-fill');
+        return;
+      }
+      
+      // 2. Call AI extraction API
+      const response = await aiAPI.extractTask(clipboardText);
+      
+      // 3. Pre-fill form
+      if (response.data.success && response.data.taskData) {
+        const taskData = response.data.taskData;
+        
+        // Find matching assignee if AI provided one
+        let assigneeValue = formData.assignee;
+        if (taskData.assignee && allAssignees.length > 0) {
+          const assigneeName = taskData.assignee.toLowerCase();
+          const matchingAssignee = allAssignees.find(a => 
+            a.name.toLowerCase().includes(assigneeName) || 
+            assigneeName.includes(a.name.toLowerCase())
+          );
+          if (matchingAssignee) {
+            assigneeValue = matchingAssignee.id;
+          }
+        }
+        
+        setFormData({
+          title: taskData.title || formData.title,
+          description: taskData.description || formData.description,
+          priority: taskData.priority || formData.priority,
+          assignee: assigneeValue,
+          dueDate: taskData.dueDate || formData.dueDate
+        });
+        
+        toast.success('✨ Task details pre-filled from clipboard!');
+        setShowAIWarning(true);
+      } else {
+        toast.warning('⚠️ Could not extract task details. Please fill manually.');
+      }
+    } catch (err) {
+      console.error('AI Pre-fill error:', err);
+      if (err.name === 'NotAllowedError') {
+        toast.error('📋 Clipboard access denied. Please paste the text manually.');
+      } else {
+        toast.error('❌ Failed to pre-fill: ' + (err.response?.data?.error || err.message));
+      }
+    } finally {
+      setIsPreFilling(false);
+    }
   };
 
   const handleClose = () => {
@@ -316,9 +403,6 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
             >
               Create New Task
             </h3>
-            {initialData && (
-              <AIWarning className="mt-2" />
-            )}
           </div>
           <IconButton
             icon={<FaTimes />}
@@ -661,13 +745,21 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
             </div>
           )}
 
+          {/* AI Warning Banner */}
+          {showAIWarning && (
+            <AIWarning className="mb-4" />
+          )}
+
           {/* Submit Buttons */}
           <div className="flex justify-between items-center pt-4">
             <IconButton
-              label="AI Help"
+              icon={<FaRobot />}
+              label="Smart Pre-fill"
               variant="primary"
-              onClick={() => setIsAIModalOpen(true)}
-              disabled={isLoading}
+              onClick={handleAIPreFill}
+              disabled={isLoading || isPreFilling}
+              loading={isPreFilling}
+              title="Extract task details from clipboard"
             />
             <div className="flex space-x-3">
               <IconButton
@@ -701,15 +793,6 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
         initialEmail={pendingEmail}
         message="This person is not in your contact list. Please add them as a contact."
       />
-
-      {/* AI Modal */}
-      {isAIModalOpen && (
-        <AIModal
-          isOpen={isAIModalOpen}
-          onClose={() => setIsAIModalOpen(false)}
-          onAction={() => onClose()}
-        />
-      )}
     </div>
   );
 };
