@@ -5,6 +5,7 @@ import useContactStore from '../../stores/contactStore';
 import { useToastContext } from '../../context/ToastContext';
 
 import TaskModal from '../tasks/TaskModal';
+import AddTaskModal from '../tasks/AddTaskModal';
 import SaveAsTemplateModal from './SaveAsTemplateModal';
 import EditProjectModal from './EditProjectModal';
 import SearchableDropdown from '../common/SearchableDropdown';
@@ -43,6 +44,8 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const [pendingEmail, setPendingEmail] = useState('');
   const [pendingTaskId, setPendingTaskId] = useState(null); // Track which task the contact is being added for
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
+  const [pendingDeleteTaskId, setPendingDeleteTaskId] = useState(null);
+  const [isDeleteTaskConfirmOpen, setIsDeleteTaskConfirmOpen] = useState(false);
 
   const { user } = useAuthStore();
   const { fetchContacts: fetchContactsFromStore } = useContactStore();
@@ -1377,10 +1380,13 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
       {/* Add Task Modal */}
       {isAddingTask && (
-        <AddProjectTaskModal
+        <AddTaskModal
           isOpen={isAddingTask}
-          onClose={() => setIsAddingTask(false)}
-          onTaskAdded={handleAddTask}
+          onClose={() => {
+            setIsAddingTask(false);
+            // Refresh project to show newly added task
+            fetchProject();
+          }}
           projectId={projectId}
         />
       )}
@@ -1565,6 +1571,45 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
           onContactAdded={handleContactAdded}
           initialEmail={pendingEmail}
         />
+      )}
+
+      {/* Delete Task Confirmation Modal */}
+      {isDeleteTaskConfirmOpen && (
+        <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 55 }}>
+          <div
+            className="modal-box border"
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)'
+            }}
+          >
+            <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+              Confirm Delete
+            </h3>
+            <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+              Are you sure you want to delete this task? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <IconButton
+                icon={<FaTimes />}
+                label="Cancel"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsDeleteTaskConfirmOpen(false);
+                  setPendingDeleteTaskId(null);
+                }}
+              />
+              <IconButton
+                icon={<FaTrash />}
+                label="Delete Task"
+                variant="danger"
+                size="sm"
+                onClick={confirmDeleteTask}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Bulk Delete Confirmation Modal */}
