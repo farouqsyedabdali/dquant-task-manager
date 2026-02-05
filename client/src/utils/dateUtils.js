@@ -41,9 +41,10 @@ export function convertLocalDateTimeToUTC(localDateTimeString) {
     return localDateTimeString;
   }
 
-  // If it's date-only (YYYY-MM-DD), append T23:59:00 and convert
+  // If it's date-only (YYYY-MM-DD), append T00:00:00 (start of day) and convert
+  // This represents the beginning of the selected day in local time
   if (!localDateTimeString.includes('T')) {
-    localDateTimeString = `${localDateTimeString}T23:59:00`;
+    localDateTimeString = `${localDateTimeString}T00:00:00`;
   }
 
   // Parse as local time and convert to UTC ISO string

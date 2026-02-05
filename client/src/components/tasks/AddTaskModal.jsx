@@ -14,7 +14,7 @@ import AIModal from './AIModal';
 import AIWarning from '../common/AIWarning';
 import { FaTimes, FaPlus, FaSave } from 'react-icons/fa';
 
-const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
+const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -240,6 +240,8 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
       assigneeId = user.id;
     }
 
+
+
     // Convert local datetime to UTC ISO string for server
     const createData = {
       ...formData,
@@ -248,6 +250,11 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null }) => {
       dueDate: convertLocalDateTimeToUTC(formData.dueDate) // Convert to UTC for server
     };
 
+    // If projectId is provided, mark this task as a draft for the project
+    if (projectId) {
+      createData.projectId = projectId;
+      createData.isDraft = true;
+    }
 
     const result = await createTask(createData);
     if (result.success) {

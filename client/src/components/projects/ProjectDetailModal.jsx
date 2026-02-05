@@ -3,7 +3,7 @@ import { projectsAPI, usersAPI, tasksAPI, contactsAPI, templatesAPI } from '../.
 import useAuthStore from '../../context/authStore';
 import useContactStore from '../../stores/contactStore';
 import { useToastContext } from '../../context/ToastContext';
-import AddProjectTaskModal from './AddProjectTaskModal';
+
 import TaskModal from '../tasks/TaskModal';
 import SaveAsTemplateModal from './SaveAsTemplateModal';
 import EditProjectModal from './EditProjectModal';
@@ -1024,8 +1024,8 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
               </div>
 
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${project.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' :
-                  project.status === 'COMPLETED' ? 'bg-blue-500/20 text-blue-400' :
-                    'bg-gray-500/20 text-gray-400'
+                project.status === 'COMPLETED' ? 'bg-blue-500/20 text-blue-400' :
+                  'bg-gray-500/20 text-gray-400'
                 }`}>
                 {project.status}
               </span>

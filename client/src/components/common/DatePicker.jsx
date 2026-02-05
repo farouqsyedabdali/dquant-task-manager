@@ -128,11 +128,8 @@ const DatePicker = ({
     const newValue = e.target.value;
     let finalValue = newValue;
 
-    // If timeOptional and includeTime is false, set time to 11:59 PM
-    if (timeOptional && !includeTime && newValue) {
-      // Convert date-only to datetime with 11:59 PM
-      finalValue = `${newValue}T23:59`;
-    }
+    // No automatic time appending - let the value be as-is
+    // If user wants time, they'll enable it with the checkbox
 
     setLocalValue(finalValue);
     if (onChange) {
@@ -154,16 +151,17 @@ const DatePicker = ({
       const date = new Date(localValue);
 
       if (!checked) {
-        // Set to 11:59 PM
-        date.setHours(23, 59, 0, 0);
-        newValue = date.toISOString();
+        // When disabling time, just use the date portion
+        // Don't force any specific time
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        newValue = `${year}-${month}-${day}`;
       } else {
-        // Keep current time or set to current time if it was 11:59 PM
-        if (date.getHours() === 23 && date.getMinutes() === 59) {
-          const now = new Date();
-          date.setHours(now.getHours(), now.getMinutes(), 0, 0);
-          newValue = date.toISOString();
-        }
+        // When enabling time, set to current time
+        const now = new Date();
+        date.setHours(now.getHours(), now.getMinutes(), 0, 0);
+        newValue = date.toISOString();
       }
 
       setLocalValue(newValue);
