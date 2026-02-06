@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { authAPI } from '../../services/api';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 export default function ForgotPasswordModal({ isOpen, onClose }) {
   const [step, setStep] = useState(1); // 1: email, 2: code, 3: new password
@@ -10,6 +11,8 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSendCode = async (e) => {
     e.preventDefault();
@@ -105,6 +108,8 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
     setCode('');
     setNewPassword('');
     setConfirmPassword('');
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
   };
 
   if (!isOpen) return null;
@@ -364,27 +369,41 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
               >
                 New Password
               </label>
-              <input
-                id="forgot-password-new"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="input input-bordered w-full transition-colors duration-200"
-                style={{
-                  backgroundColor: 'var(--color-bg-tertiary)',
-                  borderColor: 'var(--color-border-default)',
-                  color: 'var(--color-text-primary)',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-primary)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                }}
-                placeholder="Enter new password (min 6 characters)"
-                disabled={isLoading}
-                required
-              />
+              <div className="relative">
+                <input
+                  id="forgot-password-new"
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="input input-bordered w-full pr-10 transition-colors duration-200"
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-primary)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                  }}
+                  placeholder="Enter new password (min 6 characters)"
+                  disabled={isLoading}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-text-primary)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-tertiary)'; }}
+                  tabIndex={-1}
+                  aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showNewPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+                </button>
+              </div>
             </div>
 
             <div>
@@ -394,27 +413,41 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
               >
                 Confirm New Password
               </label>
-              <input
-                id="forgot-password-confirm"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="input input-bordered w-full transition-colors duration-200"
-                style={{
-                  backgroundColor: 'var(--color-bg-tertiary)',
-                  borderColor: 'var(--color-border-default)',
-                  color: 'var(--color-text-primary)',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-primary)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                }}
-                placeholder="Confirm new password"
-                disabled={isLoading}
-                required
-              />
+              <div className="relative">
+                <input
+                  id="forgot-password-confirm"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="input input-bordered w-full pr-10 transition-colors duration-200"
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-primary)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                  }}
+                  placeholder="Confirm new password"
+                  disabled={isLoading}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-text-primary)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-tertiary)'; }}
+                  tabIndex={-1}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+                </button>
+              </div>
             </div>
 
             {/* Error/Success Messages */}

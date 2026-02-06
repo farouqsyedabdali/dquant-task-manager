@@ -1216,10 +1216,8 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       <div
                         className="col-span-4"
                         onClick={(e) => {
-                          // Stop propagation if clicking on dropdown
-                          if (e.target.closest('.searchable-dropdown-container')) {
-                            e.stopPropagation();
-                          }
+                          // Stop propagation to prevent task modal from opening
+                          e.stopPropagation();
                         }}
                       >
                         {/* Show SearchableDropdown for all tasks (draft or sent) */}
