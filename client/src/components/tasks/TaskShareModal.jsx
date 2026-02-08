@@ -222,7 +222,10 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
         {/* Backdrop */}
         <div 
           className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200" 
-          onClick={handleClose}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent event from bubbling to parent TaskModal
+            handleClose();
+          }}
         />
         
         {/* Modal */}

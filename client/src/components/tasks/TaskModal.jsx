@@ -2181,7 +2181,18 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
         {/* Task Summary Modal */}
         {isSummaryModalOpen && summaryData && (
-          <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 60 }}>
+          <div 
+            className="modal modal-open backdrop-blur-sm" 
+            style={{ zIndex: 60 }}
+            onClick={(e) => {
+              // Only close if clicking directly on the backdrop
+              if (e.target === e.currentTarget) {
+                e.stopPropagation(); // Prevent event from bubbling to parent TaskModal
+                setIsSummaryModalOpen(false);
+                setSummaryData(null);
+              }
+            }}
+          >
             <div
               className="modal-box max-w-6xl max-h-[95vh] overflow-y-auto"
               style={{

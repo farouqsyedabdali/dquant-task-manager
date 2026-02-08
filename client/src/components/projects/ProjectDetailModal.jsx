@@ -113,11 +113,14 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
             newTimeSettings[task.id] = prev[task.id];
           } else if (task.dueDate) {
             // Second priority: for NEW tasks with dates, detect from the date
+            // A time is NOT set if hours and minutes are 23:59 (end of day marker)
             const date = new Date(task.dueDate);
             const isDateOnly = date.getHours() === 23 && date.getMinutes() === 59;
-            newTimeSettings[task.id] = !isDateOnly;
+            newTimeSettings[task.id] = !isDateOnly; // Time enabled if NOT date-only
+          } else {
+            // If no date yet, default to false (time NOT enabled)
+            newTimeSettings[task.id] = false;
           }
-          // If no previous setting and no date, leave undefined (unchecked)
         });
         return newTimeSettings;
       });
@@ -555,14 +558,33 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
 
   const handleQuickDueDateChange = async (taskId, newDueDate) => {
     try {
-      // If time is not enabled for this task, append T23:59
-      const includeTime = taskTimeSettings[taskId] || false;
+      if (!newDueDate) {
+        // Clear the date
+        await tasksAPI.update(taskId, { dueDate: null });
+        setProject(prev => ({
+          ...prev,
+          tasks: prev.tasks.map(task =>
+            task.id === taskId ? { ...task, dueDate: null } : task
+          )
+        }));
+        return;
+      }
+
+      // Check if time is enabled for this task (default to false if not set)
+      const includeTime = taskTimeSettings[taskId] === true;
       let finalDate = newDueDate;
 
-      if (newDueDate && !includeTime) {
-        // Set to 11:59 PM for date-only
-        finalDate = `${newDueDate}T23:59`;
+      if (!includeTime) {
+        // If time is NOT enabled, set to end of day (23:59) for date-only
+        // Check if the input already has a time component
+        if (!newDueDate.includes('T')) {
+          finalDate = `${newDueDate}T23:59`;
+        } else {
+          // If time was in the input (shouldn't happen with date input), force end of day
+          finalDate = newDueDate.split('T')[0] + 'T23:59';
+        }
       }
+      // If time IS enabled, keep the datetime value as-is
 
       // Convert local datetime to UTC ISO string for server
       const utcDate = convertLocalDateTimeToUTC(finalDate);
@@ -594,11 +616,11 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
       let newValue;
 
       if (!checked) {
-        // Set to 11:59 PM
+        // Time disabled: Set to end of day (11:59 PM)
         date.setHours(23, 59, 0, 0);
         newValue = date.toISOString();
       } else {
-        // Keep current time or set to current time if it was 11:59 PM
+        // Time enabled: Keep current time or set to current time if it was end of day
         if (date.getHours() === 23 && date.getMinutes() === 59) {
           const now = new Date();
           date.setHours(now.getHours(), now.getMinutes(), 0, 0);
@@ -618,7 +640,15 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
         }));
       } catch (err) {
         console.error('Error updating due date:', err);
-        setError(err.response?.data?.error || 'Failed to update due date');
+        // Revert checkbox state on error
+        setTaskTimeSettings(prev => ({ ...prev, [taskId]: !checked }));
+        
+        // Check if it's an auth error
+        if (err.response?.status === 401) {
+          setError('Session expired. Please log in again.');
+        } else {
+          setError(err.response?.data?.error || 'Failed to update due date');
+        }
       }
     }
     // If task doesn't have a date yet, just keep the checkbox state in local state
