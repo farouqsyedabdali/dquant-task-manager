@@ -481,7 +481,7 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
               </button>
             )}
             
-            {!isPersonalAccount && (
+            {task.assigner?.name && (
               <span 
                 className="text-xs transition-colors duration-200 ml-2"
                 style={{ color: 'var(--color-text-tertiary)' }}
