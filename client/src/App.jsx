@@ -25,6 +25,7 @@ import Contacts from './pages/Contacts';
 import Projects from './pages/Projects';
 import ColorPaletteTester from './pages/ColorPaletteTester';
 import GoogleCallback from './pages/GoogleCallback';
+import LegalDocumentPage from './pages/LegalDocumentPage';
 import AIModal from './components/tasks/AIModal';
 import ToastContainer from './components/common/ToastContainer';
 import { ToastProvider, useToastContext } from './context/ToastContext';
@@ -85,6 +86,10 @@ function AppContent() {
             <Route path="/task-invitation/:token" element={<TaskInvitation />} />
             <Route path="/verify-email" element={<EmailVerification />} />
             <Route path="/complete-employee-setup" element={<EmployeeSetup />} />
+
+            {/* Legal Document Routes (public, standalone pages) */}
+            <Route path="/privacy-policy" element={<LegalDocumentPage documentType="privacy" />} />
+            <Route path="/terms-of-service" element={<LegalDocumentPage documentType="terms" />} />
 
             {/* Popup Route (no header/layout) */}
             <Route path="/popup" element={<TaskPopup />} />
