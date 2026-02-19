@@ -24,6 +24,8 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Contacts from './pages/Contacts';
 import Projects from './pages/Projects';
 import ColorPaletteTester from './pages/ColorPaletteTester';
+import TestStaging from './pages/TestStaging';
+import EmailMockup from './pages/EmailMockup';
 import GoogleCallback from './pages/GoogleCallback';
 import LegalDocumentPage from './pages/LegalDocumentPage';
 import AIModal from './components/tasks/AIModal';
