@@ -96,8 +96,6 @@ function AppContent() {
             {/* Staging Test Page (no auth required) */}
             <Route path="/test-staging" element={<TestStaging />} />
 
-            {/* Email Mockup Gallery (no auth required) */}
-            <Route path="/email-mockup" element={<EmailMockup />} />
             {/* Protected Routes */}
             <Route
               path="/dashboard"

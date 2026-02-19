@@ -49,6 +49,13 @@ router.delete('/:id/tasks/:taskId',
   projectController.removeTaskFromProject
 );
 
+// Duplicate tasks
+router.post('/:id/tasks/duplicate',
+  validators.id('id'),
+  handleValidationErrors,
+  projectController.duplicateTasks
+);
+
 // Send draft tasks
 router.post('/:id/tasks/:taskId/send',
   validators.id('id'),

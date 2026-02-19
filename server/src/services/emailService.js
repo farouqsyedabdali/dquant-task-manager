@@ -78,12 +78,15 @@ const emailService = {
       isRegisteredUser
     });
 
+    const text = `You've received a task from ${senderName}\n\n${recipientName ? `Hi ${recipientName},` : 'Hello,'}\n\n${senderName} has sent you a task: "${task.title}"\nPriority: ${task.priority}\nDue: ${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}\n${message ? `\nMessage: "${message}"\n` : ''}\nView and respond: ${invitationLink}\n\nThis invitation expires in 7 days.\n\n© ${new Date().getFullYear()} Tialz. All rights reserved.`;
+
     try {
       const result = await resend.emails.send({
         from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
         to: recipientEmail,
         subject: `You've received a task from ${senderName}`,
         html,
+        text,
       });
 
       console.log('Email sent successfully:', result);
@@ -99,35 +102,10 @@ const emailService = {
    * @param {Object} params - Email parameters
    */
   async sendInvitationAcceptedNotification({ senderEmail, senderName, recipientName, taskTitle }) {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .badge { display: inline-block; background: #10b981; color: white; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1 style="margin: 0;">Task Invitation Accepted! ✅</h1>
-            </div>
-            <div class="content">
-              <p>Hi ${senderName},</p>
-              <p><strong>${recipientName}</strong> has accepted your task invitation:</p>
-              <p style="font-size: 18px; font-weight: bold; color: #667eea;">📋 ${taskTitle}</p>
-              <p>They can now view and work on this task from their account.</p>
-              <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-              <p style="color: #666; font-size: 14px;">This is an automated notification from your Task Manager.</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
+    const { invitationAcceptedTemplate } = require('../templates/invitationAcceptedEmail');
+    const html = invitationAcceptedTemplate({ senderName, recipientName, taskTitle });
+
+    const text = `Hi ${senderName},\n\n${recipientName} has accepted your task invitation: "${taskTitle}"\n\nThey can now view and work on this task from their account.\n\n© ${new Date().getFullYear()} Tialz. All rights reserved.`;
 
     try {
       const result = await resend.emails.send({
@@ -135,6 +113,7 @@ const emailService = {
         to: senderEmail,
         subject: `${recipientName} accepted your task invitation`,
         html,
+        text,
       });
 
       console.log('Acceptance notification sent:', result);
@@ -217,11 +196,14 @@ const emailService = {
       console.log('To:', recipientEmail);
       console.log('Task:', task.title);
       
+      const text = `Task Reminder: "${task.title}" is due in 48 hours\n\nHi ${userName},\n\nThis is a reminder that your task "${task.title}" is due soon.\nPriority: ${task.priority}\nStatus: ${task.status}\nDue: ${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}\n\nView task: ${taskLink}\n\n© ${new Date().getFullYear()} Tialz. All rights reserved.`;
+
       const result = await resend.emails.send({
         from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
         to: recipientEmail,
-        subject: `⏰ Reminder: "${task.title}" is due in 48 hours`,
+        subject: `Reminder: "${task.title}" is due in 48 hours`,
         html,
+        text,
       });
 
       console.log('✅ Task reminder email sent successfully:', result);

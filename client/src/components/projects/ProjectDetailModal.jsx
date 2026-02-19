@@ -8,9 +8,10 @@ import TaskModal from '../tasks/TaskModal';
 import AddTaskModal from '../tasks/AddTaskModal';
 import SaveAsTemplateModal from './SaveAsTemplateModal';
 import EditProjectModal from './EditProjectModal';
+import DuplicateTasksModal from './DuplicateTasksModal';
 import SearchableDropdown from '../common/SearchableDropdown';
 import AddContactModal from '../common/AddContactModal';
-import { FaTrash, FaPlus, FaPaperPlane, FaSave, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaTrash, FaPlus, FaPaperPlane, FaSave, FaEdit, FaCheck, FaTimes, FaCopy } from 'react-icons/fa';
 import IconButton from '../common/IconButton';
 import { formatDateForInput, convertLocalDateTimeToUTC } from '../../utils/dateUtils';
 
@@ -32,6 +33,7 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState(new Set()); // Renamed from selectedDraftTasks - now works for ALL tasks
 
   const [reassignForm, setReassignForm] = useState({
@@ -938,14 +940,26 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
               <div className="flex items-center gap-2 flex-wrap">
                 {project.canManage && (
                   <>
-                    <IconButton
-                      icon={<FaPlus />}
-                      label="Add Task"
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setIsAddingTask(true)}
-                      className="!bg-indigo-600 hover:!bg-indigo-700"
-                    />
+                    {/* Add Task (no selection) / Duplicate (with selection) */}
+                    {selectedCount === 0 ? (
+                      <IconButton
+                        icon={<FaPlus />}
+                        label="Add Task"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setIsAddingTask(true)}
+                        className="!bg-indigo-600 hover:!bg-indigo-700"
+                      />
+                    ) : (
+                      <IconButton
+                        icon={<FaCopy />}
+                        label={`Duplicate (${selectedCount})`}
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setIsDuplicateModalOpen(true)}
+                        className="!bg-indigo-600 hover:!bg-indigo-700"
+                      />
+                    )}
 
                     {/* Send Tasks Button - Shows when no selection OR drafts are selected */}
                     {(draftCount > 0 && selectedCount === 0) && (
@@ -1584,6 +1598,21 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
           onClose={() => setIsEditModalOpen(false)}
           project={project}
           onProjectUpdated={handleProjectEdited}
+        />
+      )}
+
+      {/* Duplicate Tasks Modal */}
+      {isDuplicateModalOpen && selectedTaskObjects.length > 0 && (
+        <DuplicateTasksModal
+          isOpen={isDuplicateModalOpen}
+          onClose={() => setIsDuplicateModalOpen(false)}
+          tasks={selectedTaskObjects}
+          projectId={projectId}
+          onSuccess={(message) => {
+            setSelectedTasks(new Set());
+            fetchProject();
+            toast.success(message);
+          }}
         />
       )}
 

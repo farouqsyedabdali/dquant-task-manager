@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import useContactStore from '../stores/contactStore';
 import useAuthStore from '../context/authStore';
 import IconButton from '../components/common/IconButton';
@@ -8,11 +9,11 @@ import GoogleContactsModal from '../components/contacts/GoogleContactsModal';
 import { FaPlus, FaTimes, FaCheck, FaUserFriends, FaGoogle } from 'react-icons/fa';
 
 const Contacts = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [isGoogleContactsModalOpen, setIsGoogleContactsModalOpen] = useState(false);
-  const [googleContactsTaskId, setGoogleContactsTaskId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all', 'personal', 'business'
   const [successMessage, setSuccessMessage] = useState('');
@@ -38,6 +39,17 @@ const Contacts = () => {
   useEffect(() => {
     fetchContacts({ type: filterType, search: searchTerm });
   }, [filterType, searchTerm]);
+
+  // Auto-open the Google Contacts modal after returning from Google OAuth
+  useEffect(() => {
+    if (searchParams.get('googleAuth') === 'success') {
+      // Clear the URL param so it doesn't re-trigger
+      searchParams.delete('googleAuth');
+      setSearchParams(searchParams, { replace: true });
+      // Open the modal — it will call initializeModal() which fetches access status & contacts
+      setIsGoogleContactsModalOpen(true);
+    }
+  }, []);
 
   // Auto-clear success and error messages
   useEffect(() => {
@@ -684,21 +696,17 @@ const Contacts = () => {
       <GoogleContactsModal
         isOpen={isGoogleContactsModalOpen}
         onClose={() => setIsGoogleContactsModalOpen(false)}
-        taskId={googleContactsTaskId}
-        onInvitationsSent={(results) => {
-          // Handle invitation results
-          const successful = results.successful?.length || 0;
-          const failed = results.failed?.length || 0;
-
-          if (successful > 0) {
-            setSuccessMessage(`Successfully sent ${successful} invitation${successful !== 1 ? 's' : ''}!`);
+        onContactsImported={(result) => {
+          if (result.imported > 0) {
+            const message = result.skipped > 0
+              ? `Imported ${result.imported} contact${result.imported !== 1 ? 's' : ''}. ${result.skipped} skipped (already exist).`
+              : `Successfully imported ${result.imported} contact${result.imported !== 1 ? 's' : ''}!`;
+            setSuccessMessage(message);
+          } else if (result.skipped > 0) {
+            setSuccessMessage('All selected contacts already exist in your contact list.');
           }
 
-          if (failed > 0) {
-            setErrorMessage(`Failed to send ${failed} invitation${failed !== 1 ? 's' : ''}.`);
-          }
-
-          // Refresh contacts list
+          // Refresh contacts list to show newly imported contacts
           fetchContacts({ type: filterType, search: searchTerm });
         }}
       />
