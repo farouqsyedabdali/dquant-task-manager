@@ -151,11 +151,17 @@ const googleContactsController = {
         });
       }
 
-      // If user doesn't have basic Google auth but is requesting contacts, they need basic auth first
+      // If user doesn't have basic Google auth but is requesting contacts,
+      // generate a contacts auth URL directly (will auth + request contacts scope in one step)
       if (!user.googleId && forContacts) {
-        return res.status(400).json({
-          error: 'User must authenticate with Google first',
-          needsBasicAuth: true
+        const { getContactsAuthUrl } = require('../services/googleAuthService');
+        const authUrl = getContactsAuthUrl();
+        console.log('🔗 User has no Google auth, generating contacts auth URL directly');
+
+        return res.json({
+          success: true,
+          authUrl,
+          message: 'Redirect user to this URL to authenticate with Google and grant contacts permission'
         });
       }
 

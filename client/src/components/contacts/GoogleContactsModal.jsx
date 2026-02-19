@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import IconButton from '../common/IconButton';
 import LoadingSpinner from '../common/LoadingSpinner';
-import { FaTimes, FaGoogle, FaSearch, FaCheck, FaUserFriends, FaEnvelope } from 'react-icons/fa';
+import { FaTimes, FaGoogle, FaSearch, FaCheck, FaUserFriends, FaDownload } from 'react-icons/fa';
 import useGoogleContactsStore from '../../stores/googleContactsStore';
 import { useToast } from '../../hooks/useToast';
 
-const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => {
-  const [currentView, setCurrentView] = useState('connect'); // 'connect', 'contacts', 'select', 'sending', 'success'
-  const [customMessage, setCustomMessage] = useState('');
+const GoogleContactsModal = ({ isOpen, onClose, onContactsImported }) => {
+  const [currentView, setCurrentView] = useState('connect'); // 'connect', 'contacts', 'importing', 'success'
+  const [importResult, setImportResult] = useState(null);
   const { showToast } = useToast();
 
   const {
@@ -23,6 +23,7 @@ const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => 
     searchContacts,
     loadMoreContacts,
     connectGoogleAccount,
+    importContacts,
     toggleContactSelection,
     selectAllContacts,
     deselectAllContacts,
@@ -37,19 +38,9 @@ const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => 
     } else {
       clearState();
       setCurrentView('connect');
+      setImportResult(null);
     }
   }, [isOpen]);
-
-  // Check for successful Google auth return
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('googleAuth') === 'success') {
-      // Clear the URL parameter and reinitialize
-      const newUrl = window.location.pathname + window.location.hash;
-      window.history.replaceState({}, '', newUrl);
-      initializeModal();
-    }
-  }, []);
 
   const initializeModal = async () => {
     const status = await fetchAccessStatus();
@@ -61,29 +52,18 @@ const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => 
       await fetchContacts({ limit: 50 });
     } else if (status?.needsContactsPermission) {
       console.log('User needs contacts permission, showing connect view');
-      // User has basic Google auth but needs contacts permission
       setCurrentView('connect');
     } else {
       console.log('User needs basic Google auth, showing connect view');
-      // User doesn't have Google auth at all
       setCurrentView('connect');
     }
   };
 
   const handleConnectGoogle = async () => {
-    // Determine what type of connection is needed
-    let forContacts = false;
-
-    if (accessStatus.needsContactsPermission) {
-      // User has basic Google auth but needs contacts permission
-      forContacts = true;
-    } else if (!accessStatus.isGoogleUser) {
-      // User has no Google auth at all
-      forContacts = false;
-    } else {
-      // User has Google auth but we're not sure about contacts
-      forContacts = false;
-    }
+    // We always need contacts scope for importing, so forContacts should be true
+    // unless the user has no Google auth at all (in which case the backend will
+    // return needsBasicAuth and redirect to basic Google auth first)
+    const forContacts = true;
 
     console.log('Modal handleConnectGoogle:', {
       accessStatus,
@@ -116,50 +96,37 @@ const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => 
     await searchContacts(searchTerm);
   };
 
-  const handleSendInvitations = async () => {
+  const handleImportContacts = async () => {
     if (getSelectedCount() === 0) {
       showToast('Please select at least one contact', 'error');
       return;
     }
 
-    if (getSelectedCount() > 20) {
-      showToast('You can only send invitations to 20 contacts at a time', 'error');
-      return;
-    }
-
-    setCurrentView('sending');
+    setCurrentView('importing');
 
     try {
       const selectedIds = Array.from(selectedContacts);
-      const response = await fetch(`/api/google-contacts/tasks/${taskId}/send-google-invitations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          googleContactIds: selectedIds,
-          message: customMessage.trim() || undefined
-        })
-      });
+      const result = await importContacts(selectedIds);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send invitations');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to import contacts');
       }
 
+      setImportResult(result);
       setCurrentView('success');
 
-      if (onInvitationsSent) {
-        onInvitationsSent(data.results);
+      if (onContactsImported) {
+        onContactsImported(result);
       }
 
-      showToast(`Successfully sent ${data.results.successful.length} invitation${data.results.successful.length !== 1 ? 's' : ''}!`, 'success');
+      const message = result.skipped > 0
+        ? `Imported ${result.imported} contact${result.imported !== 1 ? 's' : ''}. ${result.skipped} skipped (already exist).`
+        : `Successfully imported ${result.imported} contact${result.imported !== 1 ? 's' : ''}!`;
+      showToast(message, 'success');
 
     } catch (error) {
-      console.error('Error sending invitations:', error);
-      showToast(error.message || 'Failed to send invitations', 'error');
+      console.error('Error importing contacts:', error);
+      showToast(error.message || 'Failed to import contacts', 'error');
       setCurrentView('contacts');
     }
   };
@@ -173,8 +140,8 @@ const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => 
         </h3>
         <p style={{ color: 'var(--color-text-secondary)' }}>
           {accessStatus.needsContactsPermission
-            ? "Grant access to your Google contacts to send invitations"
-            : "Import your Google contacts and send task invitations instantly"
+            ? "Grant access to your Google contacts to import them"
+            : "Connect your Google account to import contacts"
           }
         </p>
       </div>
@@ -349,35 +316,17 @@ const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => 
         )}
       </div>
 
-      {/* Custom Message */}
-      <div className="mt-6">
-        <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-          Custom Message (Optional)
-        </label>
-        <textarea
-          value={customMessage}
-          onChange={(e) => setCustomMessage(e.target.value)}
-          placeholder="Add a personal message to your invitation..."
-          className="textarea textarea-bordered w-full"
-          rows={3}
-          style={{
-            backgroundColor: 'var(--color-bg-secondary)',
-            borderColor: 'var(--color-border-default)',
-            color: 'var(--color-text-primary)',
-          }}
-        />
-      </div>
     </div>
   );
 
-  const renderSendingView = () => (
+  const renderImportingView = () => (
     <div className="text-center py-8">
       <LoadingSpinner size="lg" />
       <h3 className="text-xl font-bold mt-4 mb-2" style={{ color: 'var(--color-text-primary)' }}>
-        Sending Invitations...
+        Importing Contacts...
       </h3>
       <p style={{ color: 'var(--color-text-secondary)' }}>
-        Please wait while we send {getSelectedCount()} invitation{getSelectedCount() !== 1 ? 's' : ''}
+        Please wait while we import {getSelectedCount()} contact{getSelectedCount() !== 1 ? 's' : ''}
       </p>
     </div>
   );
@@ -386,10 +335,18 @@ const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => 
     <div className="text-center py-8">
       <FaCheck className="text-6xl text-green-500 mx-auto mb-4" />
       <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-        Invitations Sent!
+        Contacts Imported!
       </h3>
       <p style={{ color: 'var(--color-text-secondary)' }} className="mb-6">
-        Your task invitations have been sent successfully.
+        {importResult && importResult.imported > 0 && (
+          <span>Successfully imported {importResult.imported} contact{importResult.imported !== 1 ? 's' : ''}.</span>
+        )}
+        {importResult && importResult.skipped > 0 && (
+          <span className="block mt-1">{importResult.skipped} contact{importResult.skipped !== 1 ? 's were' : ' was'} skipped (already exist).</span>
+        )}
+        {importResult && importResult.imported === 0 && importResult.skipped > 0 && (
+          <span>All selected contacts already exist in your contact list.</span>
+        )}
       </p>
       <button
         onClick={onClose}
@@ -406,8 +363,8 @@ const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => 
         return renderConnectView();
       case 'contacts':
         return renderContactsView();
-      case 'sending':
-        return renderSendingView();
+      case 'importing':
+        return renderImportingView();
       case 'success':
         return renderSuccessView();
       default:
@@ -415,7 +372,7 @@ const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => 
     }
   };
 
-  const canSendInvitations = currentView === 'contacts' && getSelectedCount() > 0 && getSelectedCount() <= 20;
+  const canImport = currentView === 'contacts' && getSelectedCount() > 0;
 
   if (!isOpen) return null;
 
@@ -434,8 +391,8 @@ const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => 
             className="text-2xl font-bold transition-colors duration-200"
             style={{ color: 'var(--color-text-primary)' }}
           >
-            <FaEnvelope className="inline mr-2" />
-            Invite Google Contacts
+            <FaGoogle className="inline mr-2" />
+            Import Google Contacts
           </h2>
           <IconButton
             onClick={onClose}
@@ -476,19 +433,19 @@ const GoogleContactsModal = ({ isOpen, onClose, taskId, onInvitationsSent }) => 
               Cancel
             </button>
             <button
-              onClick={handleSendInvitations}
-              disabled={!canSendInvitations || isLoading}
+              onClick={handleImportContacts}
+              disabled={!canImport || isLoading}
               className="btn btn-primary"
             >
               {isLoading ? (
                 <>
                   <LoadingSpinner size="sm" />
-                  Sending...
+                  Importing...
                 </>
               ) : (
                 <>
-                  <FaEnvelope className="mr-2" />
-                  Send {getSelectedCount()} Invitation{getSelectedCount() !== 1 ? 's' : ''}
+                  <FaDownload className="mr-2" />
+                  Import {getSelectedCount()} Contact{getSelectedCount() !== 1 ? 's' : ''}
                 </>
               )}
             </button>

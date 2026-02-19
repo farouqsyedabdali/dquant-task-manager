@@ -66,7 +66,33 @@ const handleGoogleCallback = async (req, res) => {
 
     // If user exists, handle login or incremental auth
     if (user) {
-      // Check if this is a company account - Google OAuth is only for personal accounts
+      // Handle incremental authorization FIRST (user is linking Google for contacts, not logging in)
+      // This must be checked before the personal-only gate since company account users
+      // can still link their Google account for contacts import.
+      if (isIncrementalAuth) {
+        // Link Google account and update tokens, but preserve original authProvider
+        const updateData = {
+          googleId: googleUser.googleId
+        };
+
+        if (googleUser.accessToken) {
+          updateData.googleAccessToken = googleUser.accessToken;
+          updateData.googleRefreshToken = googleUser.refreshToken;
+          updateData.googleTokenExpiry = googleUser.tokenExpiry;
+          updateData.googleContactsScope = googleUser.scopes.includes('https://www.googleapis.com/auth/contacts.readonly');
+        }
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: updateData
+        });
+
+        console.log('🔄 Incremental auth completed for user:', user.id, 'contacts scope:', updateData.googleContactsScope);
+        // Redirect back to the frontend with success indicator
+        return res.redirect(`${frontendUrl}/auth/google/callback?incremental=true&contacts=${updateData.googleContactsScope}`);
+      }
+
+      // For regular Google Sign-In (not contacts linking), only allow personal accounts
       if (!user.company.isPersonal) {
         return res.redirect(`${frontendUrl}/login?error=Google Sign-In is only available for personal accounts. Please sign in with your email and password.`);
       }
@@ -94,13 +120,6 @@ const handleGoogleCallback = async (req, res) => {
       // Check if company is suspended
       if (user.company.markedForDeletion) {
         return res.redirect(`${frontendUrl}/login?error=company_suspended`);
-      }
-
-      // Handle incremental authorization (user was already logged in)
-      if (isIncrementalAuth) {
-        console.log('🔄 Incremental auth completed for user:', user.id, 'contacts scope:', updateData.googleContactsScope);
-        // Redirect back to the frontend with success indicator
-        return res.redirect(`${frontendUrl}/auth/google/callback?incremental=true&contacts=${updateData.googleContactsScope}`);
       }
 
       // Generate JWT token for regular login
