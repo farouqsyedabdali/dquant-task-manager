@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import ForgotPasswordModal from '../components/modals/ForgotPasswordModal';
-import LegalDocumentModal from '../components/legal/LegalDocumentModal';
 import tialzLogo from '../assets/Cover (1)-Photoroom.png';
 
 // Use VITE_API_URL environment variable, or detect environment
@@ -25,8 +24,6 @@ const LandingPage = () => {
   });
   const [loginErrors, setLoginErrors] = useState({});
   const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
-  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
-  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -681,8 +678,8 @@ const LandingPage = () => {
                   </a>
                 </div>
                 <div>
-                  <button
-                    onClick={() => setIsPrivacyModalOpen(true)}
+                  <Link
+                    to="/privacy-policy"
                     className="font-medium text-sm transition-colors duration-200 inline-flex items-center gap-1.5"
                     style={{ color: 'var(--color-primary)' }}
                     onMouseEnter={(e) => {
@@ -695,12 +692,12 @@ const LandingPage = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
-                    View Privacy Policy
-                  </button>
+                    Privacy Policy
+                  </Link>
                 </div>
                 <div>
-                  <button
-                    onClick={() => setIsTermsModalOpen(true)}
+                  <Link
+                    to="/terms-of-service"
                     className="font-medium text-sm transition-colors duration-200 inline-flex items-center gap-1.5"
                     style={{ color: 'var(--color-primary)' }}
                     onMouseEnter={(e) => {
@@ -713,8 +710,8 @@ const LandingPage = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    View Terms of Service
-                  </button>
+                    Terms of Service
+                  </Link>
                 </div>
               </div>
             </div>
@@ -726,20 +723,6 @@ const LandingPage = () => {
       <ForgotPasswordModal
         isOpen={isForgotPasswordModalOpen}
         onClose={() => setIsForgotPasswordModalOpen(false)}
-      />
-
-      {/* Privacy Policy Modal */}
-      <LegalDocumentModal
-        isOpen={isPrivacyModalOpen}
-        onClose={() => setIsPrivacyModalOpen(false)}
-        documentType="privacy"
-      />
-
-      {/* Terms of Service Modal */}
-      <LegalDocumentModal
-        isOpen={isTermsModalOpen}
-        onClose={() => setIsTermsModalOpen(false)}
-        documentType="terms"
       />
     </div>
     </>

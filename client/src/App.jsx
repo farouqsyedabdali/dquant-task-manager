@@ -26,11 +26,13 @@ import Projects from './pages/Projects';
 import ColorPaletteTester from './pages/ColorPaletteTester';
 import TestStaging from './pages/TestStaging';
 import GoogleCallback from './pages/GoogleCallback';
+import LegalDocumentPage from './pages/LegalDocumentPage';
 import AIModal from './components/tasks/AIModal';
 import ToastContainer from './components/common/ToastContainer';
 import { ToastProvider, useToastContext } from './context/ToastContext';
 import { FaRobot } from 'react-icons/fa';
 import AuthRedirect from './components/AuthRedirect';
+import EmailMockup from './pages/EmailMockup';
 import tialzLogo from './assets/TIALZ Logo (No Background).png';
 import './App.css';
 
@@ -87,6 +89,10 @@ function AppContent() {
             <Route path="/verify-email" element={<EmailVerification />} />
             <Route path="/complete-employee-setup" element={<EmployeeSetup />} />
 
+            {/* Legal Document Routes (public, standalone pages) */}
+            <Route path="/privacy-policy" element={<LegalDocumentPage documentType="privacy" />} />
+            <Route path="/terms-of-service" element={<LegalDocumentPage documentType="terms" />} />
+
             {/* Popup Route (no header/layout) */}
             <Route path="/popup" element={<TaskPopup />} />
 
@@ -95,6 +101,9 @@ function AppContent() {
 
             {/* Staging Test Page (no auth required) */}
             <Route path="/test-staging" element={<TestStaging />} />
+
+            {/* Email Mockup Gallery (no auth required) */}
+            <Route path="/email-mockup" element={<EmailMockup />} />
 
             {/* Protected Routes */}
             <Route
