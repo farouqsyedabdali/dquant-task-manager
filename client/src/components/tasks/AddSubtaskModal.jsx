@@ -6,13 +6,14 @@ import useAuthStore from '../../context/authStore';
 import useContactStore from '../../stores/contactStore';
 import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
 import { convertLocalDateTimeToUTC } from '../../utils/dateUtils';
-import { usersAPI, tasksAPI } from '../../services/api';
+import { usersAPI, tasksAPI, aiAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
 import AddContactModal from '../common/AddContactModal';
 import DatePicker from '../common/DatePicker';
 import IconButton from '../common/IconButton';
 import AIWarning from '../common/AIWarning';
-import { FaTimes, FaCheck } from 'react-icons/fa';
+import { useToastContext } from '../../context/ToastContext';
+import { FaTimes, FaCheck, FaRobot } from 'react-icons/fa';
 
 const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
@@ -32,11 +33,14 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
   const [pendingEmail, setPendingEmail] = useState('');
   const [availableTasks, setAvailableTasks] = useState([]);
   const [selectedParentId, setSelectedParentId] = useState(parentTask?.id || '');
+  const [isPreFilling, setIsPreFilling] = useState(false);
+  const [showAIWarning, setShowAIWarning] = useState(false);
 
   const { createSubtask, isLoading } = useTaskStore();
   const { recentEmployees, addToRecentEmployees } = useUserStore();
   const { user } = useAuthStore();
   const { fetchContacts } = useContactStore();
+  const toast = useToastContext();
 
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
@@ -320,6 +324,73 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
     onClose();
   };
 
+  const handleAIPreFill = async () => {
+    setIsPreFilling(true);
+    setErrors({});
+    
+    try {
+      // 1. Read clipboard
+      const clipboardText = await navigator.clipboard.readText();
+      
+      if (!clipboardText || clipboardText.trim().length === 0) {
+        toast.warning('📋 Please copy some text first, then click Smart Pre-fill');
+        return;
+      }
+      
+      // 2. Call AI extraction API (subtasks are just tasks)
+      const response = await aiAPI.extractTask(clipboardText);
+      
+      // 3. Pre-fill form
+      if (response.data.success && response.data.taskData) {
+        const taskData = response.data.taskData;
+        
+        // Find matching assignee if AI provided one
+        let assigneeIdValue = formData.assigneeId;
+        let externalContactIdValue = formData.externalContactId;
+        
+        if (taskData.assignee && allAssignees.length > 0) {
+          const assigneeName = taskData.assignee.toLowerCase();
+          const matchingAssignee = allAssignees.find(a => 
+            a.name.toLowerCase().includes(assigneeName) || 
+            assigneeName.includes(a.name.toLowerCase())
+          );
+          if (matchingAssignee) {
+            if (matchingAssignee.type === 'user') {
+              assigneeIdValue = matchingAssignee.id.toString();
+              externalContactIdValue = '';
+            } else {
+              externalContactIdValue = matchingAssignee.id.toString();
+              assigneeIdValue = '';
+            }
+          }
+        }
+        
+        setFormData({
+          title: taskData.title || formData.title,
+          description: taskData.description || formData.description,
+          priority: taskData.priority || formData.priority,
+          assigneeId: assigneeIdValue,
+          externalContactId: externalContactIdValue,
+          dueDate: taskData.dueDate || formData.dueDate
+        });
+        
+        toast.success('✨ Subtask details pre-filled from clipboard!');
+        setShowAIWarning(true);
+      } else {
+        toast.warning('⚠️ Could not extract subtask details. Please fill manually.');
+      }
+    } catch (err) {
+      console.error('AI Pre-fill error:', err);
+      if (err.name === 'NotAllowedError') {
+        toast.error('📋 Clipboard access denied. Please paste the text manually.');
+      } else {
+        toast.error('❌ Failed to pre-fill: ' + (err.response?.data?.error || err.message));
+      }
+    } finally {
+      setIsPreFilling(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   // Render above TaskModal using a portal attached to document.body with higher z-index
@@ -342,9 +413,6 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
             >
               Create Subtask
             </h3>
-            {extensionUpdateData && (
-              <AIWarning className="mt-2" />
-            )}
             <p
               className="text-sm mt-1"
               style={{ color: 'var(--color-text-secondary)' }}
@@ -602,25 +670,42 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
             )}
           </div>
 
+          {/* AI Warning Banner */}
+          {showAIWarning && (
+            <AIWarning className="mb-4" />
+          )}
+
           {/* Submit Buttons */}
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-between items-center pt-4">
             <IconButton
-              type="button"
-              onClick={handleClose}
-              icon={<FaTimes />}
-              label="Cancel"
-              variant="secondary"
-              size="sm"
-            />
-            <IconButton
-              type="submit"
-              disabled={isLoading}
-              icon={<FaCheck />}
-              label={isLoading ? 'Creating...' : 'Create Subtask'}
+              icon={<FaRobot />}
+              label="Smart Pre-fill"
               variant="primary"
+              onClick={handleAIPreFill}
+              disabled={isLoading || isPreFilling}
+              loading={isPreFilling}
+              title="Extract subtask details from clipboard"
               size="sm"
-              loading={isLoading}
             />
+            <div className="flex space-x-3">
+              <IconButton
+                type="button"
+                onClick={handleClose}
+                icon={<FaTimes />}
+                label="Cancel"
+                variant="secondary"
+                size="sm"
+              />
+              <IconButton
+                type="submit"
+                disabled={isLoading}
+                icon={<FaCheck />}
+                label={isLoading ? 'Creating...' : 'Create Subtask'}
+                variant="primary"
+                size="sm"
+                loading={isLoading}
+              />
+            </div>
           </div>
         </form>
       </div>

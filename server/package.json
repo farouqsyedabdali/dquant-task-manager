@@ -10,7 +10,8 @@
     "cleanup:tasks": "node scripts/cleanupOrphanedTasks.js",
     "cleanup:tasks:interactive": "node scripts/cleanupOrphanedTasksInteractive.js",
     "update:google-accounts": "node scripts/updateGoogleAccountsToSysdmin.js",
-    "delete:company-tasks": "node scripts/deleteCompanyTasks.js"
+    "delete:company-tasks": "node scripts/deleteCompanyTasks.js",
+    "close-connections": "node scripts/closeConnections.js"
   },
   "keywords": [],
   "author": "",

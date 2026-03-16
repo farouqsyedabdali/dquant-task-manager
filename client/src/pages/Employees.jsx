@@ -131,6 +131,8 @@ const Employees = () => {
       const nameIndex = headers.findIndex(h => h === 'name');
       const emailIndex = headers.findIndex(h => h === 'email');
       const roleIndex = headers.findIndex(h => h === 'role');
+      const departmentIndex = headers.findIndex(h => h === 'department');
+      const positionIndex = headers.findIndex(h => h === 'position');
 
       if (nameIndex === -1 || emailIndex === -1) {
         throw new Error('CSV must have "name" and "email" columns');
@@ -148,6 +150,8 @@ const Employees = () => {
         const name = values[nameIndex];
         const email = values[emailIndex];
         const role = roleIndex !== -1 ? values[roleIndex] : 'EMPLOYEE';
+        const department = departmentIndex !== -1 ? values[departmentIndex] : '';
+        const position = positionIndex !== -1 ? values[positionIndex] : '';
 
         // Validate required fields
         if (!name || !email) {
@@ -178,6 +182,8 @@ const Employees = () => {
           name,
           email,
           role: role.toUpperCase() || 'EMPLOYEE',
+          department: department || '',
+          position: position || '',
           password: generateRandomPassword() // Generate random password
         });
       }
@@ -254,7 +260,7 @@ const Employees = () => {
 
   // Download CSV template
   const downloadCSVTemplate = () => {
-    const csvContent = 'name,email,role\nJohn Doe,john@example.com,EMPLOYEE\nJane Smith,jane@example.com,ADMIN\nMike Johnson,mike@example.com,EMPLOYEE\nSystem Admin,sysadmin@example.com,SYSDMIN';
+    const csvContent = 'name,email,role,department,position\nJohn Doe,john@example.com,EMPLOYEE,Engineering,Software Developer\nJane Smith,jane@example.com,ADMIN,HR,HR Manager\nMike Johnson,mike@example.com,EMPLOYEE,Sales,Sales Representative\nSystem Admin,sysadmin@example.com,SYSDMIN,IT,System Administrator';
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -663,7 +669,7 @@ const Employees = () => {
                 className="text-sm mb-4"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                Import multiple employees from a CSV file. The file should have columns: name, email, role (optional, defaults to EMPLOYEE).
+                Import multiple employees from a CSV file. The file should have columns: name, email, role (optional), department (optional), position (optional).
                 <br />
                 <span className="text-yellow-400">Note: Imported employees will have randomly generated passwords. They should reset their password on first login.</span>
               </p>
@@ -690,10 +696,9 @@ const Employees = () => {
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
                   <p><strong>CSV Format:</strong></p>
-                  <p>name,email,role</p>
-                  <p>John Doe,john@example.com,EMPLOYEE</p>
-                  <p>Jane Smith,jane@example.com,ADMIN</p>
-                  <p>System Admin,sysadmin@example.com,SYSDMIN</p>
+                  <p className="font-mono text-xs">name,email,role,department,position</p>
+                  <p className="font-mono text-xs">John Doe,john@example.com,EMPLOYEE,Engineering,Developer</p>
+                  <p className="font-mono text-xs">Jane Smith,jane@example.com,ADMIN,HR,HR Manager</p>
                 </div>
               </div>
             </div>

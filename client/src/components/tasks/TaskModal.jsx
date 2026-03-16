@@ -117,16 +117,24 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     viewedTask?.assignerId === user?.id
   );
 
-  // Check if current user is an accepted external assignee
-  // This means they accepted a task invitation and now have assigneeId set
+  // Check if current user can withdraw from this task
+  // They can withdraw if:
+  // 1. They are the assignee (not just a collaborator)
+  // 2. They are not the creator (can't withdraw from your own task)
+  // 3. The task is not completed
+  const canWithdraw =
+    viewedTask?.assigneeId === user?.id &&
+    viewedTask?.assignerId !== user?.id &&
+    viewedTask?.status !== 'COMPLETED';
+
+  // Check if current user is an accepted external assignee (for other UI purposes)
   const isAcceptedExternalAssignee =
     viewedTask?.assigneeId === user?.id &&
     viewedTask?.externalContactId !== null &&
-    viewedTask?.assignerId !== user?.id; // Not the creator
+    viewedTask?.assignerId !== user?.id;
 
-  // Show creator name if user has company account OR if they're an external assignee
-  // (External assignees need to know who assigned them the task)
-  const shouldShowCreator = !isPersonalAccount || isAcceptedExternalAssignee;
+  // Show creator name ALWAYS (both business and personal accounts need to see who created the task)
+  const shouldShowCreator = true;
 
   const fetchUsers = async () => {
     try {
@@ -812,8 +820,12 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                       className="flex items-center space-x-4 text-sm transition-colors duration-200"
                       style={{ color: 'var(--color-text-tertiary)' }}
                     >
-                      {shouldShowCreator && <span>Created by {viewedTask.assigner?.name}</span>}
-                      {shouldShowCreator && <span>•</span>}
+                      {viewedTask.assigner?.name && (
+                        <>
+                          <span>Created by {viewedTask.assigner.name}</span>
+                          <span>•</span>
+                        </>
+                      )}
                       <span>{new Date(viewedTask.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
@@ -874,7 +886,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     />
                   )}
 
-                  {isAcceptedExternalAssignee && viewedTask.status !== 'COMPLETED' && (
+                  {canWithdraw && (
                     <IconButton
                       icon={<FaTimesCircle />}
                       label="Withdraw"
@@ -2181,7 +2193,18 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
         {/* Task Summary Modal */}
         {isSummaryModalOpen && summaryData && (
-          <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 60 }}>
+          <div 
+            className="modal modal-open backdrop-blur-sm" 
+            style={{ zIndex: 60 }}
+            onClick={(e) => {
+              // Only close if clicking directly on the backdrop
+              if (e.target === e.currentTarget) {
+                e.stopPropagation(); // Prevent event from bubbling to parent TaskModal
+                setIsSummaryModalOpen(false);
+                setSummaryData(null);
+              }
+            }}
+          >
             <div
               className="modal-box max-w-6xl max-h-[95vh] overflow-y-auto"
               style={{

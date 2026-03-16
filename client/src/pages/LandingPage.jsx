@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import ForgotPasswordModal from '../components/modals/ForgotPasswordModal';
-import tialzLogo from '../assets/Cover (1)-Photoroom.png';
+import useThemeLogo from '../hooks/useThemeLogo';
 
 // Use VITE_API_URL environment variable, or detect environment
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
@@ -16,6 +16,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
 const LandingPage = () => {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
+  const tialzLogo = useThemeLogo();
   
   const [loginFormData, setLoginFormData] = useState({
     email: '',

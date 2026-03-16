@@ -9,15 +9,8 @@ const prisma = globalForPrisma.prisma || new PrismaClient({
       url: process.env.DATABASE_URL,
     },
   },
-  // Connection pool configuration optimized for Railway
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  // Connection pool settings optimized for Railway
-  __internal: {
-    engine: {
-      connectionLimit: 3, // Railway has very limited connections, use max 3
-      poolTimeout: 60, // 60 seconds timeout for Railway
-    },
-  },
+  // Connection pool configuration optimized for Azure PostgreSQL
+  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'], // Reduced logging
 });
 
 // Prevent multiple instances in development
@@ -25,19 +18,33 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
-// Graceful shutdown
-process.on('beforeExit', async () => {
-  await prisma.$disconnect();
-});
+// Graceful shutdown with better error handling
+const disconnect = async () => {
+  try {
+    await prisma.$disconnect();
+    console.log('✅ Database disconnected successfully');
+  } catch (error) {
+    console.error('❌ Error disconnecting from database:', error);
+  }
+};
+
+process.on('beforeExit', disconnect);
 
 process.on('SIGINT', async () => {
-  await prisma.$disconnect();
+  await disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  await prisma.$disconnect();
+  await disconnect();
   process.exit(0);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', async (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  await disconnect();
+  process.exit(1);
 });
 
 module.exports = prisma;

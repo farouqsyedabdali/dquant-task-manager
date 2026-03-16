@@ -101,8 +101,20 @@ const TaskUpdatesModal = ({ isOpen, onClose, task }) => {
 
   if (!isOpen || !task) return null;
 
+  const handleBackdropClick = (e) => {
+    // Only close if clicking directly on the backdrop, not the modal box
+    if (e.target === e.currentTarget) {
+      e.stopPropagation(); // Prevent event from bubbling to parent TaskModal
+      onClose();
+    }
+  };
+
   return (
-    <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 60 }}>
+    <div 
+      className="modal modal-open backdrop-blur-sm" 
+      style={{ zIndex: 60 }}
+      onClick={handleBackdropClick}
+    >
       <div 
         className="modal-box max-w-2xl border" 
         style={{

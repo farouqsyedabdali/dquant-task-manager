@@ -170,9 +170,8 @@ const createEmployee = async (req, res) => {
     // Send invitation email
     try {
       const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].replace(/\/$/, '');
-      const invitationUrl = `${clientUrl}/employee-setup/${invitationToken}`;
+      const invitationUrl = `${clientUrl}/complete-employee-setup?token=${invitationToken}`;
 
-      // Debug logging
       console.log('🎯 Employee Invitation Debug (createEmployee):');
       console.log('  CLIENT_URL env var:', process.env.CLIENT_URL);
       console.log('  clientUrl used:', clientUrl);
@@ -278,9 +277,8 @@ const resendEmployeeInvitation = async (req, res) => {
     // Send invitation email
     try {
       const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].replace(/\/$/, '');
-      const invitationUrl = `${clientUrl}/employee-setup/${invitationToken}`;
+      const invitationUrl = `${clientUrl}/complete-employee-setup?token=${invitationToken}`;
 
-      // Debug logging
       console.log('🎯 Employee Invitation Debug (resendEmployeeInvitation):');
       console.log('  CLIENT_URL env var:', process.env.CLIENT_URL);
       console.log('  clientUrl used:', clientUrl);

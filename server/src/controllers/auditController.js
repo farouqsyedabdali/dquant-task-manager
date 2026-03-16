@@ -343,13 +343,15 @@ const getTaskAuditLogs = async (req, res) => {
     });
 
     // Get comment audit logs related to this task
-    // Comments store the task title in their description
+    // Note: Comments are linked via their parent entity (task)
+    // We filter by checking if the description contains the task ID reference
     const commentLogs = await prisma.auditLog.findMany({
       where: {
         entityType: 'Comment',
         companyId: companyId,
+        // Only include comments that reference this specific task ID
         description: {
-          contains: task.title,
+          contains: `task #${taskId}`,
           mode: 'insensitive'
         }
       },
@@ -369,12 +371,13 @@ const getTaskAuditLogs = async (req, res) => {
     });
 
     // Get co-assignee logs
+    // Filter by task ID reference instead of title
     const coAssigneeLogs = await prisma.auditLog.findMany({
       where: {
         entityType: 'TaskCoAssignee',
         companyId: companyId,
         description: {
-          contains: task.title,
+          contains: `task #${taskId}`,
           mode: 'insensitive'
         }
       },
@@ -399,7 +402,7 @@ const getTaskAuditLogs = async (req, res) => {
         entityType: 'TaskShare',
         companyId: companyId,
         description: {
-          contains: task.title,
+          contains: `task #${taskId}`,
           mode: 'insensitive'
         }
       },
@@ -408,8 +411,7 @@ const getTaskAuditLogs = async (req, res) => {
           select: {
             id: true,
             name: true,
-            email: true,
-            role: true
+            email: true
           }
         }
       },

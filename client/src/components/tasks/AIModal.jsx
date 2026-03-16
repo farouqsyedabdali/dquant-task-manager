@@ -5,13 +5,14 @@ import { FaRobot, FaTimes, FaPlus, FaEdit, FaLayerGroup, FaProjectDiagram } from
 import useAuthStore from '../../context/authStore';
 import ProjectIdeaSelectionModal from '../projects/ProjectIdeaSelectionModal';
 import IconButton from '../common/IconButton';
-import tialzLogo from '../../assets/TIALZ Logo (No Background).png';
+import useThemeLogo from '../../hooks/useThemeLogo';
 import AIWarning from '../common/AIWarning';
 
 const AIModal = ({ isOpen, onClose, onAction }) => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const tialzLogo = useThemeLogo();
   const [messages, setMessages] = useState(() => {
     // Load conversation from localStorage or start with welcome message
     const saved = localStorage.getItem('aiConversation');

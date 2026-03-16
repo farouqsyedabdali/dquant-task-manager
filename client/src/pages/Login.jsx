@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import ForgotPasswordModal from '../components/modals/ForgotPasswordModal';
-import tialzLogo from '../assets/Cover (1)-Photoroom.png';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import useThemeLogo from '../hooks/useThemeLogo';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -13,10 +14,12 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
   const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const tialzLogo = useThemeLogo();
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -237,32 +240,46 @@ const Login = () => {
               >
                 Password
               </label>
-              <input
-                id="login-password-input"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className={`input w-full transition-colors duration-200 ${errors.password ? 'border-red-500' : ''}`}
-                style={{
-                  backgroundColor: 'var(--color-bg-tertiary)',
-                  borderColor: errors.password ? '#ef4444' : 'var(--color-border-default)',
-                  color: 'var(--color-text-primary)',
-                }}
-                onFocus={(e) => {
-                  if (!errors.password) {
-                    e.currentTarget.style.borderColor = 'var(--color-primary)';
-                  }
-                }}
-                onBlur={(e) => {
-                  if (!errors.password) {
-                    e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                  }
-                }}
-                placeholder="Enter your password"
-              />
+              <div className="relative">
+                <input
+                  id="login-password-input"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  className={`input w-full pr-10 transition-colors duration-200 ${errors.password ? 'border-red-500' : ''}`}
+                  style={{
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                    borderColor: errors.password ? '#ef4444' : 'var(--color-border-default)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                  onFocus={(e) => {
+                    if (!errors.password) {
+                      e.currentTarget.style.borderColor = 'var(--color-primary)';
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!errors.password) {
+                      e.currentTarget.style.borderColor = 'var(--color-border-default)';
+                    }
+                  }}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-text-primary)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-tertiary)'; }}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+                </button>
+              </div>
               {errors.password && (
                 <p className="text-red-400 text-sm mt-1">{errors.password}</p>
               )}

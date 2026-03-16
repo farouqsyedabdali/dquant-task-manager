@@ -1277,6 +1277,169 @@ const projectController = {
   },
 
   /**
+   * Duplicate selected tasks within a project
+   * POST /api/projects/:id/tasks/duplicate
+   */
+  async duplicateTasks(req, res) {
+    try {
+      const { id: projectId } = req.params;
+      const { companyId, id: userId } = req.user;
+      const { taskIds, options = {} } = req.body;
+
+      if (!Array.isArray(taskIds) || taskIds.length === 0) {
+        return res.status(400).json({ error: 'taskIds must be a non-empty array' });
+      }
+
+      if (taskIds.length > 50) {
+        return res.status(400).json({ error: 'Cannot duplicate more than 50 tasks at once' });
+      }
+
+      const project = await prisma.project.findFirst({
+        where: { id: parseInt(projectId), companyId }
+      });
+
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+
+      const isOwner = project.ownerId === userId;
+      const isAdmin = ['ADMIN', 'SYSDMIN', 'SUPER_ADMIN'].includes(req.user.role);
+
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ error: 'Only the project owner can duplicate tasks' });
+      }
+
+      // Parse options with defaults
+      const clearAssignees = options.clearAssignees !== undefined ? options.clearAssignees : true;
+      const dueDateMode = options.dueDateMode || 'keep'; // 'keep' | 'shift' | 'clear'
+      const shiftDays = parseInt(options.shiftDays) || 0;
+      const includeSubtasks = options.includeSubtasks !== undefined ? options.includeSubtasks : true;
+
+      // Fetch the tasks to duplicate with their subtasks
+      const tasks = await prisma.task.findMany({
+        where: {
+          id: { in: taskIds.map(id => parseInt(id)) },
+          projectId: parseInt(projectId),
+          companyId
+        },
+        include: {
+          subtasks: includeSubtasks ? {
+            select: {
+              title: true,
+              description: true,
+              priority: true,
+              dueDate: true,
+              assigneeId: true,
+              externalContactId: true
+            }
+          } : false,
+          assignee: { select: { id: true, name: true } },
+          externalContact: { select: { id: true, name: true } }
+        }
+      });
+
+      if (tasks.length === 0) {
+        return res.status(404).json({ error: 'No matching tasks found in this project' });
+      }
+
+      const createdTasks = [];
+
+      for (const task of tasks) {
+        // Compute due date for the duplicate
+        let newDueDate = null;
+        if (dueDateMode === 'keep' && task.dueDate) {
+          newDueDate = task.dueDate;
+        } else if (dueDateMode === 'shift' && task.dueDate && shiftDays !== 0) {
+          const shifted = new Date(task.dueDate);
+          shifted.setDate(shifted.getDate() + shiftDays);
+          newDueDate = shifted;
+        }
+        // dueDateMode === 'clear' leaves newDueDate as null
+
+        const duplicatedTask = await prisma.task.create({
+          data: {
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            status: 'TODO',
+            projectId: parseInt(projectId),
+            assignerId: userId,
+            assigneeId: clearAssignees ? null : task.assigneeId,
+            externalContactId: clearAssignees ? null : task.externalContactId,
+            dueDate: newDueDate,
+            isDraft: true,
+            companyId
+          },
+          include: {
+            assignee: { select: { id: true, name: true, email: true } },
+            externalContact: { select: { id: true, name: true, email: true } }
+          }
+        });
+
+        // Duplicate subtasks if requested
+        if (includeSubtasks && task.subtasks && task.subtasks.length > 0) {
+          for (const subtask of task.subtasks) {
+            let subtaskDueDate = null;
+            if (dueDateMode === 'keep' && subtask.dueDate) {
+              subtaskDueDate = subtask.dueDate;
+            } else if (dueDateMode === 'shift' && subtask.dueDate && shiftDays !== 0) {
+              const shifted = new Date(subtask.dueDate);
+              shifted.setDate(shifted.getDate() + shiftDays);
+              subtaskDueDate = shifted;
+            }
+
+            await prisma.task.create({
+              data: {
+                title: subtask.title,
+                description: subtask.description,
+                priority: subtask.priority,
+                status: 'TODO',
+                parentTaskId: duplicatedTask.id,
+                projectId: parseInt(projectId),
+                assignerId: userId,
+                assigneeId: clearAssignees ? null : subtask.assigneeId,
+                externalContactId: clearAssignees ? null : subtask.externalContactId,
+                dueDate: subtaskDueDate,
+                isDraft: true,
+                companyId
+              }
+            });
+          }
+        }
+
+        createdTasks.push(duplicatedTask);
+      }
+
+      // Create audit log
+      await prisma.auditLog.create({
+        data: {
+          action: 'PROJECT_UPDATED',
+          entityType: 'Project',
+          entityId: parseInt(projectId),
+          description: `Duplicated ${createdTasks.length} task(s) in project "${project.name}"`,
+          userId,
+          companyId,
+          metadata: {
+            projectId: parseInt(projectId),
+            projectName: project.name,
+            originalTaskIds: taskIds,
+            duplicatedTaskIds: createdTasks.map(t => t.id),
+            options: { clearAssignees, dueDateMode, shiftDays, includeSubtasks }
+          }
+        }
+      });
+
+      res.status(201).json({
+        message: `Successfully duplicated ${createdTasks.length} task(s)`,
+        tasks: createdTasks
+      });
+    } catch (error) {
+      console.error('Duplicate tasks error:', error);
+      res.status(500).json({ error: 'Failed to duplicate tasks' });
+    }
+  },
+
+  /**
    * Reassign a task (typically after decline)
    * PUT /api/projects/:id/tasks/:taskId/reassign
    */

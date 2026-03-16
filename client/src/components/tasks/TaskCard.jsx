@@ -6,7 +6,8 @@ import AddSubtaskModal from './AddSubtaskModal';
 import { 
   FaCircle, FaSpinner, FaCheckCircle, FaPauseCircle, FaTimesCircle,
   FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle,
-  FaCalendar, FaComment, FaList, FaLevelUpAlt, FaShareAlt, FaPlayCircle
+  FaCalendar, FaComment, FaList, FaLevelUpAlt, FaShareAlt, FaPlayCircle,
+  FaCheck, FaArchive
 } from 'react-icons/fa';
 
 const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive, onUnarchive }) => {
@@ -23,6 +24,20 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
 
   const handleCardClick = () => {
     setIsModalOpen(true);
+  };
+
+  const handleCompleteTask = async (e) => {
+    e.stopPropagation(); // Prevent card click
+    if (onStatusChange && task.status !== 'COMPLETED') {
+      await onStatusChange(task.id, 'COMPLETED');
+    }
+  };
+
+  const handleArchiveTask = async (e) => {
+    e.stopPropagation(); // Prevent card click
+    if (onArchive) {
+      await onArchive(task.id);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -422,9 +437,53 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
           style={{ borderColor: 'var(--color-border-default)' }}
         >
           <div className="flex items-center space-x-2">
-            {!isPersonalAccount && (
+            {/* Complete Button */}
+            {task.status !== 'COMPLETED' && (
+              <button
+                onClick={handleCompleteTask}
+                className="p-1 rounded transition-all duration-200"
+                style={{
+                  backgroundColor: 'var(--color-success)',
+                  color: 'white',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.85';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+                title="Mark as Complete"
+              >
+                <FaCheck className="w-3 h-3" />
+              </button>
+            )}
+            
+            {/* Archive Button */}
+            {!task.archived && (
+              <button
+                onClick={handleArchiveTask}
+                className="p-1 rounded transition-all duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  color: 'var(--color-text-secondary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-quaternary)';
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                }}
+                title="Archive Task"
+              >
+                <FaArchive className="w-3 h-3" />
+              </button>
+            )}
+            
+            {task.assigner?.name && (
               <span 
-                className="text-xs transition-colors duration-200"
+                className="text-xs transition-colors duration-200 ml-2"
                 style={{ color: 'var(--color-text-tertiary)' }}
               >
                 Created by {task.assigner.name}

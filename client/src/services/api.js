@@ -242,6 +242,9 @@ export const projectsAPI = {
   
   // Reassign tasks
   reassignTask: (projectId, taskId, assigneeData) => api.put(`/projects/${projectId}/tasks/${taskId}/reassign`, assigneeData),
+
+  // Duplicate tasks
+  duplicateTasks: (projectId, taskIds, options) => api.post(`/projects/${projectId}/tasks/duplicate`, { taskIds, options }),
 };
 
 export const templatesAPI = {

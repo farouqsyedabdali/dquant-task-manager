@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import useAuthStore from './context/authStore';
-import useThemeStore from './stores/themeStore';
 import './debug-env'; // Debug environment variables
 import ProtectedRoute from './layouts/ProtectedRoute';
 import FontSizeProvider from './components/FontSizeProvider';
@@ -24,6 +23,7 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Contacts from './pages/Contacts';
 import Projects from './pages/Projects';
 import ColorPaletteTester from './pages/ColorPaletteTester';
+import TestStaging from './pages/TestStaging';
 import GoogleCallback from './pages/GoogleCallback';
 import LegalDocumentPage from './pages/LegalDocumentPage';
 import AIModal from './components/tasks/AIModal';
@@ -31,12 +31,12 @@ import ToastContainer from './components/common/ToastContainer';
 import { ToastProvider, useToastContext } from './context/ToastContext';
 import { FaRobot } from 'react-icons/fa';
 import AuthRedirect from './components/AuthRedirect';
-import tialzLogo from './assets/TIALZ Logo (No Background).png';
+import EmailMockup from './pages/EmailMockup';
+import { tialzFavicon } from './hooks/useThemeLogo';
 import './App.css';
 
 function AppContent() {
   const { getMe, isAuthenticated } = useAuthStore();
-  const { theme } = useThemeStore();
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [taskbarAction, setTaskbarAction] = useState(null);
   const { toasts, hideToast } = useToastContext();
@@ -47,6 +47,14 @@ function AppContent() {
       getMe();
     }
   }, [getMe, isAuthenticated]);
+
+  useEffect(() => {
+    document
+      .querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]')
+      .forEach((link) => {
+        link.href = tialzFavicon;
+      });
+  }, []);
 
   // Handle taskbar actions from Electron
   useEffect(() => {
@@ -96,6 +104,12 @@ function AppContent() {
 
             {/* Color Palette Tester (no auth required) */}
             <Route path="/test" element={<ColorPaletteTester />} />
+
+            {/* Staging Test Page (no auth required) */}
+            <Route path="/test-staging" element={<TestStaging />} />
+
+            {/* Email Mockup Gallery (no auth required) */}
+            <Route path="/email-mockup" element={<EmailMockup />} />
 
             {/* Protected Routes */}
             <Route
@@ -241,7 +255,7 @@ function AppContent() {
               onClick={() => setIsAIModalOpen(true)}
               title="Open AI Assistant"
             >
-              <img src={tialzLogo} alt="TIALZ" className="w-8 h-8 object-contain" />
+              <img src={tialzFavicon} alt="TIALZ" className="w-8 h-8 object-contain" />
             </button>
           )}
 

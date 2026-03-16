@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+/* Hide browser's native password reveal button (Edge/Chrome on Windows) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
 /* Theme Variables - Light Mode (Default) */
 :root {
   /* Background Colors - Darker, more visible grays */

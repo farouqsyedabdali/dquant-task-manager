@@ -4,10 +4,11 @@ import { aiAPI } from '../../services/api';
 import { FaPlus, FaEdit, FaLayerGroup, FaChevronDown, FaProjectDiagram, FaTimes } from 'react-icons/fa';
 import ProjectIdeaSelectionModal from '../projects/ProjectIdeaSelectionModal';
 import IconButton from '../common/IconButton';
-import tialzLogo from '../../assets/TIALZ Logo (No Background).png';
+import useThemeLogo from '../../hooks/useThemeLogo';
 
 const QuickActionsDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const tialzLogo = useThemeLogo();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
   const [isProjectIdeasModalOpen, setIsProjectIdeasModalOpen] = useState(false);

@@ -1,6 +1,6 @@
 import React from 'react';
 import Tooltip from './Tooltip';
-import tialzLogo from '../../assets/TIALZ Logo (No Background).png';
+import { tialzFavicon } from '../../hooks/useThemeLogo';
 
 /**
  * IconButton - A reusable button component that supports icons with optional text
@@ -132,7 +132,7 @@ const IconButton = ({
               {label === 'AI Help' ? (
                 <>
                   <img 
-                    src={tialzLogo} 
+                    src={tialzFavicon} 
                     alt="TIALZ" 
                     className="object-contain"
                     style={{ 

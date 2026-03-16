@@ -219,7 +219,7 @@ const SearchableDropdown = ({
           >
             <input
               type="text"
-              placeholder="Search employees..."
+              placeholder="Search..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-1 transition-colors duration-200"
@@ -260,7 +260,7 @@ const SearchableDropdown = ({
                 className="px-3 py-2 text-sm transition-colors duration-200"
                 style={{ color: 'var(--color-text-tertiary)' }}
               >
-                No employees found
+                No results found
               </div>
             ) : (
               (() => {
@@ -319,7 +319,7 @@ const SearchableDropdown = ({
                               borderBottomStyle: 'solid',
                             }}
                           >
-                            All Employees
+                            All
                           </div>
                         )}
                       </>

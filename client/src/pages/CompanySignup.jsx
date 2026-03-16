@@ -4,7 +4,8 @@ import useAuthStore from '../context/authStore';
 import PasswordStrengthIndicator from '../components/common/PasswordStrengthIndicator';
 import LegalDocumentModal from '../components/legal/LegalDocumentModal';
 import { validatePassword } from '../utils/passwordValidation';
-import tialzLogo from '../assets/Cover (1)-Photoroom.png';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import useThemeLogo from '../hooks/useThemeLogo';
 
 const CompanySignup = () => {
   const [formData, setFormData] = useState({
@@ -20,10 +21,13 @@ const CompanySignup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [legalDocumentType, setLegalDocumentType] = useState('terms'); // 'terms' or 'privacy'
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const { registerCompany, error, clearError, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const tialzLogo = useThemeLogo();
   const [urlError, setUrlError] = useState('');
 
   useEffect(() => {
@@ -348,21 +352,35 @@ const CompanySignup = () => {
                     </svg>
                   </div>
                 </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`input w-full ${errors.password ? 'border-red-500' : ''}`}
-                  style={{
-                    backgroundColor: 'var(--color-bg-tertiary)',
-                    borderColor: errors.password ? '#ef4444' : 'var(--color-border-default)',
-                    color: 'var(--color-text-primary)',
-                  }}
-                  placeholder="Enter password"
-                />
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={formData.password}
+                    onChange={handleChange}
+                    className={`input w-full pr-10 ${errors.password ? 'border-red-500' : ''}`}
+                    style={{
+                      backgroundColor: 'var(--color-bg-tertiary)',
+                      borderColor: errors.password ? '#ef4444' : 'var(--color-border-default)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                    placeholder="Enter password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-10 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-text-primary)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-tertiary)'; }}
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-red-400 text-sm mt-1">{errors.password}</p>
                 )}
@@ -379,21 +397,35 @@ const CompanySignup = () => {
                 >
                   Confirm Password *
                 </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={`input w-full ${errors.confirmPassword ? 'border-red-500' : ''}`}
-                  style={{
-                    backgroundColor: 'var(--color-bg-tertiary)',
-                    borderColor: errors.confirmPassword ? '#ef4444' : 'var(--color-border-default)',
-                    color: 'var(--color-text-primary)',
-                  }}
-                  placeholder="Confirm password"
-                />
+                <div className="relative">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className={`input w-full pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                    style={{
+                      backgroundColor: 'var(--color-bg-tertiary)',
+                      borderColor: errors.confirmPassword ? '#ef4444' : 'var(--color-border-default)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                    placeholder="Confirm password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-10 transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-text-primary)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-tertiary)'; }}
+                    tabIndex={-1}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
+                  </button>
+                </div>
                 {errors.confirmPassword && (
                   <p className="text-red-400 text-sm mt-1">{errors.confirmPassword}</p>
                 )}
