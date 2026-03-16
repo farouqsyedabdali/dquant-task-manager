@@ -3,7 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import ForgotPasswordModal from '../components/modals/ForgotPasswordModal';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import tialzLogo from '../assets/Cover (1)-Photoroom.png';
+import useThemeLogo from '../hooks/useThemeLogo';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -19,6 +19,7 @@ const Login = () => {
   const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const tialzLogo = useThemeLogo();
 
   useEffect(() => {
     if (isAuthenticated()) {

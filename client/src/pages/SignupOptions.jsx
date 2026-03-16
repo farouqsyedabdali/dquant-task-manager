@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import tialzLogo from '../assets/Cover (1)-Photoroom.png';
+import useThemeLogo from '../hooks/useThemeLogo';
 
 const SignupOptions = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const tialzLogo = useThemeLogo();
 
   const plans = [
     {

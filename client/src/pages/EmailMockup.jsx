@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import tialzLogo from '../assets/TIALZ Logo (No Background).png';
+import { lightModeLogo } from '../hooks/useThemeLogo';
 
 const BRAND = {
   primaryColor: '#6366f1',
@@ -15,7 +15,7 @@ const BRAND = {
 const currentYear = new Date().getFullYear();
 
 const logoImg = (width = 64) =>
-  `<img src="${tialzLogo}" alt="Tialz" width="${width}" height="${width}" style="display: block; margin: 0 auto ${width > 40 ? '20px' : '12px'}; width: ${width}px; height: ${width}px; object-fit: contain;${width <= 40 ? ' opacity: 0.6;' : ''}" />`;
+  `<img src="${lightModeLogo}" alt="Tialz" width="${width}" height="${width}" style="display: block; margin: 0 auto ${width > 40 ? '20px' : '12px'}; width: ${width}px; height: ${width}px; object-fit: contain;${width <= 40 ? ' opacity: 0.6;' : ''}" />`;
 
 const baseStyles = `
   body {
@@ -461,7 +461,7 @@ export default function EmailMockup() {
         justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <img src={tialzLogo} alt="Tialz" style={{ width: 40, height: 40, objectFit: 'contain' }} />
+          <img src={lightModeLogo} alt="Tialz" style={{ width: 40, height: 40, objectFit: 'contain' }} />
           <div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'white' }}>Email Mockup Gallery</h1>
             <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>Preview all Tialz email templates with sample data</p>

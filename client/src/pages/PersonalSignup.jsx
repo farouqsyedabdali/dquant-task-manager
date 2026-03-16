@@ -5,7 +5,7 @@ import PasswordStrengthIndicator from '../components/common/PasswordStrengthIndi
 import LegalDocumentModal from '../components/legal/LegalDocumentModal';
 import { validatePassword } from '../utils/passwordValidation';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import tialzLogo from '../assets/Cover (1)-Photoroom.png';
+import useThemeLogo from '../hooks/useThemeLogo';
 
 const PersonalSignup = () => {
   const [formData, setFormData] = useState({
@@ -24,6 +24,7 @@ const PersonalSignup = () => {
   
   const { registerPersonal, error, clearError, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const tialzLogo = useThemeLogo();
 
   useEffect(() => {
     if (isAuthenticated()) {

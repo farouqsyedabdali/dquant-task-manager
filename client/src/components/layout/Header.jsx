@@ -5,7 +5,7 @@ import CalendarIcon from '../icons/CalendarIcon';
 import QuickActionsDropdown from './QuickActionsDropdown';
 import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaUserFriends, FaProjectDiagram, FaComment, FaBook } from 'react-icons/fa';
 import UserManualModal from '../common/UserManualModal';
-import tialzLogo from '../../assets/Cover (1)-Photoroom.png';
+import useThemeLogo from '../../hooks/useThemeLogo';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -14,6 +14,7 @@ const Header = () => {
   const profileDropdownRef = useRef(null);
   const { user, logout, isAdmin, isSysAdmin, isSuperAdmin } = useAuthStore();
   const navigate = useNavigate();
+  const tialzLogo = useThemeLogo();
   
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;

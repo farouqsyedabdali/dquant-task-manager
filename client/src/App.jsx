@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import useAuthStore from './context/authStore';
-import useThemeStore from './stores/themeStore';
 import './debug-env'; // Debug environment variables
 import ProtectedRoute from './layouts/ProtectedRoute';
 import FontSizeProvider from './components/FontSizeProvider';
@@ -33,12 +32,11 @@ import { ToastProvider, useToastContext } from './context/ToastContext';
 import { FaRobot } from 'react-icons/fa';
 import AuthRedirect from './components/AuthRedirect';
 import EmailMockup from './pages/EmailMockup';
-import tialzLogo from './assets/TIALZ Logo (No Background).png';
+import { tialzFavicon } from './hooks/useThemeLogo';
 import './App.css';
 
 function AppContent() {
   const { getMe, isAuthenticated } = useAuthStore();
-  const { theme } = useThemeStore();
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [taskbarAction, setTaskbarAction] = useState(null);
   const { toasts, hideToast } = useToastContext();
@@ -49,6 +47,14 @@ function AppContent() {
       getMe();
     }
   }, [getMe, isAuthenticated]);
+
+  useEffect(() => {
+    document
+      .querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]')
+      .forEach((link) => {
+        link.href = tialzFavicon;
+      });
+  }, []);
 
   // Handle taskbar actions from Electron
   useEffect(() => {
@@ -249,7 +255,7 @@ function AppContent() {
               onClick={() => setIsAIModalOpen(true)}
               title="Open AI Assistant"
             >
-              <img src={tialzLogo} alt="TIALZ" className="w-8 h-8 object-contain" />
+              <img src={tialzFavicon} alt="TIALZ" className="w-8 h-8 object-contain" />
             </button>
           )}
 
