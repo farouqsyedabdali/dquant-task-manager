@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
-const { getAuthUrl, verifyToken } = require('../services/googleAuthService');
+const { getAuthUrl, verifyToken, verifyIdToken } = require('../services/googleAuthService');
 
 // Helper to get frontend URL
 const getFrontendUrl = () => {
@@ -241,8 +241,134 @@ const handleGoogleCallback = async (req, res) => {
   }
 };
 
+/**
+ * Handle Google Sign-In for mobile apps.
+ * Accepts idToken from Google Sign-In SDK, verifies it, and returns Tialz JWT.
+ * POST /api/auth/google-id-token
+ * Body: { idToken: "..." }
+ */
+const handleGoogleIdToken = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken || typeof idToken !== 'string') {
+      return res.status(400).json({ error: 'idToken is required' });
+    }
+
+    const googleUser = await verifyIdToken(idToken);
+
+    // Check if user already exists by googleId
+    let user = await prisma.user.findUnique({
+      where: { googleId: googleUser.googleId },
+      include: { company: true }
+    });
+
+    if (!user) {
+      user = await prisma.user.findFirst({
+        where: { email: googleUser.email },
+        include: { company: true }
+      });
+    }
+
+    if (user) {
+      // Only allow personal accounts to sign in via mobile Google
+      if (!user.company.isPersonal) {
+        return res.status(403).json({
+          error: 'Google Sign-In is only available for personal accounts. Please sign in with your email and password.',
+          requiresEmailAuth: true
+        });
+      }
+
+      if (user.company.markedForDeletion) {
+        return res.status(403).json({ error: 'Account suspended' });
+      }
+
+      // Update googleId if not set
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          googleId: googleUser.googleId,
+          authProvider: 'google'
+        }
+      });
+
+      const token = jwt.sign(
+        { userId: user.id, companyId: user.companyId, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      const userWithCompany = {
+        ...user,
+        companyName: user.company?.name,
+        isPersonal: user.company?.isPersonal || false
+      };
+      delete userWithCompany.password;
+
+      return res.json({
+        token,
+        user: userWithCompany
+      });
+    }
+
+    // New user - create personal account (mobile Google is personal-only)
+    const company = await prisma.company.create({
+      data: {
+        name: googleUser.name + "'s Personal",
+        email: googleUser.email,
+        passwordHash: null,
+        googleId: googleUser.googleId,
+        authProvider: 'google',
+        isPersonal: true,
+        autoArchivePeriod: 12
+      }
+    });
+
+    const newUser = await prisma.user.create({
+      data: {
+        name: googleUser.name,
+        email: googleUser.email,
+        password: null,
+        googleId: googleUser.googleId,
+        authProvider: 'google',
+        role: 'SYSDMIN',
+        companyId: company.id,
+        isEmailVerified: googleUser.emailVerified || true,
+        googleAccessToken: googleUser.accessToken,
+        googleRefreshToken: googleUser.refreshToken,
+        googleTokenExpiry: googleUser.tokenExpiry,
+        googleContactsScope: false
+      },
+      include: { company: true }
+    });
+
+    const token = jwt.sign(
+      { userId: newUser.id, companyId: newUser.companyId, role: newUser.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    const userWithCompany = {
+      ...newUser,
+      companyName: newUser.company?.name,
+      isPersonal: true
+    };
+    delete userWithCompany.password;
+
+    return res.status(201).json({
+      token,
+      user: userWithCompany,
+      newUser: true
+    });
+  } catch (error) {
+    console.error('Google ID token auth error:', error);
+    res.status(401).json({ error: 'Invalid or expired Google ID token' });
+  }
+};
+
 module.exports = {
   initiateGoogleAuth,
-  handleGoogleCallback
+  handleGoogleCallback,
+  handleGoogleIdToken
 };
 
