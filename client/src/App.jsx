@@ -32,6 +32,7 @@ import { ToastProvider, useToastContext } from './context/ToastContext';
 import { FaRobot } from 'react-icons/fa';
 import AuthRedirect from './components/AuthRedirect';
 import EmailMockup from './pages/EmailMockup';
+import MockupViewer from './mockups/MockupViewer';
 import { tialzFavicon } from './hooks/useThemeLogo';
 import './App.css';
 
@@ -110,6 +111,9 @@ function AppContent() {
 
             {/* Email Mockup Gallery (no auth required) */}
             <Route path="/email-mockup" element={<EmailMockup />} />
+
+            {/* Design Mockups (no auth required) */}
+            <Route path="/mockups/*" element={<MockupViewer />} />
 
             {/* Protected Routes */}
             <Route
