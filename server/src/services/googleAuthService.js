@@ -35,7 +35,42 @@ const getContactsAuthUrl = () => {
   });
 };
 
-// Verify Google ID token and get user info
+// Verify Google ID token directly (for mobile apps - no code exchange)
+// The mobile app sends the idToken from Google Sign-In SDK; we verify it and return user info
+const verifyIdToken = async (idToken) => {
+  try {
+    // Support multiple client IDs (web, iOS, Android) - mobile may use platform-specific client IDs
+    const audiences = [process.env.GOOGLE_CLIENT_ID]
+      .concat(process.env.GOOGLE_IOS_CLIENT_ID ? [process.env.GOOGLE_IOS_CLIENT_ID] : [])
+      .concat(process.env.GOOGLE_ANDROID_CLIENT_ID ? [process.env.GOOGLE_ANDROID_CLIENT_ID] : [])
+      .filter(Boolean);
+
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: audiences
+    });
+
+    const payload = ticket.getPayload();
+
+    return {
+      googleId: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+      emailVerified: payload.email_verified,
+      // Mobile flow has no access/refresh tokens - those come from web OAuth redirect only
+      accessToken: null,
+      refreshToken: null,
+      tokenExpiry: null,
+      scopes: []
+    };
+  } catch (error) {
+    console.error('Google ID token verification error:', error);
+    throw new Error('Invalid or expired Google ID token');
+  }
+};
+
+// Verify Google OAuth authorization code (for web - exchange code for tokens)
 const verifyToken = async (code) => {
   try {
     // Exchange code for tokens
@@ -71,7 +106,8 @@ const verifyToken = async (code) => {
 module.exports = {
   getAuthUrl,
   getContactsAuthUrl,
-  verifyToken
+  verifyToken,
+  verifyIdToken
 };
 
 

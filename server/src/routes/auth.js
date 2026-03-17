@@ -1,7 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { login, register, registerCompany, registerPersonal, deleteCompany, getMe, updateAutoArchivePeriod, forgotPassword, verifyPasswordResetCode, resetPasswordWithCode, completeEmployeeSetup } = require('../controllers/authController');
-const { initiateGoogleAuth, handleGoogleCallback } = require('../controllers/googleAuthController');
+const { initiateGoogleAuth, handleGoogleCallback, handleGoogleIdToken } = require('../controllers/googleAuthController');
 const auth = require('../middleware/auth');
 const { adminOnly, sysAdminOnly } = require('../middleware/roleCheck');
 const { validators, handleValidationErrors } = require('../middleware/validators');
@@ -57,6 +57,13 @@ router.post('/complete-employee-setup',
 // Google OAuth routes
 router.get('/google', initiateGoogleAuth);
 router.get('/google/callback', handleGoogleCallback);
+
+// Google Sign-In for mobile apps (accepts idToken from SDK, returns Tialz JWT)
+router.post('/google-id-token',
+  body('idToken').trim().notEmpty().withMessage('idToken is required'),
+  handleValidationErrors,
+  handleGoogleIdToken
+);
 
 // Forgot password routes (public)
 router.post('/forgot-password',
