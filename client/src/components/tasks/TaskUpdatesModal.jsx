@@ -121,6 +121,7 @@ const TaskUpdatesModal = ({ isOpen, onClose, task }) => {
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)'
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-4">

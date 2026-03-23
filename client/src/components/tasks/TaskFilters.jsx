@@ -151,13 +151,16 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
   return (
     <div
-      className="border rounded-lg shadow-lg p-6 transition-colors duration-200"
+      className="border rounded-lg shadow-lg p-6 transition-colors duration-200 overflow-visible"
       style={{
         backgroundColor: 'var(--color-bg-secondary)',
         borderColor: 'var(--color-border-default)',
       }}
     >
-      <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+      {/* Single row: 7 columns. min-w-[56rem] keeps one line; narrow viewports scroll horizontally
+          at the page level (no overflow-x-auto on this wrapper — that clips dropdown menus). */}
+      <div className="pb-1 -mx-1 px-1 w-full min-w-0">
+      <div className="grid grid-cols-7 gap-2 sm:gap-3 lg:gap-4 min-w-[56rem] w-full">
         {/* Search */}
         <div>
           <label
@@ -886,6 +889,7 @@ const TaskFilters = ({ filters, onFilterChange, onClearFilters }) => {
             className="w-full h-10"
           />
         </div>
+      </div>
       </div>
 
       {/* Active Filters Display */}

@@ -4,11 +4,10 @@ import { aiAPI } from '../../services/api';
 import { FaPlus, FaEdit, FaLayerGroup, FaChevronDown, FaProjectDiagram, FaTimes } from 'react-icons/fa';
 import ProjectIdeaSelectionModal from '../projects/ProjectIdeaSelectionModal';
 import IconButton from '../common/IconButton';
-import useThemeLogo from '../../hooks/useThemeLogo';
+import { tialzFavicon } from '../../hooks/useThemeLogo';
 
 const QuickActionsDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const tialzLogo = useThemeLogo();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
   const [isProjectIdeasModalOpen, setIsProjectIdeasModalOpen] = useState(false);
@@ -310,7 +309,7 @@ const QuickActionsDropdown = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isProcessing}
-        className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2"
+        className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 flex-shrink-0 whitespace-nowrap"
         style={{
           backgroundColor: 'var(--color-primary)',
           color: 'white',
@@ -330,8 +329,8 @@ const QuickActionsDropdown = () => {
         ) : (
           <>
             <img
-              src={tialzLogo}
-              alt="TIALZ"
+              src={tialzFavicon}
+              alt=""
               className="object-contain"
               style={{
                 height: '24px',

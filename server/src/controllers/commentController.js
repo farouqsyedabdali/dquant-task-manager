@@ -112,6 +112,38 @@ const createComment = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
+    // Enforce VIEWER restriction: if the user's only access is a VIEWER-level
+    // share or collaboration, they may read but not create comments.
+    const isAssigner = task.assignerId === authorId;
+    const isAssignee = task.assigneeId === authorId;
+    const isAdminRole = userRole === 'ADMIN' || userRole === 'SYSDMIN' || userRole === 'SUPER_ADMIN';
+
+    if (!isAssigner && !isAssignee && !isAdminRole) {
+      // Check co-assignee (always allowed to comment)
+      const isCoAssignee = await prisma.taskCoAssignee.findFirst({
+        where: { taskId: parseInt(taskId), userId: authorId }
+      });
+
+      if (!isCoAssignee) {
+        // User's access comes from share or collaborator — check permission level
+        const collaboratorRecord = await prisma.taskCollaborator.findFirst({
+          where: { taskId: parseInt(taskId), userId: authorId }
+        });
+        const shareRecord = await prisma.taskShare.findFirst({
+          where: { taskId: parseInt(taskId), userId: authorId }
+        });
+
+        const effectivePermission =
+          collaboratorRecord?.permissionLevel || shareRecord?.permissionLevel || 'VIEWER';
+
+        if (effectivePermission === 'VIEWER' || effectivePermission === 'VIEW') {
+          return res.status(403).json({
+            error: 'You have view-only access to this task and cannot add comments'
+          });
+        }
+      }
+    }
+
     const comment = await prisma.comment.create({
       data: {
         content,

@@ -13,7 +13,8 @@ import DatePicker from '../common/DatePicker';
 import IconButton from '../common/IconButton';
 import AIWarning from '../common/AIWarning';
 import { useToastContext } from '../../context/ToastContext';
-import { FaTimes, FaCheck, FaRobot } from 'react-icons/fa';
+import { FaTimes, FaCheck } from 'react-icons/fa';
+import { tialzFavicon } from '../../hooks/useThemeLogo';
 
 const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = null }) => {
   const [formData, setFormData] = useState({
@@ -678,7 +679,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
           {/* Submit Buttons */}
           <div className="flex justify-between items-center pt-4">
             <IconButton
-              icon={<FaRobot />}
+              icon={<img src={tialzFavicon} alt="" />}
               label="Smart Pre-fill"
               variant="primary"
               onClick={handleAIPreFill}

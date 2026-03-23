@@ -4,7 +4,8 @@ import { projectsAPI, templatesAPI, aiAPI } from '../../services/api';
 import { formatDateForInput } from '../../utils/dateUtils';
 import IconButton from '../common/IconButton';
 import ProjectIdeaSelectionModal from './ProjectIdeaSelectionModal';
-import { FaArrowLeft, FaTimes, FaCheck, FaRobot } from 'react-icons/fa';
+import { FaArrowLeft, FaTimes, FaCheck } from 'react-icons/fa';
+import { tialzFavicon } from '../../hooks/useThemeLogo';
 import { useToastContext } from '../../context/ToastContext';
 
 const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
@@ -414,7 +415,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
           <div className="flex items-center gap-3">
             {step === 1 && (
               <IconButton
-                icon={<FaRobot />}
+                icon={<img src={tialzFavicon} alt="" />}
                 label="AI Generate Project"
                 variant="primary"
                 size="sm"
@@ -1062,7 +1063,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                   size="sm"
                 />
                 <IconButton
-                  icon={<FaRobot />}
+                  icon={<img src={tialzFavicon} alt="" />}
                   label="AI Generate Project"
                   variant="primary"
                   onClick={handleAIGenerateProject}

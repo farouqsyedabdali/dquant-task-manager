@@ -7,7 +7,7 @@ import IconButton from '../common/IconButton';
 import SearchableDropdown from '../common/SearchableDropdown';
 import { FaComment, FaEdit, FaTrash, FaSave, FaTimes, FaExchangeAlt } from 'react-icons/fa';
 
-const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTaskSwitch = null }) => {
+const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTaskSwitch = null, readOnly = false }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -234,48 +234,60 @@ const CommentSection = ({ taskId, task = null, extensionUpdateData = null, onTas
       )}
       
       {/* Task Switcher - Removed: Task selection now happens in TaskSelectionModal before opening TaskModal */}
-      
-      <form onSubmit={handleSubmit} className="space-y-1">
-        <div>
-          <textarea
-            value={newComment}
-            onChange={handleCommentChange}
-            placeholder="Add a comment..."
-            rows={3}
-            maxLength={200}
-            className="textarea w-full rounded-lg transition-colors duration-200"
-            style={{
-              backgroundColor: 'var(--color-bg-tertiary)',
-              borderColor: 'var(--color-border-default)',
-              color: 'var(--color-text-primary)',
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'var(--color-primary)';
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'var(--color-border-default)';
-            }}
-            disabled={isLoading}
-          />
-          <div 
-            className="text-xs mt-1 transition-colors duration-200"
-            style={{ color: 'var(--color-text-tertiary)' }}
-          >
-            {newComment.length}/200 characters
+
+      {readOnly ? (
+        <div
+          className="text-sm text-center py-3 rounded-lg transition-colors duration-200"
+          style={{
+            backgroundColor: 'var(--color-bg-tertiary)',
+            color: 'var(--color-text-tertiary)',
+          }}
+        >
+          You have view-only access — comments are disabled
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-1">
+          <div>
+            <textarea
+              value={newComment}
+              onChange={handleCommentChange}
+              placeholder="Add a comment..."
+              rows={3}
+              maxLength={200}
+              className="textarea w-full rounded-lg transition-colors duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                borderColor: 'var(--color-border-default)',
+                color: 'var(--color-text-primary)',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-primary)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border-default)';
+              }}
+              disabled={isLoading}
+            />
+            <div 
+              className="text-xs mt-1 transition-colors duration-200"
+              style={{ color: 'var(--color-text-tertiary)' }}
+            >
+              {newComment.length}/200 characters
+            </div>
           </div>
-        </div>
-        <div className="flex justify-end">
-          <IconButton
-            icon={<FaComment />}
-            label={isLoading ? 'Adding...' : 'Add Comment'}
-            variant="primary"
-            size="sm"
-            type="submit"
-            disabled={isLoading || !newComment.trim()}
-            loading={isLoading}
-          />
-        </div>
-      </form>
+          <div className="flex justify-end">
+            <IconButton
+              icon={<FaComment />}
+              label={isLoading ? 'Adding...' : 'Add Comment'}
+              variant="primary"
+              size="sm"
+              type="submit"
+              disabled={isLoading || !newComment.trim()}
+              loading={isLoading}
+            />
+          </div>
+        </form>
+      )}
 
       {/* Comments List */}
       <div className="space-y-4">
