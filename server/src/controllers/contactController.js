@@ -330,6 +330,11 @@ const deleteContact = async (req, res) => {
       });
 
       for (const task of tasksYouAreAssignedTo) {
+        // Do not withdraw from internal (same-company) assignments — same rule as POST /tasks/:id/unaccept
+        if (contactUser.companyId === req.user.companyId) {
+          continue;
+        }
+
         // Update task: remove assignee and reset to TODO
         await prisma.task.update({
           where: { id: task.id },

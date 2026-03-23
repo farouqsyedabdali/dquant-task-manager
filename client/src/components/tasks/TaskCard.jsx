@@ -14,13 +14,19 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
   const [showAllCoAssignees, setShowAllCoAssignees] = useState(false);
-  const { user, isAdmin } = useAuthStore();
+  const { user } = useAuthStore();
 
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
 
   // Check if current user is viewing a shared task
   const isSharedTask = task?.sharedWith?.some(share => share.userId === user?.id);
+
+  // Only task creator or same-company admins may use quick "complete" / "archive" on the card
+  const isSameCompany = task?.companyId != null && task.companyId === user?.companyId;
+  const canUseCompleteAndArchiveActions =
+    task?.assignerId === user?.id ||
+    (isSameCompany && (user?.role === 'ADMIN' || user?.role === 'SYSDMIN'));
 
   const handleCardClick = () => {
     setIsModalOpen(true);
@@ -437,8 +443,8 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
           style={{ borderColor: 'var(--color-border-default)' }}
         >
           <div className="flex items-center space-x-2">
-            {/* Complete Button */}
-            {task.status !== 'COMPLETED' && (
+            {/* Complete Button — assigner or ADMIN/SYSDMIN only */}
+            {canUseCompleteAndArchiveActions && task.status !== 'COMPLETED' && (
               <button
                 onClick={handleCompleteTask}
                 className="p-1 rounded transition-all duration-200"
@@ -458,8 +464,8 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
               </button>
             )}
             
-            {/* Archive Button */}
-            {!task.archived && (
+            {/* Archive Button — assigner or ADMIN/SYSDMIN only */}
+            {canUseCompleteAndArchiveActions && !task.archived && (
               <button
                 onClick={handleArchiveTask}
                 className="p-1 rounded transition-all duration-200"

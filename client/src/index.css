@@ -131,3 +131,37 @@ input[type="password"]::-ms-clear {
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-in-out;
 }
+
+/*
+ * Layout resilience (browser zoom, narrow widths, long text)
+ * - Flex/grid children default to min-width:auto and refuse to shrink → overlap.
+ * - Use min-w-0 + truncate/line-clamp so text yields instead of covering siblings.
+ */
+.app-root-shell {
+  min-width: 0;
+  /* Avoid overflow-x: clip — it can clip/stack badly with position:absolute dropdowns
+     (menus look broken or clicks miss). Horizontal overflow is handled via min-w-0 on flex children. */
+  overflow-x: visible;
+}
+
+/* Horizontal scroll for toolbars instead of squished/overlapping controls */
+.app-toolbar-scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 1rem;
+  align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.app-toolbar-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.app-toolbar-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+  border-radius: 3px;
+}

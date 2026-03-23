@@ -83,11 +83,26 @@ const IconButton = ({
     ${className}
   `.trim().replace(/\s+/g, ' ');
 
-  // Render icon with proper size and spacing
-  const iconElement = icon && React.cloneElement(icon, {
-    size: iconSizes[size],
-    className: `${iconOnly ? '' : 'mr-2'} ${icon.props?.className || ''}`
-  });
+  // Render icon with proper size and spacing (img = favicon etc., no react-icons `size` prop)
+  const iconElement =
+    icon &&
+    (React.isValidElement(icon) && icon.type === 'img'
+      ? (
+          <img
+            {...icon.props}
+            alt={icon.props.alt ?? ''}
+            className={`object-contain ${iconOnly ? '' : 'mr-2'} ${icon.props.className || ''}`.trim()}
+            style={{
+              width: iconSizes[size],
+              height: iconSizes[size],
+              ...icon.props.style,
+            }}
+          />
+        )
+      : React.cloneElement(icon, {
+          size: iconSizes[size],
+          className: `${iconOnly ? '' : 'mr-2'} ${icon.props?.className || ''}`,
+        }));
 
   const variantStyles = getVariantStyles(variant);
   const [isHovered, setIsHovered] = React.useState(false);

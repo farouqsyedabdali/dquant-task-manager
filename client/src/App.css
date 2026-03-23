@@ -93,6 +93,22 @@ body {
 .font-large .text-4xl { font-size: var(--font-size-4xl) !important; }
 .font-large .text-5xl { font-size: var(--font-size-5xl) !important; }
 
+/*
+ * 404 display — overrides .font-small|medium|large * { font-size: base !important }
+ * which was clamping all descendants to body text size.
+ */
+.font-small .not-found-code-404,
+.font-medium .not-found-code-404,
+.font-large .not-found-code-404 {
+  /* ~¼ of previous clamp(10rem, 58vw, 48rem) */
+  font-size: clamp(2.5rem, 14.5vw, 12rem) !important;
+  line-height: 0.9 !important;
+  font-weight: 900 !important;
+  display: block !important;
+  width: 100% !important;
+  text-align: center !important;
+}
+
 
 /* Button and input sizing */
 .font-small .btn { 

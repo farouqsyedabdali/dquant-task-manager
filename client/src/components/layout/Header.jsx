@@ -91,25 +91,24 @@ const Header = () => {
         })
       }}
     >
-      <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="flex items-center">
+      <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 min-w-0">
+        <div className="flex justify-between items-center h-16 gap-3 min-w-0">
+          {/* Logo + nav — min-w-0 lets the row shrink instead of overlapping the right side */}
+          <div className="flex items-center min-w-0 flex-1">
             <div className="flex-shrink-0">
               <img 
                 src={tialzLogo}
                 alt="TIALZ Logo"
-                className="h-28 w-auto object-contain"
-                style={{ maxHeight: '112px' }}
+                className="h-10 sm:h-11 w-auto object-contain max-h-[44px]"
               />
             </div>
             
-            {/* Navigation Links */}
-            <nav className="hidden md:flex ml-8 space-x-4">
+            {/* Navigation: scroll horizontally at md–lg instead of wrapping/overlap */}
+            <nav className="hidden md:flex ml-4 lg:ml-8 app-toolbar-scroll flex-1 min-w-0 pl-2">
               <button
                 onClick={() => handleNavigation('/dashboard')}
-                className="px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2 transition-colors duration-200"
-                style={{ 
+                className="px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2 transition-colors duration-200 flex-shrink-0 whitespace-nowrap"
+                style={{
                   color: 'var(--color-text-secondary)',
                 }}
                 onMouseEnter={(e) => {
@@ -119,12 +118,12 @@ const Header = () => {
                   e.currentTarget.style.color = 'var(--color-text-secondary)';
                 }}
               >
-                <FaHome className="w-4 h-4" />
+                <FaHome className="w-4 h-4 flex-shrink-0" />
                 <span>Dashboard</span>
               </button>
               <button
                 onClick={() => handleNavigation('/calendar')}
-                className="px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2 transition-colors duration-200"
+                className="px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2 transition-colors duration-200 flex-shrink-0 whitespace-nowrap"
                 style={{ 
                   color: 'var(--color-text-secondary)',
                 }}
@@ -140,7 +139,7 @@ const Header = () => {
               </button>
               <button
                 onClick={() => handleNavigation('/contacts')}
-                className="px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2 transition-colors duration-200"
+                className="px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2 transition-colors duration-200 flex-shrink-0 whitespace-nowrap"
                 style={{ 
                   color: 'var(--color-text-secondary)',
                 }}
@@ -158,7 +157,7 @@ const Header = () => {
               </button>
               <button
                 onClick={() => handleNavigation('/projects')}
-                className="px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2 transition-colors duration-200"
+                className="px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2 transition-colors duration-200 flex-shrink-0 whitespace-nowrap"
                 style={{ 
                   color: 'var(--color-text-secondary)',
                 }}
@@ -175,7 +174,7 @@ const Header = () => {
               {isAdmin() && !isPersonalAccount && (
                 <button
                   onClick={() => handleNavigation('/employees')}
-                  className="px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2 transition-colors duration-200"
+                  className="px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2 transition-colors duration-200 flex-shrink-0 whitespace-nowrap"
                   style={{ 
                     color: 'var(--color-text-secondary)',
                   }}
@@ -194,7 +193,7 @@ const Header = () => {
           </div>
 
           {/* User Menu */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {/* Quick Actions Dropdown */}
             <QuickActionsDropdown />
 
@@ -202,7 +201,7 @@ const Header = () => {
             <div className="relative" ref={profileDropdownRef}>
               <button
                 onClick={toggleProfileDropdown}
-                className="flex items-center space-x-3 transition-colors duration-200"
+                className="flex items-center gap-2 sm:gap-3 min-w-0 max-w-full transition-colors duration-200"
                 style={{ 
                   color: 'var(--color-text-primary)',
                 }}
@@ -213,8 +212,8 @@ const Header = () => {
                   e.currentTarget.style.color = 'var(--color-text-primary)';
                 }}
               >
-                <div className="text-right hidden md:block">
-                  <p className="text-sm font-medium">{user?.name}</p>
+                <div className="text-right hidden md:block min-w-0 max-w-[10rem] lg:max-w-[14rem]">
+                  <p className="text-sm font-medium truncate">{user?.name}</p>
                   {!isPersonalAccount && (
                     <p 
                       className="text-xs transition-colors duration-200"

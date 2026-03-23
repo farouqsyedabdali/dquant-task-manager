@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { aiAPI } from '../../services/api';
-import { FaRobot, FaTimes, FaPlus, FaEdit, FaLayerGroup, FaProjectDiagram } from 'react-icons/fa';
+import { FaTimes, FaPlus, FaEdit, FaLayerGroup, FaProjectDiagram } from 'react-icons/fa';
 import useAuthStore from '../../context/authStore';
 import ProjectIdeaSelectionModal from '../projects/ProjectIdeaSelectionModal';
 import IconButton from '../common/IconButton';

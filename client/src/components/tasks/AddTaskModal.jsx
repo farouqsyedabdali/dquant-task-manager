@@ -11,7 +11,8 @@ import AddContactModal from '../common/AddContactModal';
 import IconButton from '../common/IconButton';
 import DatePicker from '../common/DatePicker';
 import AIWarning from '../common/AIWarning';
-import { FaTimes, FaPlus, FaSave, FaRobot } from 'react-icons/fa';
+import { FaTimes, FaPlus, FaSave } from 'react-icons/fa';
+import { tialzFavicon } from '../../hooks/useThemeLogo';
 import { aiAPI, projectsAPI } from '../../services/api';
 import { useToastContext } from '../../context/ToastContext';
 
@@ -753,7 +754,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
           {/* Submit Buttons */}
           <div className="flex justify-between items-center pt-4">
             <IconButton
-              icon={<FaRobot />}
+              icon={<img src={tialzFavicon} alt="" />}
               label="Smart Pre-fill"
               variant="primary"
               onClick={handleAIPreFill}

@@ -12,11 +12,14 @@ const shareTask = async (req, res) => {
     const currentUserId = req.user.id;
     const companyId = req.user.companyId;
 
-    // Verify task exists and user has permission to share it
+    // Verify task exists — allow access for same-company users OR the external lead assignee
     const task = await prisma.task.findFirst({
       where: {
         id: parseInt(taskId),
-        companyId: companyId
+        OR: [
+          { companyId: companyId },
+          { assigneeId: currentUserId }
+        ]
       },
       include: {
         assignee: true,
@@ -136,11 +139,14 @@ const unshareTask = async (req, res) => {
     const currentUserId = req.user.id;
     const companyId = req.user.companyId;
 
-    // Verify task exists and user has permission to unshare it
+    // Verify task exists — same-company or external lead assignee
     const task = await prisma.task.findFirst({
       where: {
         id: parseInt(taskId),
-        companyId: companyId
+        OR: [
+          { companyId: companyId },
+          { assigneeId: currentUserId }
+        ]
       }
     });
 
@@ -148,20 +154,20 @@ const unshareTask = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // In unshareTask, same permission logic:
-    const isAdminOrSysadminUnshare = req.user.role === 'ADMIN' || req.user.role === 'SYSDMIN' || req.user.role === 'SUPER_ADMIN';
+    const isSameCompany = task.companyId === companyId;
+    const isAdminOrSysadminUnshare = isSameCompany && (req.user.role === 'ADMIN' || req.user.role === 'SYSDMIN' || req.user.role === 'SUPER_ADMIN');
     const isAssignerUnshare = task.assignerId === currentUserId;
     const isLeadAssigneeUnshare = task.assigneeId === currentUserId;
     if (!(isLeadAssigneeUnshare || isAssignerUnshare || isAdminOrSysadminUnshare)) {
       return res.status(403).json({ error: 'Only the lead assignee, assigner, or admin/sysadmin can unshare this task' });
     }
 
-    // Find and delete the share
+    // Find the share — don't filter by companyId because external shares use
+    // the *recipient's* companyId, not the sharer's.
     const taskShare = await prisma.taskShare.findFirst({
       where: {
         taskId: parseInt(taskId),
-        userId: parseInt(userId),
-        companyId: companyId
+        userId: parseInt(userId)
       },
       include: {
         user: {
@@ -177,8 +183,14 @@ const unshareTask = async (req, res) => {
     }
 
     await prisma.taskShare.delete({
+      where: { id: taskShare.id }
+    });
+
+    // Also remove the matching TaskCollaborator so the user truly loses access
+    await prisma.taskCollaborator.deleteMany({
       where: {
-        id: taskShare.id
+        taskId: parseInt(taskId),
+        userId: parseInt(userId)
       }
     });
 
@@ -196,7 +208,7 @@ const unshareTask = async (req, res) => {
     await logAuditActionDirect(req, 'TASK_UNSHARED', 'TaskShare', {
       entityId: taskShare.id,
       taskTitle: task.title,
-      unsharedWithName: taskShare.user.name,
+      unsharedWithName: taskShare.user?.name || 'Unknown',
       metadata: {
         taskId: parseInt(taskId),
         unsharedWithUserId: parseInt(userId)
@@ -217,11 +229,14 @@ const unshareTaskById = async (req, res) => {
     const currentUserId = req.user.id;
     const companyId = req.user.companyId;
 
-    // Verify task exists and user has permission to unshare it
+    // Verify task exists — same-company or external lead assignee
     const task = await prisma.task.findFirst({
       where: {
         id: parseInt(taskId),
-        companyId: companyId
+        OR: [
+          { companyId: companyId },
+          { assigneeId: currentUserId }
+        ]
       }
     });
 
@@ -229,20 +244,20 @@ const unshareTaskById = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Check permissions: lead assignee, assigner, admin, or sysadmin
-    const isAdminOrSysadmin = req.user.role === 'ADMIN' || req.user.role === 'SYSDMIN' || req.user.role === 'SUPER_ADMIN';
+    // Check permissions: lead assignee, assigner, or same-company admin/sysadmin
+    const isSameCompany = task.companyId === companyId;
+    const isAdminOrSysadmin = isSameCompany && (req.user.role === 'ADMIN' || req.user.role === 'SYSDMIN' || req.user.role === 'SUPER_ADMIN');
     const isAssigner = task.assignerId === currentUserId;
     const isLeadAssignee = task.assigneeId === currentUserId;
     if (!(isLeadAssignee || isAssigner || isAdminOrSysadmin)) {
       return res.status(403).json({ error: 'Only the lead assignee, assigner, or admin/sysadmin can unshare this task' });
     }
 
-    // Find the share
+    // Find the share — no companyId filter; external shares use the recipient's company.
     const taskShare = await prisma.taskShare.findFirst({
       where: {
         id: parseInt(shareId),
-        taskId: parseInt(taskId),
-        companyId: companyId
+        taskId: parseInt(taskId)
       },
       include: {
         user: {
@@ -272,10 +287,18 @@ const unshareTaskById = async (req, res) => {
 
     // Delete the share
     await prisma.taskShare.delete({
-      where: {
-        id: taskShare.id
-      }
+      where: { id: taskShare.id }
     });
+
+    // Also remove the matching TaskCollaborator so the user truly loses access
+    if (unsharedUserId) {
+      await prisma.taskCollaborator.deleteMany({
+        where: {
+          taskId: parseInt(taskId),
+          userId: unsharedUserId
+        }
+      });
+    }
 
     // Send notification if it was an internal user
     if (unsharedUserId) {
@@ -317,11 +340,14 @@ const getTaskShares = async (req, res) => {
     const currentUserId = req.user.id;
     const companyId = req.user.companyId;
 
-    // Verify task exists and user has permission to view shares
+    // Verify task exists — same-company or external lead assignee
     const task = await prisma.task.findFirst({
       where: {
         id: parseInt(taskId),
-        companyId: companyId
+        OR: [
+          { companyId: companyId },
+          { assigneeId: currentUserId }
+        ]
       }
     });
 
@@ -329,15 +355,18 @@ const getTaskShares = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Check if current user is the lead assignee or task creator (both can view shares)
-    if (task.assigneeId !== currentUserId && task.assignerId !== currentUserId) {
+    // Check if current user is the lead assignee, task creator, or same-company admin
+    const isSameCompany = task.companyId === companyId;
+    const isAdminOrSysadmin = isSameCompany && (req.user.role === 'ADMIN' || req.user.role === 'SYSDMIN' || req.user.role === 'SUPER_ADMIN');
+    if (task.assigneeId !== currentUserId && task.assignerId !== currentUserId && !isAdminOrSysadmin) {
       return res.status(403).json({ error: 'Only the lead assignee or task creator can view task shares' });
     }
 
+    // Don't filter by companyId — external shares use the recipient's company,
+    // not the sharer's. The task ownership was already verified above.
     const shares = await prisma.taskShare.findMany({
       where: {
-        taskId: parseInt(taskId),
-        companyId: companyId
+        taskId: parseInt(taskId)
       },
       include: {
         user: {
@@ -458,11 +487,14 @@ const shareTaskWithContact = async (req, res) => {
     const currentUserId = req.user.id;
     const companyId = req.user.companyId;
 
-    // Verify task exists and user has permission to share it
+    // Verify task exists — allow access for same-company users OR the external lead assignee
     const task = await prisma.task.findFirst({
       where: {
         id: parseInt(taskId),
-        companyId: companyId
+        OR: [
+          { companyId: companyId },
+          { assigneeId: currentUserId }
+        ]
       },
       include: {
         assignee: true,
@@ -587,11 +619,14 @@ const shareTaskWithEmail = async (req, res) => {
     const currentUserId = req.user.id;
     const companyId = req.user.companyId;
 
-    // Verify task exists and user has permission to share it
+    // Verify task exists — allow access for same-company users OR the external lead assignee
     const task = await prisma.task.findFirst({
       where: {
         id: parseInt(taskId),
-        companyId: companyId
+        OR: [
+          { companyId: companyId },
+          { assigneeId: currentUserId }
+        ]
       },
       include: {
         assignee: true,

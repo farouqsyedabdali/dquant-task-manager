@@ -952,12 +952,12 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
       style={{ backgroundColor: 'var(--color-bg-primary)' }}
     >
       <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+        {/* Header — stacked on small screens; no absolute center (avoids overlap at zoom/narrow widths) */}
         <div className="mb-8">
-          <div className="flex justify-between items-center mb-4 relative">
-            <div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-4 min-w-0">
+            <div className="min-w-0 flex-1">
               <h1 
-                className="text-3xl font-bold transition-colors duration-200"
+                className="text-2xl sm:text-3xl font-bold transition-colors duration-200 break-words"
                 style={{ color: 'var(--color-text-primary)' }}
               >
                 Welcome back, {user?.name}!
@@ -975,19 +975,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
               </p>
             </div>
             
-            {/* Company Name - Centered */}
-            {!user?.isPersonal && user?.companyName && (
-              <div className="absolute left-1/2 transform -translate-x-1/2">
-                <h2 
-                  className="text-xl font-semibold transition-colors duration-200"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  {user.companyName}
-                </h2>
-              </div>
-            )}
-            
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 shrink-0">
               {/* ViewSwitcher removed - only card view is shown */}
 
               {/* Notification Board */}
@@ -1020,7 +1008,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
         {/* Statistics Cards */}
         <div className="mb-4">
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8 min-w-0">
           <StatCard
             title="Total Tasks"
             value={stats.total}
@@ -1085,9 +1073,9 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           className="rounded-lg shadow-lg p-6 transition-colors duration-200"
           style={{ backgroundColor: 'var(--color-bg-secondary)' }}
         >
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6 min-w-0">
             <h2 
-              className="text-xl font-semibold transition-colors duration-200"
+              className="text-xl font-semibold transition-colors duration-200 min-w-0 break-words"
               style={{ color: 'var(--color-text-primary)' }}
             >
               {archiveView === 'archived' ? 'Archived Tasks' : 'All Tasks'} ({filteredTasks.length})

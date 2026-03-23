@@ -291,8 +291,12 @@ const taskInvitationController = {
         });
       }
 
-      // Check if this was an assignment (task has externalContactId) or sharing
-      const isAssignment = invitation.task.externalContactId !== null;
+      // This is an assignment only if the task has an externalContactId AND the
+      // assignee slot is still empty.  Once a lead assignee is in place, every
+      // subsequent acceptance is a sharing invitation — not a reassignment.
+      const isAssignment =
+        invitation.task.externalContactId !== null &&
+        invitation.task.assigneeId === null;
       
       if (isAssignment) {
         // This was an assignment - make them the lead assignee
@@ -315,24 +319,42 @@ const taskInvitationController = {
           user.companyId
         );
       } else {
-        // This was sharing - make them a collaborator and create TaskShare entry
+        // This was sharing — look up the original TaskShare (by email or contact) to
+        // inherit the permissionLevel the sharer chose (e.g. VIEWER vs COMMENTER).
+        const originalShare = await prisma.taskShare.findFirst({
+          where: {
+            taskId: invitation.task.id,
+            OR: [
+              { email: invitation.recipientEmail },
+              { contact: { email: { equals: invitation.recipientEmail, mode: 'insensitive' } } }
+            ]
+          }
+        });
+        const intendedPermission = originalShare?.permissionLevel || 'VIEWER';
+
+        // Remove the old email/contact-based TaskShare (it has no userId, shows as "Unknown")
+        if (originalShare) {
+          await prisma.taskShare.delete({ where: { id: originalShare.id } });
+        }
+
+        // Create collaborator with the correct permission
         await prisma.taskCollaborator.create({
           data: {
             taskId: invitation.task.id,
             userId: userId,
             companyId: user.companyId,
-            permissionLevel: 'COMMENT', // External collaborators can comment
-            isExternal: true // This is an external collaborator
+            permissionLevel: intendedPermission,
+            isExternal: true
           }
         });
 
-        // Also create a TaskShare entry for consistency
+        // Create user-based TaskShare (replaces the old email-based one)
         await prisma.taskShare.create({
           data: {
             taskId: invitation.task.id,
             userId: userId,
             companyId: user.companyId,
-            permissionLevel: 'COMMENTER',
+            permissionLevel: intendedPermission,
             isExternal: true
           }
         });
@@ -711,22 +733,6 @@ const taskInvitationController = {
         companyId: task.companyId
       });
 
-      // Verify the current user is the assignee
-      if (task.assigneeId !== userId) {
-        console.log('❌ Mismatch:', {
-          taskAssigneeId: task.assigneeId,
-          currentUserId: userId,
-          areEqual: task.assigneeId === userId
-        });
-        return res.status(403).json({ 
-          error: 'You are not assigned to this task',
-          debug: {
-            taskAssigneeId: task.assigneeId,
-            yourUserId: userId
-          }
-        });
-      }
-
       // Don't allow unaccepting completed tasks
       if (task.status === 'COMPLETED') {
         return res.status(400).json({ 
@@ -734,20 +740,54 @@ const taskInvitationController = {
         });
       }
 
-      // Get the user info
+      if (!task.assigner) {
+        return res.status(400).json({ error: 'Invalid task: missing assigner' });
+      }
+
       const user = await prisma.user.findUnique({
-        where: { id: userId }
+        where: { id: userId },
+        select: { id: true, name: true, companyId: true }
       });
 
-      // Update task - remove assignee and reset status
-      await prisma.task.update({
-        where: { id: task.id },
-        data: {
-          assigneeId: null,
-          status: 'TODO'
-          // Keep externalContactId for assigner's reference
-        }
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const isLeadAssignee = task.assigneeId === userId;
+
+      // Check if the user is an external collaborator (shared user)
+      const collaboratorRecord = await prisma.taskCollaborator.findFirst({
+        where: { taskId: task.id, userId, isExternal: true }
       });
+      const isExternalCollaborator = !!collaboratorRecord;
+
+      if (!isLeadAssignee && !isExternalCollaborator) {
+        return res.status(403).json({ error: 'You are not assigned to or collaborating on this task' });
+      }
+
+      // Cross-org check: same company → cannot withdraw
+      if (task.assigner.companyId === user.companyId) {
+        return res.status(403).json({
+          error:
+            'You cannot withdraw from tasks assigned within your organization. Withdraw is only available when the assigner is outside your organization (e.g. another company or a personal account).'
+        });
+      }
+
+      if (isLeadAssignee) {
+        // Lead-assignee withdrawal: remove from task, reset status
+        await prisma.task.update({
+          where: { id: task.id },
+          data: { assigneeId: null, status: 'TODO' }
+        });
+      } else {
+        // External-collaborator withdrawal: remove collaborator + share records
+        await prisma.taskCollaborator.deleteMany({
+          where: { taskId: task.id, userId }
+        });
+        await prisma.taskShare.deleteMany({
+          where: { taskId: task.id, userId }
+        });
+      }
 
       // Update invitation status
       await prisma.taskInvitation.updateMany({
@@ -762,12 +802,12 @@ const taskInvitationController = {
         }
       });
 
-      // Create notification for the assigner
+      // Notify the assigner
       await prisma.notification.create({
         data: {
           type: 'TASK_INVITATION_UNACCEPTED',
           title: 'User Withdrew from Task',
-          message: `${user.name} has withdrawn from task "${task.title}". Please reassign this task.`,
+          message: `${user.name} has withdrawn from task "${task.title}".${isLeadAssignee ? ' Please reassign this task.' : ''}`,
           taskId: task.id,
           userId: task.assignerId,
           companyId: task.companyId

@@ -126,7 +126,8 @@ const getTasks = async (req, res) => {
           select: {
             id: true,
             name: true,
-            email: true
+            email: true,
+            companyId: true
           }
         },
         assignee: {
@@ -388,7 +389,8 @@ const getTask = async (req, res) => {
           select: {
             id: true,
             name: true,
-            email: true
+            email: true,
+            companyId: true
           }
         },
         assignee: {
@@ -594,7 +596,8 @@ const createTask = async (req, res) => {
           select: {
             id: true,
             name: true,
-            email: true
+            email: true,
+            companyId: true
           }
         },
         assignee: {
@@ -837,7 +840,13 @@ const updateTask = async (req, res) => {
         }
       }
     } else if (isAssignee) {
-      // Assignee can only update status
+      // Assignee can only update status (not to COMPLETED — only assigner/admins can complete)
+      if (updateData.status === 'COMPLETED') {
+        return res.status(403).json({
+          error:
+            'Only the task creator or an administrator can mark this task as completed'
+        });
+      }
       allowedUpdates = {
         status: updateData.status
       };
@@ -858,7 +867,8 @@ const updateTask = async (req, res) => {
           select: {
             id: true,
             name: true,
-            email: true
+            email: true,
+            companyId: true
           }
         },
         assignee: {
@@ -1244,6 +1254,15 @@ const updateTaskStatus = async (req, res) => {
       return res.status(403).json({ error: 'You do not have permission to update this task status' });
     }
 
+    // Only the task creator (assigner) or company/system admins may mark a task completed.
+    // Assignees and co-assignees may update other statuses but not COMPLETED.
+    if (status === 'COMPLETED' && !isAssigner && !isAdmin && !isSystemAdmin) {
+      return res.status(403).json({
+        error:
+          'Only the task creator or an administrator can mark this task as completed'
+      });
+    }
+
     const updatedTask = await prisma.task.update({
       where: { id: parseInt(id) },
       data: { status },
@@ -1252,7 +1271,8 @@ const updateTaskStatus = async (req, res) => {
           select: {
             id: true,
             name: true,
-            email: true
+            email: true,
+            companyId: true
           }
         },
         assignee: {
@@ -1354,7 +1374,8 @@ const updateTaskPriority = async (req, res) => {
           select: {
             id: true,
             name: true,
-            email: true
+            email: true,
+            companyId: true
           }
         },
         assignee: {
@@ -1468,7 +1489,8 @@ const createSubtask = async (req, res) => {
           select: {
             id: true,
             name: true,
-            email: true
+            email: true,
+            companyId: true
           }
         },
         assignee: {
@@ -1729,14 +1751,12 @@ const removeCoAssignee = async (req, res) => {
 const getCoAssignees = async (req, res) => {
   try {
     const { id: taskId } = req.params;
-    const companyId = req.user.companyId;
 
-    console.log('Getting co-assignees for taskId:', taskId, 'companyId:', companyId);
-
+    // No companyId filter — external collaborators need to see co-assignees too.
+    // Access control is enforced when the task itself is fetched.
     const coAssignees = await prisma.taskCoAssignee.findMany({
       where: {
-        taskId: parseInt(taskId),
-        companyId: companyId
+        taskId: parseInt(taskId)
       },
       include: {
         user: {

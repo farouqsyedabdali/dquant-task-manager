@@ -11,7 +11,9 @@
     "cleanup:tasks:interactive": "node scripts/cleanupOrphanedTasksInteractive.js",
     "update:google-accounts": "node scripts/updateGoogleAccountsToSysdmin.js",
     "delete:company-tasks": "node scripts/deleteCompanyTasks.js",
-    "close-connections": "node scripts/closeConnections.js"
+    "close-connections": "node scripts/closeConnections.js",
+    "seed:connection-company": "node scripts/seedConnectionCompany.js",
+    "admin-password-gui": "node scripts/admin-password-gui.js"
   },
   "keywords": [],
   "author": "",

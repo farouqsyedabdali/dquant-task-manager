@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import useAuthStore from './context/authStore';
 import './debug-env'; // Debug environment variables
@@ -29,10 +29,10 @@ import LegalDocumentPage from './pages/LegalDocumentPage';
 import AIModal from './components/tasks/AIModal';
 import ToastContainer from './components/common/ToastContainer';
 import { ToastProvider, useToastContext } from './context/ToastContext';
-import { FaRobot } from 'react-icons/fa';
 import AuthRedirect from './components/AuthRedirect';
 import EmailMockup from './pages/EmailMockup';
 import MockupViewer from './mockups/MockupViewer';
+import NotFound from './pages/NotFound';
 import { tialzFavicon } from './hooks/useThemeLogo';
 import './App.css';
 
@@ -81,7 +81,10 @@ function AppContent() {
   return (
     <FontSizeProvider>
       <Router>
-        <div className="App min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+        <div
+          className="App min-h-screen app-root-shell"
+          style={{ backgroundColor: 'var(--color-bg-primary)' }}
+        >
 
           <Routes>
             {/* Public Routes */}
@@ -244,8 +247,8 @@ function AppContent() {
               }
             />
 
-            {/* Default redirect for unknown routes */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Unknown routes */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
 
           {/* Floating AI Button - Only show when authenticated and not on popup */}

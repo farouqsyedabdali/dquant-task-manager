@@ -103,12 +103,22 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   // Check if current user is viewing a shared task (view-only access)
   const isSharedTask = viewedTask?.sharedWith?.some(share => share.userId === user?.id);
 
-  // Check if current user can share (lead assignee, assigner, or admin)
+  // Determine if the user's only access is VIEWER-level (no commenting)
+  const userShareRecord = viewedTask?.sharedWith?.find(s => s.userId === user?.id);
+  const userCollabRecord = viewedTask?.collaborators?.find(c => c.userId === user?.id);
+  const effectivePermission = userCollabRecord?.permissionLevel || userShareRecord?.permissionLevel;
+  const isViewerOnly =
+    isSharedTask &&
+    (effectivePermission === 'VIEWER' || effectivePermission === 'VIEW') &&
+    viewedTask?.assigneeId !== user?.id &&
+    viewedTask?.assignerId !== user?.id &&
+    !viewedTask?.coAssignees?.some(co => co.userId === user?.id);
+
+  // Check if current user can share (lead assignee, assigner, or same-company admin)
+  const isSameCompanyAsTask = viewedTask?.companyId != null && viewedTask.companyId === user?.companyId;
   const canShare = viewedTask?.assigneeId === user?.id ||
     viewedTask?.assignerId === user?.id ||
-    isAdmin ||
-    user?.role === 'SYSDMIN' ||
-    user?.role === 'SUPER_ADMIN';
+    (isSameCompanyAsTask && (isAdmin || user?.role === 'SYSDMIN' || user?.role === 'SUPER_ADMIN'));
 
   // Check if user can archive/unarchive this task
   const canArchive = !isSharedTask && (
@@ -117,15 +127,23 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     viewedTask?.assignerId === user?.id
   );
 
-  // Check if current user can withdraw from this task
-  // They can withdraw if:
-  // 1. They are the assignee (not just a collaborator)
-  // 2. They are not the creator (can't withdraw from your own task)
-  // 3. The task is not completed
+  // Withdraw only for cross-organization relationships (assigner company ≠ user company).
+  const hasWithdrawCompanyContext =
+    viewedTask?.assigner?.companyId != null && user?.companyId != null;
+  const isSameCompanyAsAssigner =
+    hasWithdrawCompanyContext &&
+    Number(viewedTask.assigner.companyId) === Number(user.companyId);
+
+  const isExternalCollaborator =
+    viewedTask?.collaborators?.some(c => c.userId === user?.id && c.isExternal);
+
+  // Can withdraw if: cross-org + (lead assignee OR external collaborator) + task not completed
   const canWithdraw =
-    viewedTask?.assigneeId === user?.id &&
     viewedTask?.assignerId !== user?.id &&
-    viewedTask?.status !== 'COMPLETED';
+    viewedTask?.status !== 'COMPLETED' &&
+    hasWithdrawCompanyContext &&
+    !isSameCompanyAsAssigner &&
+    (viewedTask?.assigneeId === user?.id || isExternalCollaborator);
 
   // Check if current user is an accepted external assignee (for other UI purposes)
   const isAcceptedExternalAssignee =
@@ -1397,8 +1415,8 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                       {coAssignee.user.email}
                                     </div>
                                   </div>
-                                  {/* Remove button - only if user is lead assignee or system admin */}
-                                  {(viewedTask?.assigneeId === user?.id || user?.role === 'SYSDMIN') && (
+                                  {/* Remove button - only if user is lead assignee or same-company system admin */}
+                                  {(viewedTask?.assigneeId === user?.id || (user?.role === 'SYSDMIN' && viewedTask?.companyId === user?.companyId)) && (
                                     <button
                                       onClick={() => handleRemoveCoAssignee(coAssignee.userId)}
                                       className="w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100"
@@ -2057,6 +2075,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                   task={viewedTask}
                   extensionUpdateData={extensionUpdateData}
                   onTaskSwitch={onTaskSwitch}
+                  readOnly={isViewerOnly}
                 />
               </div>
             </div>
