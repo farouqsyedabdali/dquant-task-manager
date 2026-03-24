@@ -24,6 +24,54 @@ const SearchableDropdown = ({
   const dropdownRef = useRef(null);
   const [dropdownPosition, setDropdownPosition] = useState(null);
 
+  /** Fit dropdown in viewport (handles zoom / short viewports): flip up if needed, clamp height. */
+  const computeDropdownPlacement = (buttonRect) => {
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+    const gap = 4;
+    const margin = 8;
+    const preferred = 280;
+    const minTotal = 140;
+    const searchHeader = 68;
+
+    const spaceBelow = vh - buttonRect.bottom - gap - margin;
+    const spaceAbove = buttonRect.top - gap - margin;
+
+    const openUpward = spaceBelow < 180 && spaceAbove > spaceBelow;
+
+    let totalMax = openUpward
+      ? Math.min(preferred, Math.max(minTotal, spaceAbove))
+      : Math.min(preferred, Math.max(minTotal, spaceBelow));
+
+    let top = openUpward ? buttonRect.top - totalMax - gap : buttonRect.bottom + gap;
+
+    if (openUpward && top < margin) {
+      totalMax = Math.max(minTotal, buttonRect.top - gap - margin);
+      top = margin;
+    }
+    if (!openUpward && top + totalMax > vh - margin) {
+      totalMax = Math.max(minTotal, vh - margin - top);
+    }
+
+    let left = buttonRect.left;
+    let width = buttonRect.width;
+    if (left < margin) left = margin;
+    if (left + width > vw - margin) {
+      left = Math.max(margin, vw - width - margin);
+    }
+
+    const listMax = Math.max(72, totalMax - searchHeader);
+
+    return {
+      top,
+      left,
+      width,
+      maxHeightTotal: totalMax,
+      listMaxHeight: listMax,
+      openUpward,
+    };
+  };
+
   // Update filtered options when options change, but only if there's no active search
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -35,15 +83,10 @@ const SearchableDropdown = ({
     }
   }, [options, recentEmployees, searchTerm]);
 
-  // Calculate dropdown position - using fixed positioning relative to viewport
   const updateDropdownPosition = () => {
     if (buttonRef.current) {
       const buttonRect = buttonRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: buttonRect.bottom + 4, // 4px gap, fixed positioning uses viewport coordinates
-        left: buttonRect.left,
-        width: buttonRect.width
-      });
+      setDropdownPosition(computeDropdownPlacement(buttonRect));
     }
   };
 
@@ -149,13 +192,8 @@ const SearchableDropdown = ({
           onClick={() => {
             if (!disabled) {
               if (!isOpen && buttonRef.current) {
-                // Calculate position synchronously before opening
                 const buttonRect = buttonRef.current.getBoundingClientRect();
-                setDropdownPosition({
-                  top: buttonRect.bottom + 4,
-                  left: buttonRect.left,
-                  width: buttonRect.width
-                });
+                setDropdownPosition(computeDropdownPlacement(buttonRect));
               }
               setIsOpen(!isOpen);
             }
@@ -196,7 +234,7 @@ const SearchableDropdown = ({
       {isOpen && dropdownPosition && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed rounded-lg shadow-lg max-h-60 overflow-hidden"
+          className="fixed rounded-lg shadow-lg flex flex-col overflow-hidden"
           style={{
             backgroundColor: 'var(--color-bg-secondary)',
             borderColor: 'var(--color-border-default)',
@@ -206,11 +244,12 @@ const SearchableDropdown = ({
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left}px`,
             width: `${dropdownPosition.width}px`,
+            maxHeight: `${dropdownPosition.maxHeightTotal}px`,
           }}
         >
           {/* Search Input */}
           <div
-            className="p-2"
+            className="p-2 flex-shrink-0"
             style={{
               borderBottomColor: 'var(--color-border-default)',
               borderBottomWidth: '1px',
@@ -247,10 +286,11 @@ const SearchableDropdown = ({
             `}</style>
           </div>
 
-          {/* Options List */}
+          {/* Options List — height follows viewport so list scrolls inside panel when zoomed */}
           <div
-            className="max-h-48 overflow-y-auto"
+            className="min-h-0 flex-1 overflow-y-auto scrollbar-thin"
             style={{
+              maxHeight: dropdownPosition.listMaxHeight,
               scrollbarThumbColor: 'var(--color-scrollbar-thumb)',
               scrollbarTrackColor: 'var(--color-scrollbar-track)',
             }}

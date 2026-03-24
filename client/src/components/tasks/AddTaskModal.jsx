@@ -389,14 +389,14 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
   return (
     <div className="modal modal-open backdrop-blur-sm">
       <div
-        className="modal-box max-w-2xl border transition-all duration-300"
+        className="modal-box max-w-2xl border transition-all duration-300 max-h-[min(92dvh,900px)] flex flex-col overflow-hidden"
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)',
         }}
       >
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 flex-shrink-0">
           <div>
             <h3
               className="text-2xl font-bold transition-colors duration-200"
@@ -416,8 +416,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
           />
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Scrollable fields — keeps modal height bounded; assign dropdown uses viewport positioning */}
+          <div className="space-y-6 flex-1 min-h-0 overflow-y-auto pr-1 pb-2 scrollbar-thin">
           {/* Title */}
           <div>
             <label
@@ -750,9 +751,13 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
           {showAIWarning && (
             <AIWarning className="mb-4" />
           )}
+          </div>
 
-          {/* Submit Buttons */}
-          <div className="flex justify-between items-center pt-4">
+          {/* Submit Buttons — sticky at bottom of modal */}
+          <div
+            className="flex justify-between items-center pt-4 flex-shrink-0 border-t mt-2"
+            style={{ borderColor: 'var(--color-border-default)' }}
+          >
             <IconButton
               icon={<img src={tialzFavicon} alt="" />}
               label="Smart Pre-fill"

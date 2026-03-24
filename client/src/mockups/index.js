@@ -29,6 +29,8 @@ import MobileNav from './MobileNav';
 import ToastNotification from './ToastNotification';
 import ContactCardRevamped from './ContactCardRevamped';
 import BulkActionsBar from './BulkActionsBar';
+import CreateTaskModalAssignDropdownFix from './CreateTaskModalAssignDropdownFix';
+import AIHomeFirstMockup from './AIHomeFirstMockup';
 
 export const MOCKUPS = [
   // Landing & auth
@@ -44,6 +46,7 @@ export const MOCKUPS = [
   { id: 'task-modal-full', path: 'task-modal', label: 'Task Modal', description: 'Full task edit: details, comments, activity tabs', component: TaskModalFull, category: 'App' },
   { id: 'projects-page-full', path: 'projects', label: 'Projects Page', description: 'Project cards, progress bars, create modal', component: ProjectsPageFull, category: 'App' },
   { id: 'ai-chat-full', path: 'ai-chat', label: 'AI Assistant', description: 'AI chat interface with suggestions', component: AIChatFull, category: 'App' },
+  { id: 'ai-home-first', path: 'ai-home-first', label: 'AI-first home (demo)', description: 'ChatGPT-style entry, streaming replies, guided demo, My tasks drawer', component: AIHomeFirstMockup, category: 'App' },
   { id: 'settings-page-full', path: 'settings', label: 'Settings Page', description: 'Profile, preferences, toggles', component: SettingsPageFull, category: 'App' },
   { id: 'onboarding-flow', path: 'onboarding', label: 'Onboarding Flow', description: 'First-time user setup steps', component: OnboardingFlow, category: 'App' },
   // Components
@@ -62,6 +65,7 @@ export const MOCKUPS = [
   { id: 'toast-notification', path: 'toast-notification', label: 'Toast Notification', description: 'Consistent feedback design', component: ToastNotification, category: 'Revamps' },
   { id: 'contact-card-revamped', path: 'contact-card-revamped', label: 'Contact Card Revamped', description: 'Improved contact list item', component: ContactCardRevamped, category: 'Revamps' },
   { id: 'bulk-actions-bar', path: 'bulk-actions-bar', label: 'Bulk Actions Bar', description: 'Multi-select and batch actions', component: BulkActionsBar, category: 'Revamps' },
+  { id: 'create-task-modal-assign-dropdown', path: 'create-task-modal-assign-dropdown', label: 'Create Task: assign dropdown (zoom fix)', description: 'Viewport-aware dropdown + modal scroll regions; fixes clipped contact list', component: CreateTaskModalAssignDropdownFix, category: 'Revamps' },
 ];
 
 export const getMockupByPath = (path) => MOCKUPS.find((m) => m.path === path);
