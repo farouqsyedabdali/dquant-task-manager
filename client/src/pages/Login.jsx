@@ -23,7 +23,7 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/dashboard');
+      navigate('/app');
     }
     clearError();
     
@@ -79,7 +79,7 @@ const Login = () => {
 
     const result = await login(formData);
     if (result.success) {
-      navigate('/dashboard');
+      navigate('/app');
     } else if (result.requiresVerification) {
       // Redirect to email verification page with email parameter
       navigate(`/verify-email?email=${encodeURIComponent(result.email)}&resend=true`);

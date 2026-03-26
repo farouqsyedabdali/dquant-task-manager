@@ -32,7 +32,7 @@ const CompanySignup = () => {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/dashboard');
+      navigate('/app');
     }
     clearError();
     

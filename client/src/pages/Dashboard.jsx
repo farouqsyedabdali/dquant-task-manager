@@ -208,7 +208,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           console.error('Dashboard: Error fetching task from URL:', error);
         } finally {
           // Clean up URL parameter
-          navigate('/dashboard', { replace: true });
+          navigate('/app/tasks', { replace: true });
         }
       };
       openTaskFromUrl();
@@ -263,14 +263,14 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
           
           // Clean up localStorage and URL parameters
           localStorage.removeItem(popupDataKey);
-          navigate('/dashboard', { replace: true });
+          navigate('/app/tasks', { replace: true });
         } else {
           console.log('Dashboard: No popupData found in localStorage for key:', popupDataKey);
         }
       } catch (error) {
         console.error('Failed to parse popup data from localStorage:', error);
         // Clean up URL parameters on error
-        navigate('/dashboard', { replace: true });
+        navigate('/app/tasks', { replace: true });
       }
     }
     
@@ -292,7 +292,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
         setIsAddModalOpen(true);
         
         // Clean up URL parameters
-        navigate('/dashboard', { replace: true });
+        navigate('/app/tasks', { replace: true });
       } catch (error) {
         console.error('Failed to parse task data from URL:', error);
       }
@@ -305,7 +305,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
         });
         
         // Clean up URL parameters
-        navigate('/dashboard', { replace: true });
+        navigate('/app/tasks', { replace: true });
       } catch (error) {
         console.error('Failed to parse update data from URL:', error);
       }
@@ -318,7 +318,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
         });
         
         // Clean up URL parameters
-        navigate('/dashboard', { replace: true });
+        navigate('/app/tasks', { replace: true });
       } catch (error) {
         console.error('Failed to parse complete task data from URL:', error);
       }
@@ -331,7 +331,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
         });
         
         // Clean up URL parameters
-        navigate('/dashboard', { replace: true });
+        navigate('/app/tasks', { replace: true });
       } catch (error) {
         console.error('Failed to parse summarize task data from URL:', error);
       }
@@ -344,7 +344,7 @@ const Dashboard = ({ taskbarAction, onTaskbarActionHandled }) => {
         });
         
         // Clean up URL parameters
-        navigate('/dashboard', { replace: true });
+        navigate('/app/tasks', { replace: true });
       } catch (error) {
         console.error('Failed to parse add subtask data from URL:', error);
       }

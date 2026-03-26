@@ -635,7 +635,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
                   style={{ color: 'var(--color-text-tertiary)' }}
                 >
                   No assignees available. <a
-                    href="/contacts"
+                    href="/app/contacts"
                     className="transition-colors duration-200"
                     style={{ color: 'var(--color-primary-light)' }}
                     onMouseEnter={(e) => {
@@ -729,7 +729,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
                     style={{ color: 'var(--color-text-tertiary)' }}
                   >
                     No contacts available. <a
-                      href="/contacts"
+                      href="/app/contacts"
                       className="transition-colors duration-200"
                       style={{ color: 'var(--color-primary-light)' }}
                       onMouseEnter={(e) => {

@@ -101,7 +101,7 @@ const TestStaging = () => {
                         </p>
 
                         <Link
-                            to="/dashboard"
+                            to="/app"
                             className="inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-all duration-200 border"
                             style={{
                                 color: 'var(--color-text-primary)',

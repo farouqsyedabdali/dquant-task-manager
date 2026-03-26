@@ -91,7 +91,7 @@ const QuickActionsDropdown = () => {
       console.log('QuickActions: Stored data in localStorage with key:', storageKey);
 
       // Navigate to dashboard with the storage key
-      navigate(`/dashboard?popupData=${storageKey}`);
+      navigate(`/app?popupData=${storageKey}`);
 
     } catch (err) {
       console.error('Create task error:', err);
@@ -144,7 +144,7 @@ const QuickActionsDropdown = () => {
       console.log('QuickActions: Stored update data in localStorage with key:', storageKey);
 
       // Navigate to dashboard with the storage key
-      navigate(`/dashboard?popupData=${storageKey}`);
+      navigate(`/app?popupData=${storageKey}`);
 
     } catch (err) {
       console.error('Update task error:', err);
@@ -204,7 +204,7 @@ const QuickActionsDropdown = () => {
         console.log('QuickActions: Project created successfully:', project);
 
         // Navigate to projects page with project ID and success message
-        navigate('/projects', {
+        navigate('/app/projects', {
           state: {
             openProjectId: project.id,
             successMessage: `Project "${project.name}" created successfully with ${project.tasks?.length || 0} tasks!`
@@ -293,7 +293,7 @@ const QuickActionsDropdown = () => {
       console.log('QuickActions: Stored subtask data in localStorage with key:', storageKey);
 
       // Navigate to dashboard with the storage key
-      navigate(`/dashboard?popupData=${storageKey}`);
+      navigate(`/app?popupData=${storageKey}`);
 
     } catch (err) {
       console.error('Add subtask error:', err);

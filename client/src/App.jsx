@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import useAuthStore from './context/authStore';
 import './debug-env'; // Debug environment variables
@@ -10,18 +10,14 @@ import CompanySignup from './pages/CompanySignup';
 import PersonalSignup from './pages/PersonalSignup';
 import SignupOptions from './pages/SignupOptions';
 import Dashboard from './pages/Dashboard';
-import PersonalDashboard from './pages/PersonalDashboard';
-import Employees from './pages/Employees';
+import AppWorkSurface from './pages/AppWorkSurface';
 import TaskPopup from './pages/TaskPopup';
 import Settings from './pages/Settings';
-import Calendar from './pages/Calendar';
 import LandingPage from './pages/LandingPage';
 import TaskInvitation from './pages/TaskInvitation';
 import EmailVerification from './pages/EmailVerification';
 import EmployeeSetup from './pages/EmployeeSetup';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import Contacts from './pages/Contacts';
-import Projects from './pages/Projects';
 import ColorPaletteTester from './pages/ColorPaletteTester';
 import TestStaging from './pages/TestStaging';
 import GoogleCallback from './pages/GoogleCallback';
@@ -35,6 +31,39 @@ import MockupViewer from './mockups/MockupViewer';
 import NotFound from './pages/NotFound';
 import { tialzFavicon } from './hooks/useThemeLogo';
 import './App.css';
+
+/** Preserves query string (e.g. AIModal popupData) when resolving /app → /app/welcome */
+function AppHomeRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/app/welcome${search}`} replace />;
+}
+
+/** Old /dashboard links (e.g. Electron popups) → tasks lens with query preserved */
+function DashboardRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/app/tasks${search}`} replace />;
+}
+
+/** Legacy /calendar → work surface calendar lens */
+function CalendarRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/app/calendar${search}`} replace />;
+}
+
+function ProjectsRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/app/projects${search}`} replace />;
+}
+
+function ContactsRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/app/contacts${search}`} replace />;
+}
+
+function EmployeesRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/app/employees${search}`} replace />;
+}
 
 function AppContent() {
   const { getMe, isAuthenticated } = useAuthStore();
@@ -118,29 +147,36 @@ function AppContent() {
             {/* Design Mockups (no auth required) */}
             <Route path="/mockups/*" element={<MockupViewer />} />
 
-            {/* Protected Routes */}
+            {/* Protected Routes — work surface (AI-first home) */}
             <Route
-              path="/dashboard"
+              path="/app"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                    <Header />
-                    <div className="pt-16">
-                      <Dashboard taskbarAction={taskbarAction} onTaskbarActionHandled={() => setTaskbarAction(null)} />
-                    </div>
-                  </div>
+                  <AppHomeRedirect />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app/:lens"
+              element={
+                <ProtectedRoute>
+                  <AppWorkSurface
+                    taskbarAction={taskbarAction}
+                    onTaskbarActionHandled={() => setTaskbarAction(null)}
+                  />
                 </ProtectedRoute>
               }
             />
 
             <Route
-              path="/personal-dashboard"
+              path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <PersonalDashboard taskbarAction={taskbarAction} onTaskbarActionHandled={() => setTaskbarAction(null)} />
+                  <DashboardRedirect />
                 </ProtectedRoute>
               }
             />
+            <Route path="/aidashboard" element={<Navigate to="/app/welcome" replace />} />
 
             <Route
               path="/admin"
@@ -158,12 +194,7 @@ function AppContent() {
               path="/employees"
               element={
                 <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
-                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                    <Header />
-                    <div className="pt-16">
-                      <Employees />
-                    </div>
-                  </div>
+                  <EmployeesRedirect />
                 </ProtectedRoute>
               }
             />
@@ -195,12 +226,7 @@ function AppContent() {
               path="/calendar"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                    <Header />
-                    <div className="pt-16">
-                      <Calendar />
-                    </div>
-                  </div>
+                  <CalendarRedirect />
                 </ProtectedRoute>
               }
             />
@@ -209,12 +235,7 @@ function AppContent() {
               path="/contacts"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                    <Header />
-                    <div className="pt-16">
-                      <Contacts />
-                    </div>
-                  </div>
+                  <ContactsRedirect />
                 </ProtectedRoute>
               }
             />
@@ -223,12 +244,7 @@ function AppContent() {
               path="/projects"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                    <Header />
-                    <div className="pt-16">
-                      <Projects />
-                    </div>
-                  </div>
+                  <ProjectsRedirect />
                 </ProtectedRoute>
               }
             />
@@ -252,7 +268,9 @@ function AppContent() {
           </Routes>
 
           {/* Floating AI Button - Only show when authenticated and not on popup */}
-          {isAuthenticated() && window.location.pathname !== '/popup' && (
+          {isAuthenticated() &&
+            window.location.pathname !== '/popup' &&
+            !window.location.pathname.startsWith('/app') && (
             <button
               className="fixed bottom-6 right-6 z-50 text-white rounded-full p-4 shadow-lg flex items-center justify-center floating-ai-button"
               style={{

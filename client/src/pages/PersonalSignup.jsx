@@ -28,7 +28,7 @@ const PersonalSignup = () => {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/dashboard');
+      navigate('/app');
     }
     clearError();
   }, [isAuthenticated, navigate, clearError]);

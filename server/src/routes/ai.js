@@ -31,12 +31,250 @@ function extractJsonCommands(text) {
   return [];
 }
 
+function sanitizeChatHistory(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const m of raw) {
+    if (!m || typeof m !== 'object') continue;
+    const role = m.role === 'assistant' || m.role === 'user' ? m.role : null;
+    const content = typeof m.content === 'string' ? m.content.trim() : '';
+    if (!role || !content) continue;
+    out.push({ role, content: content.slice(0, 12000) });
+  }
+  return out.slice(-48);
+}
+
+function buildChatSystemPrompt(userName, userRole, companyName, userTasks) {
+  const taskLines = userTasks.length
+    ? userTasks
+        .map((task, idx) => {
+          const due = task.dueDate
+            ? new Date(task.dueDate).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })
+            : 'no due date';
+          return `#${idx + 1}: ${task.title} (${task.status}, ${task.priority} priority, due ${due}, assigned to ${task.assignee?.name || 'unassigned'})`;
+        })
+        .join('\n')
+    : '(none)';
+
+  return `
+You are an AI assistant for a task management system called TIALZ.
+You are in a multi-turn chat. Use the full conversation history to answer follow-ups (what the user asked earlier, what you already did, quoted email text, or agreed next steps). If they ask what they said first or to repeat earlier content, answer from the conversation. Do not reply with generic "I don't have enough context" when the answer is in the history; only ask for clarification when something is genuinely missing.
+
+Style rules:
+- Do NOT use emojis (no ✅, ⚠️, 🗑️, etc). Write clean, professional text.
+- Use markdown for formatting: **bold** for emphasis, numbered lists for priorities/steps, bullet points for summaries. Keep it concise.
+- When creating a task, output the JSON command and add a short line like "Here's what I've put together — review the draft below." The UI will show a visual card for the user to approve or decline.
+- When deleting or updating a task, just confirm what happened in plain text.
+
+If the user asks you to create, delete, update, or list tasks, output a JSON command (or an array of commands) in this format (on a new line):
+{ "action": "create_task", "title": "...", "assignee": "...", "description": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
+{ "action": "delete_task", "title": "..." }
+{ "action": "update_task", "title": "...", "status": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
+{ "action": "list_tasks", "filter": { "status": "...", "priority": "...", "assignee": "..." } }
+- For multiple actions, output an array of JSON commands.
+- Parse natural language dates (e.g., "by Friday", "EOD tomorrow", "next Monday 3pm") and convert to ISO-like format (YYYY-MM-DD or YYYY-MM-DDTHH:mm) in the dueDate field when applicable.
+- For references like "last task you created" or "second task in my list", use the user's recent tasks (provided below) and include the resolved title in the command.
+- IMPORTANT: You are only shown active tasks (TODO and IN_PROGRESS status) to help you focus on the most relevant work. This improves accuracy when there are many tasks.
+- For normal questions (what's due, priorities, summaries), answer in plain language using markdown and the task list below. Be concise and fast.
+- Otherwise, just answer normally.
+
+Current User Context:
+- Name: ${userName}
+- Role: ${userRole}
+- Company: ${companyName || 'Unknown Company'}
+
+Active Tasks (${userTasks.length} - TODO and IN_PROGRESS only):
+${taskLines}
+`.trim();
+}
+
+async function runChatCommand(command, { userId, companyId, userTasks }) {
+  if (command.action === 'create_task') {
+    const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+    let priority = 'MEDIUM';
+    if (command.priority && typeof command.priority === 'string') {
+      const upper = command.priority.trim().toUpperCase();
+      if (allowedPriorities.includes(upper)) {
+        priority = upper;
+      }
+    }
+
+    let dueDate = null;
+    let dueDateError = null;
+    if (command.dueDate && typeof command.dueDate === 'string') {
+      let finalDueDate = command.dueDate;
+      if (!finalDueDate.includes('T')) {
+        finalDueDate = `${finalDueDate}T23:59:00`;
+      } else if (finalDueDate.includes('T') && !finalDueDate.includes(':')) {
+        finalDueDate = `${finalDueDate}23:59:00`;
+      }
+      const dueDateObj = new Date(finalDueDate);
+      if (isNaN(dueDateObj.getTime())) {
+        dueDateError = 'Invalid date format. Please provide a valid date.';
+      } else if (dueDateObj <= new Date()) {
+        dueDateError = 'Due date must be in the future.';
+      } else {
+        dueDate = dueDateObj.toISOString();
+      }
+    }
+
+    if (dueDateError) {
+      return { __type: 'error', message: dueDateError };
+    }
+
+    return {
+      __type: 'task_proposal',
+      title: command.title || 'Untitled Task',
+      description: command.description || '',
+      priority,
+      dueDate,
+      assignee: command.assignee || null,
+    };
+  } else if (command.action === 'delete_task') {
+    const task = await prisma.task.findFirst({
+      where: {
+        title: { equals: command.title, mode: 'insensitive' },
+        companyId: companyId
+      }
+    });
+    if (task) {
+      await prisma.task.delete({ where: { id: task.id } });
+      return `Task "${task.title}" has been deleted.`;
+    } else {
+      return `Could not find a task called "${command.title}".`;
+    }
+  } else if (command.action === 'update_task') {
+    let title = command.title;
+    if (title && title.toLowerCase().includes('last task')) {
+      if (userTasks.length > 0) title = userTasks[0].title;
+    } else if (title && title.toLowerCase().includes('second task')) {
+      if (userTasks.length > 1) title = userTasks[1].title;
+    }
+    const task = await prisma.task.findFirst({
+      where: {
+        title: { equals: title, mode: 'insensitive' },
+        companyId: companyId
+      }
+    });
+    if (task) {
+      const updateData = {};
+      if (command.status) {
+        const allowedStatuses = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED'];
+        const status = command.status.trim().toUpperCase();
+        if (allowedStatuses.includes(status)) updateData.status = status;
+      }
+      if (command.priority) {
+        const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+        const priority = command.priority.trim().toUpperCase();
+        if (allowedPriorities.includes(priority)) updateData.priority = priority;
+      }
+      if (command.dueDate && typeof command.dueDate === 'string') {
+        const parsed = new Date(command.dueDate);
+        if (!isNaN(parsed.getTime())) updateData.dueDate = parsed;
+      }
+      if (Object.keys(updateData).length > 0) {
+        await prisma.task.update({ where: { id: task.id }, data: updateData });
+        return `Task "${task.title}" updated${updateData.status ? ` — status: ${updateData.status}` : ''}${updateData.priority ? ` — priority: ${updateData.priority}` : ''}${updateData.dueDate ? ' — due date updated' : ''}.`;
+      } else {
+        return `No valid fields to update for task "${task.title}".`;
+      }
+    } else {
+      return `Could not find a task called "${title}".`;
+    }
+  } else if (command.action === 'list_tasks') {
+    const filter = command.filter || {};
+    let where = { companyId };
+    if (filter.status) {
+      where.status = filter.status.trim().toUpperCase();
+    }
+    if (filter.priority) {
+      where.priority = filter.priority.trim().toUpperCase();
+    }
+    if (filter.assignee) {
+      const assignee = await prisma.user.findFirst({
+        where: {
+          name: { equals: filter.assignee, mode: 'insensitive' },
+          companyId: companyId
+        }
+      });
+      if (assignee) where.assigneeId = assignee.id;
+    }
+    where.OR = [
+      { assigneeId: userId },
+      { assignerId: userId }
+    ];
+    if (!filter.status) {
+      where.status = {
+        in: ['TODO', 'IN_PROGRESS']
+      };
+    }
+    const tasks = await prisma.task.findMany({
+      where,
+      orderBy: { updatedAt: 'desc' },
+      take: 20
+    });
+    if (tasks.length === 0) return 'No matching tasks found.';
+    return 'Tasks:\n' + tasks.map(t => `- ${t.title} (${t.status}, ${t.priority})`).join('\n');
+  }
+  return null;
+}
+
+function stripJsonFromText(text) {
+  let cleaned = text.replace(/```json[\s\S]*?```/g, '').replace(/```[\s\S]*?```/g, '');
+  cleaned = cleaned.replace(/\[[\s\S]*?\]/g, (match) => {
+    try { const arr = JSON.parse(match); if (Array.isArray(arr) && arr.length && arr[0].action) return ''; } catch {}
+    return match;
+  });
+  cleaned = cleaned.replace(/\{[\s\S]*?\}/g, (match) => {
+    try { const obj = JSON.parse(match); if (obj.action) return ''; } catch {}
+    return match;
+  });
+  return cleaned.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+async function finalizeAiChatText(aiText, { userId, companyId, userTasks }) {
+  const commands = extractJsonCommands(aiText);
+  if (commands.length > 0) {
+    const textParts = [];
+    const proposals = [];
+    for (const command of commands) {
+      try {
+        const result = await runChatCommand(command, { userId, companyId, userTasks });
+        if (!result) continue;
+        if (result && typeof result === 'object' && result.__type === 'task_proposal') {
+          proposals.push(result);
+        } else if (result && typeof result === 'object' && result.__type === 'error') {
+          textParts.push(result.message);
+        } else if (typeof result === 'string') {
+          textParts.push(result);
+        }
+      } catch (err) {
+        textParts.push('Error processing command.');
+      }
+    }
+    const prose = stripJsonFromText(aiText);
+    const commandOutput = textParts.join('\n');
+    const combined = [prose, commandOutput].filter(Boolean).join('\n\n');
+    return { text: combined, proposals };
+  } else {
+    if (/^\s*\{[\s\S]*\}\s*$/.test(aiText) || /^\s*\[.*\]\s*$/s.test(aiText)) {
+      return { text: '', proposals: [] };
+    }
+    return { text: aiText, proposals: [] };
+  }
+}
+
 // POST /api/ai/chat
 router.post('/chat',
   validators.aiText('message'),
   handleValidationErrors,
   async (req, res) => {
-    const { message } = req.body;
+    const { message, history: rawHistory } = req.body;
+    const history = sanitizeChatHistory(rawHistory);
 
     let responded = false;
 
@@ -67,39 +305,24 @@ router.post('/chat',
         take: 10
       });
 
-      // System prompt for AI (now includes due date awareness and focuses on active tasks)
-      const systemPrompt = `
-You are an AI assistant for a task management system.
-If the user asks you to create, delete, update, or list tasks, output a JSON command (or an array of commands) in this format (on a new line):
-{ "action": "create_task", "title": "...", "assignee": "...", "description": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
-{ "action": "delete_task", "title": "..." }
-{ "action": "update_task", "title": "...", "status": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
-{ "action": "list_tasks", "filter": { "status": "...", "priority": "...", "assignee": "..." } }
-- For multiple actions, output an array of JSON commands.
-- Parse natural language dates (e.g., "by Friday", "EOD tomorrow", "next Monday 3pm") and convert to ISO-like format (YYYY-MM-DD or YYYY-MM-DDTHH:mm) in the dueDate field when applicable.
-- For references like "last task you created" or "second task in my list", use the user's recent tasks (provided below) and include the resolved title in the command.
-- IMPORTANT: You are only shown active tasks (TODO and IN_PROGRESS status) to help you focus on the most relevant work. This improves accuracy when there are many tasks.
-- Otherwise, just answer normally.
+      const systemPrompt = buildChatSystemPrompt(
+        userName,
+        userRole,
+        req.user.company?.name || 'Unknown Company',
+        userTasks
+      );
 
-Current User Context:
-- Name: ${userName}
-- Role: ${userRole}
-- Company: ${req.user.company?.name || 'Unknown Company'}
-
-Active Tasks (${userTasks.length} - TODO and IN_PROGRESS only):
-${userTasks.map((task, idx) => `#${idx + 1}: ${task.title} (${task.status}, ${task.priority} priority, assigned to ${task.assignee?.name || 'unassigned'})`).join('\n')}
-`;
-
-      // Stream from OpenRouter API with Gemma 3 27B
+      const chatModel = process.env.OPENROUTER_CHAT_MODEL || 'google/gemini-2.0-flash-001';
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'arcee-ai/trinity-large-preview:free',
+        model: chatModel,
         messages: [
           { role: 'system', content: systemPrompt },
+          ...history,
           { role: 'user', content: message }
         ],
         stream: true,
-        max_tokens: 2000,
-        temperature: 0.7
+        max_tokens: 2048,
+        temperature: 0.45
       }, {
         headers: {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -121,7 +344,7 @@ ${userTasks.map((task, idx) => `#${idx + 1}: ${task.title} (${task.status}, ${ta
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') {
-              handleAIResponse(fullContent.trim());
+              void handleAIResponse(fullContent.trim()).catch((err) => console.error('handleAIResponse', err));
               return;
             }
             try {
@@ -138,7 +361,7 @@ ${userTasks.map((task, idx) => `#${idx + 1}: ${task.title} (${task.status}, ${ta
       });
       openrouterRes.data.on('end', () => {
         if (!responded) {
-          handleAIResponse(fullContent.trim());
+          void handleAIResponse(fullContent.trim()).catch((err) => console.error('handleAIResponse', err));
         }
       });
       openrouterRes.data.on('error', err => {
@@ -148,192 +371,22 @@ ${userTasks.map((task, idx) => `#${idx + 1}: ${task.title} (${task.status}, ${ta
         }
       });
 
-      // Handle AI response: check for JSON command and execute if needed
       async function handleAIResponse(aiText) {
         if (responded) return;
         responded = true;
-        // Multi-action support: parse array or single command
-        const commands = extractJsonCommands(aiText);
-        if (commands.length > 0) {
-          let results = [];
-          for (const command of commands) {
-            try {
-              const result = await handleSingleCommand(command);
-              if (result) results.push(result);
-            } catch (err) {
-              results.push('⚠️ Error processing command.');
-            }
+        try {
+          const result = await finalizeAiChatText(aiText, { userId, companyId, userTasks });
+          const payload = { response: result.text || '' };
+          if (result.proposals && result.proposals.length > 0) {
+            payload.proposals = result.proposals;
           }
-          // If all results are from list_tasks, join and return only those (suppress JSON)
-          if (results.length > 0 && results.every(r => typeof r === 'string' && (r.startsWith('Tasks:') || r.startsWith('No matching tasks found.')))) {
-            return res.json({ response: results.join('\n') });
-          }
-          // Otherwise, join all results (for create/delete/update, etc.)
-          return res.json({ response: results.join('\n') });
-        } else {
-          // If the AI's response is just a JSON command (code block), suppress it
-          if (/^\s*\{[\s\S]*\}\s*$/.test(aiText) || /^\s*\[.*\]\s*$/s.test(aiText)) {
-            return res.json({ response: '' });
-          }
-          // No command, just return the AI's response
-          return res.json({ response: aiText });
+          return res.json(payload);
+        } catch (err) {
+          console.error('AI chat finalize error:', err);
+          return res.status(500).json({ error: 'Failed to process AI response' });
         }
       }
 
-      // Handle a single command (create, delete, update, list)
-      async function handleSingleCommand(command) {
-        if (command.action === 'create_task') {
-          // Find assignee by name (if provided)
-          let assigneeId = null;
-          if (command.assignee) {
-            const assignee = await prisma.user.findFirst({
-              where: {
-                name: { equals: command.assignee, mode: 'insensitive' },
-                companyId: companyId
-              }
-            });
-            if (assignee) assigneeId = assignee.id;
-          }
-          // Validate priority
-          const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
-          let priority = 'MEDIUM';
-          if (command.priority && typeof command.priority === 'string') {
-            const upper = command.priority.trim().toUpperCase();
-            if (allowedPriorities.includes(upper)) {
-              priority = upper;
-            }
-          }
-          // Validate due date is required
-          if (!command.dueDate || typeof command.dueDate !== 'string') {
-            return `⚠️ Due date is required. Please provide a due date in the format YYYY-MM-DD or YYYY-MM-DDTHH:mm`;
-          }
-
-          // Parse and validate due date
-          let finalDueDate = command.dueDate;
-          if (!finalDueDate.includes('T')) {
-            // Date only format (YYYY-MM-DD), add 11:59 PM
-            finalDueDate = `${finalDueDate}T23:59:00`;
-          } else if (finalDueDate.includes('T') && !finalDueDate.includes(':')) {
-            // Date with T but no time (YYYY-MM-DDT), add 11:59 PM
-            finalDueDate = `${finalDueDate}23:59:00`;
-          }
-
-          const dueDateObj = new Date(finalDueDate);
-          const now = new Date();
-          if (isNaN(dueDateObj.getTime())) {
-            return `⚠️ Invalid due date format. Please use YYYY-MM-DD or YYYY-MM-DDTHH:mm format.`;
-          }
-          if (dueDateObj <= now) {
-            return `⚠️ Due date must be in the future. Please provide a future date.`;
-          }
-
-          // Create the task
-          const newTask = await prisma.task.create({
-            data: {
-              title: command.title || 'Untitled Task',
-              description: command.description || '',
-              priority,
-              assignerId: userId,
-              assigneeId: assigneeId || userId,
-              dueDate: dueDateObj,
-              companyId
-            }
-          });
-          return `✅ Task "${newTask.title}" created${assigneeId ? ` and assigned to ${command.assignee}` : ''}.`;
-        } else if (command.action === 'delete_task') {
-          // Find the task by title
-          const task = await prisma.task.findFirst({
-            where: {
-              title: { equals: command.title, mode: 'insensitive' },
-              companyId: companyId
-            }
-          });
-          if (task) {
-            await prisma.task.delete({ where: { id: task.id } });
-            return `🗑️ Task "${task.title}" deleted.`;
-          } else {
-            return `⚠️ Task "${command.title}" not found.`;
-          }
-        } else if (command.action === 'update_task') {
-          // Reference resolution: support "last task", "second task", etc.
-          let title = command.title;
-          if (title && title.toLowerCase().includes('last task')) {
-            if (userTasks.length > 0) title = userTasks[0].title;
-          } else if (title && title.toLowerCase().includes('second task')) {
-            if (userTasks.length > 1) title = userTasks[1].title;
-          }
-          // Find the task by title
-          const task = await prisma.task.findFirst({
-            where: {
-              title: { equals: title, mode: 'insensitive' },
-              companyId: companyId
-            }
-          });
-          if (task) {
-            const updateData = {};
-            if (command.status) {
-              const allowedStatuses = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED'];
-              const status = command.status.trim().toUpperCase();
-              if (allowedStatuses.includes(status)) updateData.status = status;
-            }
-            if (command.priority) {
-              const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
-              const priority = command.priority.trim().toUpperCase();
-              if (allowedPriorities.includes(priority)) updateData.priority = priority;
-            }
-            if (command.dueDate && typeof command.dueDate === 'string') {
-              const parsed = new Date(command.dueDate);
-              if (!isNaN(parsed.getTime())) updateData.dueDate = parsed;
-            }
-            if (Object.keys(updateData).length > 0) {
-              await prisma.task.update({ where: { id: task.id }, data: updateData });
-              return `✏️ Task "${task.title}" updated${updateData.status ? ` (status: ${updateData.status})` : ''}${updateData.priority ? ` (priority: ${updateData.priority})` : ''}${updateData.dueDate ? ' (due date updated)' : ''}.`;
-            } else {
-              return `⚠️ No valid fields to update for task "${task.title}".`;
-            }
-          } else {
-            return `⚠️ Task "${title}" not found.`;
-          }
-        } else if (command.action === 'list_tasks') {
-          // List or summarize tasks with filters
-          const filter = command.filter || {};
-          let where = { companyId };
-          if (filter.status) {
-            where.status = filter.status.trim().toUpperCase();
-          }
-          if (filter.priority) {
-            where.priority = filter.priority.trim().toUpperCase();
-          }
-          if (filter.assignee) {
-            const assignee = await prisma.user.findFirst({
-              where: {
-                name: { equals: filter.assignee, mode: 'insensitive' },
-                companyId
-              }
-            });
-            if (assignee) where.assigneeId = assignee.id;
-          }
-          // Only show tasks user can see and focus on active tasks (TODO and IN_PROGRESS)
-          where.OR = [
-            { assigneeId: userId },
-            { assignerId: userId }
-          ];
-          // If no specific status filter, default to active tasks only
-          if (!filter.status) {
-            where.status = {
-              in: ['TODO', 'IN_PROGRESS']
-            };
-          }
-          const tasks = await prisma.task.findMany({
-            where,
-            orderBy: { updatedAt: 'desc' },
-            take: 20
-          });
-          if (tasks.length === 0) return 'No matching tasks found.';
-          return 'Tasks:\n' + tasks.map(t => `- ${t.title} (${t.status}, ${t.priority})`).join('\n');
-        }
-        return null;
-      }
     } catch (err) {
       if (!responded) {
         responded = true;

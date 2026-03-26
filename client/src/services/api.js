@@ -109,7 +109,8 @@ export const usersAPI = {
 
 // AI API
 export const aiAPI = {
-  chat: (message) => api.post('/ai/chat', { message }),
+  /** @param {string} message @param {{ role: 'user'|'assistant', content: string }[]} [history] prior turns only */
+  chat: (message, history = []) => api.post('/ai/chat', { message, history }),
   extractTask: (text) => api.post('/ai/extract-task', { text }),
   identifyTaskUpdate: (text) => api.post('/ai/identify-task-update', { text }),
   suggestProjectIdeas: (text) => api.post('/ai/suggest-project-ideas', { text }),

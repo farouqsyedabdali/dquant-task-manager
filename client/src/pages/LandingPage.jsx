@@ -28,7 +28,7 @@ const LandingPage = () => {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/dashboard');
+      navigate('/app');
     }
     clearError();
   }, [isAuthenticated, navigate, clearError]);
@@ -84,7 +84,7 @@ const LandingPage = () => {
 
     const result = await login(loginFormData);
     if (result.success) {
-      navigate('/dashboard');
+      navigate('/app');
     } else if (result.requiresVerification) {
       navigate(`/verify-email?email=${encodeURIComponent(result.email)}&resend=true`);
     }

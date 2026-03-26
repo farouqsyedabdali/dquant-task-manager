@@ -341,7 +341,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
         toast.success(`🎉 Project "${project.name}" created with ${project.tasks?.length || 0} tasks!`);
         
         // Navigate to projects page with project ID
-        navigate('/projects', {
+        navigate('/app/projects', {
           state: {
             openProjectId: project.id,
             successMessage: `Project "${project.name}" created successfully with ${project.tasks?.length || 0} tasks!`,

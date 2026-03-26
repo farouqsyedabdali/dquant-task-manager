@@ -105,7 +105,7 @@ const AIModal = ({ isOpen, onClose, onAction }) => {
       // Navigate to dashboard with the storage key
       setInput('');
       if (onAction) onAction();
-      navigate(`/dashboard?popupData=${storageKey}`);
+      navigate(`/app?popupData=${storageKey}`);
       onClose();
     } catch (err) {
       console.error('Create task error:', err);
@@ -160,7 +160,7 @@ const AIModal = ({ isOpen, onClose, onAction }) => {
       // Navigate to dashboard with the storage key
       setInput('');
       if (onAction) onAction();
-      navigate(`/dashboard?popupData=${storageKey}`);
+      navigate(`/app?popupData=${storageKey}`);
       onClose();
     } catch (err) {
       console.error('Update task error:', err);
@@ -226,8 +226,8 @@ const AIModal = ({ isOpen, onClose, onAction }) => {
         if (onAction) onAction();
 
         // If already on projects page, use replace: false to ensure state update triggers
-        const isOnProjectsPage = location.pathname === '/projects';
-        navigate('/projects', {
+        const isOnProjectsPage = location.pathname === '/app/projects';
+        navigate('/app/projects', {
           state: {
             openProjectId: project.id,
             successMessage: `Project "${project.name}" created successfully with ${project.tasks?.length || 0} tasks!`,
@@ -316,7 +316,7 @@ const AIModal = ({ isOpen, onClose, onAction }) => {
       // Navigate to dashboard with the storage key
       setInput('');
       if (onAction) onAction();
-      navigate(`/dashboard?popupData=${storageKey}`);
+      navigate(`/app?popupData=${storageKey}`);
       onClose();
     } catch (err) {
       console.error('Add subtask error:', err);

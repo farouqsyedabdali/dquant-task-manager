@@ -52,7 +52,7 @@ const TaskInvitation = () => {
       if (response.data.success) {
         setActionSuccess('accepted');
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate('/app');
         }, 2000);
       }
     } catch (err) {
@@ -88,7 +88,7 @@ const TaskInvitation = () => {
       if (response.data.success) {
         setActionSuccess('declined');
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate('/app');
         }, 2000);
       }
     } catch (err) {

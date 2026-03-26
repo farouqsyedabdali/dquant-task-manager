@@ -487,3 +487,46 @@ button, a, input, select, textarea {
   transition: all 0.2s ease-in-out;
 }
 
+/* AI chat markdown styling */
+.ai-markdown {
+  line-height: 1.65;
+}
+.ai-markdown > *:first-child { margin-top: 0; }
+.ai-markdown > *:last-child { margin-bottom: 0; }
+.ai-markdown p { margin: 0.5em 0; }
+.ai-markdown strong { font-weight: 600; }
+.ai-markdown ul, .ai-markdown ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+.ai-markdown li { margin: 0.25em 0; }
+.ai-markdown ol { list-style-type: decimal; }
+.ai-markdown ul { list-style-type: disc; }
+.ai-markdown code {
+  background: var(--color-bg-primary);
+  border-radius: 4px;
+  padding: 0.15em 0.35em;
+  font-size: 0.9em;
+}
+.ai-markdown pre {
+  background: var(--color-bg-primary);
+  border-radius: 8px;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.ai-markdown pre code {
+  background: none;
+  padding: 0;
+}
+.ai-markdown h1, .ai-markdown h2, .ai-markdown h3 {
+  font-weight: 600;
+  margin: 0.75em 0 0.25em;
+}
+.ai-markdown blockquote {
+  border-left: 3px solid var(--color-border-default);
+  padding-left: 0.75em;
+  margin: 0.5em 0;
+  color: var(--color-text-secondary);
+}
+

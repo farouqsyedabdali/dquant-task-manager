@@ -19,7 +19,7 @@ const GoogleCallback = () => {
     if (incremental === 'true') {
       console.log('Incremental auth completed, contacts access:', contacts);
       // Redirect back to contacts page to continue the flow
-      navigate('/contacts?googleAuth=success');
+      navigate('/app/contacts?googleAuth=success');
       return;
     }
 
@@ -52,9 +52,9 @@ const GoogleCallback = () => {
             
             // Redirect to dashboard (same for all account types)
             if (newUser === 'true') {
-              navigate('/dashboard?welcome=true');
+              navigate('/app?welcome=true');
             } else {
-              navigate('/dashboard');
+              navigate('/app');
             }
           } else {
             navigate('/login?error=Failed to authenticate');

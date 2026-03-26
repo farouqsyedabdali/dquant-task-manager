@@ -100,8 +100,8 @@ const NotificationBoard = () => {
       
       // Navigate to dashboard if not already there
       const currentPath = window.location.pathname;
-      if (!currentPath.includes('/dashboard')) {
-        navigate('/dashboard');
+      if (!currentPath.includes('/app')) {
+        navigate('/app');
       }
     }
     

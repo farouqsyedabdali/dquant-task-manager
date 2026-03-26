@@ -85,7 +85,7 @@ const EmployeeSetup = () => {
         login(result.token, result.user);
 
         // Redirect to dashboard
-        navigate('/dashboard');
+        navigate('/app');
       } else {
         setErrors({ general: result.error || 'Failed to complete setup' });
       }

@@ -1842,7 +1842,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             onClick={() => {
                               // Close task modal and navigate to project with state
                               onClose();
-                              navigate('/projects', {
+                              navigate('/app/projects', {
                                 state: { openProjectId: viewedTask.project.id }
                               });
                             }}

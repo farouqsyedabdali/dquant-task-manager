@@ -29,7 +29,7 @@ const AuthRedirect = () => {
           const result = await getMe();
           if (result.success) {
             // Token is valid, redirect to dashboard
-            navigate('/dashboard', { replace: true });
+            navigate('/app/welcome', { replace: true });
             return;
           } else {
             // Token is invalid, clear auth
