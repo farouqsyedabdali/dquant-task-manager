@@ -34,6 +34,7 @@ const reminderRoutes = require('./routes/reminders')
 const projectRoutes = require('./routes/projects')
 const templateRoutes = require('./routes/templates')
 const googleContactsRoutes = require('./routes/googleContacts')
+const deviceTokenRoutes = require('./routes/deviceTokens')
 const internalRoutes = require('./routes/internal')
 
 const app = express()
@@ -150,6 +151,7 @@ app.use('/api/reminders', reminderRoutes)
 app.use('/api/projects', projectRoutes)
 app.use('/api/templates', templateRoutes)
 app.use('/api/google-contacts', googleContactsRoutes)
+app.use('/api/device-tokens', deviceTokenRoutes)
 app.use('/api/internal', internalRoutes)
 
 // Health check

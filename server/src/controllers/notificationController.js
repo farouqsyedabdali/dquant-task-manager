@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { sendPushToUser } = require('../services/pushNotificationService');
 
 // Get notifications for a user
 const getNotifications = async (req, res) => {
@@ -209,6 +210,14 @@ const createNotification = async (type, title, message, taskId, userId, companyI
         companyId
       }
     });
+
+    // Fire-and-forget push notification to the user's devices
+    sendPushToUser(userId, {
+      title,
+      body: message,
+      data: { type, taskId: String(taskId), notificationId: String(notification.id) },
+    }).catch(() => {});
+
     return notification;
   } catch (error) {
     console.error('Error creating notification:', error);

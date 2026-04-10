@@ -74,6 +74,7 @@ model User {
   projectMemberships       ProjectMember[]
   projectTemplates         ProjectTemplate[]
   templateTasks            TemplateTask[]
+  deviceTokens             DeviceToken[]
   company                  Company            @relation(fields: [companyId], references: [id])
 
   @@unique([email, companyId])
@@ -298,6 +299,19 @@ model TaskInvitation {
 
   @@index([token])
   @@index([recipientEmail])
+}
+
+model DeviceToken {
+  id        Int      @id @default(autoincrement())
+  token     String
+  platform  String   // "android", "ios", or "web"
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([token, userId])
+  @@index([userId])
 }
 
 model AuditLog {
