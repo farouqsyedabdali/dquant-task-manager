@@ -1,17 +1,5 @@
 import axios from 'axios';
-
-// Use VITE_API_URL environment variable, or detect environment
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.MODE === 'production' 
-    ? 'https://dquant-task-manager-production.up.railway.app/api' 
-    : 'http://localhost:3000/api');
-
-// Debug log
-console.log('🔌 API Configuration:', {
-  VITE_API_URL: import.meta.env.VITE_API_URL,
-  MODE: import.meta.env.MODE,
-  API_BASE_URL
-});
+import { API_BASE_URL } from '../config/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -84,7 +72,7 @@ export const tasksAPI = {
   // Task Invitation API
   sendInvitation: (taskId, invitationData) => api.post(`/tasks/${taskId}/send-invitation`, invitationData),
   // Unaccept task (remove yourself from an accepted task)
-  unaccessTask: (taskId) => api.post(`/tasks/${taskId}/unaccept`),
+  unacceptTask: (taskId) => api.post(`/tasks/${taskId}/unaccept`),
 };
 
 // Comments API
@@ -111,11 +99,26 @@ export const usersAPI = {
 export const aiAPI = {
   /** @param {string} message @param {{ role: 'user'|'assistant', content: string }[]} [history] prior turns only */
   chat: (message, history = []) => api.post('/ai/chat', { message, history }),
+  /** Classify message for quick actions vs chat — same capabilities as header AI Actions */
+  routeIntent: (message) => api.post('/ai/route-intent', { message }),
   extractTask: (text) => api.post('/ai/extract-task', { text }),
   identifyTaskUpdate: (text) => api.post('/ai/identify-task-update', { text }),
   suggestProjectIdeas: (text) => api.post('/ai/suggest-project-ideas', { text }),
   createProjectFromIdea: (text, selectedIdea, projectName, dueDate) => 
     api.post('/ai/create-project-from-idea', { text, selectedIdea, projectName, dueDate }),
+  previewAction: (actionType, input, sourceText) => api.post('/ai/actions/preview', { actionType, input, sourceText }),
+  executeAction: (actionId) => api.post('/ai/actions/execute', { actionId }),
+  rejectAction: (actionId) => api.post('/ai/actions/reject', { actionId }),
+  undoAction: (actionId) => api.post('/ai/actions/undo', { actionId }),
+};
+
+// Gmail Agent API
+export const gmailAgentAPI = {
+  getStatus: () => api.get('/gmail-agent/status'),
+  connect: () => api.post('/gmail-agent/connect'),
+  updateSettings: (accountId, settings) => api.patch(`/gmail-agent/accounts/${accountId}`, settings),
+  syncNow: (accountId) => api.post(`/gmail-agent/accounts/${accountId}/sync`),
+  disconnect: (accountId) => api.post(`/gmail-agent/accounts/${accountId}/disconnect`),
 };
 
 // Task Share API

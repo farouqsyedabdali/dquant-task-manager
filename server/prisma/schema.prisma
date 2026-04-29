@@ -21,6 +21,9 @@ model Company {
   markedForDeletion Boolean            @default(false)
   isPersonal        Boolean            @default(false)
   auditLogs         AuditLog[]
+  aiActions         AIAction[]
+  connectedAccounts ConnectedAccount[]
+  emailIngestions   EmailIngestion[]
   comments          Comment[]
   notifications     Notification[]
   projects          Project[]
@@ -60,6 +63,9 @@ model User {
   googleTokenExpiry        DateTime?
   googleContactsScope      Boolean            @default(false)
   auditLogs                AuditLog[]
+  aiActions                AIAction[]
+  connectedAccounts        ConnectedAccount[]
+  emailIngestions          EmailIngestion[]
   comments                 Comment[]
   contacts                 Contact[]
   notifications            Notification[]
@@ -94,6 +100,10 @@ model Task {
   parentTaskId          Int?
   projectId             Int?
   dueDate               DateTime?
+  recurrence            TaskRecurrence     @default(NONE)
+  recurrenceSeriesId    Int?
+  recurrenceAnchorDate  DateTime?
+  recurrenceEndsAt      DateTime?
   statusManuallyChanged Boolean            @default(false)
   archived              Boolean            @default(false)
   externalContactId     Int?
@@ -117,6 +127,13 @@ model Task {
 
   @@index([projectId])
   @@index([isDraft])
+  @@index([recurrenceSeriesId])
+}
+
+enum TaskRecurrence {
+  NONE
+  WEEKLY
+  MONTHLY
 }
 
 model Project {
@@ -334,6 +351,98 @@ model AuditLog {
   @@index([action, createdAt])
 }
 
+model AIAction {
+  id            String    @id @default(cuid())
+  actionType    String
+  status        String    @default("PENDING")
+  riskLevel     String    @default("LOW")
+  sourceType    String    @default("CHAT")
+  sourceText    String?
+  sourceMetadata Json?
+  input         Json
+  resolvedInput Json?
+  preview       Json?
+  beforeState   Json?
+  result        Json?
+  undoData      Json?
+  error         String?
+  userId        Int
+  companyId     Int
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  executedAt    DateTime?
+  undoneAt      DateTime?
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([actionType, createdAt])
+  @@index([sourceType, createdAt])
+}
+
+model ConnectedAccount {
+  id                    Int                    @id @default(autoincrement())
+  provider              ConnectedProvider
+  email                 String
+  encryptedAccessToken  String?
+  encryptedRefreshToken String?
+  tokenExpiry           DateTime?
+  scopes                String[]               @default([])
+  status                ConnectedAccountStatus @default(ACTIVE)
+  syncEnabled           Boolean                @default(true)
+  lastSyncedAt          DateTime?
+  lastHistoryId         String?
+  lastError             String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  userId                Int
+  companyId             Int
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  emailIngestions       EmailIngestion[]
+
+  @@unique([provider, userId, email])
+  @@index([provider, status, syncEnabled])
+  @@index([userId, provider])
+  @@index([companyId])
+}
+
+model EmailIngestion {
+  id                 Int                  @id @default(autoincrement())
+  provider           ConnectedProvider
+  providerMessageId  String
+  threadId           String?
+  senderEmail        String?
+  senderName         String?
+  subject            String?
+  snippet            String?
+  receivedAt         DateTime?
+  classification     String?
+  confidence         Float?
+  reason             String?
+  status             EmailIngestionStatus @default(RECEIVED)
+  extractedActions   Json?
+  createdTaskIds     Int[]                @default([])
+  error              String?
+  rawMetadata        Json?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  connectedAccountId Int
+  userId             Int
+  companyId          Int
+  connectedAccount   ConnectedAccount     @relation(fields: [connectedAccountId], references: [id], onDelete: Cascade)
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company            Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerMessageId, userId])
+  @@index([userId, createdAt])
+  @@index([companyId, createdAt])
+  @@index([status, createdAt])
+  @@index([connectedAccountId, createdAt])
+}
+
 model Contact {
   id            Int         @id @default(autoincrement())
   userId        Int
@@ -370,6 +479,24 @@ enum Role {
   ADMIN
   EMPLOYEE
   SUPER_ADMIN
+}
+
+enum ConnectedProvider {
+  GOOGLE_GMAIL
+}
+
+enum ConnectedAccountStatus {
+  ACTIVE
+  REVOKED
+  ERROR
+}
+
+enum EmailIngestionStatus {
+  RECEIVED
+  SKIPPED
+  TASK_CREATED
+  NEEDS_REVIEW
+  ERROR
 }
 
 enum TaskStatus {

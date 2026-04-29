@@ -31,6 +31,8 @@ import ContactCardRevamped from './ContactCardRevamped';
 import BulkActionsBar from './BulkActionsBar';
 import CreateTaskModalAssignDropdownFix from './CreateTaskModalAssignDropdownFix';
 import AIHomeFirstMockup from './AIHomeFirstMockup';
+import AISidePanelDashboard from './AISidePanelDashboard';
+import GPT55SampleWebsite from './GPT55SampleWebsite';
 
 export const MOCKUPS = [
   // Landing & auth
@@ -47,6 +49,8 @@ export const MOCKUPS = [
   { id: 'projects-page-full', path: 'projects', label: 'Projects Page', description: 'Project cards, progress bars, create modal', component: ProjectsPageFull, category: 'App' },
   { id: 'ai-chat-full', path: 'ai-chat', label: 'AI Assistant', description: 'AI chat interface with suggestions', component: AIChatFull, category: 'App' },
   { id: 'ai-home-first', path: 'ai-home-first', label: 'AI-first home (demo)', description: 'ChatGPT-style entry, streaming replies, guided demo, My tasks drawer', component: AIHomeFirstMockup, category: 'App' },
+  { id: 'ai-side-panel', path: 'ai-side-panel', label: 'AI Side Panel Dashboard', description: 'Persistent AI chat rail alongside the real dashboard — type to create tasks, query contacts, prefill forms', component: AISidePanelDashboard, category: 'App' },
+  { id: 'gpt55-sample-website', path: 'gpt55-sample-website', label: 'GPT5.5SAMPLEWEBSITE', description: 'Original AI-native Tialz vision mockup: autonomous email, calendar, contacts, projects, and task command center', component: GPT55SampleWebsite, category: 'App' },
   { id: 'settings-page-full', path: 'settings', label: 'Settings Page', description: 'Profile, preferences, toggles', component: SettingsPageFull, category: 'App' },
   { id: 'onboarding-flow', path: 'onboarding', label: 'Onboarding Flow', description: 'First-time user setup steps', component: OnboardingFlow, category: 'App' },
   // Components

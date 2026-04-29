@@ -1,6 +1,11 @@
 const prisma = require('../lib/prisma');
 const { parseLocalDate, isDateInFuture } = require('../utils/dateUtils');
 
+function normalizeProjectTaskRecurrence(raw) {
+  if (raw === 'WEEKLY' || raw === 'MONTHLY') return raw;
+  return 'NONE';
+}
+
 // Project templates with predefined tasks
 const PROJECT_TEMPLATES = {
   marketing_campaign: {
@@ -674,7 +679,7 @@ const projectController = {
     try {
       const { id } = req.params;
       const { companyId, id: userId } = req.user;
-      const { taskId, title, description, priority, assigneeId, externalContactId, dueDate } = req.body;
+      const { taskId, title, description, priority, assigneeId, externalContactId, dueDate, recurrence: recurrenceRaw, recurrenceEndsAt: recurrenceEndsAtRaw } = req.body;
 
       const project = await prisma.project.findFirst({
         where: { id: parseInt(id), companyId }
@@ -747,28 +752,55 @@ const projectController = {
           return res.status(400).json({ error: 'Cannot assign to both internal user and external contact' });
         }
 
-        task = await prisma.task.create({
-          data: {
-            title,
-            description: description || null,
-            priority: priority || 'MEDIUM',
-            status: 'TODO',
-            projectId: parseInt(id),
-            assignerId: userId,
-            assigneeId: assigneeId ? parseInt(assigneeId) : null,
-            externalContactId: externalContactId ? parseInt(externalContactId) : null,
-            dueDate: dueDateObj, // Required, already validated
-            isDraft: true,
-            companyId
-          },
-          include: {
-            assignee: {
-              select: { id: true, name: true, email: true }
-            },
-            assigner: {
-              select: { id: true, name: true, email: true }
-            }
+        const recurrence = normalizeProjectTaskRecurrence(recurrenceRaw);
+
+        let recurrenceEndsAtObj = null;
+        if (recurrence !== 'NONE' && recurrenceEndsAtRaw) {
+          recurrenceEndsAtObj = parseLocalDate(recurrenceEndsAtRaw);
+          if (Number.isNaN(recurrenceEndsAtObj.getTime())) {
+            return res.status(400).json({ error: 'Invalid recurrence end date format' });
           }
+        }
+
+        const taskInclude = {
+          assignee: {
+            select: { id: true, name: true, email: true }
+          },
+          assigner: {
+            select: { id: true, name: true, email: true }
+          }
+        };
+
+        task = await prisma.$transaction(async (tx) => {
+          const created = await tx.task.create({
+            data: {
+              title,
+              description: description || null,
+              priority: priority || 'MEDIUM',
+              status: 'TODO',
+              projectId: parseInt(id),
+              assignerId: userId,
+              assigneeId: assigneeId ? parseInt(assigneeId) : null,
+              externalContactId: externalContactId ? parseInt(externalContactId) : null,
+              dueDate: dueDateObj, // Required, already validated
+              isDraft: true,
+              companyId,
+              recurrence,
+              recurrenceAnchorDate: recurrence !== 'NONE' ? dueDateObj : null,
+              recurrenceEndsAt: recurrence !== 'NONE' ? recurrenceEndsAtObj : null,
+              recurrenceSeriesId: null
+            },
+            include: taskInclude
+          });
+
+          if (recurrence !== 'NONE') {
+            return tx.task.update({
+              where: { id: created.id },
+              data: { recurrenceSeriesId: created.id },
+              include: taskInclude
+            });
+          }
+          return created;
         });
 
         // Create audit log for new task

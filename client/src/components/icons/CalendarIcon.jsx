@@ -1,11 +1,9 @@
-const CalendarIcon = ({ className = 'w-4 h-4', size }) => {
+const CalendarIcon = ({ className = "w-4 h-4" }) => {
   return (
-    <svg
-      className={className}
-      width={size}
-      height={size}
-      fill="none"
-      stroke="currentColor"
+    <svg 
+      className={className} 
+      fill="none" 
+      stroke="currentColor" 
       viewBox="0 0 24 24"
     >
       <path 

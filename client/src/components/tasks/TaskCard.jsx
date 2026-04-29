@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import useAuthStore from '../../context/authStore';
-import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
+import { STATUS_LABELS, PRIORITY_LABELS, TASK_RECURRENCE } from '../../utils/constants';
 import TaskModal from './TaskModal';
 import AddSubtaskModal from './AddSubtaskModal';
 import { 
@@ -169,6 +169,18 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
             <span className={`status-badge uppercase ${getPriorityColor(task.priority)}`}>
               {PRIORITY_LABELS[task.priority]}
             </span>
+            {task.recurrence && task.recurrence !== TASK_RECURRENCE.NONE && (
+              <span
+                className="status-badge uppercase bg-opacity-20 text-xs"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  color: 'var(--color-text-secondary)'
+                }}
+                title="Repeating task"
+              >
+                {task.recurrence === 'WEEKLY' ? 'Weekly' : 'Monthly'}
+              </span>
+            )}
           </div>
         </div>
 

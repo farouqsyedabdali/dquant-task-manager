@@ -3,6 +3,13 @@ const { createNotification, notifyTaskUsers } = require('./notificationControlle
 const { logAuditActionDirect } = require('../middleware/auditLogger')
 const { autoChangeStatusToInProgress, markStatusAsManuallyChanged } = require('../utils/autoStatusManager')
 const { parseLocalDate, isDateInFuture } = require('../utils/dateUtils')
+const { spawnNextRecurrenceAfterCompletion } = require('../services/taskRecurrenceService')
+
+function normalizeTaskRecurrenceInput(raw, parentTaskId) {
+  if (parentTaskId) return 'NONE'
+  if (raw === 'WEEKLY' || raw === 'MONTHLY') return raw
+  return 'NONE'
+}
 
 // Get tasks based on user role and assignments
 const getTasks = async (req, res) => {
@@ -494,7 +501,17 @@ const getTask = async (req, res) => {
 // Create task (anyone can create tasks)
 const createTask = async (req, res) => {
   try {
-    const { title, description, priority, assigneeId, externalContactId, parentTaskId, dueDate } = req.body;
+    const {
+      title,
+      description,
+      priority,
+      assigneeId,
+      externalContactId,
+      parentTaskId,
+      dueDate,
+      recurrence: recurrenceRaw,
+      recurrenceEndsAt: recurrenceEndsAtRaw
+    } = req.body;
     const assignerId = req.user.id;
     const companyId = req.user.companyId;
 
@@ -579,80 +596,110 @@ const createTask = async (req, res) => {
       }
     }
 
-    const task = await prisma.task.create({
-      data: {
-        title,
-        description,
-        priority: priority || 'MEDIUM',
-        assignerId,
-        assigneeId: assigneeId ? parseInt(assigneeId) : null,
-        externalContactId: externalContactId ? parseInt(externalContactId) : null,
-        parentTaskId: parentTaskId ? parseInt(parentTaskId) : null,
-        dueDate: dueDateObj, // Required, already validated
-        companyId
+    const recurrence = normalizeTaskRecurrenceInput(recurrenceRaw, parentTaskId ? parseInt(parentTaskId) : null)
+
+    let recurrenceEndsAtObj = null
+    if (recurrence !== 'NONE' && recurrenceEndsAtRaw) {
+      recurrenceEndsAtObj = parseLocalDate(recurrenceEndsAtRaw)
+      if (Number.isNaN(recurrenceEndsAtObj.getTime())) {
+        return res.status(400).json({ error: 'Invalid recurrence end date format' })
+      }
+    }
+
+    const taskInclude = {
+      assigner: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          companyId: true
+        }
       },
-      include: {
-        assigner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            companyId: true
-          }
-        },
-        assignee: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        externalContact: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            company: true,
-            isPersonal: true
-          }
-        },
-        parentTask: {
-          select: {
-            id: true,
-            title: true
-          }
-        },
-        subtasks: {
-          include: {
-            assigner: {
-              select: {
-                id: true,
-                name: true
-              }
-            },
-            assignee: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
-          }
-        },
-        comments: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                name: true
-              }
+      assignee: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      externalContact: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          company: true,
+          isPersonal: true
+        }
+      },
+      parentTask: {
+        select: {
+          id: true,
+          title: true
+        }
+      },
+      subtasks: {
+        include: {
+          assigner: {
+            select: {
+              id: true,
+              name: true
             }
           },
-          orderBy: {
-            createdAt: 'desc'
+          assignee: {
+            select: {
+              id: true,
+              name: true
+            }
           }
         }
+      },
+      comments: {
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
       }
-    });
+    }
+
+    const task = await prisma.$transaction(async (tx) => {
+      const created = await tx.task.create({
+        data: {
+          title,
+          description,
+          priority: priority || 'MEDIUM',
+          assignerId,
+          assigneeId: assigneeId ? parseInt(assigneeId) : null,
+          externalContactId: externalContactId ? parseInt(externalContactId) : null,
+          parentTaskId: parentTaskId ? parseInt(parentTaskId) : null,
+          dueDate: dueDateObj, // Required, already validated
+          companyId,
+          recurrence,
+          recurrenceAnchorDate: recurrence !== 'NONE' ? dueDateObj : null,
+          recurrenceEndsAt: recurrence !== 'NONE' ? recurrenceEndsAtObj : null,
+          recurrenceSeriesId: null
+        },
+        include: taskInclude
+      })
+
+      if (recurrence !== 'NONE' && !parentTaskId) {
+        return tx.task.update({
+          where: { id: created.id },
+          data: {
+            recurrenceSeriesId: created.id
+          },
+          include: taskInclude
+        })
+      }
+
+      return created
+    })
 
     // Create notification for the assignee (only for internal users)
     if (task.assigneeId && task.assigneeId !== assignerId) {
@@ -837,6 +884,50 @@ const updateTask = async (req, res) => {
         // If setting to a non-null value AND assigneeId is not already set, clear it
         if (updateData.externalContactId !== null && !task.assigneeId) {
           allowedUpdates.assigneeId = null;
+        }
+      }
+
+      // Recurrence (weekly / monthly); subtasks cannot repeat
+      if (updateData.recurrence !== undefined) {
+        const r = normalizeTaskRecurrenceInput(updateData.recurrence, task.parentTaskId)
+        if (task.parentTaskId && r !== 'NONE') {
+          return res.status(400).json({ error: 'Subtasks cannot repeat' })
+        }
+        allowedUpdates.recurrence = r
+        if (r === 'NONE') {
+          allowedUpdates.recurrenceSeriesId = null
+          allowedUpdates.recurrenceAnchorDate = null
+          allowedUpdates.recurrenceEndsAt = null
+        } else {
+          const anchorSource = allowedUpdates.dueDate !== undefined ? allowedUpdates.dueDate : task.dueDate
+          if (!anchorSource) {
+            return res.status(400).json({ error: 'Due date is required for recurring tasks' })
+          }
+          allowedUpdates.recurrenceAnchorDate = anchorSource
+          allowedUpdates.recurrenceSeriesId = task.recurrenceSeriesId || task.id
+          if (updateData.recurrenceEndsAt !== undefined) {
+            if (updateData.recurrenceEndsAt === null || updateData.recurrenceEndsAt === '') {
+              allowedUpdates.recurrenceEndsAt = null
+            } else {
+              const end = parseLocalDate(updateData.recurrenceEndsAt)
+              if (Number.isNaN(end.getTime())) {
+                return res.status(400).json({ error: 'Invalid recurrence end date format' })
+              }
+              allowedUpdates.recurrenceEndsAt = end
+            }
+          }
+        }
+      } else if (updateData.recurrenceEndsAt !== undefined) {
+        if (task.recurrence === 'NONE') {
+          allowedUpdates.recurrenceEndsAt = null
+        } else if (updateData.recurrenceEndsAt === null || updateData.recurrenceEndsAt === '') {
+          allowedUpdates.recurrenceEndsAt = null
+        } else {
+          const end = parseLocalDate(updateData.recurrenceEndsAt)
+          if (Number.isNaN(end.getTime())) {
+            return res.status(400).json({ error: 'Invalid recurrence end date format' })
+          }
+          allowedUpdates.recurrenceEndsAt = end
         }
       }
     } else if (isAssignee) {
@@ -1132,7 +1223,19 @@ const updateTask = async (req, res) => {
       }
     }
 
-    res.json(updatedTask);
+    let responsePayload = updatedTask
+    if (updateData.status === 'COMPLETED' && task.status !== 'COMPLETED') {
+      try {
+        const spawned = await spawnNextRecurrenceAfterCompletion(updatedTask)
+        if (spawned) {
+          responsePayload = { ...updatedTask, spawnedRecurringTask: spawned }
+        }
+      } catch (recErr) {
+        console.error('Recurring task spawn error:', recErr)
+      }
+    }
+
+    res.json(responsePayload);
   } catch (error) {
     console.error('Update task error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -1320,12 +1423,24 @@ const updateTaskStatus = async (req, res) => {
       }
     });
 
+    let statusPayload = updatedTask
+    if (status === 'COMPLETED' && task.status !== 'COMPLETED') {
+      try {
+        const spawned = await spawnNextRecurrenceAfterCompletion(updatedTask)
+        if (spawned) {
+          statusPayload = { ...updatedTask, spawnedRecurringTask: spawned }
+        }
+      } catch (recErr) {
+        console.error('Recurring task spawn error:', recErr)
+      }
+    }
+
     // If status was changed and the user is the creator (assigner), mark as manually changed
     if (status !== task.status && isAssigner) {
       await markStatusAsManuallyChanged(parseInt(id), companyId);
     }
 
-    res.json(updatedTask);
+    res.json(statusPayload);
   } catch (error) {
     console.error('Update task status error:', error);
     res.status(500).json({ error: 'Internal server error' });

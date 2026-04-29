@@ -6,6 +6,7 @@ import useThemeStore from '../stores/themeStore';
 import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import AuditLogModal from '../components/audit/AuditLogModal';
 import LegalDocumentModal from '../components/legal/LegalDocumentModal';
+import GmailAgentSettings from '../components/integrations/GmailAgentSettings';
 import { feedbackAPI, authAPI } from '../services/api';
 import { lightPalettes, darkPalettes } from '../config/colorPalettes';
 import IconButton from '../components/common/IconButton';
@@ -25,7 +26,7 @@ const Settings = () => {
   const [showOlderVersions, setShowOlderVersions] = useState(false);
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [legalDocumentType, setLegalDocumentType] = useState('terms'); // 'terms' or 'privacy'
-  const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'preferences' | 'about' | 'feedback' | 'admin-tools'
+  const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'integrations' | 'preferences' | 'about' | 'feedback' | 'admin-tools'
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -33,7 +34,7 @@ const Settings = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const category = urlParams.get('category');
-    if (category && ['account', 'preferences', 'about', 'feedback', 'admin-tools'].includes(category)) {
+    if (category && ['account', 'integrations', 'preferences', 'about', 'feedback', 'admin-tools'].includes(category)) {
       setSelectedCategory(category);
     }
   }, [location.search]);
@@ -159,6 +160,7 @@ const Settings = () => {
             <nav className="flex md:block space-x-2 md:space-x-0 md:space-y-2">
               {[
                 { id: 'account', label: 'Account' },
+                { id: 'integrations', label: 'Integrations' },
                 { id: 'preferences', label: 'Preferences' },
                 { id: 'feedback', label: 'Feedback' },
                 { id: 'about', label: 'About' },
@@ -416,6 +418,12 @@ const Settings = () => {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {selectedCategory === 'integrations' && (
+            <div className="space-y-8">
+              <GmailAgentSettings />
             </div>
           )}
 

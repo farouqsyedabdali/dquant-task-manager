@@ -3,7 +3,7 @@ import useTaskStore from '../../stores/taskStore';
 import useUserStore from '../../stores/userStore';
 import useAuthStore from '../../context/authStore';
 import useContactStore from '../../stores/contactStore';
-import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
+import { PRIORITY_OPTIONS, getDefaultDueDate, TASK_RECURRENCE, RECURRENCE_OPTIONS } from '../../utils/constants';
 import { convertLocalDateTimeToUTC } from '../../utils/dateUtils';
 import { usersAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
@@ -22,7 +22,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
     description: '',
     priority: 'MEDIUM',
     assignee: '', // Will store as "type_id" format (e.g., "user_123" or "contact_456")
-    dueDate: getDefaultDueDate()
+    dueDate: getDefaultDueDate(),
+    recurrence: TASK_RECURRENCE.NONE,
+    recurrenceEndsAt: ''
   });
   const [errors, setErrors] = useState({});
   const [users, setUsers] = useState([]);
@@ -255,7 +257,11 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
         priority: formData.priority,
         assigneeId,
         externalContactId,
-        dueDate: convertLocalDateTimeToUTC(formData.dueDate)
+        dueDate: convertLocalDateTimeToUTC(formData.dueDate),
+        recurrence: formData.recurrence,
+        ...(formData.recurrence !== TASK_RECURRENCE.NONE && formData.recurrenceEndsAt
+          ? { recurrenceEndsAt: convertLocalDateTimeToUTC(formData.recurrenceEndsAt) }
+          : {})
       };
       
       try {
@@ -265,7 +271,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
           description: '',
           priority: 'MEDIUM',
           assignee: !isPersonalAccount && user ? `user_${user.id.toString()}` : '',
-          dueDate: getDefaultDueDate()
+          dueDate: getDefaultDueDate(),
+          recurrence: TASK_RECURRENCE.NONE,
+          recurrenceEndsAt: ''
         });
         setErrors({});
         toast.success('Task added to project as draft!');
@@ -282,7 +290,11 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
         priority: formData.priority,
         assigneeId,
         externalContactId,
-        dueDate: convertLocalDateTimeToUTC(formData.dueDate)
+        dueDate: convertLocalDateTimeToUTC(formData.dueDate),
+        recurrence: formData.recurrence,
+        ...(formData.recurrence !== TASK_RECURRENCE.NONE && formData.recurrenceEndsAt
+          ? { recurrenceEndsAt: convertLocalDateTimeToUTC(formData.recurrenceEndsAt) }
+          : {})
       };
       
       const result = await createTask(createData);
@@ -292,7 +304,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
           description: '',
           priority: 'MEDIUM',
           assignee: !isPersonalAccount && user ? `user_${user.id.toString()}` : '',
-          dueDate: getDefaultDueDate()
+          dueDate: getDefaultDueDate(),
+          recurrence: TASK_RECURRENCE.NONE,
+          recurrenceEndsAt: ''
         });
         setErrors({});
         onClose();
@@ -378,7 +392,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
       description: '',
       priority: 'MEDIUM',
       assignee: !isPersonalAccount && user ? `user_${user.id.toString()}` : '',
-      dueDate: getDefaultDueDate()
+      dueDate: getDefaultDueDate(),
+      recurrence: TASK_RECURRENCE.NONE,
+      recurrenceEndsAt: ''
     });
     setErrors({});
     onClose();
@@ -556,6 +572,60 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
             </div>
           </div>
 
+          {/* Repeat (weekly / monthly) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Repeat
+              </label>
+              <select
+                name="recurrence"
+                value={formData.recurrence}
+                onChange={handleChange}
+                className="select w-full transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+              >
+                {RECURRENCE_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+              <p className="text-xs mt-1 opacity-75" style={{ color: 'var(--color-text-tertiary)' }}>
+                The next task is created when this one is marked complete.
+              </p>
+            </div>
+            {formData.recurrence !== TASK_RECURRENCE.NONE && (
+              <div>
+                <label
+                  className="block text-sm font-medium mb-2 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Stop repeating after (optional)
+                </label>
+                <DatePicker
+                  value={formData.recurrenceEndsAt || ''}
+                  onChange={(e) => {
+                    handleChange({
+                      target: {
+                        name: 'recurrenceEndsAt',
+                        value: e.target.value
+                      }
+                    });
+                  }}
+                  placeholder="Optional — pick last repeat date"
+                  showTime={false}
+                  timeOptional={false}
+                />
+              </div>
+            )}
+          </div>
+
           {/* Assignee Selection - Show for company accounts */}
           {!isPersonalAccount && (
             <div>
@@ -635,7 +705,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
                   style={{ color: 'var(--color-text-tertiary)' }}
                 >
                   No assignees available. <a
-                    href="/app/contacts"
+                    href="/contacts"
                     className="transition-colors duration-200"
                     style={{ color: 'var(--color-primary-light)' }}
                     onMouseEnter={(e) => {
@@ -729,7 +799,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
                     style={{ color: 'var(--color-text-tertiary)' }}
                   >
                     No contacts available. <a
-                      href="/app/contacts"
+                      href="/contacts"
                       className="transition-colors duration-200"
                       style={{ color: 'var(--color-primary-light)' }}
                       onMouseEnter={(e) => {

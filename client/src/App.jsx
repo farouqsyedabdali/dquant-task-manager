@@ -1,17 +1,19 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import useAuthStore from './context/authStore';
-import './debug-env'; // Debug environment variables
 import ProtectedRoute from './layouts/ProtectedRoute';
+import AuthenticatedShell from './layouts/AuthenticatedShell';
 import FontSizeProvider from './components/FontSizeProvider';
-import Header from './components/layout/Header';
 import Login from './pages/Login';
 import CompanySignup from './pages/CompanySignup';
 import PersonalSignup from './pages/PersonalSignup';
 import SignupOptions from './pages/SignupOptions';
 import Dashboard from './pages/Dashboard';
-import AppWorkSurface from './pages/AppWorkSurface';
 import TaskPopup from './pages/TaskPopup';
+import CalendarPage from './pages/Calendar';
+import Contacts from './pages/Contacts';
+import Projects from './pages/Projects';
+import Employees from './pages/Employees';
 import Settings from './pages/Settings';
 import LandingPage from './pages/LandingPage';
 import TaskInvitation from './pages/TaskInvitation';
@@ -22,7 +24,6 @@ import ColorPaletteTester from './pages/ColorPaletteTester';
 import TestStaging from './pages/TestStaging';
 import GoogleCallback from './pages/GoogleCallback';
 import LegalDocumentPage from './pages/LegalDocumentPage';
-import AIModal from './components/tasks/AIModal';
 import ToastContainer from './components/common/ToastContainer';
 import { ToastProvider, useToastContext } from './context/ToastContext';
 import AuthRedirect from './components/AuthRedirect';
@@ -30,49 +31,16 @@ import EmailMockup from './pages/EmailMockup';
 import MockupViewer from './mockups/MockupViewer';
 import NotFound from './pages/NotFound';
 import { tialzFavicon } from './hooks/useThemeLogo';
+import { useAssistantStore } from './stores/assistantStore';
 import './App.css';
 
-/** Preserves query string (e.g. AIModal popupData) when resolving /app → /app/welcome */
-function AppHomeRedirect() {
-  const { search } = useLocation();
-  return <Navigate to={`/app/welcome${search}`} replace />;
-}
-
-/** Old /dashboard links (e.g. Electron popups) → tasks lens with query preserved */
-function DashboardRedirect() {
-  const { search } = useLocation();
-  return <Navigate to={`/app/tasks${search}`} replace />;
-}
-
-/** Legacy /calendar → work surface calendar lens */
-function CalendarRedirect() {
-  const { search } = useLocation();
-  return <Navigate to={`/app/calendar${search}`} replace />;
-}
-
-function ProjectsRedirect() {
-  const { search } = useLocation();
-  return <Navigate to={`/app/projects${search}`} replace />;
-}
-
-function ContactsRedirect() {
-  const { search } = useLocation();
-  return <Navigate to={`/app/contacts${search}`} replace />;
-}
-
-function EmployeesRedirect() {
-  const { search } = useLocation();
-  return <Navigate to={`/app/employees${search}`} replace />;
-}
-
 function AppContent() {
-  const { getMe, isAuthenticated } = useAuthStore();
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const { getMe, isAuthenticated, token } = useAuthStore();
   const [taskbarAction, setTaskbarAction] = useState(null);
   const { toasts, hideToast } = useToastContext();
+  const showDevRoutes = import.meta.env.DEV;
 
   useEffect(() => {
-    // Check if user is authenticated and get user info
     if (isAuthenticated()) {
       getMe();
     }
@@ -86,20 +54,24 @@ function AppContent() {
       });
   }, []);
 
-  // Handle taskbar actions from Electron
   useEffect(() => {
-    // Check if we're running in Electron
+    if (!token) return undefined;
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        useAssistantStore.getState().toggle();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [token]);
+
+  useEffect(() => {
     if (window.desktop && window.desktop.onTaskbarAction) {
-      console.log('Setting up taskbar action listener');
       window.desktop.onTaskbarAction((data) => {
-        console.log('Received taskbar action in App:', data);
         setTaskbarAction(data);
       });
-    } else {
-      console.log('Desktop API not available or onTaskbarAction not found');
     }
-
-    // Cleanup listener on unmount
     return () => {
       if (window.desktop && window.desktop.removeAllListeners) {
         window.desktop.removeAllListeners('taskbar-action');
@@ -114,9 +86,7 @@ function AppContent() {
           className="App min-h-screen app-root-shell"
           style={{ backgroundColor: 'var(--color-bg-primary)' }}
         >
-
           <Routes>
-            {/* Public Routes */}
             <Route path="/" element={<AuthRedirect />} />
             <Route path="/landing" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
@@ -128,64 +98,44 @@ function AppContent() {
             <Route path="/verify-email" element={<EmailVerification />} />
             <Route path="/complete-employee-setup" element={<EmployeeSetup />} />
 
-            {/* Legal Document Routes (public, standalone pages) */}
             <Route path="/privacy-policy" element={<LegalDocumentPage documentType="privacy" />} />
             <Route path="/terms-of-service" element={<LegalDocumentPage documentType="terms" />} />
 
-            {/* Popup Route (no header/layout) */}
             <Route path="/popup" element={<TaskPopup />} />
 
-            {/* Color Palette Tester (no auth required) */}
-            <Route path="/test" element={<ColorPaletteTester />} />
-
-            {/* Staging Test Page (no auth required) */}
-            <Route path="/test-staging" element={<TestStaging />} />
-
-            {/* Email Mockup Gallery (no auth required) */}
-            <Route path="/email-mockup" element={<EmailMockup />} />
-
-            {/* Design Mockups (no auth required) */}
-            <Route path="/mockups/*" element={<MockupViewer />} />
-
-            {/* Protected Routes — work surface (AI-first home) */}
-            <Route
-              path="/app"
-              element={
-                <ProtectedRoute>
-                  <AppHomeRedirect />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/:lens"
-              element={
-                <ProtectedRoute>
-                  <AppWorkSurface
-                    taskbarAction={taskbarAction}
-                    onTaskbarActionHandled={() => setTaskbarAction(null)}
-                  />
-                </ProtectedRoute>
-              }
-            />
+            {showDevRoutes && (
+              <>
+                <Route path="/test" element={<ColorPaletteTester />} />
+                <Route path="/test-staging" element={<TestStaging />} />
+                <Route path="/email-mockup" element={<EmailMockup />} />
+                <Route path="/mockups/*" element={<MockupViewer />} />
+              </>
+            )}
 
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <DashboardRedirect />
+                  <AuthenticatedShell>
+                    <Dashboard
+                      taskbarAction={taskbarAction}
+                      onTaskbarActionHandled={() => setTaskbarAction(null)}
+                    />
+                  </AuthenticatedShell>
                 </ProtectedRoute>
               }
             />
-            <Route path="/aidashboard" element={<Navigate to="/app/welcome" replace />} />
 
             <Route
               path="/admin"
               element={
                 <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
-                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                    <Header />
-                    <Dashboard />
-                  </div>
+                  <AuthenticatedShell>
+                    <Dashboard
+                      taskbarAction={taskbarAction}
+                      onTaskbarActionHandled={() => setTaskbarAction(null)}
+                    />
+                  </AuthenticatedShell>
                 </ProtectedRoute>
               }
             />
@@ -194,7 +144,9 @@ function AppContent() {
               path="/employees"
               element={
                 <ProtectedRoute allowedRoles={['ADMIN', 'SYSDMIN']}>
-                  <EmployeesRedirect />
+                  <AuthenticatedShell>
+                    <Employees />
+                  </AuthenticatedShell>
                 </ProtectedRoute>
               }
             />
@@ -212,12 +164,9 @@ function AppContent() {
               path="/settings"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                    <Header />
-                    <div className="pt-16">
-                      <Settings />
-                    </div>
-                  </div>
+                  <AuthenticatedShell>
+                    <Settings />
+                  </AuthenticatedShell>
                 </ProtectedRoute>
               }
             />
@@ -226,7 +175,9 @@ function AppContent() {
               path="/calendar"
               element={
                 <ProtectedRoute>
-                  <CalendarRedirect />
+                  <AuthenticatedShell>
+                    <CalendarPage />
+                  </AuthenticatedShell>
                 </ProtectedRoute>
               }
             />
@@ -235,7 +186,9 @@ function AppContent() {
               path="/contacts"
               element={
                 <ProtectedRoute>
-                  <ContactsRedirect />
+                  <AuthenticatedShell>
+                    <Contacts />
+                  </AuthenticatedShell>
                 </ProtectedRoute>
               }
             />
@@ -244,7 +197,9 @@ function AppContent() {
               path="/projects"
               element={
                 <ProtectedRoute>
-                  <ProjectsRedirect />
+                  <AuthenticatedShell>
+                    <Projects />
+                  </AuthenticatedShell>
                 </ProtectedRoute>
               }
             />
@@ -253,43 +208,36 @@ function AppContent() {
               path="/employee"
               element={
                 <ProtectedRoute allowedRoles={['EMPLOYEE']}>
-                  <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                    <Header />
-                    <div className="pt-16">
-                      <Dashboard />
-                    </div>
-                  </div>
+                  <AuthenticatedShell>
+                    <Dashboard
+                      taskbarAction={taskbarAction}
+                      onTaskbarActionHandled={() => setTaskbarAction(null)}
+                    />
+                  </AuthenticatedShell>
                 </ProtectedRoute>
               }
             />
 
-            {/* Unknown routes */}
             <Route path="*" element={<NotFound />} />
           </Routes>
 
-          {/* Floating AI Button - Only show when authenticated and not on popup */}
-          {isAuthenticated() &&
-            window.location.pathname !== '/popup' &&
-            !window.location.pathname.startsWith('/app') && (
+          {/* Floating Tialz logo FAB (toggle assistant) — commented out
+          {isAuthenticated() && window.location.pathname !== '/popup' && (
             <button
-              className="fixed bottom-6 right-6 z-50 text-white rounded-full p-4 shadow-lg flex items-center justify-center floating-ai-button"
+              type="button"
+              className="fixed bottom-6 right-6 z-40 text-white rounded-full p-4 shadow-lg flex items-center justify-center floating-ai-button lg:bottom-6"
               style={{
                 backgroundColor: 'var(--color-primary)',
                 boxShadow: '0 4px 24px rgba(79, 102, 241, 0.4)',
               }}
-              onClick={() => setIsAIModalOpen(true)}
-              title="Open AI Assistant"
+              onClick={() => useAssistantStore.getState().toggle()}
+              title="Toggle AI assistant (Ctrl+/)"
             >
-              <img src={tialzFavicon} alt="TIALZ" className="w-8 h-8 object-contain" />
+              <img src={tialzFavicon} alt="" className="w-8 h-8 object-contain" />
             </button>
           )}
+          */}
 
-          {/* AI Modal */}
-          {isAIModalOpen && (
-            <AIModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} />
-          )}
-
-          {/* Toast Container */}
           <ToastContainer toasts={toasts} onClose={hideToast} />
         </div>
       </Router>

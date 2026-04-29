@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import useTaskStore from '../../stores/taskStore';
 import useAuthStore from '../../context/authStore';
 import useUserStore from '../../stores/userStore';
-import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
-import { convertLocalDateTimeToUTC } from '../../utils/dateUtils';
+import { STATUS_LABELS, PRIORITY_LABELS, TASK_RECURRENCE, RECURRENCE_LABELS, RECURRENCE_OPTIONS } from '../../utils/constants';
+import { convertLocalDateTimeToUTC, formatDateForInput } from '../../utils/dateUtils';
 import CommentSection from '../comments/CommentSection';
 import AddSubtaskModal from './AddSubtaskModal';
 import AddTeamMemberModal from './AddTeamMemberModal';
@@ -16,6 +16,7 @@ import SearchableDropdown from '../common/SearchableDropdown';
 import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
 import useContactStore from '../../stores/contactStore';
 import AddContactModal from '../common/AddContactModal';
+import DatePicker from '../common/DatePicker';
 import IconButton from '../common/IconButton';
 import ConfirmModal from '../common/ConfirmModal';
 import AIWarning from '../common/AIWarning';
@@ -35,7 +36,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     priority: 'MEDIUM',
     assigneeId: '',
     externalContactId: '',
-    dueDate: ''
+    dueDate: '',
+    recurrence: TASK_RECURRENCE.NONE,
+    recurrenceEndsAt: ''
   });
   const [isEditing, setIsEditing] = useState(false);
   const [errors, setErrors] = useState({});
@@ -153,6 +156,18 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   // Show creator name ALWAYS (both business and personal accounts need to see who created the task)
   const shouldShowCreator = true;
+
+  const canEditRecurrence =
+    !viewedTask?.parentTaskId &&
+    ((isAdmin() && viewedTask?.companyId === user?.companyId) || viewedTask?.assignerId === user?.id) &&
+    !isSharedTask;
+
+  const showRecurrenceSection =
+    !viewedTask?.parentTaskId &&
+    (
+      (canEditRecurrence && isEditing) ||
+      (viewedTask.recurrence && viewedTask.recurrence !== TASK_RECURRENCE.NONE)
+    );
 
   const fetchUsers = async () => {
     try {
@@ -329,7 +344,11 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         priority: viewedTask.priority || 'MEDIUM',
         assigneeId: viewedTask.assigneeId?.toString() || '',
         externalContactId: viewedTask.externalContactId?.toString() || '',
-        dueDate: viewedTask.dueDate ? new Date(viewedTask.dueDate).toISOString().slice(0, 16) : ''
+        dueDate: viewedTask.dueDate ? new Date(viewedTask.dueDate).toISOString().slice(0, 16) : '',
+        recurrence: viewedTask.recurrence || TASK_RECURRENCE.NONE,
+        recurrenceEndsAt: viewedTask.recurrenceEndsAt
+          ? formatDateForInput(viewedTask.recurrenceEndsAt)
+          : ''
       });
     }
   }, [viewedTask]);
@@ -451,8 +470,17 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       ...formData,
       assigneeId: formData.assigneeId ? parseInt(formData.assigneeId) : null,
       externalContactId: formData.externalContactId ? parseInt(formData.externalContactId) : null,
-      dueDate: convertLocalDateTimeToUTC(formData.dueDate) // Convert to UTC for server
+      dueDate: convertLocalDateTimeToUTC(formData.dueDate),
+      recurrence: formData.recurrence
     };
+    delete updateData.recurrenceEndsAt;
+    if (formData.recurrence === TASK_RECURRENCE.NONE) {
+      updateData.recurrenceEndsAt = null;
+    } else if (formData.recurrenceEndsAt) {
+      updateData.recurrenceEndsAt = convertLocalDateTimeToUTC(formData.recurrenceEndsAt);
+    } else {
+      updateData.recurrenceEndsAt = null;
+    }
 
     const result = await updateTask(viewedTask.id, updateData);
     if (result.success) {
@@ -477,7 +505,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
     setIsUnaccepting(true);
     try {
-      const response = await tasksAPI.unaccessTask(viewedTask.id);
+      const response = await tasksAPI.unacceptTask(viewedTask.id);
       if (response.data.success) {
         toast.success('You have successfully withdrawn from this task');
         setIsUnaccessConfirmOpen(false);
@@ -1183,6 +1211,85 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                 </div>
               </div>
 
+              {/* Repeat (weekly / monthly) — not for subtasks */}
+              {showRecurrenceSection && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <h4
+                      className="text-base font-semibold mb-3 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      Repeat
+                    </h4>
+                    {canEditRecurrence && isEditing ? (
+                      <>
+                        <select
+                          name="recurrence"
+                          value={formData.recurrence}
+                          onChange={handleChange}
+                          className="select w-full transition-colors duration-200"
+                          style={{
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            borderColor: 'var(--color-border-default)',
+                            color: 'var(--color-text-primary)',
+                          }}
+                        >
+                          {RECURRENCE_OPTIONS.map(({ value, label }) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
+                        </select>
+                        <p className="text-xs mt-2 opacity-80" style={{ color: 'var(--color-text-tertiary)' }}>
+                          Completing this task creates the next one with the updated due date.
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-base" style={{ color: 'var(--color-text-primary)' }}>
+                        {RECURRENCE_LABELS[viewedTask.recurrence || TASK_RECURRENCE.NONE]}
+                      </span>
+                    )}
+                  </div>
+                  {(canEditRecurrence && isEditing
+                    ? formData.recurrence !== TASK_RECURRENCE.NONE
+                    : viewedTask.recurrence &&
+                      viewedTask.recurrence !== TASK_RECURRENCE.NONE) && (
+                    <div>
+                      <h4
+                        className="text-base font-semibold mb-3 transition-colors duration-200"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        Stop repeating after
+                      </h4>
+                      {canEditRecurrence && isEditing ? (
+                        <DatePicker
+                          value={formData.recurrenceEndsAt || ''}
+                          onChange={(e) => {
+                            handleChange({
+                              target: {
+                                name: 'recurrenceEndsAt',
+                                value: e.target.value
+                              }
+                            });
+                          }}
+                          placeholder="Optional — pick last repeat date"
+                          showTime={false}
+                          timeOptional={false}
+                        />
+                      ) : (
+                        <span className="text-base" style={{ color: 'var(--color-text-primary)' }}>
+                          {viewedTask.recurrenceEndsAt
+                            ? new Date(viewedTask.recurrenceEndsAt).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                            : '—'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Tabbed Interface for Team & Hierarchy */}
               <div className="border-t pt-4 mt-4" style={{ borderColor: 'var(--color-border-default)' }}>
                 {/* Tab Headers */}
@@ -1842,7 +1949,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                             onClick={() => {
                               // Close task modal and navigate to project with state
                               onClose();
-                              navigate('/app/projects', {
+                              navigate('/projects', {
                                 state: { openProjectId: viewedTask.project.id }
                               });
                             }}

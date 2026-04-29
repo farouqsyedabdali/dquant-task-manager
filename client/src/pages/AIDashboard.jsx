@@ -1,4 +1,4 @@
 import AppWorkSurface from './AppWorkSurface';
 
-/** @deprecated Use `/app` routes or import AppWorkSurface */
+/** @deprecated Use `/dashboard` or import AppWorkSurface */
 export default AppWorkSurface;

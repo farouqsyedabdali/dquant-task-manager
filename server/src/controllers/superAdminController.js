@@ -1,5 +1,5 @@
 const prisma = require('../lib/prisma');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const { logAuditActionDirect } = require('../middleware/auditLogger');
 
 

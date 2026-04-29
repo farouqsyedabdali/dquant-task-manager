@@ -29,3 +29,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Testing files
+tialz_agent/
+tialz-calendar-sync/

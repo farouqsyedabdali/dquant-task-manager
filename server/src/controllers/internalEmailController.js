@@ -254,14 +254,16 @@ const processInboundEmail = async (req, res) => {
   try {
     const { senderEmail, subject, cleanBody } = req.body;
 
-    const user = await prisma.user.findFirst({
+    const matchingUsers = await prisma.user.findMany({
       where: {
         email: senderEmail.toLowerCase()
       },
       include: {
         company: true
-      }
+      },
+      take: 2
     });
+    const user = matchingUsers[0];
 
     if (!user) {
       secureLogger.warn('Inbound email ignored because sender was not found', {
@@ -272,6 +274,18 @@ const processInboundEmail = async (req, res) => {
         accepted: false,
         status: 'ignored',
         reason: 'user_not_found'
+      });
+    }
+
+    if (matchingUsers.length > 1) {
+      secureLogger.warn('Inbound email ignored because sender email matched multiple tenants', {
+        senderEmail
+      });
+
+      return res.status(202).json({
+        accepted: false,
+        status: 'ignored',
+        reason: 'ambiguous_sender_email'
       });
     }
 

@@ -1,10 +1,25 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
-const { getAuthUrl, verifyToken, verifyIdToken } = require('../services/googleAuthService');
+const { getAuthUrl, verifyToken, verifyIdToken, createOAuthState, parseOAuthState } = require('../services/googleAuthService');
+const { upsertGmailAccountFromOAuth } = require('../services/gmailAgentService');
 
 // Helper to get frontend URL
 const getFrontendUrl = () => {
   return (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0];
+};
+
+const findSingleUserByEmail = async (email) => {
+  const users = await prisma.user.findMany({
+    where: { email },
+    include: { company: true },
+    take: 2
+  });
+
+  if (users.length > 1) {
+    return { ambiguous: true, user: null };
+  }
+
+  return { ambiguous: false, user: users[0] || null };
 };
 
 // Initiate Google OAuth flow
@@ -13,8 +28,8 @@ const initiateGoogleAuth = async (req, res) => {
     const { signupType } = req.query; // 'company' or 'personal'
     const authUrl = getAuthUrl();
     
-    // Store signup type in state parameter
-    const state = Buffer.from(JSON.stringify({ signupType })).toString('base64');
+    // Store signup type in a signed state parameter.
+    const state = createOAuthState({ signupType });
     const urlWithState = `${authUrl}&state=${state}`;
     
     res.redirect(urlWithState);
@@ -37,18 +52,35 @@ const handleGoogleCallback = async (req, res) => {
     // Decode state to get signup type and check if this is incremental auth
     let signupType = null;
     let isIncrementalAuth = false;
+    let isGmailAgentAuth = false;
+    let gmailAgentUserId = null;
     if (state) {
       try {
-        const decoded = JSON.parse(Buffer.from(state, 'base64').toString());
+        const decoded = parseOAuthState(state);
         signupType = decoded.signupType;
         isIncrementalAuth = decoded.isIncrementalAuth || false;
+        isGmailAgentAuth = decoded.isGmailAgentAuth || false;
+        gmailAgentUserId = decoded.userId ? Number(decoded.userId) : null;
       } catch (e) {
-        // State might not be in expected format
+        return res.redirect(`${frontendUrl}/login?error=invalid_oauth_state`);
       }
     }
 
     // Verify token and get user info (now returns tokens too)
     const googleUser = await verifyToken(code);
+
+    if (isGmailAgentAuth) {
+      if (!gmailAgentUserId) {
+        return res.redirect(`${frontendUrl}/settings?category=integrations&gmail=invalid_state`);
+      }
+
+      await upsertGmailAccountFromOAuth({
+        userId: gmailAgentUserId,
+        googleUser
+      });
+
+      return res.redirect(`${frontendUrl}/settings?category=integrations&gmail=connected`);
+    }
 
     // Check if user already exists by googleId
     let user = await prisma.user.findUnique({
@@ -58,10 +90,11 @@ const handleGoogleCallback = async (req, res) => {
 
     // If not found by googleId, check by email
     if (!user) {
-      user = await prisma.user.findFirst({
-        where: { email: googleUser.email },
-        include: { company: true }
-      });
+      const result = await findSingleUserByEmail(googleUser.email);
+      if (result.ambiguous) {
+        return res.redirect(`${frontendUrl}/login?error=multiple_accounts_for_email`);
+      }
+      user = result.user;
     }
 
     // If user exists, handle login or incremental auth
@@ -264,10 +297,14 @@ const handleGoogleIdToken = async (req, res) => {
     });
 
     if (!user) {
-      user = await prisma.user.findFirst({
-        where: { email: googleUser.email },
-        include: { company: true }
-      });
+      const result = await findSingleUserByEmail(googleUser.email);
+      if (result.ambiguous) {
+        return res.status(409).json({
+          error: 'Multiple accounts use this email. Please sign in with email and password.',
+          requiresEmailAuth: true
+        });
+      }
+      user = result.user;
     }
 
     if (user) {

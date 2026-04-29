@@ -20,7 +20,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const express = require('express');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const { PrismaClient } = require('@prisma/client');
 
 const PORT = parseInt(process.env.ADMIN_PASSWORD_GUI_PORT || '34567', 10);

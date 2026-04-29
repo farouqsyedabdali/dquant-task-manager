@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { logAuditActionDirect } = require('../middleware/auditLogger');
 const emailService = require('../services/emailService');
@@ -172,11 +172,6 @@ const createEmployee = async (req, res) => {
       const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].replace(/\/$/, '');
       const invitationUrl = `${clientUrl}/complete-employee-setup?token=${invitationToken}`;
 
-      console.log('🎯 Employee Invitation Debug (createEmployee):');
-      console.log('  CLIENT_URL env var:', process.env.CLIENT_URL);
-      console.log('  clientUrl used:', clientUrl);
-      console.log('  invitationUrl generated:', invitationUrl);
-
       const emailTemplate = employeeInvitationEmail(
         newUser.name,
         req.user.name,
@@ -278,11 +273,6 @@ const resendEmployeeInvitation = async (req, res) => {
     try {
       const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].replace(/\/$/, '');
       const invitationUrl = `${clientUrl}/complete-employee-setup?token=${invitationToken}`;
-
-      console.log('🎯 Employee Invitation Debug (resendEmployeeInvitation):');
-      console.log('  CLIENT_URL env var:', process.env.CLIENT_URL);
-      console.log('  clientUrl used:', clientUrl);
-      console.log('  invitationUrl generated:', invitationUrl);
 
       const emailTemplate = employeeInvitationEmail(
         updatedUser.name,

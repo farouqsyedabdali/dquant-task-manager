@@ -1,15 +1,9 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../context/authStore';
 import ForgotPasswordModal from '../components/modals/ForgotPasswordModal';
 import useThemeLogo from '../hooks/useThemeLogo';
-
-// Use VITE_API_URL environment variable, or detect environment
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.MODE === 'production' 
-    ? 'https://dquant-task-manager-production.up.railway.app/api' 
-    : 'http://localhost:3000/api');
+import { getApiUrl } from '../config/api';
 
 // No OS icons needed - web-focused
 
@@ -28,18 +22,10 @@ const LandingPage = () => {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/app');
+      navigate('/dashboard');
     }
     clearError();
   }, [isAuthenticated, navigate, clearError]);
-
-  const scrollToSection = (sectionId) => {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleOpenInBrowser = () => {
-    navigate('/login');
-  };
 
   const handleLoginChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -84,14 +70,14 @@ const LandingPage = () => {
 
     const result = await login(loginFormData);
     if (result.success) {
-      navigate('/app');
+      navigate('/dashboard');
     } else if (result.requiresVerification) {
       navigate(`/verify-email?email=${encodeURIComponent(result.email)}&resend=true`);
     }
   };
 
   const handleGoogleSignIn = () => {
-    window.location.href = `${API_BASE_URL}/auth/google`;
+    window.location.href = getApiUrl('/auth/google');
   };
 
     return (

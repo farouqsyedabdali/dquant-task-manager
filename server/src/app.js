@@ -7,13 +7,6 @@ require('dotenv').config()
 // Import secure logger
 const secureLogger = require('./middleware/secureLogger')
 
-// Debug environment variables on startup
-secureLogger.info('🔧 Environment Debug:', {
-  CLIENT_URL: process.env.CLIENT_URL,
-  NODE_ENV: process.env.NODE_ENV,
-  PORT: process.env.PORT
-});
-
 const authRoutes = require('./routes/auth')
 const taskRoutes = require('./routes/tasks')
 const commentRoutes = require('./routes/comments')
@@ -34,10 +27,13 @@ const reminderRoutes = require('./routes/reminders')
 const projectRoutes = require('./routes/projects')
 const templateRoutes = require('./routes/templates')
 const googleContactsRoutes = require('./routes/googleContacts')
+const gmailAgentRoutes = require('./routes/gmailAgent')
 const deviceTokenRoutes = require('./routes/deviceTokens')
 const internalRoutes = require('./routes/internal')
 
 const app = express()
+
+app.set('trust proxy', 1)
 
 // Security Middleware - Helmet (must be early in middleware chain)
 app.use(helmet({
@@ -96,8 +92,8 @@ const allowedOrigins = process.env.CLIENT_URL
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, Postman, or server-to-server)
-    if (!origin) return callback(null, true);
+    // Server-to-server requests do not need browser CORS headers.
+    if (!origin) return callback(null, process.env.NODE_ENV !== 'production');
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -114,21 +110,8 @@ app.use(express.json({ limit: '10mb' })) // Limit payload size
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(cookieParser())
 
-// Rate Limiting Middleware
-const { authLimiter, apiLimiter, aiLimiter, feedbackLimiter } = require('./middleware/rateLimiter')
-
-// Apply rate limiters to specific routes
-// Auth routes get strict rate limiting
-// app.use('/api/auth', authLimiter) // COMMENTED OUT: 15-minute IP rate limit
-
-// AI routes get special rate limiting (expensive operations)
-app.use('/api/ai', aiLimiter)
-
-// Feedback gets rate limiting to prevent spam
-app.use('/api/feedback', feedbackLimiter)
-
-// General API rate limiting (applied last, less strict)
-// app.use('/api', apiLimiter) // COMMENTED OUT: 15-minute IP rate limit
+// Rate limiting temporarily disabled for local Gmail agent testing.
+// Re-enable by restoring middleware from ./middleware/rateLimiter.
 
 // Routes
 app.use('/api/auth', authRoutes)
@@ -151,69 +134,13 @@ app.use('/api/reminders', reminderRoutes)
 app.use('/api/projects', projectRoutes)
 app.use('/api/templates', templateRoutes)
 app.use('/api/google-contacts', googleContactsRoutes)
+app.use('/api/gmail-agent', gmailAgentRoutes)
 app.use('/api/device-tokens', deviceTokenRoutes)
 app.use('/api/internal', internalRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Task Manager API is running' })
-})
-
-// Debug environment variables endpoint
-app.get('/api/debug/env', (req, res) => {
-  res.json({
-    timestamp: new Date().toISOString(),
-    environment: {
-      NODE_ENV: process.env.NODE_ENV,
-      CLIENT_URL: process.env.CLIENT_URL,
-      PORT: process.env.PORT,
-      DATABASE_URL: process.env.DATABASE_URL ? '[SET]' : '[NOT SET]',
-      JWT_SECRET: process.env.JWT_SECRET ? '[SET]' : '[NOT SET]',
-      RESEND_API_KEY: process.env.RESEND_API_KEY ? '[SET]' : '[NOT SET]'
-    }
-  });
-});
-
-// Database test endpoint
-app.get('/api/test-db', async (req, res) => {
-  const prisma = require('./lib/prisma')
-  
-  try {
-    secureLogger.info('🔍 Testing database connection...')
-    
-    // Test basic connection
-    await prisma.$connect()
-    secureLogger.info('✅ Prisma connected successfully')
-    
-    // Test a simple query
-    const userCount = await prisma.user.count()
-    const companyCount = await prisma.company.count()
-    const taskCount = await prisma.task.count()
-    
-    res.json({
-      status: 'OK',
-      message: 'Database connection successful',
-      data: {
-        users: userCount,
-        companies: companyCount,
-        tasks: taskCount
-      }
-    })
-    
-  } catch (error) {
-    secureLogger.error('❌ Database test failed:', { 
-      message: error.message,
-      code: error.code 
-    })
-    res.status(500).json({
-      status: 'ERROR',
-      message: 'Database connection failed',
-      error: error.message,
-      code: error.code
-    })
-  } finally {
-    await prisma.$disconnect()
-  }
+  res.json({ status: 'OK', message: 'Tialz API is running' })
 })
 
 // Error handling middleware

@@ -104,14 +104,24 @@ const useTaskStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await tasksAPI.update(id, taskData);
-      const updatedTask = response.data;
-      set(state => ({
-        tasks: state.tasks.map(task => 
+      const payload = response.data;
+      const spawnedRecurringTask = payload.spawnedRecurringTask;
+      const updatedTask = { ...payload };
+      delete updatedTask.spawnedRecurringTask;
+
+      set((state) => {
+        let tasks = state.tasks.map((task) =>
           task.id === updatedTask.id ? updatedTask : task
-        ),
-        currentTask: state.currentTask?.id === updatedTask.id ? updatedTask : state.currentTask,
-        isLoading: false
-      }));
+        );
+        if (spawnedRecurringTask && !tasks.some((t) => t.id === spawnedRecurringTask.id)) {
+          tasks = [spawnedRecurringTask, ...tasks];
+        }
+        return {
+          tasks,
+          currentTask: state.currentTask?.id === updatedTask.id ? updatedTask : state.currentTask,
+          isLoading: false
+        };
+      });
       return { success: true, data: updatedTask };
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Failed to update task';
@@ -143,14 +153,24 @@ const useTaskStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await tasksAPI.updateStatus(id, status);
-      const updatedTask = response.data;
-      set(state => ({
-        tasks: state.tasks.map(task => 
+      const payload = response.data;
+      const spawnedRecurringTask = payload.spawnedRecurringTask;
+      const updatedTask = { ...payload };
+      delete updatedTask.spawnedRecurringTask;
+
+      set((state) => {
+        let tasks = state.tasks.map((task) =>
           task.id === updatedTask.id ? updatedTask : task
-        ),
-        currentTask: state.currentTask?.id === updatedTask.id ? updatedTask : state.currentTask,
-        isLoading: false
-      }));
+        );
+        if (spawnedRecurringTask && !tasks.some((t) => t.id === spawnedRecurringTask.id)) {
+          tasks = [spawnedRecurringTask, ...tasks];
+        }
+        return {
+          tasks,
+          currentTask: state.currentTask?.id === updatedTask.id ? updatedTask : state.currentTask,
+          isLoading: false
+        };
+      });
       return { success: true, data: updatedTask };
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Failed to update task status';

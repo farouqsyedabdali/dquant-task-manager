@@ -5,11 +5,65 @@ const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
 const { validators, handleValidationErrors } = require('../middleware/validators');
 const { parseLocalDate } = require('../utils/dateUtils');
+const {
+  createAIActionPreview,
+  executeAIAction,
+  rejectAIAction,
+  undoAIAction,
+  SUPPORTED_ACTIONS
+} = require('../services/aiActionRunner');
 
 const router = express.Router();
 
 // Apply authentication middleware to all AI routes
 router.use(auth);
+
+router.post('/actions/preview', async (req, res) => {
+  try {
+    const { actionType, input, sourceText } = req.body;
+    const preview = await createAIActionPreview({ req, actionType, input, sourceText });
+    res.json({ success: true, action: preview });
+  } catch (error) {
+    console.error('AI action preview error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to preview AI action' });
+  }
+});
+
+router.post('/actions/execute', async (req, res) => {
+  try {
+    const { actionId } = req.body;
+    if (!actionId) return res.status(400).json({ error: 'actionId is required' });
+    const result = await executeAIAction({ req, actionId });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('AI action execute error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to execute AI action' });
+  }
+});
+
+router.post('/actions/reject', async (req, res) => {
+  try {
+    const { actionId } = req.body;
+    if (!actionId) return res.status(400).json({ error: 'actionId is required' });
+    const action = await rejectAIAction({ req, actionId });
+    res.json({ success: true, action });
+  } catch (error) {
+    console.error('AI action reject error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to reject AI action' });
+  }
+});
+
+router.post('/actions/undo', async (req, res) => {
+  try {
+    const { actionId } = req.body;
+    if (!actionId) return res.status(400).json({ error: 'actionId is required' });
+    const result = await undoAIAction({ req, actionId });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('AI action undo error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to undo AI action' });
+  }
+});
 
 // Helper: Try to extract JSON command(s) from AI response
 function extractJsonCommands(text) {
@@ -31,6 +85,36 @@ function extractJsonCommands(text) {
   return [];
 }
 
+const ROUTE_INTENT_ALLOWED = new Set(['create_task', 'add_update', 'add_subtask', 'create_project', 'chat']);
+
+/**
+ * Parse JSON from LLM for POST /ai/route-intent. Falls back to chat on parse errors.
+ */
+function parseRouteIntentResponse(rawText, fallbackMessage) {
+  const cleaned = (rawText || '').replace(/```json|```/g, '').trim();
+  let obj = null;
+  try {
+    obj = JSON.parse(cleaned);
+  } catch {
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (m) {
+      try {
+        obj = JSON.parse(m[0]);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  if (!obj || typeof obj !== 'object') {
+    return { intent: 'chat', text: fallbackMessage };
+  }
+  let intent = typeof obj.intent === 'string' ? obj.intent.trim() : 'chat';
+  if (!ROUTE_INTENT_ALLOWED.has(intent)) intent = 'chat';
+  const text =
+    typeof obj.text === 'string' && obj.text.trim() ? obj.text.trim() : fallbackMessage;
+  return { intent, text };
+}
+
 function sanitizeChatHistory(raw) {
   if (!Array.isArray(raw)) return [];
   const out = [];
@@ -44,6 +128,18 @@ function sanitizeChatHistory(raw) {
   return out.slice(-48);
 }
 
+function formatCurrentDateForPrompt() {
+  return new Date().toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  });
+}
+
 function buildChatSystemPrompt(userName, userRole, companyName, userTasks) {
   const taskLines = userTasks.length
     ? userTasks
@@ -55,7 +151,7 @@ function buildChatSystemPrompt(userName, userRole, companyName, userTasks) {
                 year: 'numeric',
               })
             : 'no due date';
-          return `#${idx + 1}: ${task.title} (${task.status}, ${task.priority} priority, due ${due}, assigned to ${task.assignee?.name || 'unassigned'})`;
+          return `#${idx + 1}: [id:${task.id}] ${task.title} (${task.status}, ${task.priority} priority, due ${due}, assigned to ${task.assignee?.name || 'unassigned'})`;
         })
         .join('\n')
     : '(none)';
@@ -67,15 +163,20 @@ You are in a multi-turn chat. Use the full conversation history to answer follow
 Style rules:
 - Do NOT use emojis (no ✅, ⚠️, 🗑️, etc). Write clean, professional text.
 - Use markdown for formatting: **bold** for emphasis, numbered lists for priorities/steps, bullet points for summaries. Keep it concise.
-- When creating a task, output the JSON command and add a short line like "Here's what I've put together — review the draft below." The UI will show a visual card for the user to approve or decline.
-- When deleting or updating a task, just confirm what happened in plain text.
+- When creating or changing work, output the JSON command and add a short line like "Here's what I've put together — review the action below." The UI will show a visual card for the user to approve or decline.
+- Do not claim that you already changed something. The user must approve the action card first.
+- For create/change requests, always include the JSON command even if a field is missing, vague, in the past, or needs clarification. The action runner will turn invalid drafts into blocked review cards. Do not replace the JSON command with only a clarification sentence.
 
-If the user asks you to create, delete, update, or list tasks, output a JSON command (or an array of commands) in this format (on a new line):
+If the user asks you to create or change tasks/projects/comments, output a JSON command (or an array of commands) in this format (on a new line):
 { "action": "create_task", "title": "...", "assignee": "...", "description": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
-{ "action": "delete_task", "title": "..." }
-{ "action": "update_task", "title": "...", "status": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
+{ "action": "update_task", "taskId": 123, "title": "task name if id is unknown", "status": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm", "description": "..." }
+{ "action": "add_subtask", "parentTaskId": 123, "parentTaskTitle": "parent task if id is unknown", "title": "...", "description": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
+{ "action": "create_project", "name": "...", "description": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
+{ "action": "update_project", "projectId": 123, "projectName": "project name if id is unknown", "name": "...", "description": "...", "status": "ACTIVE|ON_HOLD|COMPLETED|ARCHIVED", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
+{ "action": "add_comment", "taskId": 123, "title": "task name if id is unknown", "content": "..." }
 { "action": "list_tasks", "filter": { "status": "...", "priority": "...", "assignee": "..." } }
 - For multiple actions, output an array of JSON commands.
+- Prefer taskId/projectId when it is available in the active task context. If you only know a title, include the title and let the action runner resolve it.
 - Parse natural language dates (e.g., "by Friday", "EOD tomorrow", "next Monday 3pm") and convert to ISO-like format (YYYY-MM-DD or YYYY-MM-DDTHH:mm) in the dueDate field when applicable.
 - For references like "last task you created" or "second task in my list", use the user's recent tasks (provided below) and include the resolved title in the command.
 - IMPORTANT: You are only shown active tasks (TODO and IN_PROGRESS status) to help you focus on the most relevant work. This improves accuracy when there are many tasks.
@@ -86,6 +187,7 @@ Current User Context:
 - Name: ${userName}
 - Role: ${userRole}
 - Company: ${companyName || 'Unknown Company'}
+- Current date/time: ${formatCurrentDateForPrompt()}
 
 Active Tasks (${userTasks.length} - TODO and IN_PROGRESS only):
 ${taskLines}
@@ -236,13 +338,28 @@ function stripJsonFromText(text) {
   return cleaned.replace(/\n{3,}/g, '\n\n').trim();
 }
 
-async function finalizeAiChatText(aiText, { userId, companyId, userTasks }) {
+async function finalizeAiChatText(aiText, { req, userId, companyId, userTasks, sourceText }) {
   const commands = extractJsonCommands(aiText);
   if (commands.length > 0) {
     const textParts = [];
     const proposals = [];
     for (const command of commands) {
       try {
+        const actionType = normalizeActionName(command.action);
+        if (SUPPORTED_ACTIONS.has(actionType)) {
+          const { action, ...input } = command;
+          const proposal = await createAIActionPreview({
+            req,
+            actionType,
+            input,
+            sourceText,
+            sourceType: 'CHAT',
+            sourceMetadata: { command }
+          });
+          proposals.push(proposal);
+          continue;
+        }
+
         const result = await runChatCommand(command, { userId, companyId, userTasks });
         if (!result) continue;
         if (result && typeof result === 'object' && result.__type === 'task_proposal') {
@@ -266,6 +383,15 @@ async function finalizeAiChatText(aiText, { userId, companyId, userTasks }) {
     }
     return { text: aiText, proposals: [] };
   }
+}
+
+function normalizeActionName(action) {
+  const normalized = String(action || '').trim().toLowerCase();
+  if (normalized === 'add_update' || normalized === 'comment_task') return 'add_comment';
+  if (normalized === 'create_subtask') return 'add_subtask';
+  if (normalized === 'edit_task' || normalized === 'modify_task') return 'update_task';
+  if (normalized === 'edit_project' || normalized === 'modify_project') return 'update_project';
+  return normalized;
 }
 
 // POST /api/ai/chat
@@ -375,7 +501,13 @@ router.post('/chat',
         if (responded) return;
         responded = true;
         try {
-          const result = await finalizeAiChatText(aiText, { userId, companyId, userTasks });
+          const result = await finalizeAiChatText(aiText, {
+            req,
+            userId,
+            companyId,
+            userTasks,
+            sourceText: message
+          });
           const payload = { response: result.text || '' };
           if (result.proposals && result.proposals.length > 0) {
             payload.proposals = result.proposals;
@@ -395,6 +527,67 @@ router.post('/chat',
       }
     }
   });
+
+// POST /api/ai/route-intent — classify user message for quick actions vs general chat (client + shared aiQuickActions)
+router.post(
+  '/route-intent',
+  validators.aiText('message'),
+  handleValidationErrors,
+  async (req, res) => {
+    const { message } = req.body;
+    const model =
+      process.env.OPENROUTER_INTENT_MODEL ||
+      process.env.OPENROUTER_CHAT_MODEL ||
+      'google/gemini-2.0-flash-001';
+
+    const system = `You are a strict classifier for TIALZ task management. Given ONE user message, output ONLY valid JSON (no markdown, no explanation) with this exact shape:
+{"intent":"create_task"|"add_update"|"add_subtask"|"create_project"|"chat","text":"<string>"}
+
+Definitions:
+- create_task: A new standalone task, reminder, or todo (including deadlines and assignments).
+- add_update: Log progress, a note, or a status change on an EXISTING task the user refers to.
+- add_subtask: Add a child task under an existing parent task.
+- create_project: A multi-task initiative, project, campaign, or event that implies multiple steps or tasks.
+- chat: Questions, summaries, listing tasks, greetings, general conversation, or unclear intent.
+
+Rules:
+- Prefer the most specific intent. If the user only wants one action item, use create_task, not create_project.
+- If unsure, use chat.
+- "text" must be the full user message to forward to tools (trimmed). You may lightly normalize wording but keep meaning.
+
+Return only the JSON object.`;
+
+    try {
+      const openrouterRes = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model,
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: message },
+          ],
+          max_tokens: 256,
+          temperature: 0.1,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0],
+            'X-Title': process.env.SITE_NAME || 'Tialz Task Manager',
+          },
+        }
+      );
+
+      const raw = openrouterRes.data.choices?.[0]?.message?.content?.trim() || '';
+      const { intent, text } = parseRouteIntentResponse(raw, message);
+      return res.json({ intent, text });
+    } catch (err) {
+      console.error('route-intent error:', err?.response?.data || err.message);
+      return res.status(500).json({ error: 'Intent routing failed' });
+    }
+  }
+);
 
 // POST /api/ai/extract-task
 router.post('/extract-task',

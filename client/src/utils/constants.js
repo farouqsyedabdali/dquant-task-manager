@@ -58,6 +58,23 @@ export const PRIORITY_OPTIONS = Object.entries(PRIORITY_LABELS).map(([value, lab
   label
 }));
 
+export const TASK_RECURRENCE = {
+  NONE: 'NONE',
+  WEEKLY: 'WEEKLY',
+  MONTHLY: 'MONTHLY'
+};
+
+export const RECURRENCE_LABELS = {
+  [TASK_RECURRENCE.NONE]: 'Does not repeat',
+  [TASK_RECURRENCE.WEEKLY]: 'Every week',
+  [TASK_RECURRENCE.MONTHLY]: 'Every month'
+};
+
+export const RECURRENCE_OPTIONS = Object.entries(RECURRENCE_LABELS).map(([value, label]) => ({
+  value,
+  label
+}));
+
 export const SORT_OPTIONS = [
   { value: 'urgency', label: 'Urgency (Priority + Due Date)' },
   { value: 'created-desc', label: 'Date Created (Newest First)' },

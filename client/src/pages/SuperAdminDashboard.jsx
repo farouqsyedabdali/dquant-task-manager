@@ -48,8 +48,23 @@ const SuperAdminDashboard = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState(null);
 
-  // Check if user is super admin
+  useEffect(() => {
+    if (!isSuperAdmin()) {
+      return;
+    }
+
+    if (activeTab === 'overview') {
+      fetchSystemHealth();
+    } else if (activeTab === 'companies') {
+      fetchCompanies(1, companySearch);
+    } else if (activeTab === 'users') {
+      fetchUsers(1, userSearch, userRoleFilter);
+    }
+  }, [activeTab]);
+
+  // Check if user is super admin after all hooks have been registered.
   if (!isSuperAdmin()) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -60,16 +75,6 @@ const SuperAdminDashboard = () => {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (activeTab === 'overview') {
-      fetchSystemHealth();
-    } else if (activeTab === 'companies') {
-      fetchCompanies(1, companySearch);
-    } else if (activeTab === 'users') {
-      fetchUsers(1, userSearch, userRoleFilter);
-    }
-  }, [activeTab]);
 
   // Search handlers
   const handleCompanySearch = (searchTerm) => {
@@ -332,9 +337,6 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  // Analytics data
-  const [analyticsData, setAnalyticsData] = useState(null);
-
   // Analytics handlers
   const handleGenerateRevenueReport = () => {
     setMessage('Revenue report generation feature coming soon!');
@@ -386,7 +388,7 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  const StatCard = ({ title, value, icon, color = 'text-blue-500', bgColor = 'bg-blue-500' }) => (
+  const StatCard = ({ title, value, icon, color = 'text-blue-500' }) => (
     <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
       <div className="flex items-center justify-between">
         <div>

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "cross-env NODE_ENV=test jest --runInBand",
     "start": "node index.js",
     "dev": "node index.js",
     "seed": "node src/utils/seed.js",
@@ -23,7 +23,6 @@
     "@prisma/client": "^6.9.0",
     "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
-    "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
@@ -37,10 +36,12 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.3",
-    "prop-types": "^15.8.1",
     "resend": "^6.1.2"
   },
   "devDependencies": {
-    "prisma": "^6.9.0"
+    "cross-env": "^10.1.0",
+    "jest": "^30.3.0",
+    "prisma": "^6.9.0",
+    "supertest": "^7.2.2"
   }
 }

@@ -10,7 +10,7 @@ const NotFound = () => {
   const authed = isAuthenticated();
   const tialzLogo = useThemeLogo();
 
-  const dashboardPath = '/app/welcome';
+  const dashboardPath = '/dashboard';
 
   return (
     <div

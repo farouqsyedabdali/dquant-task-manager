@@ -104,7 +104,8 @@ const taskInvitationController = {
       // Try to find recipient user by email to link them
       const recipientUser = await prisma.user.findFirst({
         where: {
-          email: recipientEmail.toLowerCase()
+          email: recipientEmail.toLowerCase(),
+          companyId: task.companyId
         }
       });
 
@@ -700,7 +701,7 @@ const taskInvitationController = {
    * Unaccept a task (remove yourself from an accepted task)
    * POST /api/tasks/:taskId/unaccept
    */
-  async unaccessTask(req, res) {
+  async unacceptTask(req, res) {
     try {
       const { taskId } = req.params;
       const userId = req.user.id;
