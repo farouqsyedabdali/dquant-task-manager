@@ -7,6 +7,7 @@ const {
   collectProjectUpdates,
   collectTaskUpdates,
   normalizeActionType,
+  normalizePreviewInput,
   normalizePriority,
   normalizeProjectStatus,
   optionalString
@@ -373,7 +374,8 @@ function failedPreview(actionType, input, summary, resolution = {}) {
 }
 
 async function createAIActionPreview({ req, actionType, input, sourceText, sourceType = 'CHAT', sourceMetadata = null }) {
-  const preview = await buildPreview(actionType, input || {}, req.user);
+  const normalizedInput = normalizePreviewInput(actionType, input || {});
+  const preview = await buildPreview(actionType, normalizedInput, req.user);
 
   const action = await prisma.aIAction.create({
     data: {
@@ -383,7 +385,7 @@ async function createAIActionPreview({ req, actionType, input, sourceText, sourc
       sourceType,
       sourceText: sourceText || null,
       sourceMetadata,
-      input: input || {},
+      input: normalizedInput,
       resolvedInput: preview.resolvedInput || null,
       preview,
       beforeState: preview.beforeState || null,

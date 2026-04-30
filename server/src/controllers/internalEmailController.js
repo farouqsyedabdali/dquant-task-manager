@@ -3,11 +3,17 @@ const prisma = require('../lib/prisma');
 const emailService = require('../services/emailService');
 const secureLogger = require('../middleware/secureLogger');
 const { parseLocalDate } = require('../utils/dateUtils');
+const { DEFAULT_OPENROUTER_MODEL } = require('../config/openRouterDefaults');
 
 const PERSONAL_MONTHLY_LIMIT = 100;
 const BUSINESS_MONTHLY_LIMIT = 300;
 const MAX_TASKS_PER_EMAIL = 10;
 const DEFAULT_DUE_DATE_DAYS = 7;
+
+const OPENROUTER_STRUCTURED_MODEL =
+  process.env.OPENROUTER_STRUCTURED_MODEL ||
+  process.env.OPENROUTER_CHAT_MODEL ||
+  DEFAULT_OPENROUTER_MODEL;
 
 function getMonthRange(now = new Date()) {
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -126,7 +132,7 @@ Rules:
   const response = await axios.post(
     'https://openrouter.ai/api/v1/chat/completions',
     {
-      model: 'arcee-ai/trinity-large-preview:free',
+      model: OPENROUTER_STRUCTURED_MODEL,
       messages: [
         { role: 'system', content: prompt },
         {

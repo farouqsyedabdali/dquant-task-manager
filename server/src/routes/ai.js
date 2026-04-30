@@ -12,6 +12,13 @@ const {
   undoAIAction,
   SUPPORTED_ACTIONS
 } = require('../services/aiActionRunner');
+const { DEFAULT_OPENROUTER_MODEL } = require('../config/openRouterDefaults');
+
+/** JSON extraction / structured OpenRouter calls (extract-task, identify-task-update, suggest-projects, generate-project-tasks). */
+const OPENROUTER_STRUCTURED_MODEL =
+  process.env.OPENROUTER_STRUCTURED_MODEL ||
+  process.env.OPENROUTER_CHAT_MODEL ||
+  DEFAULT_OPENROUTER_MODEL;
 
 const router = express.Router();
 
@@ -85,7 +92,15 @@ function extractJsonCommands(text) {
   return [];
 }
 
-const ROUTE_INTENT_ALLOWED = new Set(['create_task', 'add_update', 'add_subtask', 'create_project', 'chat']);
+const ROUTE_INTENT_ALLOWED = new Set([
+  'create_task',
+  'add_update',
+  'add_subtask',
+  'create_project',
+  'update_task',
+  'update_project',
+  'chat'
+]);
 
 /**
  * Parse JSON from LLM for POST /ai/route-intent. Falls back to chat on parse errors.
@@ -169,7 +184,7 @@ Style rules:
 
 If the user asks you to create or change tasks/projects/comments, output a JSON command (or an array of commands) in this format (on a new line):
 { "action": "create_task", "title": "...", "assignee": "...", "description": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
-{ "action": "update_task", "taskId": 123, "title": "task name if id is unknown", "status": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm", "description": "..." }
+{ "action": "update_task", "taskId": 123, "taskTitle": "only when resolving by name (no taskId)", "newTitle": "only when renaming", "status": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm", "description": "..." }
 { "action": "add_subtask", "parentTaskId": 123, "parentTaskTitle": "parent task if id is unknown", "title": "...", "description": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
 { "action": "create_project", "name": "...", "description": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
 { "action": "update_project", "projectId": 123, "projectName": "project name if id is unknown", "name": "...", "description": "...", "status": "ACTIVE|ON_HOLD|COMPLETED|ARCHIVED", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
@@ -438,7 +453,7 @@ router.post('/chat',
         userTasks
       );
 
-      const chatModel = process.env.OPENROUTER_CHAT_MODEL || 'google/gemini-2.0-flash-001';
+      const chatModel = process.env.OPENROUTER_CHAT_MODEL || DEFAULT_OPENROUTER_MODEL;
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
         model: chatModel,
         messages: [
@@ -538,16 +553,18 @@ router.post(
     const model =
       process.env.OPENROUTER_INTENT_MODEL ||
       process.env.OPENROUTER_CHAT_MODEL ||
-      'google/gemini-2.0-flash-001';
+      DEFAULT_OPENROUTER_MODEL;
 
     const system = `You are a strict classifier for TIALZ task management. Given ONE user message, output ONLY valid JSON (no markdown, no explanation) with this exact shape:
-{"intent":"create_task"|"add_update"|"add_subtask"|"create_project"|"chat","text":"<string>"}
+{"intent":"create_task"|"add_update"|"add_subtask"|"create_project"|"update_task"|"update_project"|"chat","text":"<string>"}
 
 Definitions:
 - create_task: A new standalone task, reminder, or todo (including deadlines and assignments).
-- add_update: Log progress, a note, or a status change on an EXISTING task the user refers to.
+- add_update: Log progress, a note, or a comment on an EXISTING task the user refers to.
 - add_subtask: Add a child task under an existing parent task.
 - create_project: A multi-task initiative, project, campaign, or event that implies multiple steps or tasks.
+- update_task: Change fields on an existing task (deadline, status, priority, title rename, description).
+- update_project: Change fields on an existing project (name, deadline, status, description).
 - chat: Questions, summaries, listing tasks, greetings, general conversation, or unclear intent.
 
 Rules:
@@ -636,7 +653,7 @@ Output: {"title": "Update website homepage", "description": "Update the website 
 
       // Call OpenRouter for task extraction
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'arcee-ai/trinity-large-preview:free',
+        model: OPENROUTER_STRUCTURED_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Extract task information from this text: "${text}"` }
@@ -868,7 +885,7 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
 
       // Call OpenRouter for task update identification
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'arcee-ai/trinity-large-preview:free',
+        model: OPENROUTER_STRUCTURED_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Analyze this text for task updates: "${text}"` }
@@ -1077,7 +1094,7 @@ STRICT RULES:
 
       // Context-aware API call: analyze text context and generate appropriate suggestions
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'arcee-ai/trinity-large-preview:free',
+        model: OPENROUTER_STRUCTURED_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           {
@@ -1322,7 +1339,7 @@ Guidelines:
 
       // Optimized API call
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'arcee-ai/trinity-large-preview:free',
+        model: OPENROUTER_STRUCTURED_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Create project "${ideaName}" from: "${text.substring(0, 500)}"` }

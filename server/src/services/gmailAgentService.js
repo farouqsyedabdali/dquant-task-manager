@@ -1,6 +1,7 @@
 const axios = require('axios');
 const { google } = require('googleapis');
 const prisma = require('../lib/prisma');
+const { DEFAULT_OPENROUTER_MODEL } = require('../config/openRouterDefaults');
 const secureLogger = require('../middleware/secureLogger');
 const { parseLocalDate } = require('../utils/dateUtils');
 const { encryptToken, decryptToken } = require('../utils/tokenCrypto');
@@ -155,7 +156,7 @@ Use at most 5 tasks.
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: process.env.EMAIL_AGENT_MODEL || process.env.OPENROUTER_CHAT_MODEL || 'google/gemini-2.0-flash-001',
+        model: process.env.EMAIL_AGENT_MODEL || process.env.OPENROUTER_CHAT_MODEL || DEFAULT_OPENROUTER_MODEL,
         messages: [
           { role: 'system', content: prompt },
           { role: 'user', content: `From: ${senderEmail}\nSubject: ${subject}\n\n${cleanBody}` }

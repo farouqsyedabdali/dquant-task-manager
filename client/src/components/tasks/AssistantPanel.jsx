@@ -37,6 +37,35 @@ const ACTION_COPY = {
   add_comment: { label: 'Add comment', objectLabel: 'Comment draft', verb: 'add this comment' }
 };
 
+const TASK_STATUS_OPTIONS = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED'];
+const PROJECT_STATUS_OPTIONS = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'];
+
+function proposalHasUndo(proposal) {
+  return !!(proposal?.undoData || proposal?.undoLabel || proposal?.preview?.undoLabel);
+}
+
+function findLatestUndoableProposal(messages) {
+  for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex -= 1) {
+    const proposals = messages[messageIndex]?.proposals;
+    if (!Array.isArray(proposals)) continue;
+    for (let proposalIndex = proposals.length - 1; proposalIndex >= 0; proposalIndex -= 1) {
+      const proposal = proposals[proposalIndex];
+      if (proposal?.id && proposal.status === 'EXECUTED' && proposalHasUndo(proposal)) {
+        return { proposal, messageIndex, proposalIndex };
+      }
+    }
+  }
+  return null;
+}
+
+function isDraftSaveDisabled(actionType, draft) {
+  if (actionType === 'add_comment') return !(draft.content || '').trim();
+  if (actionType === 'create_task' || actionType === 'add_subtask' || actionType === 'create_project') {
+    return !(draft.title || '').trim() || !(draft.dueDate || '').trim();
+  }
+  return false;
+}
+
 /**
  * @param {'rail' | 'sheet' | 'modal'} layout
  * @param {() => void} [onAction]
@@ -69,6 +98,7 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
       .slice(-24);
 
   const latestProposal = useMemo(() => findLatestProposal(messages), [messages]);
+  const latestUndoableProposal = useMemo(() => findLatestUndoableProposal(messages)?.proposal, [messages]);
 
   const updateProposalStatus = (messageIndex, proposalIndex, updates) => {
     setMessages((prev) =>
@@ -231,6 +261,17 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
       return;
     }
 
+    if (isUndoText(text)) {
+      const undoTarget = findLatestUndoableProposal(messages);
+      if (undoTarget?.proposal?.id) {
+        setInput('');
+        setMessages((prev) => [...prev, { role: 'user', content: text }]);
+        setIsProcessing(false);
+        await handleProposalAction(undoTarget.messageIndex, undoTarget.proposalIndex, 'undo');
+        return;
+      }
+    }
+
     if (
       isApprovalText(text) &&
       currentLatestProposal?.proposal?.status === 'PENDING' &&
@@ -377,6 +418,7 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
         onSend={() => handleSend()}
         isProcessing={isProcessing}
         latestProposal={latestProposal?.proposal}
+        latestUndoableProposal={latestUndoableProposal}
       />
 
       {error && (
@@ -509,12 +551,15 @@ const MessageGroup = ({ message, messageIndex, onProposalAction }) => {
   );
 };
 
-const Composer = ({ value, onChange, onSend, isProcessing, latestProposal }) => {
-  const helperText = latestProposal?.status === 'PENDING'
-    ? 'Tip: type "go ahead" to approve the latest draft.'
-    : latestProposal?.status === 'NEEDS_CLARIFICATION'
-      ? 'Add a detail like a due date, assignee, or exact task ID.'
-      : 'Press Enter to send. Shift+Enter adds a line.';
+const Composer = ({ value, onChange, onSend, isProcessing, latestProposal, latestUndoableProposal }) => {
+  let helperText = 'Press Enter to send. Shift+Enter adds a line.';
+  if (latestProposal?.status === 'PENDING') {
+    helperText = 'Tip: type "go ahead" to approve the latest draft.';
+  } else if (latestProposal?.status === 'NEEDS_CLARIFICATION') {
+    helperText = 'Add a detail like a due date, assignee, or exact task ID.';
+  } else if (latestUndoableProposal && proposalHasUndo(latestUndoableProposal)) {
+    helperText = 'Tip: type "undo" to reverse the last completed action.';
+  }
 
   return (
     <div
@@ -594,7 +639,7 @@ const AIActionCard = ({ proposal, onAction }) => {
   const isError = status === 'ERROR';
   const resolved = proposal.resolvedInput || {};
   const diff = Array.isArray(proposal.diff || proposal.preview?.diff) ? (proposal.diff || proposal.preview.diff) : [];
-  const canUndo = isDone && (proposal.undoData || proposal.undoLabel || proposal.preview?.undoLabel);
+  const canUndo = isDone && proposalHasUndo(proposal);
   const details = buildDetails(proposal);
   const duplicateCandidates = Array.isArray(proposal.duplicateCandidates || proposal.preview?.duplicateCandidates)
     ? (proposal.duplicateCandidates || proposal.preview.duplicateCandidates)
@@ -632,6 +677,8 @@ const AIActionCard = ({ proposal, onAction }) => {
 
       {isEditing ? (
         <DraftEditor
+          actionType={proposal.actionType}
+          proposal={proposal}
           draft={draft}
           onChange={setDraft}
           onSave={submitDraft}
@@ -774,7 +821,7 @@ const DetailRow = ({ label, value, multiline }) => (
   </div>
 );
 
-const DraftEditor = ({ draft, onChange, onSave, onCancel, isBusy }) => {
+const DraftEditor = ({ actionType, proposal, draft, onChange, onSave, onCancel, isBusy }) => {
   const fieldClass = 'w-full rounded-lg border px-2 py-1.5 text-xs focus:outline-none';
   const fieldStyle = {
     backgroundColor: 'var(--color-bg-secondary)',
@@ -783,6 +830,10 @@ const DraftEditor = ({ draft, onChange, onSave, onCancel, isBusy }) => {
   };
 
   const update = (key, value) => onChange((prev) => ({ ...prev, [key]: value }));
+  const saveDisabled = isBusy || isDraftSaveDisabled(actionType, draft);
+  const resolved = proposal?.resolvedInput || {};
+
+  const titleLabel = actionType === 'update_project' ? 'Name' : 'Title';
 
   return (
     <div className="mt-2.5 rounded-xl border p-2.5" style={{ borderColor: 'var(--color-border-default)', backgroundColor: 'var(--color-bg-tertiary)' }}>
@@ -791,7 +842,7 @@ const DraftEditor = ({ draft, onChange, onSave, onCancel, isBusy }) => {
           Edit draft
         </p>
         <div className="flex shrink-0 gap-1.5">
-          <ActionButton onClick={onSave} disabled={isBusy || !draft.title.trim()} variant="primary">
+          <ActionButton onClick={onSave} disabled={saveDisabled} variant="primary">
             Save
           </ActionButton>
           <ActionButton onClick={onCancel} disabled={isBusy}>
@@ -800,27 +851,61 @@ const DraftEditor = ({ draft, onChange, onSave, onCancel, isBusy }) => {
         </div>
       </div>
       <div className="space-y-2">
-        <label className="block text-xs">
-          <span className="mb-1 block font-medium" style={{ color: 'var(--color-text-secondary)' }}>Title</span>
-          <input className={fieldClass} style={fieldStyle} value={draft.title} onChange={(e) => update('title', e.target.value)} />
-        </label>
-        <label className="block text-xs">
-          <span className="mb-1 block font-medium" style={{ color: 'var(--color-text-secondary)' }}>Due date</span>
-          <input className={fieldClass} style={fieldStyle} value={draft.dueDate} onChange={(e) => update('dueDate', e.target.value)} placeholder="Tomorrow at 5pm" />
-        </label>
-        <label className="block text-xs">
-          <span className="mb-1 block font-medium" style={{ color: 'var(--color-text-secondary)' }}>Priority</span>
-          <select className={fieldClass} style={fieldStyle} value={draft.priority} onChange={(e) => update('priority', e.target.value)}>
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
-            <option value="URGENT">Urgent</option>
-          </select>
-        </label>
-        <label className="block text-xs">
-          <span className="mb-1 block font-medium" style={{ color: 'var(--color-text-secondary)' }}>Description</span>
-          <textarea className={`${fieldClass} resize-none`} style={fieldStyle} rows={2} value={draft.description} onChange={(e) => update('description', e.target.value)} />
-        </label>
+        {actionType === 'add_comment' && (
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            {resolved.taskId ? `Task #${resolved.taskId}` : 'Task target is set from the draft.'}
+          </p>
+        )}
+
+        {actionType === 'add_comment' ? (
+          <label className="block text-xs">
+            <span className="mb-1 block font-medium" style={{ color: 'var(--color-text-secondary)' }}>Comment</span>
+            <textarea
+              className={`${fieldClass} resize-none`}
+              style={fieldStyle}
+              rows={4}
+              value={draft.content}
+              onChange={(e) => update('content', e.target.value)}
+            />
+          </label>
+        ) : (
+          <>
+            <label className="block text-xs">
+              <span className="mb-1 block font-medium" style={{ color: 'var(--color-text-secondary)' }}>{titleLabel}</span>
+              <input className={fieldClass} style={fieldStyle} value={draft.title} onChange={(e) => update('title', e.target.value)} />
+            </label>
+            <label className="block text-xs">
+              <span className="mb-1 block font-medium" style={{ color: 'var(--color-text-secondary)' }}>Due date</span>
+              <input className={fieldClass} style={fieldStyle} value={draft.dueDate} onChange={(e) => update('dueDate', e.target.value)} placeholder="Tomorrow at 5pm" />
+            </label>
+            {actionType !== 'update_project' && (
+              <label className="block text-xs">
+                <span className="mb-1 block font-medium" style={{ color: 'var(--color-text-secondary)' }}>Priority</span>
+                <select className={fieldClass} style={fieldStyle} value={draft.priority} onChange={(e) => update('priority', e.target.value)}>
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="URGENT">Urgent</option>
+                </select>
+              </label>
+            )}
+            {(actionType === 'update_task' || actionType === 'update_project') && (
+              <label className="block text-xs">
+                <span className="mb-1 block font-medium" style={{ color: 'var(--color-text-secondary)' }}>Status</span>
+                <select className={fieldClass} style={fieldStyle} value={draft.status} onChange={(e) => update('status', e.target.value)}>
+                  <option value="">No change</option>
+                  {(actionType === 'update_project' ? PROJECT_STATUS_OPTIONS : TASK_STATUS_OPTIONS).map((s) => (
+                    <option key={s} value={s}>{humanize(s)}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label className="block text-xs">
+              <span className="mb-1 block font-medium" style={{ color: 'var(--color-text-secondary)' }}>Description</span>
+              <textarea className={`${fieldClass} resize-none`} style={fieldStyle} rows={2} value={draft.description} onChange={(e) => update('description', e.target.value)} />
+            </label>
+          </>
+        )}
       </div>
     </div>
   );
@@ -927,6 +1012,10 @@ function isCancelText(text) {
   return /^(no|nope|cancel|reject|stop|never mind|nevermind|discard)$/i.test(text.trim());
 }
 
+function isUndoText(text) {
+  return /^(undo|undo that|undo it|reverse that|take it back|rollback)$/i.test(text.trim());
+}
+
 function isCreateAnywayText(text) {
   return /^(create anyway|create it anyway|make another|make a duplicate|duplicate it|yes create it|yes create anyway)$/i.test(text.trim());
 }
@@ -938,8 +1027,11 @@ function hasDuplicateCandidates(proposal) {
 
 function isDraftCorrection(text, proposal) {
   if (!proposal || !['NEEDS_CLARIFICATION', 'ERROR', 'PENDING'].includes(proposal.status)) return false;
+  if (proposal.actionType === 'add_comment') {
+    return /\b(comment|note|rephrase|instead (say|write)|change (it )?to|update (the )?(comment|note))\b/i.test(text);
+  }
   if (!['create_task', 'add_subtask', 'create_project', 'update_task', 'update_project'].includes(proposal.actionType)) return false;
-  return /\b(due|date|tomorrow|today|eod|priority|assign|assignee|title|rename|description|project|january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(text);
+  return /\b(due|date|tomorrow|today|eod|priority|assign|assignee|title|rename|description|project|status|in progress|completed|on hold|cancelled|canceled|january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(text);
 }
 
 function buildCorrectedInput(previous, text) {
@@ -947,6 +1039,7 @@ function buildCorrectedInput(previous, text) {
     ...(previous.input || {}),
     ...(previous.resolvedInput || {}),
   };
+  delete nextInput.updates;
 
   if (/\b(due|date|tomorrow|today|eod|january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(text)) {
     nextInput.dueDate = text;
@@ -954,6 +1047,25 @@ function buildCorrectedInput(previous, text) {
 
   const priorityMatch = text.match(/\b(low|medium|high|urgent)\b/i);
   if (priorityMatch) nextInput.priority = priorityMatch[1].toUpperCase();
+
+  if (previous.actionType === 'update_task') {
+    if (/\b(in progress|in_progress|in-progress)\b/i.test(text)) nextInput.status = 'IN_PROGRESS';
+    else if (/\btodo\b/i.test(text)) nextInput.status = 'TODO';
+    else if (/\b(done|completed)\b/i.test(text)) nextInput.status = 'COMPLETED';
+    else if (/\b(on hold|on_hold)\b/i.test(text)) nextInput.status = 'ON_HOLD';
+    else if (/\b(cancelled|canceled)\b/i.test(text)) nextInput.status = 'CANCELLED';
+  }
+
+  if (previous.actionType === 'update_project') {
+    if (/\b(active)\b/i.test(text)) nextInput.status = 'ACTIVE';
+    else if (/\b(on hold|on_hold)\b/i.test(text)) nextInput.status = 'ON_HOLD';
+    else if (/\b(completed|done)\b/i.test(text)) nextInput.status = 'COMPLETED';
+    else if (/\b(archived)\b/i.test(text)) nextInput.status = 'ARCHIVED';
+  }
+
+  if (previous.actionType === 'add_comment') {
+    nextInput.content = text.trim();
+  }
 
   return nextInput;
 }
@@ -965,42 +1077,61 @@ function buildEditableDraft(proposal) {
     title: resolved.title || resolved.name || updates.title || updates.name || getProposalTitle(proposal, resolved),
     dueDate: resolved.dueDate || updates.dueDate || '',
     priority: resolved.priority || updates.priority || 'MEDIUM',
-    description: resolved.description || updates.description || ''
+    description: resolved.description || updates.description || '',
+    content: resolved.content || '',
+    status: updates.status || ''
   };
 }
 
 function buildInputFromDraft(proposal, draft) {
-  const base = {
-    ...(proposal.input || {}),
-    ...(proposal.resolvedInput || {})
-  };
+  const input = proposal.input || {};
+  const resolved = proposal.resolvedInput || {};
+
+  if (proposal.actionType === 'add_comment') {
+    return {
+      ...input,
+      taskId: resolved.taskId ?? input.taskId,
+      taskTitle: input.taskTitle,
+      title: input.title,
+      content: (draft.content || '').trim(),
+    };
+  }
 
   if (proposal.actionType === 'update_task') {
-    return {
-      ...base,
-      newTitle: draft.title,
-      dueDate: draft.dueDate,
+    const next = {
+      ...input,
+      taskId: resolved.taskId ?? input.taskId,
+      taskTitle: input.taskTitle,
+      newTitle: (draft.title || '').trim() || undefined,
+      dueDate: draft.dueDate || undefined,
       priority: draft.priority,
-      description: draft.description
+      description: draft.description,
     };
+    if ((draft.status || '').trim()) next.status = draft.status;
+    return next;
   }
 
   if (proposal.actionType === 'update_project') {
-    return {
-      ...base,
-      newName: draft.title,
-      dueDate: draft.dueDate,
-      description: draft.description
+    const next = {
+      ...input,
+      projectId: resolved.projectId ?? input.projectId,
+      projectName: input.projectName,
+      newName: (draft.title || '').trim() || undefined,
+      dueDate: draft.dueDate || undefined,
+      description: draft.description,
     };
+    if ((draft.status || '').trim()) next.status = draft.status;
+    return next;
   }
 
   return {
-    ...base,
+    ...input,
+    ...resolved,
     title: draft.title,
-    name: proposal.actionType?.includes('project') ? draft.title : base.name,
+    name: proposal.actionType?.includes('project') ? draft.title : input.name,
     dueDate: draft.dueDate,
     priority: draft.priority,
-    description: draft.description
+    description: draft.description,
   };
 }
 

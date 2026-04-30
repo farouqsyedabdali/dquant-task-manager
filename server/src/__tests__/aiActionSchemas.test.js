@@ -2,6 +2,7 @@ const {
   buildValidationErrors,
   collectTaskUpdates,
   normalizeActionType,
+  normalizePreviewInput,
   normalizePriority,
   normalizeTaskStatus
 } = require('../services/aiActionSchemas');
@@ -43,5 +44,20 @@ describe('aiActionSchemas', () => {
 
     expect(result.errors).toContain('Task reference is required');
     expect(result.errors).toContain('At least one task update is required');
+  });
+
+  it('normalizes mistaken rename field when taskId is known', () => {
+    expect(normalizePreviewInput('update_task', { taskId: 3, title: 'Renamed' })).toEqual({
+      taskId: 3,
+      newTitle: 'Renamed'
+    });
+  });
+
+  it('keeps title for lookup when taskTitle is also provided', () => {
+    expect(normalizePreviewInput('update_task', { taskId: 3, title: 'Foo', taskTitle: 'Bar' })).toEqual({
+      taskId: 3,
+      title: 'Foo',
+      taskTitle: 'Bar'
+    });
   });
 });

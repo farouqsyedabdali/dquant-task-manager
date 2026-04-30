@@ -52,6 +52,24 @@ function toId(value) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+function normalizeUpdateTaskInput(input = {}) {
+  const id = toId(input.taskId);
+  const titleStr = optionalString(input.title);
+  const newTitleStr = optionalString(input.newTitle);
+  const taskTitleStr = optionalString(input.taskTitle);
+  if (id && !newTitleStr && titleStr && !taskTitleStr) {
+    const { title, ...rest } = input;
+    return { ...rest, newTitle: title };
+  }
+  return { ...input };
+}
+
+function normalizePreviewInput(actionType, input = {}) {
+  const type = normalizeActionType(actionType);
+  if (type === 'update_task') return normalizeUpdateTaskInput(input || {});
+  return { ...(input || {}) };
+}
+
 function collectTaskUpdates(input) {
   const updates = {};
   const invalid = [];
@@ -143,6 +161,7 @@ module.exports = {
   collectTaskUpdates,
   buildValidationErrors,
   normalizeActionType,
+  normalizePreviewInput,
   normalizePriority,
   normalizeProjectStatus,
   normalizeTaskStatus,
