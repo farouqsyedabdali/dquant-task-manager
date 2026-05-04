@@ -7,6 +7,7 @@ import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
 import AuditLogModal from '../components/audit/AuditLogModal';
 import LegalDocumentModal from '../components/legal/LegalDocumentModal';
 import GmailAgentSettings from '../components/integrations/GmailAgentSettings';
+import OutlookAgentSettings from '../components/integrations/OutlookAgentSettings';
 import { feedbackAPI, authAPI } from '../services/api';
 import { lightPalettes, darkPalettes } from '../config/colorPalettes';
 import IconButton from '../components/common/IconButton';
@@ -424,6 +425,7 @@ const Settings = () => {
           {selectedCategory === 'integrations' && (
             <div className="space-y-8">
               <GmailAgentSettings />
+              <OutlookAgentSettings />
             </div>
           )}
 

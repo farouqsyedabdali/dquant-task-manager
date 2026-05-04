@@ -483,6 +483,7 @@ enum Role {
 
 enum ConnectedProvider {
   GOOGLE_GMAIL
+  MICROSOFT_OUTLOOK
 }
 
 enum ConnectedAccountStatus {

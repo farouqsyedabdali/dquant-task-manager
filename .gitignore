@@ -33,3 +33,6 @@ logs/
 # Testing files
 tialz_agent/
 tialz-calendar-sync/
+
+# vision
+vision.txt

@@ -121,6 +121,15 @@ export const gmailAgentAPI = {
   disconnect: (accountId) => api.post(`/gmail-agent/accounts/${accountId}/disconnect`),
 };
 
+// Outlook / Microsoft 365 Agent API
+export const outlookAgentAPI = {
+  getStatus: () => api.get('/outlook-agent/status'),
+  connect: () => api.post('/outlook-agent/connect'),
+  updateSettings: (accountId, settings) => api.patch(`/outlook-agent/accounts/${accountId}`, settings),
+  syncNow: (accountId) => api.post(`/outlook-agent/accounts/${accountId}/sync`),
+  disconnect: (accountId) => api.post(`/outlook-agent/accounts/${accountId}/disconnect`),
+};
+
 // Task Share API
 export const taskShareAPI = {
   shareTask: (taskId, userId, permissionLevel = 'VIEWER') => api.post(`/task-shares/${taskId}/share`, { userId, permissionLevel }),
