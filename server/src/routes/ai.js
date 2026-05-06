@@ -72,24 +72,75 @@ router.post('/actions/undo', async (req, res) => {
   }
 });
 
-// Helper: Try to extract JSON command(s) from AI response
+function findMatchingCloser(s, startIdx, openCh, closeCh) {
+  let depth = 0;
+  for (let i = startIdx; i < s.length; i++) {
+    const c = s[i];
+    if (c === openCh) depth++;
+    else if (c === closeCh) {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+// Helper: extract task action objects from model output (handles multiline arrays/objects)
 function extractJsonCommands(text) {
-  // Remove code block markers (``` or ```json)
-  let cleaned = text.replace(/```json|```/g, '').trim();
-  // Try to match an array of JSON objects or a single object
-  const arrayMatch = cleaned.match(/\[.*?\]/s);
-  if (arrayMatch) {
+  const raw = String(text || '');
+  let cleaned = raw.replace(/```json/gi, '```').replace(/```[\s\S]*?```/g, '').trim();
+
+  const commands = [];
+  let pos = 0;
+  while (pos < cleaned.length) {
+    const lb = cleaned.indexOf('[', pos);
+    const oc = cleaned.indexOf('{', pos);
+    let start = -1;
+    let isArray = false;
+    if (lb === -1 && oc === -1) break;
+    if (oc === -1 || (lb !== -1 && lb < oc)) {
+      start = lb;
+      isArray = true;
+    } else {
+      start = oc;
+      isArray = false;
+    }
+
+    const end = isArray
+      ? findMatchingCloser(cleaned, start, '[', ']')
+      : findMatchingCloser(cleaned, start, '{', '}');
+    if (end === -1) {
+      pos = start + 1;
+      continue;
+    }
+    const slice = cleaned.slice(start, end + 1);
     try {
-      return JSON.parse(arrayMatch[0]);
-    } catch (e) { }
+      const parsed = JSON.parse(slice);
+      if (isArray && Array.isArray(parsed)) {
+        for (const item of parsed) {
+          if (item && typeof item === 'object' && item.action) commands.push(item);
+        }
+      } else if (!isArray && parsed && typeof parsed === 'object' && parsed.action) {
+        commands.push(parsed);
+      }
+    } catch {
+      /* skip */
+    }
+    pos = end + 1;
   }
-  const objMatches = [...cleaned.matchAll(/\{[\s\S]*?\}/g)];
-  if (objMatches.length > 0) {
-    return objMatches.map(m => {
-      try { return JSON.parse(m[0]); } catch { return null; }
-    }).filter(Boolean);
+  if (commands.length) return commands;
+
+  const fallback = [...raw.replace(/```json|```/g, '').trim().matchAll(/\{[\s\S]*?\}/g)];
+  const out = [];
+  for (const m of fallback) {
+    try {
+      const obj = JSON.parse(m[0]);
+      if (obj && obj.action) out.push(obj);
+    } catch {
+      /* ignore */
+    }
   }
-  return [];
+  return out;
 }
 
 const ROUTE_INTENT_ALLOWED = new Set([
@@ -143,6 +194,35 @@ function sanitizeChatHistory(raw) {
   return out.slice(-48);
 }
 
+/** Shared DB + system prompt for assistant chat (non-stream and SSE). */
+async function buildAssistantChatContext(req, rawHistory) {
+  const history = sanitizeChatHistory(rawHistory);
+  const userId = req.user.id;
+  const companyId = req.user.companyId;
+  const userName = req.user.name;
+  const userRole = req.user.role;
+  const userTasks = await prisma.task.findMany({
+    where: {
+      companyId,
+      status: { in: ['TODO', 'IN_PROGRESS'] },
+      OR: [{ assigneeId: userId }, { assignerId: userId }],
+    },
+    include: {
+      assignee: { select: { name: true } },
+      assigner: { select: { name: true } },
+    },
+    orderBy: { updatedAt: 'desc' },
+    take: 10,
+  });
+  const systemPrompt = buildChatSystemPrompt(
+    userName,
+    userRole,
+    req.user.company?.name || 'Unknown Company',
+    userTasks
+  );
+  return { history, userId, companyId, userName, userRole, userTasks, systemPrompt };
+}
+
 function formatCurrentDateForPrompt() {
   return new Date().toLocaleString('en-US', {
     weekday: 'long',
@@ -177,10 +257,15 @@ You are in a multi-turn chat. Use the full conversation history to answer follow
 
 Style rules:
 - Do NOT use emojis (no ✅, ⚠️, 🗑️, etc). Write clean, professional text.
-- Use markdown for formatting: **bold** for emphasis, numbered lists for priorities/steps, bullet points for summaries. Keep it concise.
+- Use light markdown when helpful: **bold** for emphasis, short bullet or numbered lists. Keep it concise.
+- Do NOT use markdown pipe tables (lines with | column | separators) for task lists, summaries, or "here are your tasks" — they read as glitchy spreadsheet dumps in chat. Write in natural sentences instead.
+- When the user asks about their tasks, what's due, or an overview: sound like a colleague — a brief opener, then bullets or short lines with title, status, priority, and due date woven into prose (e.g. "**Check CRA…** — still to do, medium priority, due May 9."). Group or order by urgency if useful. Only use a table layout if they explicitly ask for a table or spreadsheet-style output.
 - When creating or changing work, output the JSON command and add a short line like "Here's what I've put together — review the action below." The UI will show a visual card for the user to approve or decline.
 - Do not claim that you already changed something. The user must approve the action card first.
 - For create/change requests, always include the JSON command even if a field is missing, vague, in the past, or needs clarification. The action runner will turn invalid drafts into blocked review cards. Do not replace the JSON command with only a clarification sentence.
+- NEVER wrap action JSON in markdown code fences (no triple backticks).
+- NEVER paste a human-readable bullet list of JSON objects for the user to copy. One short sentence, then raw JSON only (array or object) that the UI parses — the user should only see cards, not raw data.
+- Keep machine JSON compact on its own lines; do not narrate the JSON field by field.
 
 If the user asks you to create or change tasks/projects/comments, output a JSON command (or an array of commands) in this format (on a new line):
 { "action": "create_task", "title": "...", "assignee": "...", "description": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
@@ -195,7 +280,7 @@ If the user asks you to create or change tasks/projects/comments, output a JSON 
 - Parse natural language dates (e.g., "by Friday", "EOD tomorrow", "next Monday 3pm") and convert to ISO-like format (YYYY-MM-DD or YYYY-MM-DDTHH:mm) in the dueDate field when applicable.
 - For references like "last task you created" or "second task in my list", use the user's recent tasks (provided below) and include the resolved title in the command.
 - IMPORTANT: You are only shown active tasks (TODO and IN_PROGRESS status) to help you focus on the most relevant work. This improves accuracy when there are many tasks.
-- For normal questions (what's due, priorities, summaries), answer in plain language using markdown and the task list below. Be concise and fast.
+- For normal questions (what's due, priorities, summaries, "tell me about my tasks"), answer in plain conversational language from the task list below — not tables, not column grids. Be concise and fast.
 - Otherwise, just answer normally.
 
 Current User Context:
@@ -341,15 +426,45 @@ async function runChatCommand(command, { userId, companyId, userTasks }) {
 }
 
 function stripJsonFromText(text) {
-  let cleaned = text.replace(/```json[\s\S]*?```/g, '').replace(/```[\s\S]*?```/g, '');
-  cleaned = cleaned.replace(/\[[\s\S]*?\]/g, (match) => {
-    try { const arr = JSON.parse(match); if (Array.isArray(arr) && arr.length && arr[0].action) return ''; } catch {}
-    return match;
-  });
-  cleaned = cleaned.replace(/\{[\s\S]*?\}/g, (match) => {
-    try { const obj = JSON.parse(match); if (obj.action) return ''; } catch {}
-    return match;
-  });
+  let cleaned = String(text || '')
+    .replace(/```json[\s\S]*?```/gi, '')
+    .replace(/```[\s\S]*?```/g, '');
+  const stripRanges = [];
+  let pos = 0;
+  while (pos < cleaned.length) {
+    const lb = cleaned.indexOf('[', pos);
+    const oc = cleaned.indexOf('{', pos);
+    let start = -1;
+    let isArr = false;
+    if (lb === -1 && oc === -1) break;
+    if (oc === -1 || (lb !== -1 && lb < oc)) {
+      start = lb;
+      isArr = true;
+    } else {
+      start = oc;
+    }
+    const end = isArr
+      ? findMatchingCloser(cleaned, start, '[', ']')
+      : findMatchingCloser(cleaned, start, '{', '}');
+    if (end === -1) {
+      pos = start + 1;
+      continue;
+    }
+    const slice = cleaned.slice(start, end + 1);
+    try {
+      const p = JSON.parse(slice);
+      const isAction =
+        (Array.isArray(p) && p.length && p[0]?.action) ||
+        (!Array.isArray(p) && p?.action);
+      if (isAction) stripRanges.push([start, end + 1]);
+    } catch {
+      /* skip */
+    }
+    pos = end + 1;
+  }
+  for (let i = stripRanges.length - 1; i >= 0; i--) {
+    cleaned = cleaned.slice(0, stripRanges[i][0]) + cleaned.slice(stripRanges[i][1]);
+  }
   return cleaned.replace(/\n{3,}/g, '\n\n').trim();
 }
 
@@ -415,45 +530,24 @@ router.post('/chat',
   handleValidationErrors,
   async (req, res) => {
     const { message, history: rawHistory } = req.body;
-    const history = sanitizeChatHistory(rawHistory);
-
+    const fast = true;
     let responded = false;
 
     try {
-      // Get user context
-      const userId = req.user.id;
-      const userRole = req.user.role;
-      const companyId = req.user.companyId;
-      const userName = req.user.name;
-
-      // Fetch user's recent tasks for context (only TODO and IN_PROGRESS for better AI focus)
-      const userTasks = await prisma.task.findMany({
-        where: {
-          companyId: companyId,
-          status: {
-            in: ['TODO', 'IN_PROGRESS']
-          },
-          OR: [
-            { assigneeId: userId },
-            { assignerId: userId }
-          ]
-        },
-        include: {
-          assignee: { select: { name: true } },
-          assigner: { select: { name: true } }
-        },
-        orderBy: { updatedAt: 'desc' },
-        take: 10
-      });
-
-      const systemPrompt = buildChatSystemPrompt(
-        userName,
-        userRole,
-        req.user.company?.name || 'Unknown Company',
-        userTasks
-      );
+      const {
+        history,
+        userId,
+        companyId,
+        userTasks,
+        systemPrompt,
+      } = await buildAssistantChatContext(req, rawHistory);
 
       const chatModel = process.env.OPENROUTER_CHAT_MODEL || DEFAULT_OPENROUTER_MODEL;
+      const maxTokens = fast
+        ? Math.min(Number(process.env.OPENROUTER_CHAT_MAX_TOKENS_FAST || 1024), 2048)
+        : Math.min(Number(process.env.OPENROUTER_CHAT_MAX_TOKENS || 2048), 8192);
+      const temperature = fast ? 0.38 : 0.45;
+
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
         model: chatModel,
         messages: [
@@ -462,8 +556,8 @@ router.post('/chat',
           { role: 'user', content: message }
         ],
         stream: true,
-        max_tokens: 2048,
-        temperature: 0.45
+        max_tokens: maxTokens,
+        temperature
       }, {
         headers: {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -542,6 +636,154 @@ router.post('/chat',
       }
     }
   });
+
+function writeSse(res, payload) {
+  res.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+// POST /api/ai/chat-stream — Server-Sent Events: token deltas, then final text + action proposals
+router.post('/chat-stream', validators.aiText('message'), handleValidationErrors, async (req, res) => {
+  const { message, history: rawHistory } = req.body;
+  const fast = true;
+
+  let upstream = null;
+  const safeEnd = () => {
+    try {
+      res.end();
+    } catch {
+      /* ignore */
+    }
+  };
+
+  try {
+    const { history, userId, companyId, userTasks, systemPrompt } = await buildAssistantChatContext(req, rawHistory);
+
+    res.status(200);
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (typeof res.flushHeaders === 'function') {
+      res.flushHeaders();
+    }
+
+    writeSse(res, { type: 'meta', phase: 'model' });
+
+    const chatModel = process.env.OPENROUTER_CHAT_MODEL || DEFAULT_OPENROUTER_MODEL;
+    const maxTokens = fast
+      ? Math.min(Number(process.env.OPENROUTER_CHAT_MAX_TOKENS_FAST || 1024), 2048)
+      : Math.min(Number(process.env.OPENROUTER_CHAT_MAX_TOKENS || 2048), 8192);
+    const temperature = fast ? 0.38 : 0.45;
+
+    const openrouterRes = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model: chatModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...history,
+          { role: 'user', content: message },
+        ],
+        stream: true,
+        max_tokens: maxTokens,
+        temperature,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0],
+          'X-Title': process.env.SITE_NAME || 'Tialz Task Manager',
+        },
+        responseType: 'stream',
+      }
+    );
+
+    upstream = openrouterRes.data;
+    let clientClosed = false;
+    req.on('close', () => {
+      clientClosed = true;
+      if (upstream && !upstream.destroyed) upstream.destroy();
+    });
+
+    let fullContent = '';
+    let buf = '';
+    let streamSettled = false;
+
+    try {
+      await new Promise((resolve, reject) => {
+        const finish = () => {
+          if (streamSettled) return;
+          streamSettled = true;
+          resolve();
+        };
+        upstream.on('data', (chunk) => {
+          if (clientClosed) return;
+          buf += chunk.toString();
+          const lines = buf.split('\n');
+          buf = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') {
+              finish();
+              return;
+            }
+            try {
+              const parsed = JSON.parse(data);
+              const piece = parsed.choices && parsed.choices[0]?.delta?.content;
+              if (piece) {
+                fullContent += piece;
+                writeSse(res, { type: 'delta', text: piece });
+              }
+            } catch {
+              /* malformed or partial line */
+            }
+          }
+        });
+        upstream.on('end', finish);
+        upstream.on('error', (e) => reject(e));
+      });
+    } catch (streamErr) {
+      if (!clientClosed && res.headersSent) {
+        try {
+          writeSse(res, { type: 'error', message: streamErr.message || 'Stream interrupted' });
+        } catch {
+          /* ignore */
+        }
+      }
+      safeEnd();
+      return;
+    }
+
+    if (clientClosed) return;
+
+    writeSse(res, { type: 'meta', phase: 'finalizing' });
+    const result = await finalizeAiChatText(fullContent.trim(), {
+      req,
+      userId,
+      companyId,
+      userTasks,
+      sourceText: message,
+    });
+    writeSse(res, {
+      type: 'done',
+      response: result.text || '',
+      proposals: result.proposals || [],
+    });
+    safeEnd();
+  } catch (err) {
+    if (!res.headersSent) {
+      return res.status(500).json({ error: err.message || 'AI stream failed' });
+    }
+    try {
+      writeSse(res, { type: 'error', message: err.message || 'AI stream failed' });
+    } catch {
+      /* ignore */
+    }
+    safeEnd();
+  }
+});
 
 // POST /api/ai/route-intent — classify user message for quick actions vs general chat (client + shared aiQuickActions)
 router.post(

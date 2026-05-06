@@ -756,9 +756,12 @@ const deleteUserGlobally = async (req, res) => {
  */
 const getUserEngagementAnalytics = async (req, res) => {
   try {
-    const { days = 30 } = req.query;
+    const rawDays = req.query?.days;
+    const parsedDays = Number.parseInt(String(rawDays ?? 30), 10);
+    const days = Number.isFinite(parsedDays) ? Math.min(Math.max(parsedDays, 1), 365) : 30;
+
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(days));
+    startDate.setDate(startDate.getDate() - days);
 
     // Calculate Daily Active Users (DAU) - users who logged in today
     const today = new Date();
@@ -862,12 +865,14 @@ const getUserEngagementAnalytics = async (req, res) => {
     const retainedUsers = [...lastWeekUserIds].filter(id => thisWeekUserIds.has(id));
 
     // Feature usage statistics
+    // IMPORTANT: AuditLog.action is a Prisma enum (AuditAction). Only query for values that exist in schema.prisma.
+    // Using an unknown enum value (e.g. COMMENT_ADDED) will throw and cause a 500.
     const featureUsage = await prisma.auditLog.groupBy({
       by: ['action'],
       where: {
         createdAt: { gte: startDate },
         action: {
-          in: ['TASK_CREATED', 'TASK_UPDATED', 'TASK_COMPLETED', 'COMMENT_ADDED', 'PROJECT_CREATED']
+          in: ['TASK_CREATED', 'TASK_UPDATED', 'TASK_STATUS_CHANGED', 'COMMENT_CREATED', 'PROJECT_CREATED']
         }
       },
       _count: {

@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { aiAPI } from '../../services/api';
-import { FaCheck, FaPaperPlane, FaPen, FaRegTrashAlt, FaTimes, FaUndo } from 'react-icons/fa';
+import { consumeAiChatStream } from '../../services/aiChatStream';
+import { FaCheck, FaPaperPlane, FaPen, FaRegTrashAlt, FaStop, FaTimes, FaUndo } from 'react-icons/fa';
 import IconButton from '../common/IconButton';
 
 const STORAGE_KEY = 'aiConversation:v2';
@@ -66,6 +67,44 @@ function isDraftSaveDisabled(actionType, draft) {
   return false;
 }
 
+/** All PENDING executable proposals in the latest assistant message that still has drafts (in list order). */
+function collectExecutablePendingChain(messages) {
+  for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex -= 1) {
+    const proposals = messages[messageIndex]?.proposals;
+    if (!Array.isArray(proposals)) continue;
+    const steps = [];
+    proposals.forEach((p, proposalIndex) => {
+      if (p?.id && p.status === 'PENDING' && p.canExecute !== false) {
+        steps.push({ messageIndex, proposalIndex, id: p.id });
+      }
+    });
+    if (steps.length) return steps;
+  }
+  return [];
+}
+
+/** While streaming, hide raw action JSON so the thread stays readable. */
+function maskAssistantStreamText(message) {
+  const raw = message.content || '';
+  if (!message.streaming) return raw;
+  const fence = raw.indexOf('```');
+  if (fence !== -1) {
+    const before = raw.slice(0, fence).trimEnd();
+    return (before ? `${before}\n\n` : '') + 'Preparing your review…';
+  }
+  const arr = raw.search(/\[\s*\{/);
+  if (arr !== -1 && /"action"\s*:/.test(raw.slice(arr, Math.min(raw.length, arr + 400)))) {
+    const before = raw.slice(0, arr).trimEnd();
+    return (before ? `${before}\n\n` : '') + 'Preparing your review…';
+  }
+  const brace = raw.search(/\{\s*"action"\s*:/);
+  if (brace !== -1) {
+    const before = raw.slice(0, brace).trimEnd();
+    return (before ? `${before}\n\n` : '') + 'Preparing your review…';
+  }
+  return raw;
+}
+
 /**
  * @param {'rail' | 'sheet' | 'modal'} layout
  * @param {() => void} [onAction]
@@ -78,6 +117,66 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState('Ready');
   const messagesScrollRef = useRef(null);
+  const streamAbortRef = useRef(null);
+  /** Coalesce SSE deltas to one React update per animation frame (avoids Markdown/layout thrash). */
+  const streamMsgIdRef = useRef(null);
+  const streamPendingRef = useRef('');
+  const streamRafRef = useRef(null);
+
+  const cancelStreamRaf = () => {
+    if (streamRafRef.current != null) {
+      cancelAnimationFrame(streamRafRef.current);
+      streamRafRef.current = null;
+    }
+  };
+
+  const flushStreamPendingSync = () => {
+    const id = streamMsgIdRef.current;
+    const pending = streamPendingRef.current;
+    if (!pending || !id) return;
+    streamPendingRef.current = '';
+    setMessages((prev) => {
+      const next = [...prev];
+      const last = next[next.length - 1];
+      if (last?.role !== 'assistant' || last.id !== id) return prev;
+      next[next.length - 1] = { ...last, content: (last.content || '') + pending };
+      return next;
+    });
+  };
+
+  const scheduleStreamFlush = () => {
+    if (streamRafRef.current != null) return;
+    streamRafRef.current = requestAnimationFrame(() => {
+      streamRafRef.current = null;
+      if (!streamMsgIdRef.current) return;
+      const chunk = streamPendingRef.current;
+      streamPendingRef.current = '';
+      if (chunk) {
+        setMessages((prev) => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          const id = streamMsgIdRef.current;
+          if (last?.role !== 'assistant' || !id || last.id !== id) return prev;
+          next[next.length - 1] = { ...last, content: (last.content || '') + chunk };
+          return next;
+        });
+        setStatusText('Writing…');
+      }
+      const el = messagesScrollRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+      if (streamPendingRef.current) scheduleStreamFlush();
+    });
+  };
+
+  useEffect(
+    () => () => {
+      if (streamRafRef.current != null) {
+        cancelAnimationFrame(streamRafRef.current);
+        streamRafRef.current = null;
+      }
+    },
+    []
+  );
 
   const hasMessages = messages.length > 0;
 
@@ -88,17 +187,18 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
 
   useEffect(() => {
     const el = messagesScrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    // While streaming, scroll is driven in the rAF flush to avoid fighting CSS smooth-scroll.
+    if (messages[messages.length - 1]?.streaming) return;
+    el.scrollTop = el.scrollHeight;
   }, [messages, isProcessing]);
 
   const getChatHistoryForApi = () =>
     messages
       .filter((m) => m.role === 'user' || m.role === 'assistant')
       .map((m) => ({ role: m.role, content: formatMessageForHistory(m) }))
+      .filter((m) => m.content && m.content.trim())
       .slice(-24);
-
-  const latestProposal = useMemo(() => findLatestProposal(messages), [messages]);
-  const latestUndoableProposal = useMemo(() => findLatestUndoableProposal(messages)?.proposal, [messages]);
 
   const updateProposalStatus = (messageIndex, proposalIndex, updates) => {
     setMessages((prev) =>
@@ -272,15 +372,64 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
       }
     }
 
-    if (
-      isApprovalText(text) &&
-      currentLatestProposal?.proposal?.status === 'PENDING' &&
-      currentLatestProposal.proposal.canExecute !== false
-    ) {
+    if (isApprovalText(text)) {
+      const chain = collectExecutablePendingChain(messages);
+      if (chain.length === 0) {
+        setInput('');
+        setMessages((prev) => [
+          ...prev,
+          { role: 'user', content: text },
+          {
+            role: 'assistant',
+            content:
+              'Nothing is waiting for approval. If a reply was still loading, wait for the review cards—or ask again.',
+          },
+        ]);
+        setIsProcessing(false);
+        return;
+      }
       setInput('');
       setMessages((prev) => [...prev, { role: 'user', content: text }]);
-      setIsProcessing(false);
-      await handleProposalAction(currentLatestProposal.messageIndex, currentLatestProposal.proposalIndex, 'execute');
+      setIsProcessing(true);
+      setStatusText(chain.length > 1 ? `Applying ${chain.length} updates…` : 'Applying…');
+      try {
+        for (const step of chain) {
+          const { messageIndex, proposalIndex, id } = step;
+          setMessages((prev) =>
+            prev.map((msg, mi) => {
+              if (mi !== messageIndex || !msg.proposals) return msg;
+              const proposals = msg.proposals.map((p, pi) =>
+                pi === proposalIndex ? { ...p, status: 'EXECUTING' } : p
+              );
+              return { ...msg, proposals };
+            })
+          );
+          const { data } = await aiAPI.executeAction(id);
+          setMessages((prev) =>
+            prev.map((msg, mi) => {
+              if (mi !== messageIndex || !msg.proposals) return msg;
+              const proposals = msg.proposals.map((p, pi) =>
+                pi === proposalIndex
+                  ? {
+                      ...p,
+                      ...(data.action || {}),
+                      status: data.action?.status || 'EXECUTED',
+                      result: data.result,
+                    }
+                  : p
+              );
+              return { ...msg, proposals };
+            })
+          );
+        }
+        setStatusText('Ready');
+        if (onAction) onAction();
+      } catch (err) {
+        setError(getErrorMessage(err, 'Could not apply updates'));
+        setStatusText('Needs attention');
+      } finally {
+        setIsProcessing(false);
+      }
       return;
     }
 
@@ -312,43 +461,108 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
       }
     }
 
-    let intent = 'chat';
-    let payloadText = text;
-    setStatusText('Understanding request');
-    try {
-      const { data } = await aiAPI.routeIntent(text);
-      intent = data.intent || 'chat';
-      payloadText = (data.text && data.text.trim()) || text;
-    } catch (e) {
-      console.warn('routeIntent failed, falling back to chat', e);
-    }
+    const historyPayload = getChatHistoryForApi();
+    const assistantMsgId = `a-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    setInput('');
+    setStatusText('Connecting…');
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', content: text },
+      { role: 'assistant', id: assistantMsgId, content: '', streaming: true },
+    ]);
+
+    const ac = new AbortController();
+    streamAbortRef.current = ac;
+    cancelStreamRaf();
+    streamPendingRef.current = '';
+    streamMsgIdRef.current = assistantMsgId;
 
     try {
-      setStatusText(intent === 'chat' ? 'Thinking' : 'Preparing draft');
-      const history = getChatHistoryForApi();
-      const { data } = await aiAPI.chat(payloadText, history);
-          setInput('');
-      const proposals = Array.isArray(data?.proposals)
-        ? data.proposals.map((proposal) => ({ ...proposal, status: proposal.status || 'PENDING' }))
-        : [];
-      const reply = cleanAssistantReply(data?.response, proposals);
-          setMessages((prev) => [
-            ...prev,
-            { role: 'user', content: text },
-            {
-              role: 'assistant',
-          content: reply,
-          ...(proposals.length > 0 ? { proposals } : {}),
-            },
-          ]);
-      setStatusText(proposals.some((proposal) => proposal.status === 'NEEDS_CLARIFICATION') ? 'Needs details' : proposals.length ? 'Action ready' : 'Ready');
+      await consumeAiChatStream(text, historyPayload, {
+        signal: ac.signal,
+        onDelta: (piece) => {
+          streamPendingRef.current += piece;
+          scheduleStreamFlush();
+        },
+        onMeta: ({ phase }) => {
+          if (phase === 'model') setStatusText('Thinking…');
+          if (phase === 'finalizing') setStatusText('Preparing actions…');
+        },
+        onDone: ({ response, proposals }) => {
+          cancelStreamRaf();
+          flushStreamPendingSync();
+          const list = Array.isArray(proposals)
+            ? proposals.map((proposal) => ({ ...proposal, status: proposal.status || 'PENDING' }))
+            : [];
+          const reply = cleanAssistantReply(response, list);
+          setMessages((prev) => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last?.role !== 'assistant' || last.id !== assistantMsgId) return prev;
+            next[next.length - 1] = {
+              ...last,
+              content: reply,
+              streaming: false,
+              ...(list.length > 0 ? { proposals: list } : {}),
+            };
+            return next;
+          });
+          setStatusText(
+            list.some((proposal) => proposal.status === 'NEEDS_CLARIFICATION')
+              ? 'Needs details'
+              : list.length
+                ? 'Action ready'
+                : 'Ready'
+          );
+        },
+      });
     } catch (err) {
-      console.error('handleSend error:', err);
-      setError(getErrorMessage(err, 'Something went wrong'));
-      setStatusText('Needs attention');
+      cancelStreamRaf();
+      flushStreamPendingSync();
+      if (err?.name === 'AbortError') {
+        setMessages((prev) => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last?.role === 'assistant' && last.id === assistantMsgId) {
+            next[next.length - 1] = {
+              ...last,
+              streaming: false,
+              content: (last.content || '').trim()
+                ? `${(last.content || '').trim()}\n\n_(Stopped)_`
+                : '_(Stopped)_',
+            };
+          }
+          return next;
+        });
+        setStatusText('Stopped');
+      } else {
+        console.error('handleSend error:', err);
+        setError(getErrorMessage(err, 'Something went wrong'));
+        setStatusText('Needs attention');
+        setMessages((prev) => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last?.role === 'assistant' && last.id === assistantMsgId) {
+            next[next.length - 1] = {
+              ...last,
+              streaming: false,
+              content: (last.content || '').trim() || '(Something went wrong)',
+            };
+          }
+          return next;
+        });
+      }
     } finally {
+      streamAbortRef.current = null;
+      cancelStreamRaf();
+      streamMsgIdRef.current = null;
+      streamPendingRef.current = '';
       setIsProcessing(false);
     }
+  };
+
+  const stopStreaming = () => {
+    streamAbortRef.current?.abort();
   };
 
   const handleNewChat = () => {
@@ -388,9 +602,12 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
 
         <div
           ref={messagesScrollRef}
-        className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3"
-          style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-      >
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-3"
+          style={{
+            backgroundColor: 'var(--color-bg-tertiary)',
+            scrollBehavior: messages[messages.length - 1]?.streaming ? 'auto' : 'smooth',
+          }}
+        >
         {!hasMessages && (
           <AssistantEmptyState
             onSuggestion={(suggestion) => {
@@ -402,23 +619,25 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
 
         {messages.map((msg, idx) => (
           <MessageGroup
-            key={`${msg.role}-${idx}-${msg.content?.slice(0, 12) || 'proposal'}`}
+            key={msg.id || `${msg.role}-${idx}-${msg.content?.slice(0, 20) || 'msg'}`}
             message={msg}
             messageIndex={idx}
             onProposalAction={handleProposalAction}
           />
         ))}
 
-        {isProcessing && <ThinkingIndicator label={statusText} />}
+        {isProcessing && !messages[messages.length - 1]?.streaming && (
+          <ThinkingIndicator label={statusText} />
+        )}
       </div>
 
       <Composer
         value={input}
         onChange={setInput}
         onSend={() => handleSend()}
+        onStop={stopStreaming}
         isProcessing={isProcessing}
-        latestProposal={latestProposal?.proposal}
-        latestUndoableProposal={latestUndoableProposal}
+        isStreaming={Boolean(messages[messages.length - 1]?.streaming)}
       />
 
       {error && (
@@ -509,35 +728,54 @@ const AssistantEmptyState = ({ onSuggestion }) => (
 
 const MessageGroup = ({ message, messageIndex, onProposalAction }) => {
   const isUser = message.role === 'user';
-  const shouldShowText = message.content && message.content !== '(No response)';
+  const assistantBody = !isUser ? maskAssistantStreamText(message) : '';
+  const showUserBubble = isUser && message.content && message.content !== '(No response)';
+  const showAssistantBubble =
+    !isUser &&
+    (message.streaming || (message.content && message.content !== '(No response)'));
+  const shouldShowBubble = showUserBubble || showAssistantBubble;
 
   return (
-    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-      {shouldShowText && (
+    <div className={`flex min-w-0 w-full max-w-full flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+      {shouldShowBubble && (
         <div
-          className={`max-w-[94%] rounded-2xl px-3 py-2 text-sm leading-5 shadow-sm ${isUser ? 'text-white' : 'border'}`}
-                style={
+          className={`max-w-[min(94%,100%)] rounded-2xl px-3 py-2 text-sm leading-5 shadow-sm ${isUser ? 'text-white' : 'border'}`}
+          style={
             isUser
               ? { backgroundColor: 'var(--color-primary)' }
               : {
-                        backgroundColor: 'var(--color-bg-secondary)',
-                        color: 'var(--color-text-primary)',
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  color: 'var(--color-text-primary)',
                   borderColor: 'var(--color-border-default)',
                 }
           }
         >
           {isUser ? (
-            <p className="whitespace-pre-wrap">{message.content}</p>
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
           ) : (
-            <div className="ai-markdown">
-              <ReactMarkdown>{message.content}</ReactMarkdown>
+            <div className="ai-markdown min-h-[1.25rem] max-w-full overflow-x-hidden break-words [text-rendering:optimizeLegibility] [-webkit-font-smoothing:antialiased]">
+              {assistantBody ? (
+                message.streaming ? (
+                  <p className="whitespace-pre-wrap break-words text-sm leading-relaxed tracking-[0.01em]">
+                    {assistantBody}
+                  </p>
+                ) : (
+                  <ReactMarkdown>{assistantBody}</ReactMarkdown>
+                )
+              ) : message.streaming ? (
+                <span
+                  className="inline-block h-4 w-0.5 animate-pulse rounded-sm opacity-60"
+                  style={{ backgroundColor: 'var(--color-text-secondary)' }}
+                  aria-hidden
+                />
+              ) : null}
             </div>
           )}
         </div>
       )}
 
       {message.role === 'assistant' && Array.isArray(message.proposals) && message.proposals.length > 0 && (
-        <div className="mt-2 w-full space-y-2.5">
+        <div className="mt-2 w-full min-w-0 max-w-full space-y-2.5">
           {message.proposals.map((proposal, proposalIndex) => (
             <AIActionCard
               key={proposal.id || proposalIndex}
@@ -551,54 +789,55 @@ const MessageGroup = ({ message, messageIndex, onProposalAction }) => {
   );
 };
 
-const Composer = ({ value, onChange, onSend, isProcessing, latestProposal, latestUndoableProposal }) => {
-  let helperText = 'Press Enter to send. Shift+Enter adds a line.';
-  if (latestProposal?.status === 'PENDING') {
-    helperText = 'Tip: type "go ahead" to approve the latest draft.';
-  } else if (latestProposal?.status === 'NEEDS_CLARIFICATION') {
-    helperText = 'Add a detail like a due date, assignee, or exact task ID.';
-  } else if (latestUndoableProposal && proposalHasUndo(latestUndoableProposal)) {
-    helperText = 'Tip: type "undo" to reverse the last completed action.';
-  }
+const Composer = ({ value, onChange, onSend, onStop, isProcessing, isStreaming }) => {
+  const showStop = isProcessing && isStreaming;
 
   return (
     <div
       className="flex-shrink-0 border-t px-3 py-2.5"
-          style={{ borderColor: 'var(--color-border-default)', backgroundColor: 'var(--color-bg-secondary)' }}
+      style={{ borderColor: 'var(--color-border-default)', backgroundColor: 'var(--color-bg-secondary)' }}
     >
       <div
         className="rounded-2xl border p-2"
         style={{ borderColor: 'var(--color-border-default)', backgroundColor: 'var(--color-bg-tertiary)' }}
-        >
-          <textarea
-          className="w-full resize-none bg-transparent px-2 py-1 text-sm leading-5 focus:outline-none"
+      >
+        <textarea
+          className="w-full min-w-0 resize-none bg-transparent px-2 py-1 text-sm leading-5 focus:outline-none"
           style={{ color: 'var(--color-text-primary)', minHeight: 46 }}
           rows={2}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-              onSend();
-                }
-              }}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' || e.shiftKey) return;
+            e.preventDefault();
+            if (showStop) return;
+            if (isProcessing) return;
+            onSend();
+          }}
           placeholder="Ask me to draft or update work..."
-              disabled={isProcessing}
+          disabled={isProcessing && !showStop}
           maxLength={700}
         />
-        <div className="flex items-center justify-between gap-2 px-1 pt-1">
-          <p className="min-w-0 truncate text-[11px]" style={{ color: 'var(--color-text-tertiary)' }} title={helperText}>
-            {helperText}
-          </p>
-              <IconButton
-                icon={<FaPaperPlane />}
-                label="Send"
-                variant="primary"
-                size="sm"
-            onClick={onSend}
-            disabled={isProcessing || !value.trim()}
-                loading={isProcessing}
-              />
+        <div className="flex items-center justify-end gap-2 px-1 pt-1">
+          {showStop ? (
+            <IconButton
+              icon={<FaStop />}
+              label="Stop"
+              variant="secondary"
+              size="sm"
+              onClick={onStop}
+            />
+          ) : (
+            <IconButton
+              icon={<FaPaperPlane />}
+              label="Send"
+              variant="primary"
+              size="sm"
+              onClick={onSend}
+              disabled={isProcessing || !value.trim()}
+              loading={isProcessing}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -653,7 +892,7 @@ const AIActionCard = ({ proposal, onAction }) => {
 
   return (
     <div
-      className="rounded-2xl border p-3 text-left shadow-sm transition-opacity"
+      className="min-w-0 max-w-full overflow-x-hidden rounded-2xl border p-3 text-left shadow-sm transition-opacity"
       style={{
         backgroundColor: 'var(--color-bg-secondary)',
         borderColor: isBlocked ? 'rgba(245, 158, 11, 0.45)' : isError ? 'rgba(239, 68, 68, 0.45)' : 'var(--color-border-default)',
@@ -960,7 +1199,10 @@ function findLatestProposal(messages) {
     if (!Array.isArray(proposals)) continue;
     for (let proposalIndex = proposals.length - 1; proposalIndex >= 0; proposalIndex -= 1) {
       const proposal = proposals[proposalIndex];
-      if (proposal?.id && !['REJECTED', 'UNDONE', 'SUPERSEDED'].includes(proposal.status)) {
+      if (
+        proposal?.id &&
+        ['PENDING', 'NEEDS_CLARIFICATION', 'ERROR'].includes(proposal.status)
+      ) {
         return { proposal, messageIndex, proposalIndex };
       }
     }
@@ -996,12 +1238,16 @@ function formatMessageForHistory(message) {
 
 function cleanAssistantReply(reply, proposals) {
   const text = typeof reply === 'string' ? reply.trim() : '';
-  if (proposals.length > 0 && (!text || /^\s*(here'?s|i'?ve|review)/i.test(text))) {
-    return proposals.some((proposal) => proposal.status === 'NEEDS_CLARIFICATION')
-      ? 'I drafted this, but I need one more detail before it can run.'
-      : 'I drafted this for review.';
+  if (proposals.length > 0 && (!text || /^\s*(here'?s|i'?ve|review|please|let me know)/i.test(text))) {
+    if (proposals.some((proposal) => proposal.status === 'NEEDS_CLARIFICATION')) {
+      return 'I need one more detail on the card below before this can run.';
+    }
+    if (proposals.length > 1) {
+      return `I set up **${proposals.length} changes** below. Say **approve** when they look good, and I will run them in order.`;
+    }
+    return 'Here is a change to review — say **approve** when it looks right.';
   }
-  return text || (proposals.length > 0 ? 'I drafted this for review.' : '(No response)');
+  return text || (proposals.length > 0 ? 'Review the card below.' : '(No response)');
 }
 
 function isApprovalText(text) {
