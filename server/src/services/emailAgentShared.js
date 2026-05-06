@@ -69,6 +69,24 @@ function deterministicSkip({ headers, senderEmail, subject }) {
   return null;
 }
 
+async function isSenderAlwaysSkipped({ userId, provider, senderEmail }) {
+  const normalizedSender = String(senderEmail || '').trim().toLowerCase();
+  if (!normalizedSender) return false;
+
+  const rule = await prisma.emailSenderRule.findUnique({
+    where: {
+      userId_provider_senderEmail: {
+        userId,
+        provider,
+        senderEmail: normalizedSender
+      }
+    },
+    select: { alwaysSkip: true }
+  });
+
+  return Boolean(rule?.alwaysSkip);
+}
+
 async function classifyAndExtractTasks({ subject, cleanBody, senderEmail }) {
   if (!process.env.OPENROUTER_API_KEY) {
     return {
@@ -153,14 +171,7 @@ async function createTasksFromEmail({ account, ingestion, classification, cleanB
     const task = await prisma.task.create({
       data: {
         title,
-        description: [
-          String(item.description || '').trim(),
-          ingestion.subject ? `Source email subject: ${ingestion.subject}` : null,
-          cleanBody ? `Source email excerpt: ${cleanBody.slice(0, 700)}` : null
-        ]
-          .filter(Boolean)
-          .join('\n\n')
-          .slice(0, 1200),
+        description: String(item.description || '').trim().slice(0, 1200) || null,
         priority: normalizePriority(item.priority || classification.importance),
         dueDate: resolveDueDate(item.dueDate),
         status: 'TODO',
@@ -203,6 +214,7 @@ module.exports = {
   headerValue,
   stripQuotedText,
   deterministicSkip,
+  isSenderAlwaysSkipped,
   classifyAndExtractTasks,
   createTasksFromEmail
 };

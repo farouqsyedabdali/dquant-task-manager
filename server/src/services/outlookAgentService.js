@@ -7,6 +7,7 @@ const {
   MIN_AUTO_CREATE_CONFIDENCE,
   stripQuotedText,
   deterministicSkip,
+  isSenderAlwaysSkipped,
   classifyAndExtractTasks,
   createTasksFromEmail
 } = require('./emailAgentShared');
@@ -196,6 +197,23 @@ async function processOutlookMessage(account, messageId) {
       }
     }
   });
+
+  const alwaysSkipped = await isSenderAlwaysSkipped({
+    userId: account.userId,
+    provider: PROVIDER,
+    senderEmail
+  });
+  if (alwaysSkipped) {
+    return prisma.emailIngestion.update({
+      where: { id: ingestion.id },
+      data: {
+        status: 'SKIPPED',
+        classification: 'NON_ACTIONABLE',
+        confidence: 1,
+        reason: 'always_skip_sender'
+      }
+    });
+  }
 
   const skipReason = deterministicSkip({ headers, senderEmail, subject });
   if (skipReason) {

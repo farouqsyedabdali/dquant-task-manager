@@ -119,6 +119,8 @@ export const gmailAgentAPI = {
   updateSettings: (accountId, settings) => api.patch(`/gmail-agent/accounts/${accountId}`, settings),
   syncNow: (accountId) => api.post(`/gmail-agent/accounts/${accountId}/sync`),
   disconnect: (accountId) => api.post(`/gmail-agent/accounts/${accountId}/disconnect`),
+  addSkipSender: (senderEmail) => api.post('/gmail-agent/skip-senders', { senderEmail }),
+  removeSkipSender: (ruleId) => api.delete(`/gmail-agent/skip-senders/${ruleId}`),
 };
 
 // Outlook / Microsoft 365 Agent API
@@ -128,6 +130,8 @@ export const outlookAgentAPI = {
   updateSettings: (accountId, settings) => api.patch(`/outlook-agent/accounts/${accountId}`, settings),
   syncNow: (accountId) => api.post(`/outlook-agent/accounts/${accountId}/sync`),
   disconnect: (accountId) => api.post(`/outlook-agent/accounts/${accountId}/disconnect`),
+  addSkipSender: (senderEmail) => api.post('/outlook-agent/skip-senders', { senderEmail }),
+  removeSkipSender: (ruleId) => api.delete(`/outlook-agent/skip-senders/${ruleId}`),
 };
 
 // Task Share API

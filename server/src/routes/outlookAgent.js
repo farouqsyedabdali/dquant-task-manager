@@ -7,7 +7,9 @@ const {
   disconnect,
   getStatus,
   runSyncNow,
-  updateSettings
+  updateSettings,
+  addSkipSender,
+  removeSkipSender
 } = require('../controllers/outlookAgentController');
 
 const router = express.Router();
@@ -24,5 +26,12 @@ router.patch(
 );
 router.post('/accounts/:accountId/sync', runSyncNow);
 router.post('/accounts/:accountId/disconnect', disconnect);
+router.post(
+  '/skip-senders',
+  body('senderEmail').isEmail().withMessage('senderEmail must be a valid email'),
+  handleValidationErrors,
+  addSkipSender
+);
+router.delete('/skip-senders/:ruleId', removeSkipSender);
 
 module.exports = router;

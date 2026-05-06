@@ -4,8 +4,19 @@ const { getOutlookAgentStatus, syncOutlookAccount, PROVIDER } = require('../serv
 
 const getStatus = async (req, res) => {
   try {
-    const status = await getOutlookAgentStatus(req.user.id);
-    res.json({ success: true, ...status });
+    const [status, skipSenders] = await Promise.all([
+      getOutlookAgentStatus(req.user.id),
+      prisma.emailSenderRule.findMany({
+        where: {
+          userId: req.user.id,
+          provider: PROVIDER,
+          alwaysSkip: true
+        },
+        orderBy: { senderEmail: 'asc' },
+        select: { id: true, senderEmail: true, createdAt: true }
+      })
+    ]);
+    res.json({ success: true, ...status, skipSenders });
   } catch (error) {
     console.error('Outlook agent status error:', error);
     res.status(500).json({ error: 'Failed to fetch Outlook agent status' });
@@ -96,10 +107,70 @@ const runSyncNow = async (req, res) => {
   }
 };
 
+const addSkipSender = async (req, res) => {
+  try {
+    const senderEmail = String(req.body?.senderEmail || '').trim().toLowerCase();
+    if (!senderEmail) return res.status(400).json({ error: 'senderEmail is required' });
+
+    await prisma.emailSenderRule.upsert({
+      where: {
+        userId_provider_senderEmail: {
+          userId: req.user.id,
+          provider: PROVIDER,
+          senderEmail
+        }
+      },
+      create: {
+        userId: req.user.id,
+        companyId: req.user.companyId,
+        provider: PROVIDER,
+        senderEmail,
+        alwaysSkip: true
+      },
+      update: { alwaysSkip: true }
+    });
+
+    const skipSenders = await prisma.emailSenderRule.findMany({
+      where: { userId: req.user.id, provider: PROVIDER, alwaysSkip: true },
+      orderBy: { senderEmail: 'asc' },
+      select: { id: true, senderEmail: true, createdAt: true }
+    });
+    res.json({ success: true, skipSenders });
+  } catch (error) {
+    console.error('Outlook agent add skip sender error:', error);
+    res.status(500).json({ error: 'Failed to add always-skip sender' });
+  }
+};
+
+const removeSkipSender = async (req, res) => {
+  try {
+    const id = Number(req.params.ruleId);
+    if (!id) return res.status(400).json({ error: 'Invalid rule id' });
+
+    const rule = await prisma.emailSenderRule.findFirst({
+      where: { id, userId: req.user.id, provider: PROVIDER }
+    });
+    if (!rule) return res.status(404).json({ error: 'Skip sender rule not found' });
+
+    await prisma.emailSenderRule.delete({ where: { id } });
+    const skipSenders = await prisma.emailSenderRule.findMany({
+      where: { userId: req.user.id, provider: PROVIDER, alwaysSkip: true },
+      orderBy: { senderEmail: 'asc' },
+      select: { id: true, senderEmail: true, createdAt: true }
+    });
+    res.json({ success: true, skipSenders });
+  } catch (error) {
+    console.error('Outlook agent remove skip sender error:', error);
+    res.status(500).json({ error: 'Failed to remove always-skip sender' });
+  }
+};
+
 module.exports = {
   getStatus,
   connect,
   updateSettings,
   disconnect,
-  runSyncNow
+  runSyncNow,
+  addSkipSender,
+  removeSkipSender
 };
