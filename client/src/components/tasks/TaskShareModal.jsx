@@ -302,12 +302,12 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
                 allowAddNew={!isPersonalAccount}
                 onAddNew={handleAddNewContact}
                 renderOption={(recipient) => (
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-2 h-2 rounded-full ${recipient.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                    <span>{recipient.displayName || recipient.name}</span>
-                    <span style={{ color: 'var(--color-text-tertiary)' }}>({recipient.email})</span>
+                  <div className="flex items-center space-x-2 w-full overflow-hidden">
+                    <div className={`flex-shrink-0 w-2 h-2 rounded-full ${recipient.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                    <span className="truncate font-medium">{recipient.displayName || recipient.name}</span>
+                    <span className="truncate flex-1 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>({recipient.email})</span>
                     {recipient.type === 'contact' && (
-                      <span className="text-xs px-2 py-0.5 rounded" style={{
+                      <span className="flex-shrink-0 text-xs px-2 py-0.5 rounded" style={{
                         backgroundColor: 'var(--color-bg-tertiary)',
                         color: 'var(--color-text-secondary)'
                       }}>

@@ -288,7 +288,7 @@ const SearchableDropdown = ({
 
           {/* Options List — height follows viewport so list scrolls inside panel when zoomed */}
           <div
-            className="min-h-0 flex-1 overflow-y-auto scrollbar-thin"
+            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin"
             style={{
               maxHeight: dropdownPosition.listMaxHeight,
               scrollbarThumbColor: 'var(--color-scrollbar-thumb)',

@@ -87,19 +87,39 @@ async function isSenderAlwaysSkipped({ userId, provider, senderEmail }) {
   return Boolean(rule?.alwaysSkip);
 }
 
-async function classifyAndExtractTasks({ subject, cleanBody, senderEmail }) {
+async function classifyAndExtractTasks({ subject, cleanBody, senderEmail, account }) {
   if (!process.env.OPENROUTER_API_KEY) {
     return {
       isActionable: false,
       confidence: 0,
       importance: 'LOW',
       reason: 'OPENROUTER_API_KEY is not configured',
-      tasks: []
+      actions: []
     };
   }
 
+  let taskLines = '(none)';
+  if (account) {
+    const userTasks = await prisma.task.findMany({
+      where: {
+        companyId: account.companyId,
+        status: { in: ['TODO', 'IN_PROGRESS'] },
+        OR: [{ assigneeId: account.userId }, { assignerId: account.userId }],
+      },
+      select: { id: true, title: true, status: true, priority: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 20
+    });
+    if (userTasks.length > 0) {
+      taskLines = userTasks.map(t => `[id:${t.id}] ${t.title} (${t.status}, ${t.priority})`).join('\n');
+    }
+  }
+
   const prompt = `
-You are Tialz's email task agent. Decide if this email should automatically become tasks.
+You are Tialz's email task agent. Decide if this email should automatically become tasks, update existing tasks, or add subtasks.
+
+Active Tasks for user:
+${taskLines}
 
 Return ONLY valid JSON with this shape:
 {
@@ -107,20 +127,34 @@ Return ONLY valid JSON with this shape:
   "confidence": number,
   "importance": "LOW"|"MEDIUM"|"HIGH"|"URGENT",
   "reason": "short explanation",
-  "tasks": [
+  "actions": [
     {
+      "actionType": "create_task",
       "title": "short task title",
       "description": "short helpful context",
       "priority": "LOW"|"MEDIUM"|"HIGH"|"URGENT",
       "dueDate": "YYYY-MM-DD or natural date string or null"
+    },
+    {
+      "actionType": "update_task",
+      "taskId": 123,
+      "status": "TODO"|"IN_PROGRESS"|"COMPLETED"|"ON_HOLD"|"CANCELLED",
+      "priority": "LOW"|"MEDIUM"|"HIGH"|"URGENT",
+      "dueDate": "YYYY-MM-DD or natural date string or null"
+    },
+    {
+      "actionType": "add_subtask",
+      "parentTaskId": 123,
+      "title": "short subtask title",
+      "description": "short helpful context"
     }
   ]
 }
 
-Create tasks only for emails that represent real work: direct requests, commitments, follow-ups, approvals, meetings, deliverables, issues, or deadlines.
+Create or update tasks only for emails that represent real work: direct requests, commitments, follow-ups, approvals, meetings, deliverables, issues, or deadlines.
 Ignore newsletters, marketing, automated digests, receipts, FYI-only messages, social notifications, and spam.
 If uncertain, set isActionable=false or confidence below 0.72.
-Use at most 5 tasks.
+Use at most 5 actions.
 `.trim();
 
   try {
@@ -151,7 +185,7 @@ Use at most 5 tasks.
       confidence: Number(parsed.confidence || 0),
       importance: normalizePriority(parsed.importance),
       reason: String(parsed.reason || '').slice(0, 500),
-      tasks: Array.isArray(parsed.tasks) ? parsed.tasks.slice(0, 5) : []
+      actions: Array.isArray(parsed.actions) ? parsed.actions.slice(0, 5) : []
     };
   } catch (error) {
     const status = error.response?.status;
@@ -162,47 +196,114 @@ Use at most 5 tasks.
 
 async function createTasksFromEmail({ account, ingestion, classification, cleanBody, auditAgentName, auditSource }) {
   const createdTaskIds = [];
-  const actions = [];
+  const loggedActions = [];
 
-  for (const item of classification.tasks || []) {
-    const title = String(item.title || '').trim().slice(0, 200);
-    if (!title) continue;
+  for (const item of classification.actions || []) {
+    const actionType = item.actionType || 'create_task';
 
-    const task = await prisma.task.create({
-      data: {
-        title,
-        description: String(item.description || '').trim().slice(0, 1200) || null,
-        priority: normalizePriority(item.priority || classification.importance),
-        dueDate: resolveDueDate(item.dueDate),
-        status: 'TODO',
-        assignerId: account.userId,
-        assigneeId: account.userId,
-        companyId: account.companyId
+    if (actionType === 'create_task') {
+      const title = String(item.title || '').trim().slice(0, 200);
+      if (!title) continue;
+
+      const task = await prisma.task.create({
+        data: {
+          title,
+          description: String(item.description || '').trim().slice(0, 1200) || null,
+          priority: normalizePriority(item.priority || classification.importance),
+          dueDate: resolveDueDate(item.dueDate),
+          status: 'TODO',
+          assignerId: account.userId,
+          assigneeId: account.userId,
+          companyId: account.companyId
+        }
+      });
+
+      createdTaskIds.push(task.id);
+      loggedActions.push({ actionType: 'create_task', taskId: task.id, title: task.title });
+
+      await prisma.auditLog.create({
+        data: {
+          action: 'TASK_CREATED',
+          entityType: 'Task',
+          entityId: task.id,
+          description: `${auditAgentName} created task "${task.title}"`,
+          metadata: {
+            source: auditSource,
+            emailIngestionId: ingestion.id,
+            messageId: ingestion.providerMessageId,
+            senderEmail: ingestion.senderEmail
+          },
+          userId: account.userId,
+          companyId: account.companyId
+        }
+      });
+    } else if (actionType === 'update_task' && item.taskId) {
+      const task = await prisma.task.findFirst({
+        where: { id: item.taskId, companyId: account.companyId }
+      });
+      if (task) {
+        const updateData = {};
+        if (item.status) updateData.status = item.status.trim().toUpperCase();
+        if (item.priority) updateData.priority = normalizePriority(item.priority);
+        if (item.dueDate) updateData.dueDate = resolveDueDate(item.dueDate);
+
+        if (Object.keys(updateData).length > 0) {
+          await prisma.task.update({ where: { id: task.id }, data: updateData });
+          loggedActions.push({ actionType: 'update_task', taskId: task.id, updates: updateData });
+
+          await prisma.auditLog.create({
+            data: {
+              action: 'TASK_UPDATED',
+              entityType: 'Task',
+              entityId: task.id,
+              description: `${auditAgentName} updated task "${task.title}"`,
+              metadata: { source: auditSource, emailIngestionId: ingestion.id, updates: updateData },
+              userId: account.userId,
+              companyId: account.companyId
+            }
+          });
+        }
       }
-    });
+    } else if (actionType === 'add_subtask' && item.parentTaskId) {
+      const parentTask = await prisma.task.findFirst({
+        where: { id: item.parentTaskId, companyId: account.companyId }
+      });
+      if (parentTask) {
+        const title = String(item.title || '').trim().slice(0, 200);
+        if (title) {
+          const subtask = await prisma.task.create({
+            data: {
+              title,
+              description: String(item.description || '').trim().slice(0, 1200) || null,
+              priority: normalizePriority(item.priority || classification.importance),
+              dueDate: resolveDueDate(item.dueDate),
+              status: 'TODO',
+              assignerId: account.userId,
+              assigneeId: account.userId,
+              companyId: account.companyId,
+              parentTaskId: parentTask.id
+            }
+          });
+          createdTaskIds.push(subtask.id);
+          loggedActions.push({ actionType: 'add_subtask', taskId: subtask.id, parentTaskId: parentTask.id, title: subtask.title });
 
-    createdTaskIds.push(task.id);
-    actions.push({ actionType: 'create_task', taskId: task.id, title: task.title });
-
-    await prisma.auditLog.create({
-      data: {
-        action: 'TASK_CREATED',
-        entityType: 'Task',
-        entityId: task.id,
-        description: `${auditAgentName} created task "${task.title}"`,
-        metadata: {
-          source: auditSource,
-          emailIngestionId: ingestion.id,
-          messageId: ingestion.providerMessageId,
-          senderEmail: ingestion.senderEmail
-        },
-        userId: account.userId,
-        companyId: account.companyId
+          await prisma.auditLog.create({
+            data: {
+              action: 'SUBTASK_CREATED',
+              entityType: 'Task',
+              entityId: subtask.id,
+              description: `${auditAgentName} created subtask "${subtask.title}" under "${parentTask.title}"`,
+              metadata: { source: auditSource, emailIngestionId: ingestion.id },
+              userId: account.userId,
+              companyId: account.companyId
+            }
+          });
+        }
       }
-    });
+    }
   }
 
-  return { createdTaskIds, actions };
+  return { createdTaskIds, actions: loggedActions };
 }
 
 module.exports = {

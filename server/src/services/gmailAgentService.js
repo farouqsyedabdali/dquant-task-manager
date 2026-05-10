@@ -304,11 +304,11 @@ async function processGmailMessage(account, messageId) {
   }
 
   try {
-    const classification = await classifyAndExtractTasks({ subject, cleanBody, senderEmail });
+    const classification = await classifyAndExtractTasks({ subject, cleanBody, senderEmail, account });
     if (
       !classification.isActionable ||
       classification.confidence < MIN_AUTO_CREATE_CONFIDENCE ||
-      classification.tasks.length === 0
+      classification.actions.length === 0
     ) {
       return prisma.emailIngestion.update({
         where: { id: ingestion.id },
