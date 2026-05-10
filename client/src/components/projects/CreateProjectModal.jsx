@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { projectsAPI, templatesAPI, aiAPI } from '../../services/api';
 import { formatDateForInput } from '../../utils/dateUtils';
 import IconButton from '../common/IconButton';
+import DatePicker from '../common/DatePicker';
 import ProjectIdeaSelectionModal from './ProjectIdeaSelectionModal';
 import { FaArrowLeft, FaTimes, FaCheck } from 'react-icons/fa';
 import { tialzFavicon } from '../../hooks/useThemeLogo';
@@ -935,17 +936,13 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                 Due Date <span className="text-error">*</span>
               </label>
-              <input
-                type="date"
+              <DatePicker
+                name="dueDate"
                 value={formData.dueDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-                className="input input-bordered w-full"
-                style={{
-                  backgroundColor: 'var(--color-bg-tertiary)',
-                  borderColor: 'var(--color-border-default)',
-                  color: 'var(--color-text-primary)',
-                }}
-                required
+                onChange={(e) => setFormData((prev) => ({ ...prev, dueDate: e.target.value }))}
+                placeholder="Select project due date"
+                showTime={false}
+                timeOptional={false}
                 min={formatDateForInput(new Date())}
               />
               <label className="label">

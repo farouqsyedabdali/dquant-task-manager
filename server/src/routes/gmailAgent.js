@@ -1,5 +1,5 @@
 const express = require('express');
-const { body } = require('express-validator');
+const { body, query } = require('express-validator');
 const auth = require('../middleware/auth');
 const { handleValidationErrors } = require('../middleware/validators');
 const {
@@ -8,6 +8,7 @@ const {
   getStatus,
   runSyncNow,
   updateSettings,
+  getCalendarEvents,
   addSkipSender,
   removeSkipSender
 } = require('../controllers/gmailAgentController');
@@ -17,6 +18,13 @@ const router = express.Router();
 router.use(auth);
 
 router.get('/status', getStatus);
+router.get(
+  '/calendar/events',
+  query('timeMin').notEmpty().isISO8601().withMessage('timeMin must be a valid ISO 8601 datetime'),
+  query('timeMax').notEmpty().isISO8601().withMessage('timeMax must be a valid ISO 8601 datetime'),
+  handleValidationErrors,
+  getCalendarEvents
+);
 router.post('/connect', connect);
 router.patch(
   '/accounts/:accountId',

@@ -12,6 +12,8 @@ const GmailAgentSettings = () => {
   const [skipSenders, setSkipSenders] = useState([]);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [skipSendersModalOpen, setSkipSendersModalOpen] = useState(false);
+  const [calendarScopeGranted, setCalendarScopeGranted] = useState(false);
+  const [googleCalendarWriteEnabled, setGoogleCalendarWriteEnabled] = useState(false);
 
   const loadStatus = async () => {
     try {
@@ -20,6 +22,8 @@ const GmailAgentSettings = () => {
       setAccount(data.account || null);
       setRecent(Array.isArray(data.recent) ? data.recent : []);
       setSkipSenders(Array.isArray(data.skipSenders) ? data.skipSenders : []);
+      setCalendarScopeGranted(Boolean(data.calendarScopeGranted));
+      setGoogleCalendarWriteEnabled(Boolean(data.googleCalendarWriteEnabled));
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load Gmail agent status');
     } finally {
@@ -62,6 +66,8 @@ const GmailAgentSettings = () => {
       const { data } = await gmailAgentAPI.syncNow(account.id);
       setAccount(data.account || account);
       setRecent(Array.isArray(data.recent) ? data.recent : recent);
+      if (data.calendarScopeGranted !== undefined) setCalendarScopeGranted(Boolean(data.calendarScopeGranted));
+      if (data.googleCalendarWriteEnabled !== undefined) setGoogleCalendarWriteEnabled(Boolean(data.googleCalendarWriteEnabled));
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to sync Gmail');
     } finally {
@@ -78,6 +84,8 @@ const GmailAgentSettings = () => {
       setRecent([]);
       setSkipSenders([]);
       setSkipSendersModalOpen(false);
+      setCalendarScopeGranted(false);
+      setGoogleCalendarWriteEnabled(false);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to disconnect Gmail');
     } finally {
@@ -128,10 +136,10 @@ const GmailAgentSettings = () => {
           <div>
             <h2 className="card-title text-xl mb-2" style={{ color: 'var(--color-text-primary)' }}>
               <FaEnvelope className="h-5 w-5" />
-              Gmail AI Agent
+              Google Mail &amp; Calendar
             </h2>
             <p className="text-sm leading-6" style={{ color: 'var(--color-text-secondary)' }}>
-              Connect Gmail so Tialz can read recent emails in the background, filter out noise, and automatically create tasks from important work.
+              One connection reads Gmail for the AI task agent and shows your primary Google Calendar alongside tasks in the app calendar. Grant both Mail and Calendar when prompted.
             </p>
           </div>
           <span
@@ -157,8 +165,19 @@ const GmailAgentSettings = () => {
           <div className="space-y-5">
             <div className="rounded-xl border p-4" style={{ borderColor: 'var(--color-border-default)', backgroundColor: 'var(--color-bg-tertiary)' }}>
               <div className="grid gap-3 md:grid-cols-2">
-                <Detail label="Gmail account" value={account.email} />
+                <Detail label="Google account" value={account.email} />
                 <Detail label="Status" value={account.status} />
+                <Detail label="Google Calendar in app" value={calendarScopeGranted ? 'Enabled' : 'Not linked — use Connect again'} />
+                <Detail
+                  label="Sync tasks to Google Calendar"
+                  value={
+                    googleCalendarWriteEnabled
+                      ? 'On (Tialz calendar)'
+                      : calendarScopeGranted
+                        ? 'Reconnect to grant event write'
+                        : 'Connect Google first'
+                  }
+                />
                 <Detail label="Auto-create tasks" value={account.syncEnabled ? 'On' : 'Paused'} />
                 <Detail label="Last checked" value={account.lastSyncedAt ? new Date(account.lastSyncedAt).toLocaleString() : 'Not yet'} />
               </div>
@@ -281,7 +300,7 @@ const GmailAgentSettings = () => {
               style={{ backgroundColor: 'var(--color-primary)' }}
             >
               <FaGoogle className="h-4 w-4" />
-              Connect Gmail
+              Connect Google (mail &amp; calendar)
             </button>
           </div>
         )}

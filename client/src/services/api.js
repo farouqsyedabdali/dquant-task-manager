@@ -43,6 +43,8 @@ export const authAPI = {
   registerPersonal: (personalData) => api.post('/auth/register-personal', personalData),
   deleteCompany: () => api.delete('/auth/company'),
   getMe: () => api.get('/auth/me'),
+  updateBriefingPreferences: (payload) => api.patch('/auth/briefing-preferences', payload),
+  previewBriefing: (kind) => api.get(`/auth/preview-briefing/${kind}`),
   updateAutoArchivePeriod: (autoArchivePeriod) => api.put('/auth/company/auto-archive', { autoArchivePeriod }),
   sendVerificationEmail: (email) => api.post('/email-verification/send', email),
   verifyEmail: (token) => api.post('/email-verification/verify', token),
@@ -115,6 +117,8 @@ export const aiAPI = {
 // Gmail Agent API
 export const gmailAgentAPI = {
   getStatus: () => api.get('/gmail-agent/status'),
+  /** @param {{ timeMin: string, timeMax: string }} params ISO range for Google Calendar primary calendar */
+  getCalendarEvents: (params) => api.get('/gmail-agent/calendar/events', { params }),
   connect: () => api.post('/gmail-agent/connect'),
   updateSettings: (accountId, settings) => api.patch(`/gmail-agent/accounts/${accountId}`, settings),
   syncNow: (accountId) => api.post(`/gmail-agent/accounts/${accountId}/sync`),

@@ -547,6 +547,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
                 Due Date *
               </label>
               <DatePicker
+                name="dueDate"
                 value={formData.dueDate || ''}
                 onChange={(e) => {
                   handleChange({
@@ -555,16 +556,14 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
                       value: e.target.value
                     }
                   });
-                  // Clear error when user selects a date
                   if (errors.dueDate) {
-                    setErrors(prev => ({ ...prev, dueDate: '' }));
+                    setErrors((prev) => ({ ...prev, dueDate: '' }));
                   }
                 }}
                 placeholder="Select due date"
                 showTime={false}
                 timeOptional={true}
-                className={errors.dueDate ? 'border-red-500' : ''}
-                style={errors.dueDate ? { borderColor: '#ef4444' } : {}}
+                error={!!errors.dueDate}
               />
               {errors.dueDate && (
                 <p className="text-red-400 text-sm mt-1">{errors.dueDate}</p>
@@ -609,15 +608,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
                   Stop repeating after (optional)
                 </label>
                 <DatePicker
+                  name="recurrenceEndsAt"
                   value={formData.recurrenceEndsAt || ''}
-                  onChange={(e) => {
-                    handleChange({
-                      target: {
-                        name: 'recurrenceEndsAt',
-                        value: e.target.value
-                      }
-                    });
-                  }}
+                  onChange={handleChange}
                   placeholder="Optional — pick last repeat date"
                   showTime={false}
                   timeOptional={false}

@@ -11,6 +11,7 @@ const {
   classifyAndExtractTasks,
   createTasksFromEmail
 } = require('./emailAgentShared');
+const { scheduleGoogleCalendarSyncForTask } = require('./gmailAgentService');
 
 const PROVIDER = 'MICROSOFT_OUTLOOK';
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
@@ -255,6 +256,9 @@ async function processOutlookMessage(account, messageId) {
       auditAgentName: 'Outlook agent',
       auditSource: 'outlook_agent'
     });
+    for (const tid of created.createdTaskIds) {
+      scheduleGoogleCalendarSyncForTask(tid);
+    }
     ingestion = await prisma.emailIngestion.update({
       where: { id: ingestion.id },
       data: {

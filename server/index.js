@@ -2,6 +2,8 @@ const app = require('./src/app')
 const { startReminderScheduler } = require('./src/utils/taskReminderScheduler')
 const { startAutoArchiveScheduler } = require('./src/utils/autoArchiveScheduler')
 const { startGmailAgentScheduler } = require('./src/utils/gmailAgentScheduler')
+const { startNotificationCleanupScheduler } = require('./src/utils/notificationCleanupScheduler')
+const { startBriefingScheduler } = require('./src/utils/briefingScheduler')
 const secureLogger = require('./src/middleware/secureLogger')
 const PORT = process.env.PORT || 3000
 
@@ -66,6 +68,11 @@ async function startServer() {
 
     // Start the Gmail agent scheduler
     startGmailAgentScheduler()
+
+    // Drop notifications older than 3 months (daily)
+    startNotificationCleanupScheduler()
+
+    startBriefingScheduler()
   })
 }
 

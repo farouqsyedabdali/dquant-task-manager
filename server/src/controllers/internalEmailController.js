@@ -4,6 +4,7 @@ const emailService = require('../services/emailService');
 const secureLogger = require('../middleware/secureLogger');
 const { parseLocalDate } = require('../utils/dateUtils');
 const { DEFAULT_OPENROUTER_MODEL } = require('../config/openRouterDefaults');
+const { scheduleGoogleCalendarSyncForTask } = require('../services/gmailAgentService');
 
 const PERSONAL_MONTHLY_LIMIT = 100;
 const BUSINESS_MONTHLY_LIMIT = 300;
@@ -230,6 +231,8 @@ async function createTasksFromEmail({ user, senderEmail, subject, cleanBody }) {
         companyId: user.companyId
       }
     });
+
+    scheduleGoogleCalendarSyncForTask(createdTask.id);
   }
 
   secureLogger.info('Inbound email tasks created successfully', {

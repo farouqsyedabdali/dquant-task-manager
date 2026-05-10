@@ -20,6 +20,7 @@ const {
   resolveTaskReference,
   taskAccessWhere
 } = require('./aiEntityResolver');
+const { scheduleGoogleCalendarSyncForTask } = require('./gmailAgentService');
 
 function actionError(message, status = 400) {
   const error = new Error(message);
@@ -455,6 +456,7 @@ async function executeAIAction({ req, actionId }) {
       select: { id: true, title: true, status: true, priority: true, dueDate: true, parentTaskId: true, projectId: true }
     });
     undoData = { type: 'archive_task', taskId: result.id };
+    scheduleGoogleCalendarSyncForTask(result.id);
   } else if (action.actionType === 'update_task') {
     result = await prisma.task.update({
       where: { id: resolved.taskId },
@@ -464,6 +466,7 @@ async function executeAIAction({ req, actionId }) {
       },
       select: { id: true, title: true, status: true, priority: true, dueDate: true, description: true }
     });
+    scheduleGoogleCalendarSyncForTask(result.id);
     undoData = { type: 'restore_task', taskId: resolved.taskId, beforeState: preview.beforeState };
   } else if (action.actionType === 'add_comment') {
     result = await prisma.comment.create({
@@ -573,6 +576,7 @@ async function undoAIAction({ req, actionId }) {
       }),
       select: { id: true, title: true, status: true, priority: true, dueDate: true }
     });
+    scheduleGoogleCalendarSyncForTask(undoData.taskId);
   } else if (undoData.type === 'delete_comment') {
     undoResult = await prisma.comment.deleteMany({
       where: { id: undoData.commentId, companyId: req.user.companyId, authorId: req.user.id }

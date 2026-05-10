@@ -13,7 +13,7 @@ import DeleteConfirmModal from '../common/DeleteConfirmModal';
 import TaskShareModal from './TaskShareModal';
 import TaskUpdatesModal from './TaskUpdatesModal';
 import SearchableDropdown from '../common/SearchableDropdown';
-import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
+import { usersAPI, tasksAPI } from '../../services/api';
 import useContactStore from '../../stores/contactStore';
 import AddContactModal from '../common/AddContactModal';
 import DatePicker from '../common/DatePicker';
@@ -23,7 +23,7 @@ import AIWarning from '../common/AIWarning';
 import { useToastContext } from '../../context/ToastContext';
 import {
   FaTimes, FaEdit, FaTrash, FaArchive, FaShareAlt, FaChartBar,
-  FaMagic, FaSave, FaPlus, FaUserPlus, FaCheck,
+  FaSave, FaPlus, FaUserPlus, FaCheck,
   FaCircle, FaSpinner, FaCheckCircle, FaPauseCircle, FaTimesCircle,
   FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle, FaUsers, FaSitemap
 } from 'react-icons/fa';
@@ -53,9 +53,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [coAssignees, setCoAssignees] = useState([]);
   const [isLoadingCoAssignees, setIsLoadingCoAssignees] = useState(false);
   const [isAddingCoAssignee, setIsAddingCoAssignee] = useState(false);
-  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
-  const [summaryData, setSummaryData] = useState(null);
-  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isUpdatesModalOpen, setIsUpdatesModalOpen] = useState(false);
   const [isAddTeamMemberModalOpen, setIsAddTeamMemberModalOpen] = useState(false);
   const [contacts, setContacts] = useState([]);
@@ -521,211 +518,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     }
   };
 
-  // Handle task summarization
-  const handleSummarizeTask = async () => {
-    if (!viewedTask) return;
-
-    setIsLoadingSummary(true);
-    try {
-      const summary = await createTaskSummary(viewedTask);
-      setSummaryData(summary);
-      setIsSummaryModalOpen(true);
-    } catch (error) {
-      console.error('Failed to create task summary:', error);
-      toast.error('Failed to create task summary');
-    } finally {
-      setIsLoadingSummary(false);
-    }
-  };
-
-  // Create a comprehensive task summary
-  const createTaskSummary = async (task) => {
-    const formatDate = (dateString) => {
-      if (!dateString) return 'No due date set';
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffTime = date.getTime() - now.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays < 0) {
-        return `Overdue by ${Math.abs(diffDays)} day(s)`;
-      } else if (diffDays === 0) {
-        return 'Due today';
-      } else if (diffDays === 1) {
-        return 'Due tomorrow';
-      } else {
-        return `Due in ${diffDays} day(s)`;
-      }
-    };
-
-    const getStatusEmoji = (status) => {
-      switch (status) {
-        case 'TODO': return '⏳';
-        case 'IN_PROGRESS': return '🔄';
-        case 'COMPLETED': return '✅';
-        case 'ON_HOLD': return '⏸️';
-        case 'CANCELLED': return '❌';
-        default: return '❓';
-      }
-    };
-
-    const getPriorityEmoji = (priority) => {
-      switch (priority) {
-        case 'URGENT': return '🚨';
-        case 'HIGH': return '🔴';
-        case 'MEDIUM': return '🟡';
-        case 'LOW': return '🟢';
-        default: return '⚪';
-      }
-    };
-
-    // Fetch comments for the task
-    let comments = [];
-    try {
-      const response = await commentsAPI.getByTaskId(task.id);
-      comments = response.data || [];
-    } catch (error) {
-      console.error('Failed to fetch comments for summary:', error);
-    }
-
-    // Create AI-style intelligent summary
-    const generateIntelligentSummary = () => {
-      let summary = '';
-
-      // Analyze task status and urgency
-      const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED';
-      const isUrgent = task.priority === 'URGENT' || task.priority === 'HIGH';
-      const hasSubtasks = task.subtasks && task.subtasks.length > 0;
-      const hasParent = task.parentTask;
-      const hasComments = comments.length > 0;
-
-      // Start with task overview
-      if (task.status === 'COMPLETED') {
-        summary += `✅ This task "${task.title}" has been completed`;
-      } else if (task.status === 'IN_PROGRESS') {
-        summary += `🔄 "${task.title}" is currently in progress`;
-      } else if (task.status === 'TODO') {
-        summary += `⏳ "${task.title}" is pending and ready to start`;
-      } else {
-        summary += `📋 "${task.title}" is currently ${task.status.toLowerCase().replace('_', ' ')}`;
-      }
-
-      // Add urgency context
-      if (isOverdue) {
-        summary += ' and is OVERDUE';
-      } else if (isUrgent && task.status !== 'COMPLETED') {
-        summary += ` with ${task.priority.toLowerCase()} priority`;
-      }
-
-      summary += '.';
-
-      // Add assignment context
-      if (task.assignee && task.assigner) {
-        if (task.assignee.id === task.assigner.id) {
-          summary += ` ${task.assignee.name} created this task for themselves`;
-        } else {
-          summary += ` Assigned by ${task.assigner.name} to ${task.assignee.name}`;
-        }
-      } else if (task.assignee) {
-        summary += ` Currently assigned to ${task.assignee.name}`;
-      } else if (task.assigner) {
-        summary += ` Created by ${task.assigner.name} but unassigned`;
-      }
-
-      // Add due date context
-      if (task.dueDate) {
-        const dueDate = new Date(task.dueDate);
-        const now = new Date();
-        const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (diffDays < 0) {
-          summary += ` and was due ${Math.abs(diffDays)} day(s) ago`;
-        } else if (diffDays === 0) {
-          summary += ' and is due today';
-        } else if (diffDays === 1) {
-          summary += ' and is due tomorrow';
-        } else if (diffDays <= 7) {
-          summary += ` and is due in ${diffDays} day(s)`;
-        } else {
-          summary += ` with a due date of ${dueDate.toLocaleDateString()}`;
-        }
-      }
-
-      summary += '.';
-
-      // Add description context if available
-      if (task.description && task.description.trim()) {
-        const descLength = task.description.length;
-        if (descLength > 100) {
-          summary += ` The task includes detailed requirements and specifications.`;
-        } else {
-          summary += ` Additional context: "${task.description.substring(0, 80)}${descLength > 80 ? '...' : ''}"`;
-        }
-      }
-
-      // Add hierarchy context
-      if (hasParent && hasSubtasks) {
-        summary += ` This is a mid-level task with ${task.subtasks.length} subtask(s) and is part of "${task.parentTask.title}".`;
-      } else if (hasParent) {
-        summary += ` This task is a subtask of "${task.parentTask.title}".`;
-      } else if (hasSubtasks) {
-        summary += ` This is a parent task managing ${task.subtasks.length} subtask(s).`;
-      }
-
-      // Add collaboration context
-      if (hasComments) {
-        const recentComments = comments.slice(0, 3);
-        const uniqueCommenters = [...new Set(recentComments.map(c => c.author?.name).filter(Boolean))];
-
-        if (uniqueCommenters.length > 1) {
-          summary += ` Active collaboration with ${comments.length} comment(s) from ${uniqueCommenters.length} team member(s).`;
-        } else if (comments.length > 1) {
-          summary += ` Includes ${comments.length} comment(s) with ongoing discussion.`;
-        } else {
-          summary += ` Has ${comments.length} comment for additional context.`;
-        }
-      }
-
-      // Add actionable insight
-      if (task.status !== 'COMPLETED') {
-        if (isOverdue && isUrgent) {
-          summary += ' ⚠️ IMMEDIATE ATTENTION REQUIRED - This high-priority task is overdue.';
-        } else if (isOverdue) {
-          summary += ' ⏰ This task requires attention as it has passed its due date.';
-        } else if (isUrgent && task.status === 'TODO') {
-          summary += ' 🚨 High priority task ready to begin.';
-        } else if (task.status === 'IN_PROGRESS') {
-          summary += ' 👍 Task is actively being worked on.';
-        }
-      } else {
-        summary += ' ✨ Task successfully completed.';
-      }
-
-      return summary;
-    };
-
-    const textSummary = generateIntelligentSummary();
-
-    return {
-      title: task.title,
-      description: task.description || 'No description provided',
-      textSummary: textSummary,
-      status: `${getStatusEmoji(task.status)} ${task.status.replace('_', ' ')}`,
-      priority: `${getPriorityEmoji(task.priority)} ${task.priority}`,
-      dueDate: formatDate(task.dueDate),
-      createdBy: task.assigner?.name || 'Unknown',
-      assignedTo: task.assignee?.name || 'Unassigned',
-      createdAt: new Date(task.createdAt).toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
-      comments: comments.length,
-      subtasks: task.subtasks?.length || 0
-    };
-  };
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'TODO':
@@ -809,7 +601,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           animation: fadeIn 0.3s ease-out;
         }
       `}</style>
-      <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }} onClick={onClose}>
+      <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }}>
         <div
           className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto scrollbar-thin transition-colors duration-200"
           style={{
@@ -895,16 +687,16 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     className="!bg-blue-600 hover:!bg-blue-700"
                   />
 
-                  <IconButton
-                    icon={<FaMagic />}
-                    label="Summary"
-                    variant="primary"
-                    size="sm"
-                    onClick={handleSummarizeTask}
-                    disabled={isLoadingSummary}
-                    loading={isLoadingSummary}
-                    className="!bg-purple-600 hover:!bg-purple-700"
-                  />
+                  {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
+                    <IconButton
+                      icon={<FaPlus />}
+                      label="Add subtask"
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setIsAddSubtaskOpen(true)}
+                      className="!bg-purple-600 hover:!bg-purple-700"
+                    />
+                  )}
 
                   {canShare && (
                     <IconButton
@@ -1153,25 +945,15 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                   </h4>
                   {isEditing ? (
                     <div>
-                      <input
-                        type="datetime-local"
+                      <DatePicker
                         name="dueDate"
                         value={formData.dueDate}
                         onChange={handleChange}
-                        className={`input w-full transition-colors duration-200 ${errors.dueDate ? 'input-error' : ''}`}
-                        style={{
-                          backgroundColor: 'var(--color-bg-tertiary)',
-                          borderColor: errors.dueDate ? '#ef4444' : 'var(--color-border-default)',
-                          color: 'var(--color-text-primary)',
-                        }}
-                        required
+                        placeholder="Select due date and time"
+                        showTime={true}
+                        timeOptional={false}
                         min={new Date().toISOString().slice(0, 16)}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-primary)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-border-default)';
-                        }}
+                        error={!!errors.dueDate}
                       />
                       {errors.dueDate && (
                         <label className="label">
@@ -1261,15 +1043,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                       </h4>
                       {canEditRecurrence && isEditing ? (
                         <DatePicker
+                          name="recurrenceEndsAt"
                           value={formData.recurrenceEndsAt || ''}
-                          onChange={(e) => {
-                            handleChange({
-                              target: {
-                                name: 'recurrenceEndsAt',
-                                value: e.target.value
-                              }
-                            });
-                          }}
+                          onChange={handleChange}
                           placeholder="Optional — pick last repeat date"
                           showTime={false}
                           timeOptional={false}
@@ -2044,22 +1820,13 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
                         {/* Subtasks */}
                         <div>
-                          <div className="flex items-center justify-between mb-2 h-8">
+                          <div className="mb-2">
                             <h4
                               className="text-sm font-semibold transition-colors duration-200"
                               style={{ color: 'var(--color-text-secondary)' }}
                             >
                               Subtasks {viewedTask.subtasks && viewedTask.subtasks.length > 0 && `(${viewedTask.subtasks.length})`}
                             </h4>
-                            {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
-                              <IconButton
-                                icon={<FaPlus />}
-                                label="Add"
-                                variant="primary"
-                                size="sm"
-                                onClick={() => setIsAddSubtaskOpen(true)}
-                              />
-                            )}
                           </div>
 
                           {viewedTask.subtasks && viewedTask.subtasks.length > 0 ? (
@@ -2188,6 +1955,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             </div>
           </div>
         </div>
+      </div>
 
         {/* Delete Confirmation Modal */}
         <DeleteConfirmModal
@@ -2317,145 +2085,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           ]}
         />
 
-        {/* Task Summary Modal */}
-        {isSummaryModalOpen && summaryData && (
-          <div 
-            className="modal modal-open backdrop-blur-sm" 
-            style={{ zIndex: 60 }}
-            onClick={(e) => {
-              // Only close if clicking directly on the backdrop
-              if (e.target === e.currentTarget) {
-                e.stopPropagation(); // Prevent event from bubbling to parent TaskModal
-                setIsSummaryModalOpen(false);
-                setSummaryData(null);
-              }
-            }}
-          >
-            <div
-              className="modal-box max-w-6xl max-h-[95vh] overflow-y-auto"
-              style={{
-                backgroundColor: 'var(--color-bg-secondary)',
-                borderColor: 'var(--color-border-default)',
-                color: 'var(--color-text-primary)',
-              }}
-            >
-              <div className="flex justify-between items-start mb-6">
-                <h3
-                  className="text-2xl font-bold"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  Task Summary
-                </h3>
-                <IconButton
-                  icon={<FaTimes />}
-                  label="Close"
-                  iconOnly={true}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setIsSummaryModalOpen(false);
-                    setSummaryData(null);
-                  }}
-                  className="!p-2 !rounded-full"
-                />
-              </div>
-
-              <div className="space-y-6">
-                {/* AI Analysis Section */}
-                <div
-                  className="rounded-lg p-4"
-                  style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-                >
-                  <h4
-                    className="text-lg font-semibold mb-3"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    Content Summary
-                  </h4>
-                  <div
-                    className="rounded p-3 leading-relaxed"
-                    style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}
-                  >
-                    {summaryData.textSummary}
-                  </div>
-                </div>
-
-                {/* Task Details Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Status & Priority */}
-                  <div
-                    className="rounded-lg p-4"
-                    style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-                  >
-                    <h4
-                      className="text-lg font-semibold mb-3"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      📊 Status &amp; Priority
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Status:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.status}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Priority:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.priority}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Due Date:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.dueDate}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Assignment */}
-                  <div
-                    className="rounded-lg p-4"
-                    style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-                  >
-                    <h4
-                      className="text-lg font-semibold mb-3"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      👥 Assignment
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Created By:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.createdBy}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Assigned To:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.assignedTo}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Created:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.createdAt}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Activity */}
-                  <div className="bg-gray-700 rounded-lg p-4">
-                    <h4 className="text-lg font-semibold text-white mb-3">📈 Activity</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">Comments:</span>
-                        <span className="text-white">{summaryData.comments}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">Subtasks:</span>
-                        <span className="text-white">{summaryData.subtasks}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
     </>
   );
 

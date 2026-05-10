@@ -15,6 +15,24 @@ const {
 const PROVIDER = 'GOOGLE_GMAIL';
 const MAX_MESSAGES_PER_SYNC = Number(process.env.GMAIL_AGENT_MAX_MESSAGES || 10);
 const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+const GOOGLE_CALENDAR_READONLY_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+const GOOGLE_CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+
+/** Can read primary calendar in the app (readonly or events scope). */
+function accountHasGoogleCalendarReadScope(scopes) {
+  if (!Array.isArray(scopes)) return false;
+  return scopes.includes(GOOGLE_CALENDAR_READONLY_SCOPE) || scopes.includes(GOOGLE_CALENDAR_EVENTS_SCOPE);
+}
+
+/** Can create/update task events in Google Calendar. */
+function accountHasGoogleCalendarWriteScope(scopes) {
+  return Array.isArray(scopes) && scopes.includes(GOOGLE_CALENDAR_EVENTS_SCOPE);
+}
+
+/** @deprecated use accountHasGoogleCalendarReadScope */
+function accountHasGoogleCalendarScope(scopes) {
+  return accountHasGoogleCalendarReadScope(scopes);
+}
 
 function createOAuthClient() {
   return new google.auth.OAuth2(
@@ -107,11 +125,11 @@ async function upsertGmailAccountFromOAuth({ userId, googleUser }) {
   });
 }
 
-async function buildGmailClient(account) {
+async function authorizeGoogleOAuthClient(account) {
   const oauth2Client = createOAuthClient();
   oauth2Client.setCredentials({
-    access_token: decryptToken(account.encryptedAccessToken),
-    refresh_token: decryptToken(account.encryptedRefreshToken),
+    access_token: account.encryptedAccessToken ? decryptToken(account.encryptedAccessToken) : undefined,
+    refresh_token: account.encryptedRefreshToken ? decryptToken(account.encryptedRefreshToken) : undefined,
     expiry_date: account.tokenExpiry?.getTime()
   });
 
@@ -132,7 +150,76 @@ async function buildGmailClient(account) {
     oauth2Client.setCredentials(credentials);
   }
 
-  return google.gmail({ version: 'v1', auth: oauth2Client });
+  return oauth2Client;
+}
+
+async function buildGmailClient(account) {
+  const auth = await authorizeGoogleOAuthClient(account);
+  return google.gmail({ version: 'v1', auth });
+}
+
+function normalizeGoogleCalendarEvent(ev) {
+  const allDay = Boolean(ev.start?.date && !ev.start?.dateTime);
+  const start = allDay ? ev.start.date : ev.start?.dateTime;
+  const end = allDay ? ev.end?.date : ev.end?.dateTime;
+  return {
+    id: ev.id,
+    title: ev.summary || '(No title)',
+    start,
+    end: end || start,
+    allDay,
+    htmlLink: ev.htmlLink || null
+  };
+}
+
+/**
+ * @param {number} userId
+ * @param {{ timeMin: string, timeMax: string }} range ISO datetimes for Calendar API
+ * @returns {Promise<{ events: object[], calendarScopeGranted: boolean }>}
+ */
+async function listGoogleCalendarEventsForUser(userId, { timeMin, timeMax }) {
+  const account = await prisma.connectedAccount.findFirst({
+    where: { userId, provider: PROVIDER, status: { not: 'REVOKED' } },
+    orderBy: { updatedAt: 'desc' }
+  });
+
+  if (!account || !account.encryptedRefreshToken) {
+    return {
+      events: [],
+      calendarScopeGranted: false,
+      googleAccountConnected: false,
+      googleCalendarWriteEnabled: false
+    };
+  }
+
+  if (!accountHasGoogleCalendarReadScope(account.scopes)) {
+    return {
+      events: [],
+      calendarScopeGranted: false,
+      googleAccountConnected: true,
+      googleCalendarWriteEnabled: accountHasGoogleCalendarWriteScope(account.scopes)
+    };
+  }
+
+  const auth = await authorizeGoogleOAuthClient(account);
+  const calendar = google.calendar({ version: 'v3', auth });
+  const { data } = await calendar.events.list({
+    calendarId: 'primary',
+    timeMin,
+    timeMax,
+    singleEvents: true,
+    orderBy: 'startTime',
+    maxResults: 250,
+    showDeleted: false
+  });
+
+  const events = (data.items || []).map(normalizeGoogleCalendarEvent);
+  return {
+    events,
+    calendarScopeGranted: true,
+    googleAccountConnected: true,
+    googleCalendarWriteEnabled: accountHasGoogleCalendarWriteScope(account.scopes)
+  };
 }
 
 async function processGmailMessage(account, messageId) {
@@ -243,6 +330,9 @@ async function processGmailMessage(account, messageId) {
       auditAgentName: 'Gmail agent',
       auditSource: 'gmail_agent'
     });
+    for (const tid of created.createdTaskIds) {
+      scheduleGoogleCalendarSyncForTask(tid);
+    }
     ingestion = await prisma.emailIngestion.update({
       where: { id: ingestion.id },
       data: {
@@ -362,14 +452,217 @@ async function getGmailAgentStatus(userId) {
       })
     : [];
 
-  return { account, recent };
+  return {
+    account,
+    recent,
+    calendarScopeGranted: account ? accountHasGoogleCalendarReadScope(account.scopes) : false,
+    googleCalendarWriteEnabled: account ? accountHasGoogleCalendarWriteScope(account.scopes) : false
+  };
+}
+
+async function ensureTialzGoogleCalendar(accountRow) {
+  if (accountRow.tialzGoogleCalendarId) return accountRow.tialzGoogleCalendarId;
+
+  const auth = await authorizeGoogleOAuthClient(accountRow);
+  const calendar = google.calendar({ version: 'v3', auth });
+  const { data } = await calendar.calendars.insert({
+    requestBody: {
+      summary: 'Tialz',
+      description: 'Tasks synced from Tialz. Toggle this calendar in Google Calendar to show or hide them.',
+      timeZone: 'UTC'
+    }
+  });
+  const calendarId = data.id;
+  await prisma.connectedAccount.update({
+    where: { id: accountRow.id },
+    data: { tialzGoogleCalendarId: calendarId }
+  });
+  return calendarId;
+}
+
+async function findGoogleConnectedAccountForUser(userId) {
+  return prisma.connectedAccount.findFirst({
+    where: {
+      userId,
+      provider: PROVIDER,
+      status: { not: 'REVOKED' },
+      encryptedRefreshToken: { not: null }
+    },
+    orderBy: { updatedAt: 'desc' }
+  });
+}
+
+/**
+ * Remove event from Google; optionally clear task sync fields in DB (when clearTaskFields true).
+ */
+async function deleteGoogleCalendarEventForTask(task, { clearTaskFields = true } = {}) {
+  if (!task.googleCalendarEventId && !task.googleCalendarSyncedUserId) {
+    return;
+  }
+  if (!task.googleCalendarEventId || !task.googleCalendarSyncedUserId) {
+    if (clearTaskFields && task.id) {
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { googleCalendarEventId: null, googleCalendarSyncedUserId: null }
+      });
+    }
+    return;
+  }
+
+  const account = await findGoogleConnectedAccountForUser(task.googleCalendarSyncedUserId);
+  if (!account?.tialzGoogleCalendarId || !accountHasGoogleCalendarWriteScope(account.scopes)) {
+    if (clearTaskFields && task.id) {
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { googleCalendarEventId: null, googleCalendarSyncedUserId: null }
+      });
+    }
+    return;
+  }
+
+  try {
+    const auth = await authorizeGoogleOAuthClient(account);
+    const calendar = google.calendar({ version: 'v3', auth });
+    await calendar.events.delete({
+      calendarId: account.tialzGoogleCalendarId,
+      eventId: task.googleCalendarEventId
+    });
+  } catch (err) {
+    secureLogger.error('Google Calendar event delete failed', {
+      taskId: task.id,
+      message: err.message
+    });
+  }
+
+  if (clearTaskFields && task.id) {
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { googleCalendarEventId: null, googleCalendarSyncedUserId: null }
+    });
+  }
+}
+
+function pickCalendarSyncUserId(task) {
+  if (task.assigneeId) return task.assigneeId;
+  return task.assignerId;
+}
+
+function buildEventSummary(task) {
+  const prefix = task.status === 'COMPLETED' ? '[Tialz] ✓ ' : '[Tialz] ';
+  if (task.status === 'CANCELLED') return `${prefix}(cancelled) ${task.title}`;
+  return `${prefix}${task.title}`;
+}
+
+async function syncTaskToGoogleCalendarById(taskId) {
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task) return;
+
+  const shouldNotSync =
+    task.isDraft ||
+    task.archived ||
+    !task.dueDate ||
+    task.status === 'CANCELLED';
+
+  if (shouldNotSync) {
+    await deleteGoogleCalendarEventForTask(task, { clearTaskFields: true });
+    return;
+  }
+
+  const targetUserId = pickCalendarSyncUserId(task);
+  const account = await findGoogleConnectedAccountForUser(targetUserId);
+
+  if (!account || !accountHasGoogleCalendarWriteScope(account.scopes)) {
+    await deleteGoogleCalendarEventForTask(task, { clearTaskFields: true });
+    return;
+  }
+
+  if (
+    task.googleCalendarSyncedUserId &&
+    task.googleCalendarEventId &&
+    task.googleCalendarSyncedUserId !== targetUserId
+  ) {
+    const prev = {
+      id: task.id,
+      googleCalendarEventId: task.googleCalendarEventId,
+      googleCalendarSyncedUserId: task.googleCalendarSyncedUserId
+    };
+    await deleteGoogleCalendarEventForTask(prev, { clearTaskFields: true });
+    const reloaded = await prisma.task.findUnique({ where: { id: taskId } });
+    if (!reloaded) return;
+    Object.assign(task, reloaded);
+  }
+
+  const calendarId = await ensureTialzGoogleCalendar(account);
+  const reloadedAccount = await prisma.connectedAccount.findUnique({ where: { id: account.id } });
+  const auth = await authorizeGoogleOAuthClient(reloadedAccount);
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const startAt = new Date(task.dueDate);
+  const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+  const requestBody = {
+    summary: buildEventSummary(task),
+    description:
+      (task.description || '').slice(0, 8000) +
+      (task.description && task.description.length > 8000 ? '\n…' : ''),
+    start: { dateTime: startAt.toISOString(), timeZone: 'UTC' },
+    end: { dateTime: endAt.toISOString(), timeZone: 'UTC' },
+    extendedProperties: { private: { tialzTaskId: String(task.id) } }
+  };
+
+  try {
+    if (task.googleCalendarEventId) {
+      await calendar.events.patch({
+        calendarId,
+        eventId: task.googleCalendarEventId,
+        requestBody
+      });
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { googleCalendarSyncedUserId: targetUserId }
+      });
+    } else {
+      const { data } = await calendar.events.insert({
+        calendarId,
+        requestBody
+      });
+      await prisma.task.update({
+        where: { id: task.id },
+        data: {
+          googleCalendarEventId: data.id,
+          googleCalendarSyncedUserId: targetUserId
+        }
+      });
+    }
+  } catch (err) {
+    secureLogger.error('Google Calendar task sync failed', { taskId: task.id, message: err.message });
+  }
+}
+
+function scheduleGoogleCalendarSyncForTask(taskId) {
+  setImmediate(() => {
+    syncTaskToGoogleCalendarById(taskId).catch((err) => {
+      secureLogger.error('Google Calendar task sync scheduler error', {
+        taskId,
+        message: err.message
+      });
+    });
+  });
 }
 
 module.exports = {
   PROVIDER,
   GMAIL_SCOPE,
+  GOOGLE_CALENDAR_READONLY_SCOPE,
+  GOOGLE_CALENDAR_EVENTS_SCOPE,
+  accountHasGoogleCalendarScope,
+  accountHasGoogleCalendarReadScope,
+  accountHasGoogleCalendarWriteScope,
   upsertGmailAccountFromOAuth,
   getGmailAgentStatus,
+  listGoogleCalendarEventsForUser,
   syncAllGmailAccounts,
-  syncGmailAccount
+  syncGmailAccount,
+  syncTaskToGoogleCalendarById,
+  scheduleGoogleCalendarSyncForTask,
+  deleteGoogleCalendarEventForTask
 };

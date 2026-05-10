@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const axios = require('axios');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const { StringDecoder } = require('string_decoder');
 const { validators, handleValidationErrors } = require('../middleware/validators');
 const { parseLocalDate } = require('../utils/dateUtils');
 const {
@@ -570,8 +571,9 @@ router.post('/chat',
 
       let fullContent = '';
       let buffer = '';
+      const decoder = new StringDecoder('utf8');
       openrouterRes.data.on('data', chunk => {
-        buffer += chunk.toString();
+        buffer += decoder.write(chunk);
         let lines = buffer.split('\n');
         buffer = lines.pop();
 
@@ -595,6 +597,7 @@ router.post('/chat',
         }
       });
       openrouterRes.data.on('end', () => {
+        buffer += decoder.end();
         if (!responded) {
           void handleAIResponse(fullContent.trim()).catch((err) => console.error('handleAIResponse', err));
         }
@@ -709,17 +712,19 @@ router.post('/chat-stream', validators.aiText('message'), handleValidationErrors
     let fullContent = '';
     let buf = '';
     let streamSettled = false;
+    const decoder = new StringDecoder('utf8');
 
     try {
       await new Promise((resolve, reject) => {
         const finish = () => {
           if (streamSettled) return;
+          buf += decoder.end();
           streamSettled = true;
           resolve();
         };
         upstream.on('data', (chunk) => {
           if (clientClosed) return;
-          buf += chunk.toString();
+          buf += decoder.write(chunk);
           const lines = buf.split('\n');
           buf = lines.pop() || '';
           for (const line of lines) {
@@ -926,10 +931,11 @@ Output: {"title": "Update website homepage", "description": "Update the website 
           }
         }, 30000);
 
+        const decoder = new StringDecoder('utf8');
         openrouterRes.data.on('data', chunk => {
           if (responseHandled) return; // Don't process if response already handled
 
-          buffer += chunk.toString();
+          buffer += decoder.write(chunk);
           let lines = buffer.split('\n');
           buffer = lines.pop();
 
@@ -947,6 +953,7 @@ Output: {"title": "Update website homepage", "description": "Update the website 
               if (data === '[DONE]' && !responseHandled) {
                 responseHandled = true;
                 clearTimeout(timeoutId);
+                buffer += decoder.end();
 
                 try {
                   // Extract JSON from the response
@@ -1016,10 +1023,12 @@ Output: {"title": "Update website homepage", "description": "Update the website 
       if (err.response?.data && typeof err.response.data.read === 'function') {
         try {
           let errorBody = '';
+          const errDecoder = new StringDecoder('utf8');
           err.response.data.on('data', chunk => {
-            errorBody += chunk.toString();
+            errorBody += errDecoder.write(chunk);
           });
           err.response.data.on('end', () => {
+            errorBody += errDecoder.end();
             console.error('OpenRouter actual error message:', errorBody);
           });
         } catch (readError) {
@@ -1148,6 +1157,7 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
       let fullContent = '';
       let buffer = '';
       let responseHandled = false;
+      const decoder = new StringDecoder('utf8');
 
       await new Promise((resolve, reject) => {
         const timeoutId = setTimeout(() => {
@@ -1160,7 +1170,7 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
         openrouterRes.data.on('data', chunk => {
           if (responseHandled) return;
 
-          buffer += chunk.toString();
+          buffer += decoder.write(chunk);
           let lines = buffer.split('\n');
           buffer = lines.pop();
 
@@ -1178,6 +1188,7 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
               if (data === '[DONE]' && !responseHandled) {
                 responseHandled = true;
                 clearTimeout(timeoutId);
+                buffer += decoder.end();
 
                 try {
                   // Extract JSON from the response

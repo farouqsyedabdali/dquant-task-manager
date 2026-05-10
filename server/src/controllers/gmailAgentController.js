@@ -1,6 +1,10 @@
 const prisma = require('../lib/prisma');
 const { getGmailAgentAuthUrl } = require('../services/googleAuthService');
-const { getGmailAgentStatus, syncGmailAccount } = require('../services/gmailAgentService');
+const {
+  getGmailAgentStatus,
+  syncGmailAccount,
+  listGoogleCalendarEventsForUser
+} = require('../services/gmailAgentService');
 
 const getStatus = async (req, res) => {
   try {
@@ -79,7 +83,8 @@ const disconnect = async (req, res) => {
         status: 'REVOKED',
         syncEnabled: false,
         encryptedAccessToken: null,
-        encryptedRefreshToken: null
+        encryptedRefreshToken: null,
+        tialzGoogleCalendarId: null
       }
     });
 
@@ -142,6 +147,17 @@ const addSkipSender = async (req, res) => {
   }
 };
 
+const getCalendarEvents = async (req, res) => {
+  try {
+    const { timeMin, timeMax } = req.query;
+    const result = await listGoogleCalendarEventsForUser(req.user.id, { timeMin, timeMax });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Google Calendar events error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to fetch Google Calendar events' });
+  }
+};
+
 const removeSkipSender = async (req, res) => {
   try {
     const id = Number(req.params.ruleId);
@@ -171,6 +187,7 @@ module.exports = {
   updateSettings,
   disconnect,
   runSyncNow,
+  getCalendarEvents,
   addSkipSender,
   removeSkipSender
 };

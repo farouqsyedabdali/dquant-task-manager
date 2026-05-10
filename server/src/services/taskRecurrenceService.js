@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const { createNotification } = require('../controllers/notificationController');
+const { scheduleGoogleCalendarSyncForTask } = require('./gmailAgentService');
 
 function sameLocalCalendarDay(a, b) {
   if (!a || !b) return false;
@@ -156,6 +157,8 @@ async function spawnNextRecurrenceAfterCompletion(completedTask) {
       console.error('Notification for recurring task failed:', e);
     }
   }
+
+  scheduleGoogleCalendarSyncForTask(newTask.id);
 
   return newTask;
 }

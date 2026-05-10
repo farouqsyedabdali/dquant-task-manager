@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const { sendPushToUser } = require('../services/pushNotificationService');
+const { purgeExpiredNotifications } = require('../utils/notificationRetention');
 
 // Get notifications for a user
 const getNotifications = async (req, res) => {
@@ -7,21 +8,8 @@ const getNotifications = async (req, res) => {
     const userId = req.user.id;
     const companyId = req.user.companyId;
     
-    // Clean up read notifications older than 7 days
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    await prisma.notification.deleteMany({
-      where: {
-        userId: userId,
-        companyId: companyId,
-        isRead: true,
-        readAt: {
-          lt: sevenDaysAgo
-        }
-      }
-    });
-    
+    await purgeExpiredNotifications({ userId, companyId });
+
     const notifications = await prisma.notification.findMany({
       where: {
         userId: userId,
@@ -72,20 +60,7 @@ const markAsRead = async (req, res) => {
       return res.status(404).json({ error: 'Notification not found' });
     }
 
-    // Clean up read notifications older than 7 days
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    await prisma.notification.deleteMany({
-      where: {
-        userId: userId,
-        companyId: companyId,
-        isRead: true,
-        readAt: {
-          lt: sevenDaysAgo
-        }
-      }
-    });
+    await purgeExpiredNotifications({ userId, companyId });
 
     res.json({ success: true, message: 'Notification marked as read' });
   } catch (error) {
@@ -113,20 +88,7 @@ const markAllAsRead = async (req, res) => {
       }
     });
 
-    // Clean up read notifications older than 7 days
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    await prisma.notification.deleteMany({
-      where: {
-        userId: userId,
-        companyId: companyId,
-        isRead: true,
-        readAt: {
-          lt: sevenDaysAgo
-        }
-      }
-    });
+    await purgeExpiredNotifications({ userId, companyId });
 
     res.json({ success: true, message: 'All notifications marked as read' });
   } catch (error) {
@@ -205,17 +167,23 @@ const createNotification = async (type, title, message, taskId, userId, companyI
         type,
         title,
         message,
-        taskId,
+        taskId: taskId ?? null,
         userId,
         companyId
       }
     });
 
+    const pushData = {
+      type,
+      taskId: taskId != null ? String(taskId) : '',
+      notificationId: String(notification.id),
+    };
+
     // Fire-and-forget push notification to the user's devices
     sendPushToUser(userId, {
       title,
       body: message,
-      data: { type, taskId: String(taskId), notificationId: String(notification.id) },
+      data: pushData,
     }).catch(() => {});
 
     return notification;

@@ -4,6 +4,10 @@ const { logAuditActionDirect } = require('../middleware/auditLogger')
 const { autoChangeStatusToInProgress, markStatusAsManuallyChanged } = require('../utils/autoStatusManager')
 const { parseLocalDate, isDateInFuture } = require('../utils/dateUtils')
 const { spawnNextRecurrenceAfterCompletion } = require('../services/taskRecurrenceService')
+const {
+  scheduleGoogleCalendarSyncForTask,
+  deleteGoogleCalendarEventForTask
+} = require('../services/gmailAgentService')
 
 function normalizeTaskRecurrenceInput(raw, parentTaskId) {
   if (parentTaskId) return 'NONE'
@@ -11,12 +15,39 @@ function normalizeTaskRecurrenceInput(raw, parentTaskId) {
   return 'NONE'
 }
 
+/** Main dashboard visibility (non-draft, non-archived): same rules as default “all” task list. */
+function buildDashboardTaskVisibilityWhere(user) {
+  const userId = user.id
+  const userRole = user.role
+  const companyId = user.companyId
+  const base = { archived: false }
+  if (userRole === 'EMPLOYEE') {
+    return {
+      ...base,
+      OR: [
+        { AND: [{ assigneeId: userId }, { isDraft: false }] },
+        { AND: [{ assignerId: userId }, { isDraft: false }] },
+        { AND: [{ coAssignees: { some: { userId } } }, { isDraft: false }] },
+        { AND: [{ sharedWith: { some: { userId } } }, { isDraft: false }] },
+        { AND: [{ collaborators: { some: { userId, companyId } } }, { isDraft: false }] }
+      ]
+    }
+  }
+  return {
+    ...base,
+    OR: [
+      { AND: [{ companyId }, { isDraft: false }] },
+      { AND: [{ assigneeId: userId }, { isDraft: false }] },
+      { AND: [{ collaborators: { some: { userId, companyId } } }, { isDraft: false }] }
+    ]
+  }
+}
+
 // Get tasks based on user role and assignments
 const getTasks = async (req, res) => {
   try {
     const { status, priority, search, type = 'all', dueDateFilter } = req.query;
     const userId = req.user.id;
-    const userRole = req.user.role;
     const companyId = req.user.companyId;
 
     let whereClause = {
@@ -37,24 +68,8 @@ const getTasks = async (req, res) => {
       // Only show non-draft tasks they created (drafts only visible in project view)
       whereClause.assignerId = userId;
       whereClause.isDraft = false;
-    } else if (userRole === 'EMPLOYEE') {
-      // Employees see tasks assigned to them, tasks they created, tasks they're co-assigned to, shared with them, or collaborating
-      // EXCLUDE ALL DRAFT TASKS - they should only be visible in project view
-      whereClause.OR = [
-        { AND: [{ assigneeId: userId }, { isDraft: false }] },
-        { AND: [{ assignerId: userId }, { isDraft: false }] }, // Exclude drafts from created tasks too
-        { AND: [{ coAssignees: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft co-assignments
-        { AND: [{ sharedWith: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft shares
-        { AND: [{ collaborators: { some: { userId: userId, companyId: companyId } } }, { isDraft: false }] } // Exclude draft collaborations
-      ];
     } else {
-      // Admins see all tasks in their company OR tasks they're collaborating on OR tasks assigned to them
-      // EXCLUDE ALL DRAFT TASKS - they should only be visible in project view
-      whereClause.OR = [
-        { AND: [{ companyId: companyId }, { isDraft: false }] }, // Exclude drafts from company tasks
-        { AND: [{ assigneeId: userId }, { isDraft: false }] },
-        { AND: [{ collaborators: { some: { userId: userId, companyId: companyId } } }, { isDraft: false }] } // Exclude draft collaborations
-      ];
+      Object.assign(whereClause, buildDashboardTaskVisibilityWhere(req.user))
     }
 
     // Add filters
@@ -779,6 +794,8 @@ const createTask = async (req, res) => {
       }
     });
 
+    scheduleGoogleCalendarSyncForTask(task.id);
+
     res.status(201).json(task);
   } catch (error) {
     console.error('Create task error:', error);
@@ -1235,6 +1252,8 @@ const updateTask = async (req, res) => {
       }
     }
 
+    scheduleGoogleCalendarSyncForTask(updatedTask.id);
+
     res.json(responsePayload);
   } catch (error) {
     console.error('Update task error:', error);
@@ -1310,6 +1329,8 @@ const deleteTask = async (req, res) => {
         subtasksCount: task.subtasks.length
       }
     });
+
+    await deleteGoogleCalendarEventForTask(task, { clearTaskFields: false });
 
     await prisma.task.delete({
       where: { id: parseInt(id) }
@@ -1440,6 +1461,8 @@ const updateTaskStatus = async (req, res) => {
       await markStatusAsManuallyChanged(parseInt(id), companyId);
     }
 
+    scheduleGoogleCalendarSyncForTask(parseInt(id));
+
     res.json(statusPayload);
   } catch (error) {
     console.error('Update task status error:', error);
@@ -1539,6 +1562,7 @@ const updateTaskPriority = async (req, res) => {
     });
 
     res.json(updatedTask);
+    scheduleGoogleCalendarSyncForTask(parseInt(id));
   } catch (error) {
     console.error('Update task priority error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -1892,6 +1916,7 @@ const getCoAssignees = async (req, res) => {
 };
 
 module.exports = {
+  buildDashboardTaskVisibilityWhere,
   getTasks,
   getTask,
   createTask,

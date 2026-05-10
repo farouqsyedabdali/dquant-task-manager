@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { taskShareAPI, usersAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
+import AddContactModal from '../common/AddContactModal';
 import IconButton from '../common/IconButton';
 import useAuthStore from '../../context/authStore';
 import useContactStore from '../../stores/contactStore';
@@ -15,8 +16,8 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
   const [isLoadingShares, setIsLoadingShares] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState(''); // Unified field for user_id or contact_id
-  const [recipientEmail, setRecipientEmail] = useState('');
-  const [permissionLevel, setPermissionLevel] = useState('VIEWER'); // 'VIEWER' or 'COMMENTER'
+  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
   const [error, setError] = useState(null);
   
   // Check if this is a personal account
@@ -110,12 +111,24 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
     }
   };
 
+  const handleAddNewContact = (email) => {
+    setPendingEmail(email);
+    setIsAddContactModalOpen(true);
+  };
+
+  const handleContactAdded = async (newContact) => {
+    await fetchContacts();
+    setSelectedRecipient(`contact_${newContact.id}`);
+    setIsAddContactModalOpen(false);
+    setPendingEmail('');
+  };
+
   const handleShare = async () => {
     if (!task) return;
 
     // Validate selection
-    if (!selectedRecipient && !recipientEmail.trim()) {
-      setError('Please select a recipient or enter an email address');
+    if (!selectedRecipient) {
+      setError('Please select a recipient');
       return;
     }
 
@@ -128,15 +141,12 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
         if (selectedRecipient.startsWith('user_')) {
           // Share with internal employee
           const userId = selectedRecipient.split('_')[1];
-          await taskShareAPI.shareTask(task.id, userId, permissionLevel);
+          await taskShareAPI.shareTask(task.id, userId, 'COMMENTER');
         } else if (selectedRecipient.startsWith('contact_')) {
           // Share with existing contact
           const contactId = selectedRecipient.split('_')[1];
-          await taskShareAPI.shareTaskWithContact(task.id, contactId, permissionLevel);
+          await taskShareAPI.shareTaskWithContact(task.id, contactId, 'COMMENTER');
         }
-      } else {
-        // Share with email address
-        await taskShareAPI.shareTaskWithEmail(task.id, recipientEmail, permissionLevel);
       }
 
       // Refresh the shared users list
@@ -149,8 +159,6 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
 
       // Reset form
       setSelectedRecipient('');
-      setRecipientEmail('');
-      setPermissionLevel('VIEWER');
     } catch (error) {
       console.error('Error sharing task:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Failed to share task';
@@ -158,8 +166,7 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
         status: error.response?.status,
         error: errorMessage,
         taskId: task.id,
-        selectedRecipient,
-        recipientEmail
+        selectedRecipient
       });
       setError(errorMessage);
     } finally {
@@ -193,8 +200,6 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
 
   const handleClose = () => {
     setSelectedRecipient('');
-    setRecipientEmail('');
-    setPermissionLevel('VIEWER');
     setError(null);
     onClose();
   };
@@ -218,7 +223,7 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
           animation: fadeIn 0.3s ease-out;
         }
       `}</style>
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center">
         {/* Backdrop */}
         <div 
           className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200" 
@@ -260,12 +265,6 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
           >
             "{task.title}"
           </h3>
-          <p 
-            className="text-sm transition-colors duration-200"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Share this task with team members or external contacts
-          </p>
         </div>
 
         {error && (
@@ -282,39 +281,6 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
         )}
 
         <div className="space-y-4">
-
-          {/* Permission Level Selection */}
-          <div>
-            <label
-              className="block text-sm font-medium mb-2 transition-colors duration-200"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
-              Permission Level
-            </label>
-            <div className="flex space-x-2">
-              <IconButton
-                label="Viewer"
-                variant={permissionLevel === 'VIEWER' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setPermissionLevel('VIEWER')}
-              />
-              <IconButton
-                label="Commenter"
-                variant={permissionLevel === 'COMMENTER' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setPermissionLevel('COMMENTER')}
-              />
-            </div>
-            <p
-              className="text-xs mt-1 transition-colors duration-200"
-              style={{ color: 'var(--color-text-tertiary)' }}
-            >
-              {permissionLevel === 'VIEWER'
-                ? 'Can only view the task'
-                : 'Can view and comment on the task'
-              }
-            </p>
-          </div>
 
           {/* Recipient Selection */}
           <div>
@@ -333,6 +299,8 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
                 placeholder="Select an employee or contact..."
                 className="w-full"
                 disabled={isLoadingUsers}
+                allowAddNew={!isPersonalAccount}
+                onAddNew={handleAddNewContact}
                 renderOption={(recipient) => (
                   <div className="flex items-center space-x-2">
                     <div className={`w-2 h-2 rounded-full ${recipient.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
@@ -349,32 +317,6 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
                   </div>
                 )}
               />
-
-              <div
-                className="text-center text-sm transition-colors duration-200"
-                style={{ color: 'var(--color-text-tertiary)' }}
-              >
-                OR
-              </div>
-
-              <input
-                type="email"
-                value={recipientEmail}
-                onChange={(e) => setRecipientEmail(e.target.value)}
-                placeholder="Enter email address..."
-                className="input input-bordered w-full transition-colors duration-200"
-                style={{
-                  backgroundColor: 'var(--color-bg-tertiary)',
-                  borderColor: 'var(--color-border-default)',
-                  color: 'var(--color-text-primary)'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-primary)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-border-default)';
-                }}
-              />
             </div>
           </div>
 
@@ -386,7 +328,7 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
               variant="primary"
               size="sm"
               onClick={handleShare}
-              disabled={isLoading || (!selectedRecipient && !recipientEmail.trim())}
+              disabled={isLoading || !selectedRecipient}
               loading={isLoading}
             />
           </div>
@@ -444,12 +386,6 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
                       >
                         {share.user?.name || share.contact?.name || share.email}
                       </span>
-                      <span 
-                        className="text-xs ml-2 transition-colors duration-200"
-                        style={{ color: 'var(--color-text-tertiary)' }}
-                      >
-                        ({share.permissionLevel || 'VIEWER'})
-                      </span>
                     </div>
                   </div>
                   <IconButton
@@ -476,8 +412,20 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
         </div>
       </div>
     </div>
-    </>
-  );
+
+    {isAddContactModalOpen && (
+      <AddContactModal
+        isOpen={isAddContactModalOpen}
+        onClose={() => {
+          setIsAddContactModalOpen(false);
+          setPendingEmail('');
+        }}
+        onContactAdded={handleContactAdded}
+        initialEmail={pendingEmail}
+      />
+    )}
+  </>
+);
 };
 
 export default TaskShareModal;

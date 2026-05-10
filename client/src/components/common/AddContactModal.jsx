@@ -93,6 +93,7 @@ const AddContactModal = ({
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
           <h3

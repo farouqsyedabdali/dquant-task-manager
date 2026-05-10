@@ -34,6 +34,7 @@ model Company {
   taskCollaborators TaskCollaborator[]
   taskShares        TaskShare[]
   users             User[]
+  briefingLogs     BriefingLog[]
 }
 
 model User {
@@ -83,7 +84,13 @@ model User {
   projectTemplates         ProjectTemplate[]
   templateTasks            TemplateTask[]
   deviceTokens             DeviceToken[]
+  briefingLogs             BriefingLog[]
   company                  Company            @relation(fields: [companyId], references: [id])
+  briefingMorningEnabled   Boolean            @default(false)
+  briefingEveningEnabled   Boolean            @default(false)
+  briefingMorningTime      String             @default("08:00")
+  briefingEveningTime      String             @default("18:00")
+  briefingTimezone         String?
 
   @@unique([email, companyId])
 }
@@ -112,6 +119,8 @@ model Task {
   isDraft               Boolean            @default(false)
   sentAt                DateTime?
   declinedReason        String?
+  googleCalendarEventId      String?
+  googleCalendarSyncedUserId Int?
   comments              Comment[]
   notifications         Notification[]
   reminders             TaskReminder[]
@@ -239,13 +248,28 @@ model Notification {
   message   String
   isRead    Boolean          @default(false)
   readAt    DateTime?
-  taskId    Int
+  taskId    Int?
   userId    Int
   companyId Int
   createdAt DateTime         @default(now())
   company   Company          @relation(fields: [companyId], references: [id])
-  task      Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task      Task?            @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BriefingLog {
+  id        Int          @id @default(autoincrement())
+  userId    Int
+  companyId Int
+  kind      BriefingKind
+  localDate String
+  content   String
+  createdAt DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, localDate])
+  @@index([companyId])
 }
 
 model TaskCoAssignee {
@@ -404,6 +428,7 @@ model ConnectedAccount {
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
   emailIngestions       EmailIngestion[]
+  tialzGoogleCalendarId String?
 
   @@unique([provider, userId, email])
   @@index([provider, status, syncEnabled])
@@ -563,6 +588,13 @@ enum NotificationType {
   PROJECT_TASK_ACCEPTED
   PROJECT_TASK_DECLINED
   PROJECT_TASK_REASSIGNED
+  MORNING_BRIEFING
+  EVENING_BRIEFING
+}
+
+enum BriefingKind {
+  MORNING
+  EVENING
 }
 
 enum AuditAction {

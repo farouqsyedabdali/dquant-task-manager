@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { login, register, registerCompany, registerPersonal, deleteCompany, getMe, updateAutoArchivePeriod, forgotPassword, verifyPasswordResetCode, resetPasswordWithCode, completeEmployeeSetup } = require('../controllers/authController');
+const { login, register, registerCompany, registerPersonal, deleteCompany, getMe, updateAutoArchivePeriod, updateBriefingPreferences, previewBriefing, forgotPassword, verifyPasswordResetCode, resetPasswordWithCode, completeEmployeeSetup } = require('../controllers/authController');
 const { initiateGoogleAuth, handleGoogleCallback, handleGoogleIdToken } = require('../controllers/googleAuthController');
 const { handleMicrosoftCallback } = require('../controllers/microsoftAuthController');
 const auth = require('../middleware/auth');
@@ -93,6 +93,8 @@ router.post('/reset-password-with-code',
 
 // Protected routes
 router.get('/me', auth, getMe);
+router.patch('/briefing-preferences', auth, updateBriefingPreferences);
+router.get('/preview-briefing/:kind', auth, previewBriefing);
 router.put('/company/auto-archive', auth, updateAutoArchivePeriod); // Update auto-archive period
 router.delete('/company', auth, sysAdminOnly, deleteCompany); // Only SYSDMIN can delete company
 

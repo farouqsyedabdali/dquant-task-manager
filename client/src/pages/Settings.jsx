@@ -30,6 +30,12 @@ const Settings = () => {
   const [selectedCategory, setSelectedCategory] = useState('account'); // 'account' | 'integrations' | 'preferences' | 'about' | 'feedback' | 'admin-tools'
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useToastContext();
+
+  const [previewBriefingContent, setPreviewBriefingContent] = useState('');
+  const [previewBriefingTitle, setPreviewBriefingTitle] = useState('');
+  const [isPreviewingBriefing, setIsPreviewingBriefing] = useState(false);
+  const [showBriefingModal, setShowBriefingModal] = useState(false);
   
   // Check URL parameters for category on mount and when location changes
   useEffect(() => {
@@ -59,6 +65,20 @@ const Settings = () => {
   useEffect(() => {
     setAutoArchivePeriod(user?.autoArchivePeriod ?? 12);
   }, [user?.autoArchivePeriod]);
+
+  const handlePreviewBriefing = async (kind) => {
+    try {
+      setIsPreviewingBriefing(true);
+      const { data } = await authAPI.previewBriefing(kind);
+      setPreviewBriefingContent(data.content || '');
+      setPreviewBriefingTitle(kind === 'MORNING' ? 'Morning Briefing' : 'Evening Briefing');
+      setShowBriefingModal(true);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Could not fetch briefing');
+    } finally {
+      setIsPreviewingBriefing(false);
+    }
+  };
 
 
   // Get the required confirmation text
@@ -608,6 +628,51 @@ const Settings = () => {
                     >
                       Font size changes will be applied across the entire application.
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Daily briefings */}
+              <div
+                className="card"
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  borderColor: 'var(--color-border-default)',
+                  borderWidth: 1,
+                }}
+              >
+                <div className="card-body">
+                  <h2
+                    className="card-title text-xl mb-2"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    Daily briefings
+                  </h2>
+                  <p
+                    className="text-sm mb-6"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Generate an on-demand summary of tasks due today and overdue (morning), and how much you closed out (evening).
+                  </p>
+                  <div className="flex flex-wrap gap-4">
+                    <button
+                      type="button"
+                      onClick={() => handlePreviewBriefing('MORNING')}
+                      disabled={isPreviewingBriefing}
+                      className="px-5 py-2.5 rounded-lg font-semibold text-white transition-colors disabled:opacity-50"
+                      style={{ backgroundColor: 'var(--color-primary)' }}
+                    >
+                      {isPreviewingBriefing ? 'Generating...' : 'Generate Morning Briefing'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePreviewBriefing('EVENING')}
+                      disabled={isPreviewingBriefing}
+                      className="px-5 py-2.5 rounded-lg font-semibold text-white transition-colors disabled:opacity-50"
+                      style={{ backgroundColor: 'var(--color-primary)' }}
+                    >
+                      {isPreviewingBriefing ? 'Generating...' : 'Generate Evening Briefing'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1429,6 +1494,43 @@ const Settings = () => {
         onClose={() => setShowLegalModal(false)}
         documentType={legalDocumentType}
       />
+
+      {/* Briefing Modal */}
+      {showBriefingModal && (
+        <div className="modal modal-open">
+          <div 
+            className="modal-box w-11/12 max-w-2xl transition-colors duration-200"
+            style={{
+              backgroundColor: 'var(--color-bg-primary)',
+              borderColor: 'var(--color-border-default)',
+              borderWidth: 1,
+            }}
+          >
+            <h3 className="font-bold text-lg mb-4" style={{ color: 'var(--color-text-primary)' }}>
+              {previewBriefingTitle}
+            </h3>
+            <div 
+              className="p-4 rounded-lg whitespace-pre-wrap text-sm"
+              style={{
+                backgroundColor: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                borderColor: 'var(--color-border-default)',
+                borderWidth: 1,
+              }}
+            >
+              {previewBriefingContent}
+            </div>
+            <div className="modal-action">
+              <button 
+                className="btn btn-primary"
+                onClick={() => setShowBriefingModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
