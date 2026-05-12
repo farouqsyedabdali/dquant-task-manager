@@ -13,7 +13,7 @@ import DeleteConfirmModal from '../common/DeleteConfirmModal';
 import TaskShareModal from './TaskShareModal';
 import TaskUpdatesModal from './TaskUpdatesModal';
 import SearchableDropdown from '../common/SearchableDropdown';
-import { usersAPI, tasksAPI } from '../../services/api';
+import { usersAPI, tasksAPI, taskShareAPI } from '../../services/api';
 import useContactStore from '../../stores/contactStore';
 import AddContactModal from '../common/AddContactModal';
 import DatePicker from '../common/DatePicker';
@@ -25,7 +25,7 @@ import {
   FaTimes, FaEdit, FaTrash, FaArchive, FaShareAlt, FaChartBar,
   FaSave, FaPlus, FaUserPlus, FaCheck,
   FaCircle, FaSpinner, FaCheckCircle, FaPauseCircle, FaTimesCircle,
-  FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle, FaUsers, FaSitemap
+  FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle, FaUsers, FaSitemap, FaClock
 } from 'react-icons/fa';
 
 const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null, onTaskSwitch = null, onTaskChange = null }) => {
@@ -291,12 +291,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             return;
           }
 
-          const invitationData = {
-            recipientEmail: contact.email,
-            message: `Hi ${contact.name}, I'd like to invite you to collaborate on this task: "${viewedTask.title}"`
-          };
-
-          await tasksAPI.sendInvitation(viewedTask.id, invitationData);
+          // Use taskShareAPI to properly register the intended role as CO_ASSIGNEE
+          // This creates a TaskShare with permissionLevel='CO_ASSIGNEE' and sends the email
+          await taskShareAPI.shareTaskWithContact(viewedTask.id, contactId, 'CO_ASSIGNEE');
 
           // Refresh task data to show invitation status
           const result = await fetchTask(viewedTask.id);
@@ -1457,11 +1454,174 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                               );
                             })}
 
+                            {/* Pending Invitations */}
+                            {viewedTask.invitations && viewedTask.invitations.length > 0 && (
+                              viewedTask.invitations.map((invitation) => {
+                                // Try to find a matching contact name for this email
+                                const matchingContact = contacts.find(
+                                  c => c.email?.toLowerCase() === invitation.recipientEmail?.toLowerCase()
+                                );
+                                const displayName = matchingContact?.name || invitation.recipientEmail;
+                                const initial = matchingContact?.name?.charAt(0) || invitation.recipientEmail?.charAt(0)?.toUpperCase() || '?';
+
+                                return (
+                                  <div key={invitation.id} className="flex items-center justify-between gap-3 group relative">
+                                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                      <div
+                                        className="rounded-full flex items-center justify-center flex-shrink-0"
+                                        style={{
+                                          backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                                          border: '2px dashed #eab308',
+                                          width: '32px',
+                                          height: '32px',
+                                          minWidth: '32px',
+                                          minHeight: '32px',
+                                          maxWidth: '32px',
+                                          maxHeight: '32px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          lineHeight: '1'
+                                        }}
+                                      >
+                                        <span
+                                          className="text-sm"
+                                          style={{
+                                            color: '#eab308',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            lineHeight: '1'
+                                          }}
+                                        >
+                                          {initial}
+                                        </span>
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span
+                                            className="text-sm block truncate transition-colors duration-200"
+                                            style={{ color: 'var(--color-text-primary)', opacity: 0.7 }}
+                                          >
+                                            {displayName}
+                                          </span>
+                                          <span
+                                            className="text-xs px-1.5 py-0.5 rounded uppercase font-medium flex items-center gap-1"
+                                            style={{
+                                              backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                                              color: '#eab308',
+                                            }}
+                                          >
+                                            <FaClock className="w-2.5 h-2.5" />
+                                            PENDING
+                                          </span>
+                                        </div>
+                                        {matchingContact?.name && (
+                                          <span
+                                            className="text-xs block truncate"
+                                            style={{ color: 'var(--color-text-tertiary)' }}
+                                          >
+                                            {invitation.recipientEmail}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {/* Email tooltip */}
+                                      <div
+                                        className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                        style={{
+                                          backgroundColor: 'var(--color-bg-primary)',
+                                          color: 'var(--color-text-primary)',
+                                        }}
+                                      >
+                                        Invitation sent to {invitation.recipientEmail}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+
+                            {/* External Contact — pending lead assignee acceptance */}
+                            {!viewedTask.assignee && viewedTask.externalContact && (
+                              <div className="flex items-center justify-between gap-3 group relative">
+                                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                  <div
+                                    className="rounded-full flex items-center justify-center flex-shrink-0"
+                                    style={{
+                                      backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                                      border: '2px dashed #eab308',
+                                      width: '32px',
+                                      height: '32px',
+                                      minWidth: '32px',
+                                      minHeight: '32px',
+                                      maxWidth: '32px',
+                                      maxHeight: '32px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1'
+                                    }}
+                                  >
+                                    <span
+                                      className="text-sm"
+                                      style={{
+                                        color: '#eab308',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: '1'
+                                      }}
+                                    >
+                                      {viewedTask.externalContact.name?.charAt(0) || '?'}
+                                    </span>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span
+                                        className="text-sm block truncate transition-colors duration-200"
+                                        style={{ color: 'var(--color-text-primary)', opacity: 0.7 }}
+                                      >
+                                        {viewedTask.externalContact.name}
+                                      </span>
+                                      <span
+                                        className="text-xs px-1.5 py-0.5 rounded uppercase font-medium flex items-center gap-1"
+                                        style={{
+                                          backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                                          color: '#eab308',
+                                        }}
+                                      >
+                                        <FaClock className="w-2.5 h-2.5" />
+                                        PENDING ACCEPTANCE
+                                      </span>
+                                    </div>
+                                    <span
+                                      className="text-xs block truncate"
+                                      style={{ color: 'var(--color-text-tertiary)' }}
+                                    >
+                                      {viewedTask.externalContact.email}
+                                    </span>
+                                  </div>
+                                  {/* Email tooltip */}
+                                  <div
+                                    className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                    style={{
+                                      backgroundColor: 'var(--color-bg-primary)',
+                                      color: 'var(--color-text-primary)',
+                                    }}
+                                  >
+                                    Assigned — awaiting acceptance from {viewedTask.externalContact.email}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
                             {/* Empty State */}
                             {!viewedTask.assignee &&
+                              !viewedTask.externalContact &&
                               (!coAssignees || coAssignees.length === 0) &&
                               (!viewedTask.collaborators || viewedTask.collaborators.length === 0) &&
-                              (!viewedTask.sharedWith || viewedTask.sharedWith.length === 0) && (
+                              (!viewedTask.sharedWith || viewedTask.sharedWith.length === 0) &&
+                              (!viewedTask.invitations || viewedTask.invitations.length === 0) && (
                                 <p
                                   className="text-sm text-center py-4 transition-colors duration-200"
                                   style={{ color: 'var(--color-text-tertiary)' }}

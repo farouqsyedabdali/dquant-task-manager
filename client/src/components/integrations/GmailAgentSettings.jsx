@@ -360,7 +360,7 @@ const GmailAgentSettings = () => {
             )}
           </div>
         </div>
-        <div className="modal-backdrop" onClick={() => setSkipSendersModalOpen(false)} aria-hidden="true" />
+        <div className="modal-backdrop" aria-hidden="true" />
       </div>
     )}
     </>

@@ -338,27 +338,48 @@ const taskInvitationController = {
           await prisma.taskShare.delete({ where: { id: originalShare.id } });
         }
 
-        // Create collaborator with the correct permission
-        await prisma.taskCollaborator.create({
-          data: {
-            taskId: invitation.task.id,
-            userId: userId,
-            companyId: user.companyId,
-            permissionLevel: intendedPermission,
-            isExternal: true
-          }
-        });
+        if (intendedPermission === 'CO_ASSIGNEE') {
+          // They were invited specifically to be a co-assignee
+          await prisma.taskCoAssignee.create({
+            data: {
+              taskId: invitation.task.id,
+              userId: userId,
+              companyId: user.companyId
+            }
+          });
 
-        // Create user-based TaskShare (replaces the old email-based one)
-        await prisma.taskShare.create({
-          data: {
-            taskId: invitation.task.id,
-            userId: userId,
-            companyId: user.companyId,
-            permissionLevel: intendedPermission,
-            isExternal: true
-          }
-        });
+          // Create notification for the new co-assignee
+          await createNotification(
+            'TASK_ASSIGNED',
+            'Added as Co-Assignee',
+            `You have been added as a co-assignee to task: "${invitation.task.title}"`,
+            invitation.task.id,
+            userId,
+            user.companyId
+          );
+        } else {
+          // Create collaborator with the correct permission
+          await prisma.taskCollaborator.create({
+            data: {
+              taskId: invitation.task.id,
+              userId: userId,
+              companyId: user.companyId,
+              permissionLevel: intendedPermission,
+              isExternal: true
+            }
+          });
+
+          // Create user-based TaskShare (replaces the old email-based one)
+          await prisma.taskShare.create({
+            data: {
+              taskId: invitation.task.id,
+              userId: userId,
+              companyId: user.companyId,
+              permissionLevel: intendedPermission,
+              isExternal: true
+            }
+          });
+        }
       }
 
       // Update invitation status

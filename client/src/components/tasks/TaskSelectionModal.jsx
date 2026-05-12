@@ -74,7 +74,7 @@ const TaskSelectionModal = ({ isOpen, onClose, onSelectTask, updateContent = '',
   }));
 
   return (
-    <div className="modal modal-open backdrop-blur-sm" onClick={onClose}>
+    <div className="modal modal-open backdrop-blur-sm">
       <div 
         className="modal-box max-w-2xl w-full border transition-all duration-300 animate-fadeIn"
         style={{

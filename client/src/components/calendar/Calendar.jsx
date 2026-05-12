@@ -468,10 +468,38 @@ const Calendar = () => {
           </button>
           
           <h3 
-            className="text-2xl font-semibold min-w-[250px] text-center mx-4"
+            className="text-2xl font-semibold min-w-[250px] text-center mx-4 flex items-center justify-center gap-2"
             style={{ color: 'var(--color-text-primary)' }}
           >
-            {weekRange}
+            {calendarView === 'week' ? weekRange : (
+              <>
+                <select
+                  value={currentDate.getMonth()}
+                  onChange={(e) => setCurrentDate(new Date(currentDate.getFullYear(), parseInt(e.target.value), 1))}
+                  className="bg-transparent border-0 outline-none cursor-pointer hover:bg-[var(--color-bg-tertiary)] rounded px-2 py-1 appearance-none transition-colors text-center"
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i} value={i} style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-primary)', fontSize: '1rem' }}>
+                      {new Date(0, i).toLocaleDateString('en-US', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={currentDate.getFullYear()}
+                  onChange={(e) => setCurrentDate(new Date(parseInt(e.target.value), currentDate.getMonth(), 1))}
+                  className="bg-transparent border-0 outline-none cursor-pointer hover:bg-[var(--color-bg-tertiary)] rounded px-2 py-1 appearance-none transition-colors text-center"
+                >
+                  {Array.from({ length: 30 }, (_, i) => {
+                    const y = new Date().getFullYear() - 15 + i;
+                    return (
+                      <option key={y} value={y} style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-primary)', fontSize: '1rem' }}>
+                        {y}
+                      </option>
+                    );
+                  })}
+                </select>
+              </>
+            )}
           </h3>
           
           <button
@@ -1064,7 +1092,6 @@ const Calendar = () => {
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-500 ease-out"
-            onClick={() => setSelectedDate(null)}
           />
           
           {/* Slide-in Panel */}

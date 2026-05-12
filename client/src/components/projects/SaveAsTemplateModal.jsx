@@ -130,7 +130,7 @@ const SaveAsTemplateModal = ({ isOpen, onClose, projectName, onSave }) => {
           </div>
         </form>
       </div>
-      <div className="modal-backdrop" onClick={onClose}></div>
+      <div className="modal-backdrop"></div>
     </div>
   );
 };

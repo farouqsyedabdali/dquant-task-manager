@@ -113,7 +113,6 @@ const TaskUpdatesModal = ({ isOpen, onClose, task }) => {
     <div 
       className="modal modal-open backdrop-blur-sm" 
       style={{ zIndex: 60 }}
-      onClick={handleBackdropClick}
     >
       <div 
         className="modal-box max-w-2xl border" 

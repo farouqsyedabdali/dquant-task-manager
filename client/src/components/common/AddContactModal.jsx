@@ -80,10 +80,9 @@ const AddContactModal = ({
 
   const modalContent = (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center">
-      {/* Backdrop */}
+      {/* Backdrop — no onClick so the modal can only be closed via Cancel / X button */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200"
-        onClick={handleClose}
       />
       
       {/* Modal */}

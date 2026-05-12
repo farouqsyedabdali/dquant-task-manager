@@ -159,6 +159,13 @@ const getTasks = async (req, res) => {
             email: true
           }
         },
+        externalContact: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
         parentTask: {
           select: {
             id: true,
@@ -240,6 +247,21 @@ const getTasks = async (req, res) => {
               }
             }
           }
+        },
+        invitations: {
+          where: { status: 'PENDING' },
+          select: {
+            id: true,
+            recipientEmail: true,
+            status: true,
+            message: true,
+            createdAt: true,
+            expiresAt: true,
+            sender: {
+              select: { id: true, name: true }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
         },
         project: {
           select: {
@@ -422,6 +444,13 @@ const getTask = async (req, res) => {
             email: true
           }
         },
+        externalContact: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
         parentTask: {
           select: {
             id: true,
@@ -475,6 +504,49 @@ const getTask = async (req, res) => {
               }
             }
           }
+        },
+        collaborators: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            },
+            company: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        },
+        sharedWith: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        },
+        invitations: {
+          where: { status: 'PENDING' },
+          select: {
+            id: true,
+            recipientEmail: true,
+            status: true,
+            message: true,
+            createdAt: true,
+            expiresAt: true,
+            sender: {
+              select: { id: true, name: true }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
         },
         project: {
           select: {

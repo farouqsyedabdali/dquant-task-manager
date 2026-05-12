@@ -321,9 +321,35 @@ const DatePicker = ({
         >
           <IconChevronLeft />
         </button>
-        <span className="text-sm font-semibold flex-1 text-center" style={{ color: 'var(--color-text-primary)' }}>
-          {cursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-        </span>
+        <div className="flex items-center justify-center gap-1 flex-1">
+          <select
+            value={cursor.getMonth()}
+            onChange={(e) => setCursor(new Date(cursor.getFullYear(), parseInt(e.target.value), 1))}
+            className="text-sm font-semibold bg-transparent border-0 outline-none cursor-pointer hover:bg-[var(--color-bg-tertiary)] rounded px-1 py-0.5 appearance-none text-center"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i} value={i} style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-primary)' }}>
+                {new Date(0, i).toLocaleDateString('en-US', { month: 'long' })}
+              </option>
+            ))}
+          </select>
+          <select
+            value={cursor.getFullYear()}
+            onChange={(e) => setCursor(new Date(parseInt(e.target.value), cursor.getMonth(), 1))}
+            className="text-sm font-semibold bg-transparent border-0 outline-none cursor-pointer hover:bg-[var(--color-bg-tertiary)] rounded px-1 py-0.5 appearance-none text-center"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            {Array.from({ length: 30 }, (_, i) => {
+              const y = new Date().getFullYear() - 15 + i;
+              return (
+                <option key={y} value={y} style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-primary)' }}>
+                  {y}
+                </option>
+              );
+            })}
+          </select>
+        </div>
         <button
           type="button"
           onClick={goNextMonth}
