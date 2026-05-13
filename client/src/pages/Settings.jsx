@@ -13,6 +13,7 @@ import { lightPalettes, darkPalettes } from '../config/colorPalettes';
 import IconButton from '../components/common/IconButton';
 import ConfirmModal from '../components/common/ConfirmModal';
 import { useToastContext } from '../context/ToastContext';
+import { STATUS_LABELS, PRIORITY_LABELS } from '../utils/constants';
 import { FaFileAlt, FaTrash, FaPaperPlane, FaHistory, FaFileContract, FaShieldAlt, FaTimes } from 'react-icons/fa';
 
 const Settings = () => {
@@ -34,6 +35,10 @@ const Settings = () => {
 
   const [previewBriefingContent, setPreviewBriefingContent] = useState('');
   const [previewBriefingTitle, setPreviewBriefingTitle] = useState('');
+  const [previewBriefingTasks, setPreviewBriefingTasks] = useState([]);
+  const [previewBriefingStats, setPreviewBriefingStats] = useState({});
+  const [previewBriefingKind, setPreviewBriefingKind] = useState('');
+  const [previewBriefingDate, setPreviewBriefingDate] = useState('');
   const [isPreviewingBriefing, setIsPreviewingBriefing] = useState(false);
   const [showBriefingModal, setShowBriefingModal] = useState(false);
   
@@ -68,13 +73,22 @@ const Settings = () => {
 
   const handlePreviewBriefing = async (kind) => {
     try {
+      setPreviewBriefingKind(kind);
+      setPreviewBriefingTitle(kind === 'MORNING' ? 'Morning Briefing' : 'Evening Briefing');
+      setPreviewBriefingContent('');
+      setPreviewBriefingTasks([]);
+      setPreviewBriefingStats({});
+      setPreviewBriefingDate('');
       setIsPreviewingBriefing(true);
+      setShowBriefingModal(true);
       const { data } = await authAPI.previewBriefing(kind);
       setPreviewBriefingContent(data.content || '');
-      setPreviewBriefingTitle(kind === 'MORNING' ? 'Morning Briefing' : 'Evening Briefing');
-      setShowBriefingModal(true);
+      setPreviewBriefingTasks(data.tasks || []);
+      setPreviewBriefingStats(data.stats || {});
+      setPreviewBriefingDate(data.localDate || '');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Could not fetch briefing');
+      setShowBriefingModal(false);
     } finally {
       setIsPreviewingBriefing(false);
     }
@@ -1496,41 +1510,277 @@ const Settings = () => {
       />
 
       {/* Briefing Modal */}
-      {showBriefingModal && (
-        <div className="modal modal-open">
-          <div 
-            className="modal-box w-11/12 max-w-2xl transition-colors duration-200"
-            style={{
-              backgroundColor: 'var(--color-bg-primary)',
-              borderColor: 'var(--color-border-default)',
-              borderWidth: 1,
-            }}
-          >
-            <h3 className="font-bold text-lg mb-4" style={{ color: 'var(--color-text-primary)' }}>
-              {previewBriefingTitle}
-            </h3>
-            <div 
-              className="p-4 rounded-lg whitespace-pre-wrap text-sm"
+      {showBriefingModal && (() => {
+        const getStatusColor = (status) => {
+          switch (status) {
+            case 'TODO': return 'status-todo';
+            case 'IN_PROGRESS': return 'status-in-progress';
+            case 'COMPLETED': return 'status-completed';
+            case 'ON_HOLD': return 'status-on-hold';
+            case 'CANCELLED': return 'status-cancelled';
+            default: return 'status-todo';
+          }
+        };
+
+        const getPriorityColor = (priority) => {
+          switch (priority) {
+            case 'URGENT': return 'priority-urgent';
+            case 'HIGH': return 'priority-high';
+            case 'MEDIUM': return 'priority-medium';
+            case 'LOW': return 'priority-low';
+            default: return 'priority-medium';
+          }
+        };
+
+        const groupedTasks = {};
+        previewBriefingTasks.forEach(t => {
+          if (!groupedTasks[t.category]) groupedTasks[t.category] = [];
+          groupedTasks[t.category].push(t);
+        });
+
+        const categoryMeta = {
+          focus_first: { title: 'Focus First', icon: '🎯', color: 'var(--color-primary)' },
+          overdue: { title: 'Overdue', icon: '⚠️', color: '#ef4444' },
+          due_today: { title: 'Due Today', icon: '📋', color: '#3b82f6' },
+          upcoming: { title: 'Coming Up', icon: '📅', color: '#8b5cf6' },
+          high_priority: { title: 'High Priority', icon: '🔥', color: '#fb923c' },
+          completed: { title: 'Completed Today', icon: '✅', color: '#10b981' },
+          still_open: { title: 'Still Open', icon: '📌', color: '#fb923c' },
+          cancelled: { title: 'Cancelled', icon: '🚫', color: '#6b7280' },
+          due_tomorrow: { title: 'Due Tomorrow', icon: '📆', color: '#8b5cf6' },
+        };
+
+        const greetingText = previewBriefingKind === 'MORNING'
+          ? `Good morning${user?.name ? `, ${user.name.split(' ')[0]}` : ''}! I've picked the most important tasks for you to focus on today based on priority and deadlines.`
+          : `Good evening${user?.name ? `, ${user.name.split(' ')[0]}` : ''}! Here's how today went — and a heads-up for tomorrow.`;
+
+        const totalTasks = previewBriefingTasks.length;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div
+              className="relative border rounded-2xl shadow-2xl w-full max-w-5xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
               style={{
                 backgroundColor: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)',
                 borderColor: 'var(--color-border-default)',
-                borderWidth: 1,
               }}
             >
-              {previewBriefingContent}
-            </div>
-            <div className="modal-action">
-              <button 
-                className="btn btn-primary"
-                onClick={() => setShowBriefingModal(false)}
+              {/* Header */}
+              <div className="px-6 pt-5 pb-4 flex-shrink-0">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center text-xl"
+                      style={{
+                        backgroundColor: previewBriefingKind === 'MORNING'
+                          ? 'rgba(251, 191, 36, 0.15)'
+                          : 'rgba(129, 140, 248, 0.15)',
+                      }}
+                    >
+                      {previewBriefingKind === 'MORNING' ? '☀️' : '🌙'}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                        {previewBriefingTitle}
+                      </h3>
+                      {previewBriefingDate && (
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
+                          {previewBriefingDate}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowBriefingModal(false)}
+                    className="p-2 rounded-lg transition-colors hover:opacity-70"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                  >
+                    <FaTimes size={16} />
+                  </button>
+                </div>
+
+                {/* Greeting */}
+                {!isPreviewingBriefing && (
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    {totalTasks === 0
+                      ? previewBriefingKind === 'MORNING'
+                        ? "You're all clear — no tasks due today and nothing overdue. Enjoy your day!"
+                        : "No tasks were due today. Take it easy!"
+                      : greetingText
+                    }
+                  </p>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto px-6 pb-5" style={{ scrollbarWidth: 'thin' }}>
+                {isPreviewingBriefing ? (
+                  <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                    <div
+                      className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
+                      style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }}
+                    />
+                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      Gathering your tasks...
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {Object.entries(groupedTasks).map(([category, tasks]) => {
+                      const meta = categoryMeta[category] || { title: category, icon: '📄', color: '#6b7280' };
+                      return (
+                        <div key={category}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-sm">{meta.icon}</span>
+                            <span
+                              className="text-xs font-semibold uppercase tracking-wider"
+                              style={{ color: meta.color }}
+                            >
+                              {meta.title} ({tasks.length})
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {tasks.map((task) => {
+                              const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && (task.status === 'TODO' || task.status === 'IN_PROGRESS');
+
+                              return (
+                                <button
+                                  key={task.id}
+                                  onClick={() => {
+                                    setShowBriefingModal(false);
+                                    navigate(`/dashboard?taskId=${task.id}`);
+                                  }}
+                                  className="w-full text-left rounded-lg border p-3 transition-all duration-150 group cursor-pointer flex flex-col h-full"
+                                  style={{
+                                    backgroundColor: 'var(--color-bg-primary)',
+                                    borderColor: isOverdue ? 'rgba(239, 68, 68, 0.4)' : 'var(--color-border-default)',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                                    e.currentTarget.style.borderColor = 'var(--color-primary)';
+                                    e.currentTarget.style.transform = 'translateY(-1px)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                                    e.currentTarget.style.borderColor = isOverdue ? 'rgba(239, 68, 68, 0.4)' : 'var(--color-border-default)';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = 'none';
+                                  }}
+                                >
+                                    {/* Row 1: Title */}
+                                    <h4
+                                      className="text-sm font-medium line-clamp-2 mb-2 w-full"
+                                      style={{ color: 'var(--color-text-primary)' }}
+                                    >
+                                      {task.title}
+                                    </h4>
+                                    
+                                    {/* Row 2: Badges */}
+                                    <div className="flex items-center gap-1.5 mb-3 w-full">
+                                      <span className={`status-badge uppercase ${getStatusColor(task.status)}`}>
+                                        {STATUS_LABELS[task.status]}
+                                      </span>
+                                      <span className={`status-badge uppercase ${getPriorityColor(task.priority)}`}>
+                                        {PRIORITY_LABELS[task.priority]}
+                                      </span>
+                                    </div>
+
+                                    {/* Row 3: Meta info */}
+                                    <div className="mt-auto flex flex-col gap-2.5 w-full text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                                      
+                                      {/* Assignee & Project Row */}
+                                      {(task.assignee?.name || task.project?.name) && (
+                                        <div className="flex items-center gap-3 flex-wrap">
+                                          {task.assignee?.name && (
+                                            <div className="flex items-center gap-1.5">
+                                              <div
+                                                className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold flex-shrink-0"
+                                                style={{ backgroundColor: 'var(--color-primary)' }}
+                                              >
+                                                {task.assignee.name.charAt(0)}
+                                              </div>
+                                              <span className="line-clamp-1 truncate">{task.assignee.name}</span>
+                                            </div>
+                                          )}
+
+                                          {task.project?.name && (
+                                            <div className="flex items-center gap-1">
+                                              <span>📁</span>
+                                              <span className="line-clamp-1 truncate">{task.project.name}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Date & Icons Row */}
+                                      <div className="flex items-center gap-3 w-full">
+                                        {task.dueDate && (
+                                          <div className="flex items-center gap-1 flex-shrink-0" style={isOverdue ? { color: '#ef4444', fontWeight: 500 } : {}}>
+                                            <span>📅</span>
+                                            <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                                            {isOverdue && <span className="text-[10px] font-semibold ml-0.5">OVERDUE</span>}
+                                          </div>
+                                        )}
+
+                                        {task._count?.subtasks > 0 && (
+                                          <div className="flex items-center gap-1 flex-shrink-0">
+                                            <span>📝</span>
+                                            <span>{task._count.subtasks}</span>
+                                          </div>
+                                        )}
+
+                                        {task._count?.comments > 0 && (
+                                          <div className="flex items-center gap-1 flex-shrink-0">
+                                            <span>💬</span>
+                                            <span>{task._count.comments}</span>
+                                          </div>
+                                        )}
+
+                                        <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0" style={{ color: 'var(--color-primary)' }}>
+                                          <span className="text-[11px] font-medium">Open</span>
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                          </svg>
+                                        </div>
+                                      </div>
+                                    </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div
+                className="flex items-center justify-between px-6 py-3 border-t flex-shrink-0"
+                style={{ borderColor: 'var(--color-border-default)' }}
               >
-                Close
-              </button>
+                <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                  {!isPreviewingBriefing && totalTasks > 0
+                    ? `${totalTasks} task${totalTasks !== 1 ? 's' : ''} shown${previewBriefingStats.hidden ? ` · ${previewBriefingStats.hidden} lower priority tasks hidden` : ''} · Click any task to open it`
+                    : 'Daily briefing'
+                  }
+                </p>
+                <IconButton
+                  icon={<FaTimes />}
+                  label="Close"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowBriefingModal(false)}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

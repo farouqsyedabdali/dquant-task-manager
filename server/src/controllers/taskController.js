@@ -245,6 +245,13 @@ const getTasks = async (req, res) => {
                 name: true,
                 email: true
               }
+            },
+            contact: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
             }
           }
         },
@@ -525,6 +532,13 @@ const getTask = async (req, res) => {
         sharedWith: {
           include: {
             user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            },
+            contact: {
               select: {
                 id: true,
                 name: true,
