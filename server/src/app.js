@@ -88,19 +88,22 @@ app.use((req, res, next) => {
 
 // CORS Middleware
 const allowedOrigins = process.env.CLIENT_URL 
-  ? process.env.CLIENT_URL.split(',').map(url => url.trim())
+  ? process.env.CLIENT_URL.split(',').map(url => url.trim().toLowerCase().replace(/\/$/, ''))
   : ['http://localhost:5173'];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Server-to-server requests do not need browser CORS headers.
-    if (!origin) return callback(null, process.env.NODE_ENV !== 'production');
+    // Server-to-server requests and tools do not need browser CORS headers.
+    if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
+    const normalizedOrigin = origin.toLowerCase().replace(/\/$/, '');
+    
+    if (allowedOrigins.includes(normalizedOrigin) || normalizedOrigin.includes('localhost') || normalizedOrigin.includes('127.0.0.1')) {
       callback(null, true);
     } else {
-      secureLogger.warn('⚠️  CORS blocked request from origin:', { origin });
-      callback(new Error('Not allowed by CORS'));
+      secureLogger.warn('⚠️  CORS blocked request from origin:', { origin, normalizedOrigin, allowedOrigins });
+      // Return false instead of throwing an error to avoid 500 status codes on preflight requests
+      callback(null, false);
     }
   },
   credentials: true

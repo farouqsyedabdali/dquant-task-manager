@@ -106,17 +106,32 @@ async function classifyAndExtractTasks({ subject, cleanBody, senderEmail, accoun
         status: { in: ['TODO', 'IN_PROGRESS'] },
         OR: [{ assigneeId: account.userId }, { assignerId: account.userId }],
       },
-      select: { id: true, title: true, status: true, priority: true },
+      select: { 
+        id: true, 
+        title: true, 
+        status: true, 
+        priority: true,
+        comments: {
+          orderBy: { createdAt: 'desc' },
+          take: 2,
+          select: { content: true }
+        }
+      },
       orderBy: { updatedAt: 'desc' },
       take: 20
     });
     if (userTasks.length > 0) {
-      taskLines = userTasks.map(t => `[id:${t.id}] ${t.title} (${t.status}, ${t.priority})`).join('\n');
+      taskLines = userTasks.map(t => {
+        const commentPreview = t.comments.length > 0 
+          ? ` [Recent comments: ${t.comments.map(c => `"${c.content}"`).join(', ')}]` 
+          : '';
+        return `[id:${t.id}] ${t.title} (${t.status}, ${t.priority})${commentPreview}`;
+      }).join('\n');
     }
   }
 
   const prompt = `
-You are Tialz's email task agent. Decide if this email should automatically become tasks, update existing tasks, or add subtasks.
+You are Tialz's email task agent. Decide if this email should automatically become tasks, update existing tasks, add subtasks, or add comments to tasks.
 
 Active Tasks for user:
 ${taskLines}
@@ -147,6 +162,11 @@ Return ONLY valid JSON with this shape:
       "parentTaskId": 123,
       "title": "short subtask title",
       "description": "short helpful context"
+    },
+    {
+      "actionType": "add_comment",
+      "taskId": 123,
+      "content": "the comment text to add"
     }
   ]
 }
@@ -293,6 +313,35 @@ async function createTasksFromEmail({ account, ingestion, classification, cleanB
               entityType: 'Task',
               entityId: subtask.id,
               description: `${auditAgentName} created subtask "${subtask.title}" under "${parentTask.title}"`,
+              metadata: { source: auditSource, emailIngestionId: ingestion.id },
+              userId: account.userId,
+              companyId: account.companyId
+            }
+          });
+        }
+      }
+    } else if (actionType === 'add_comment' && item.taskId) {
+      const task = await prisma.task.findFirst({
+        where: { id: item.taskId, companyId: account.companyId }
+      });
+      if (task) {
+        const content = String(item.content || '').trim().slice(0, 2000);
+        if (content) {
+          const comment = await prisma.comment.create({
+            data: {
+              content,
+              taskId: task.id,
+              authorId: account.userId
+            }
+          });
+          loggedActions.push({ actionType: 'add_comment', taskId: task.id, commentId: comment.id });
+
+          await prisma.auditLog.create({
+            data: {
+              action: 'COMMENT_CREATED',
+              entityType: 'Task',
+              entityId: task.id,
+              description: `${auditAgentName} added a comment from email`,
               metadata: { source: auditSource, emailIngestionId: ingestion.id },
               userId: account.userId,
               companyId: account.companyId

@@ -471,7 +471,7 @@ const DatePicker = ({
             Time
           </span>
           <select
-            className="select select-sm flex-1 min-w-0 text-sm"
+            className="select select-sm w-20 text-sm"
             style={{
               backgroundColor: 'var(--color-bg-tertiary)',
               borderColor: 'var(--color-border-default)',
@@ -487,7 +487,7 @@ const DatePicker = ({
             ))}
           </select>
           <select
-            className="select select-sm flex-1 min-w-0 text-sm"
+            className="select select-sm w-20 text-sm"
             style={{
               backgroundColor: 'var(--color-bg-tertiary)',
               borderColor: 'var(--color-border-default)',

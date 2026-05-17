@@ -7,7 +7,7 @@ import {
   FaCircle, FaSpinner, FaCheckCircle, FaPauseCircle, FaTimesCircle,
   FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle,
   FaCalendar, FaComment, FaList, FaLevelUpAlt, FaShareAlt, FaPlayCircle,
-  FaCheck, FaArchive
+  FaCheck, FaArchive, FaSync
 } from 'react-icons/fa';
 
 const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive, onUnarchive }) => {
@@ -171,14 +171,14 @@ const TaskCard = ({ task, onStatusChange, onPriorityChange, onDelete, onArchive,
             </span>
             {task.recurrence && task.recurrence !== TASK_RECURRENCE.NONE && (
               <span
-                className="status-badge uppercase bg-opacity-20 text-xs"
+                className="status-badge flex items-center justify-center p-1.5"
                 style={{
                   backgroundColor: 'var(--color-bg-tertiary)',
                   color: 'var(--color-text-secondary)'
                 }}
-                title="Repeating task"
+                title={`Repeating task (${task.recurrence === 'WEEKLY' ? 'Weekly' : 'Monthly'})`}
               >
-                {task.recurrence === 'WEEKLY' ? 'Weekly' : 'Monthly'}
+                <FaSync className="w-3 h-3" />
               </span>
             )}
           </div>

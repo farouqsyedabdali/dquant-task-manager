@@ -291,7 +291,7 @@ async function syncOutlookAccount(account) {
     $orderby: 'receivedDateTime desc',
     $filter: `receivedDateTime ge ${sevenDaysAgo}`
   });
-  const path = `/me/mailFolders/inbox/messages?${query.toString()}`;
+  const path = `/me/messages?${query.toString()}`;
 
   const { data, account: refreshed } = await graphGet(account, path);
   account = refreshed;

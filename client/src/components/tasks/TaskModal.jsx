@@ -1380,6 +1380,10 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
                             {/* Shared With Users */}
                             {viewedTask.sharedWith && viewedTask.sharedWith.map((share) => {
+                              // Skip ghost records with no identifiable person
+                              const shareName = share.user?.name || share.contact?.name || share.email;
+                              if (!shareName) return null;
+
                               // Skip if user is already in the list as assignee, co-assignee, or collaborator
                               if (share.userId === viewedTask.assigneeId ||
                                 coAssignees.some(co => co.userId === share.userId) ||
@@ -1415,7 +1419,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                           lineHeight: '1'
                                         }}
                                       >
-                                        {share.user?.name?.charAt(0) || '?'}
+                                        {shareName.charAt(0)}
                                       </span>
                                     </div>
                                     <div className="min-w-0 flex-1">
@@ -1424,7 +1428,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                           className="text-sm block truncate transition-colors duration-200"
                                           style={{ color: 'var(--color-text-primary)' }}
                                         >
-                                          {share.user?.name || share.email || 'Unknown'}
+                                          {shareName}
                                         </span>
                                         <span
                                           className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
@@ -1446,7 +1450,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                           color: 'var(--color-text-primary)',
                                         }}
                                       >
-                                        {share.user?.email || share.email}
+                                        {share.user?.email || share.contact?.email || share.email}
                                       </div>
                                     )}
                                   </div>

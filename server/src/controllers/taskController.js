@@ -29,7 +29,7 @@ function buildDashboardTaskVisibilityWhere(user) {
         { AND: [{ assignerId: userId }, { isDraft: false }] },
         { AND: [{ coAssignees: { some: { userId } } }, { isDraft: false }] },
         { AND: [{ sharedWith: { some: { userId } } }, { isDraft: false }] },
-        { AND: [{ collaborators: { some: { userId, companyId } } }, { isDraft: false }] }
+        { AND: [{ collaborators: { some: { userId } } }, { isDraft: false }] }
       ]
     }
   }
@@ -38,7 +38,8 @@ function buildDashboardTaskVisibilityWhere(user) {
     OR: [
       { AND: [{ companyId }, { isDraft: false }] },
       { AND: [{ assigneeId: userId }, { isDraft: false }] },
-      { AND: [{ collaborators: { some: { userId, companyId } } }, { isDraft: false }] }
+      { AND: [{ sharedWith: { some: { userId } } }, { isDraft: false }] },
+      { AND: [{ collaborators: { some: { userId } } }, { isDraft: false }] }
     ]
   }
 }
@@ -62,7 +63,7 @@ const getTasks = async (req, res) => {
         { AND: [{ assigneeId: userId }, { isDraft: false }] }, // Exclude drafts
         { AND: [{ coAssignees: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft co-assignments
         { AND: [{ sharedWith: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft shares
-        { AND: [{ collaborators: { some: { userId: userId, companyId: companyId } } }, { isDraft: false }] } // Exclude draft collaborations
+        { AND: [{ collaborators: { some: { userId: userId } } }, { isDraft: false }] } // Exclude draft collaborations (any company)
       ];
     } else if (type === 'created-by-me') {
       // Only show non-draft tasks they created (drafts only visible in project view)

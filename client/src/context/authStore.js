@@ -127,6 +127,8 @@ const useAuthStore = create((set, get) => ({
     localStorage.removeItem('user');
     localStorage.removeItem('rememberMe');
     localStorage.removeItem('tokenExpiry');
+    localStorage.removeItem('aiConversation');
+    localStorage.removeItem('aiConversation:v2');
     set({ user: null, token: null, error: null });
   },
 

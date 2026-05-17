@@ -357,7 +357,7 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
             </div>
           ) : (
             <div className="space-y-2">
-              {sharedWith.map((share) => (
+              {sharedWith.filter(share => share.user?.name || share.contact?.name || share.email).map((share) => (
                 <div 
                   key={share.id} 
                   className="flex items-center justify-between rounded p-2 transition-colors duration-200"
@@ -372,7 +372,7 @@ const TaskShareModal = ({ isOpen, onClose, task, onShareUpdate }) => {
                         className="text-white rounded-full w-6 transition-colors duration-200"
                         style={{ backgroundColor: 'var(--color-primary)' }}
                       >
-                        <span className="text-xs">{share.user?.name?.charAt(0) || share.contact?.name?.charAt(0) || '?'}</span>
+                        <span className="text-xs">{(share.user?.name || share.contact?.name || share.email).charAt(0)}</span>
                       </div>
                     </div>
                     <div>
