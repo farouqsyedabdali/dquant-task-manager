@@ -116,16 +116,14 @@ const taskInvitationController = {
         });
 
         // Create a notification for the recipient if they're already a user
-        await prisma.notification.create({
-          data: {
-            type: 'TASK_INVITATION_RECEIVED',
-            title: 'New Task Invitation',
-            message: `${sender.name} has sent you a task: "${task.title}"`,
-            taskId: task.id,
-            userId: recipientUser.id,
-            companyId: recipientUser.companyId
-          }
-        });
+        await createNotification(
+          'TASK_INVITATION_RECEIVED',
+          'New Task Invitation',
+          `${sender.name} has sent you a task: "${task.title}"`,
+          task.id,
+          recipientUser.id,
+          recipientUser.companyId
+        );
       }
 
       // Send email
@@ -393,28 +391,24 @@ const taskInvitationController = {
       });
 
       // Create notification for recipient
-      await prisma.notification.create({
-        data: {
-          type: 'TASK_INVITATION_ACCEPTED',
-          title: 'Task Invitation Accepted',
-          message: `You are now collaborating on: "${invitation.task.title}"`,
-          taskId: invitation.task.id,
-          userId: userId,
-          companyId: user.companyId
-        }
-      });
+      await createNotification(
+        'TASK_INVITATION_ACCEPTED',
+        'Task Invitation Accepted',
+        `You are now collaborating on: "${invitation.task.title}"`,
+        invitation.task.id,
+        userId,
+        user.companyId
+      );
 
       // Create notification for sender
-      await prisma.notification.create({
-        data: {
-          type: 'TASK_INVITATION_ACCEPTED',
-          title: 'Task Invitation Accepted',
-          message: `${user.name} is now collaborating on: "${invitation.task.title}"`,
-          taskId: invitation.task.id,
-          userId: invitation.senderId,
-          companyId: invitation.sender.companyId || user.companyId
-        }
-      });
+      await createNotification(
+        'TASK_INVITATION_ACCEPTED',
+        'Task Invitation Accepted',
+        `${user.name} is now collaborating on: "${invitation.task.title}"`,
+        invitation.task.id,
+        invitation.senderId,
+        invitation.sender.companyId || user.companyId
+      );
 
       // Send email notification to sender
       const senderUser = await prisma.user.findUnique({
@@ -533,16 +527,14 @@ const taskInvitationController = {
       });
 
       // Create notification for sender
-      await prisma.notification.create({
-        data: {
-          type: 'TASK_INVITATION_DECLINED',
-          title: 'Task Invitation Declined',
-          message: `${user.name} declined your task invitation: "${invitation.task.title}"`,
-          taskId: invitation.task.id,
-          userId: invitation.senderId,
-          companyId: invitation.sender.companyId
-        }
-      });
+      await createNotification(
+        'TASK_INVITATION_DECLINED',
+        'Task Invitation Declined',
+        `${user.name} declined your task invitation: "${invitation.task.title}"`,
+        invitation.task.id,
+        invitation.senderId,
+        invitation.sender.companyId
+      );
 
       res.json({
         success: true,
@@ -825,16 +817,14 @@ const taskInvitationController = {
       });
 
       // Notify the assigner
-      await prisma.notification.create({
-        data: {
-          type: 'TASK_INVITATION_UNACCEPTED',
-          title: 'User Withdrew from Task',
-          message: `${user.name} has withdrawn from task "${task.title}".${isLeadAssignee ? ' Please reassign this task.' : ''}`,
-          taskId: task.id,
-          userId: task.assignerId,
-          companyId: task.companyId
-        }
-      });
+      await createNotification(
+        'TASK_INVITATION_UNACCEPTED',
+        'User Withdrew from Task',
+        `${user.name} has withdrawn from task "${task.title}".${isLeadAssignee ? ' Please reassign this task.' : ''}`,
+        task.id,
+        task.assignerId,
+        task.companyId
+      );
 
       // Create audit log
       await prisma.auditLog.create({
