@@ -331,7 +331,8 @@ async function createTasksFromEmail({ account, ingestion, classification, cleanB
             data: {
               content,
               taskId: task.id,
-              authorId: account.userId
+              authorId: account.userId,
+              companyId: account.companyId
             }
           });
           loggedActions.push({ actionType: 'add_comment', taskId: task.id, commentId: comment.id });
