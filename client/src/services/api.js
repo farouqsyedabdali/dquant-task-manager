@@ -138,6 +138,20 @@ export const outlookAgentAPI = {
   removeSkipSender: (ruleId) => api.delete(`/outlook-agent/skip-senders/${ruleId}`),
 };
 
+// Unified Integrations API (One-Button detection + CalDAV)
+export const integrationsAPI = {
+  /** Auto-detect the mail provider for an email via MX records */
+  detect: (email) => api.get('/integrations/detect', { params: { email } }),
+  /** Aggregated status of all connected accounts (Google, Microsoft, CalDAV) */
+  getStatus: () => api.get('/integrations/status'),
+  /** Connect a CalDAV account with basic credentials */
+  connectCalDav: ({ email, password, serverUrl }) =>
+    api.post('/integrations/caldav/connect', { email, password, serverUrl }),
+  /** Disconnect a CalDAV account */
+  disconnectCalDav: (accountId) =>
+    api.post(`/integrations/caldav/${accountId}/disconnect`),
+};
+
 // Task Share API
 export const taskShareAPI = {
   shareTask: (taskId, userId, permissionLevel = 'VIEWER') => api.post(`/task-shares/${taskId}/share`, { userId, permissionLevel }),

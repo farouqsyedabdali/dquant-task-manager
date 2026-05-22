@@ -392,44 +392,21 @@ const getTask = async (req, res) => {
     // Check if user has access to this task
     if (userRole === 'EMPLOYEE') {
       whereClause.OR = [
-        // Internal company access
-        { 
-          AND: [
-            { companyId: companyId },
-            {
-              OR: [
-                { assigneeId: userId },
-                { assignerId: userId },
-                { coAssignees: { some: { userId: userId } } },
-                { sharedWith: { some: { userId: userId } } }
-              ]
-            }
-          ]
-        },
-        // External collaborator access
-        { 
-          collaborators: { 
-            some: { 
-              userId: userId,
-              companyId: companyId
-            }
-          }
-        }
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
       ];
-    } else {
-      // Admins can see all tasks in their company OR tasks they're collaborating on
-      // OR tasks they created (as assigner)
+    } else if (userRole === 'ADMIN') {
+      // Admins can see all tasks in their company OR tasks they are explicitly associated with
       whereClause.OR = [
         { companyId: companyId },
-        {
-          collaborators: {
-            some: {
-              userId: userId,
-              companyId: companyId
-            }
-          }
-        },
-        { assignerId: userId }
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
       ];
     }
 
@@ -899,25 +876,51 @@ const updateTask = async (req, res) => {
     const companyId = req.user.companyId;
     const updateData = req.body;
 
+    let whereClause = {
+      id: parseInt(id)
+    };
+
+    if (userRole === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    } else if (userRole === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    }
+
     // Find the task first to check permissions
     const task = await prisma.task.findFirst({
-      where: { 
-        id: parseInt(id),
-        companyId: companyId
-      }
+      where: whereClause
     });
 
     if (!task) {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Check permissions - company admin, system admin, assigner, or assignee
+    // Check permissions - company admin, system admin, assigner, assignee, or co-assignee
     const isCompanyAdmin = userRole === 'ADMIN' && task.companyId === companyId;
     const isSystemAdmin = userRole === 'SYSDMIN';
     const isAssigner = task.assignerId === userId;
     const isAssignee = task.assigneeId === userId;
+    const isCoAssignee = await prisma.taskCoAssignee.findFirst({
+      where: {
+        taskId: task.id,
+        userId: userId
+      }
+    }) !== null;
 
-    if (!isCompanyAdmin && !isSystemAdmin && !isAssigner && !isAssignee) {
+    if (!isCompanyAdmin && !isSystemAdmin && !isAssigner && !isAssignee && !isCoAssignee) {
       return res.status(403).json({ error: 'You do not have permission to update this task' });
     }
 
@@ -1034,7 +1037,7 @@ const updateTask = async (req, res) => {
           allowedUpdates.recurrenceEndsAt = end
         }
       }
-    } else if (isAssignee) {
+    } else if (isAssignee || isCoAssignee) {
       // Assignee can only update status (not to COMPLETED — only assigner/admins can complete)
       if (updateData.status === 'COMPLETED') {
         return res.status(403).json({
@@ -1356,12 +1359,32 @@ const deleteTask = async (req, res) => {
     const userRole = req.user.role;
     const companyId = req.user.companyId;
 
+    let whereClause = {
+      id: parseInt(id)
+    };
+
+    if (userRole === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    } else if (userRole === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    }
+
     // Find the task first to check permissions
     const task = await prisma.task.findFirst({
-      where: { 
-        id: parseInt(id),
-        companyId: companyId
-      },
+      where: whereClause,
       include: {
         subtasks: true
       }
@@ -1443,12 +1466,32 @@ const updateTaskStatus = async (req, res) => {
       return res.status(400).json({ error: 'Status is required' });
     }
 
+    let whereClause = {
+      id: parseInt(id)
+    };
+
+    if (userRole === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    } else if (userRole === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    }
+
     // Find the task first to check permissions
     const task = await prisma.task.findFirst({
-      where: {
-        id: parseInt(id),
-        companyId: companyId
-      }
+      where: whereClause
     });
 
     if (!task) {
@@ -1456,12 +1499,18 @@ const updateTaskStatus = async (req, res) => {
     }
 
     // Check permissions
-    const isAdmin = userRole === 'ADMIN';
+    const isAdmin = userRole === 'ADMIN' && task.companyId === companyId;
     const isSystemAdmin = userRole === 'SYSDMIN';
     const isAssigner = task.assignerId === userId;
     const isAssignee = task.assigneeId === userId;
+    const isCoAssignee = await prisma.taskCoAssignee.findFirst({
+      where: {
+        taskId: task.id,
+        userId: userId
+      }
+    }) !== null;
 
-    if (!isAdmin && !isSystemAdmin && !isAssigner && !isAssignee) {
+    if (!isAdmin && !isSystemAdmin && !isAssigner && !isAssignee && !isCoAssignee) {
       return res.status(403).json({ error: 'You do not have permission to update this task status' });
     }
 
@@ -1570,12 +1619,32 @@ const updateTaskPriority = async (req, res) => {
       return res.status(400).json({ error: 'Priority is required' });
     }
 
+    let whereClause = {
+      id: parseInt(id)
+    };
+
+    if (userRole === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    } else if (userRole === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    }
+
     // Find the task first to check permissions
     const task = await prisma.task.findFirst({
-      where: { 
-        id: parseInt(id),
-        companyId: companyId
-      }
+      where: whereClause
     });
 
     if (!task) {
@@ -1583,7 +1652,7 @@ const updateTaskPriority = async (req, res) => {
     }
 
     // Check permissions
-    const isAdmin = userRole === 'ADMIN';
+    const isAdmin = userRole === 'ADMIN' && task.companyId === companyId;
     const isSystemAdmin = userRole === 'SYSDMIN';
     const isAssigner = task.assignerId === userId;
 
@@ -1672,20 +1741,52 @@ const createSubtask = async (req, res) => {
       return res.status(400).json({ error: 'Assignee is required' });
     }
 
+    let parentWhere = {
+      id: parseInt(id)
+    };
+
+    if (req.user.role === 'EMPLOYEE') {
+      parentWhere.OR = [
+        { assigneeId: req.user.id },
+        { assignerId: req.user.id },
+        { coAssignees: { some: { userId: req.user.id } } },
+        { sharedWith: { some: { userId: req.user.id } } },
+        { collaborators: { some: { userId: req.user.id } } }
+      ];
+    } else if (req.user.role === 'ADMIN') {
+      parentWhere.OR = [
+        { companyId: companyId },
+        { assigneeId: req.user.id },
+        { assignerId: req.user.id },
+        { coAssignees: { some: { userId: req.user.id } } },
+        { sharedWith: { some: { userId: req.user.id } } },
+        { collaborators: { some: { userId: req.user.id } } }
+      ];
+    }
+
     // Verify parent task exists and user is assigner or assignee (works for any task, including subtasks)
     const parentTask = await prisma.task.findFirst({
-      where: {
-        id: parseInt(id),
-        companyId: companyId,
-        OR: [
-          { assigneeId: req.user.id }, // User is assignee
-          { assignerId: req.user.id }  // User is assigner
-        ]
-      }
+      where: parentWhere
     });
 
     if (!parentTask) {
       return res.status(404).json({ error: 'Parent task not found or you do not have permission to create subtasks for it' });
+    }
+
+    // Explicitly verify they are authorized to create subtasks (assigner, lead assignee, co-assignee, or admin)
+    const isParentAssigner = parentTask.assignerId === req.user.id;
+    const isParentAssignee = parentTask.assigneeId === req.user.id;
+    const isParentCoAssignee = await prisma.taskCoAssignee.findFirst({
+      where: {
+        taskId: parentTask.id,
+        userId: req.user.id
+      }
+    }) !== null;
+    const isParentAdmin = req.user.role === 'ADMIN' && parentTask.companyId === companyId;
+    const isParentSystemAdmin = req.user.role === 'SYSDMIN';
+
+    if (!isParentAssigner && !isParentAssignee && !isParentCoAssignee && !isParentAdmin && !isParentSystemAdmin) {
+      return res.status(403).json({ error: 'You do not have permission to create subtasks for this task' });
     }
 
     // Verify assignee exists in the same company
@@ -1769,12 +1870,32 @@ const addCoAssignee = async (req, res) => {
 
     console.log('Adding co-assignee for taskId:', taskId, 'userId:', userId, 'companyId:', companyId);
 
+    let whereClause = {
+      id: parseInt(taskId)
+    };
+
+    if (req.user.role === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: currentUserId },
+        { assignerId: currentUserId },
+        { coAssignees: { some: { userId: currentUserId } } },
+        { sharedWith: { some: { userId: currentUserId } } },
+        { collaborators: { some: { userId: currentUserId } } }
+      ];
+    } else if (req.user.role === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: currentUserId },
+        { assignerId: currentUserId },
+        { coAssignees: { some: { userId: currentUserId } } },
+        { sharedWith: { some: { userId: currentUserId } } },
+        { collaborators: { some: { userId: currentUserId } } }
+      ];
+    }
+
     // Get the task to check permissions
     const task = await prisma.task.findFirst({
-      where: {
-        id: parseInt(taskId),
-        companyId: companyId
-      },
+      where: whereClause,
       include: {
         assignee: true
       }
@@ -1879,12 +2000,32 @@ const removeCoAssignee = async (req, res) => {
 
     console.log('Removing co-assignee for taskId:', taskId, 'userId:', userId, 'companyId:', companyId);
 
+    let whereClause = {
+      id: parseInt(taskId)
+    };
+
+    if (req.user.role === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: currentUserId },
+        { assignerId: currentUserId },
+        { coAssignees: { some: { userId: currentUserId } } },
+        { sharedWith: { some: { userId: currentUserId } } },
+        { collaborators: { some: { userId: currentUserId } } }
+      ];
+    } else if (req.user.role === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: currentUserId },
+        { assignerId: currentUserId },
+        { coAssignees: { some: { userId: currentUserId } } },
+        { sharedWith: { some: { userId: currentUserId } } },
+        { collaborators: { some: { userId: currentUserId } } }
+      ];
+    }
+
     // Get the task to check permissions
     const task = await prisma.task.findFirst({
-      where: {
-        id: parseInt(taskId),
-        companyId: companyId
-      }
+      where: whereClause
     });
 
     if (!task) {
