@@ -528,6 +528,7 @@ enum Role {
 enum ConnectedProvider {
   GOOGLE_GMAIL
   MICROSOFT_OUTLOOK
+  HOSTINGER_IMAP
   CALDAV
 }
 

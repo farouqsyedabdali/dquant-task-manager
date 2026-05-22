@@ -30,8 +30,9 @@ const googleContactsRoutes = require('./routes/googleContacts')
 const gmailAgentRoutes = require('./routes/gmailAgent')
 const outlookAgentRoutes = require('./routes/outlookAgent')
 const deviceTokenRoutes = require('./routes/deviceTokens')
-const integrationsRoutes = require('./routes/integrations')
 const internalRoutes = require('./routes/internal')
+const emailProviderRoutes = require('./routes/emailProvider')
+const hostingerAgentRoutes = require('./routes/hostingerAgent')
 
 const app = express()
 
@@ -142,8 +143,9 @@ app.use('/api/google-contacts', googleContactsRoutes)
 app.use('/api/gmail-agent', gmailAgentRoutes)
 app.use('/api/outlook-agent', outlookAgentRoutes)
 app.use('/api/device-tokens', deviceTokenRoutes)
-app.use('/api/integrations', integrationsRoutes)
 app.use('/api/internal', internalRoutes)
+app.use('/api/email-provider', emailProviderRoutes)
+app.use('/api/hostinger-agent', hostingerAgentRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

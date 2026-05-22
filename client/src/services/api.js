@@ -138,18 +138,20 @@ export const outlookAgentAPI = {
   removeSkipSender: (ruleId) => api.delete(`/outlook-agent/skip-senders/${ruleId}`),
 };
 
-// Unified Integrations API (One-Button detection + CalDAV)
-export const integrationsAPI = {
-  /** Auto-detect the mail provider for an email via MX records */
-  detect: (email) => api.get('/integrations/detect', { params: { email } }),
-  /** Aggregated status of all connected accounts (Google, Microsoft, CalDAV) */
-  getStatus: () => api.get('/integrations/status'),
-  /** Connect a CalDAV account with basic credentials */
-  connectCalDav: ({ email, password, serverUrl }) =>
-    api.post('/integrations/caldav/connect', { email, password, serverUrl }),
-  /** Disconnect a CalDAV account */
-  disconnectCalDav: (accountId) =>
-    api.post(`/integrations/caldav/${accountId}/disconnect`),
+// Email Provider Detection API
+export const emailProviderAPI = {
+  detect: () => api.get('/email-provider/detect'),
+};
+
+// Hostinger IMAP Agent API
+export const hostingerAgentAPI = {
+  getStatus: () => api.get('/hostinger-agent/status'),
+  connect: (email, password) => api.post('/hostinger-agent/connect', { email, password }),
+  updateSettings: (accountId, settings) => api.patch(`/hostinger-agent/accounts/${accountId}`, settings),
+  syncNow: (accountId) => api.post(`/hostinger-agent/accounts/${accountId}/sync`),
+  disconnect: (accountId) => api.post(`/hostinger-agent/accounts/${accountId}/disconnect`),
+  addSkipSender: (senderEmail) => api.post('/hostinger-agent/skip-senders', { senderEmail }),
+  removeSkipSender: (ruleId) => api.delete(`/hostinger-agent/skip-senders/${ruleId}`),
 };
 
 // Task Share API

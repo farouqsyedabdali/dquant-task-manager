@@ -1,5 +1,6 @@
 const { syncAllGmailAccounts } = require('../services/gmailAgentService');
 const { syncAllOutlookAccounts } = require('../services/outlookAgentService');
+const { syncAllHostingerAccounts } = require('../services/hostingerAgentService');
 
 const DEFAULT_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -25,8 +26,19 @@ async function runOutlookAgentSync() {
   return result;
 }
 
+async function runHostingerAgentSync() {
+  if (process.env.HOSTINGER_AGENT_ENABLED === 'false') {
+    return { skipped: true, reason: 'disabled' };
+  }
+
+  console.log('📬 Starting Hostinger agent sync...');
+  const result = await syncAllHostingerAccounts();
+  console.log(`📬 Hostinger agent sync complete: ${result.accountsProcessed} account(s) checked`);
+  return result;
+}
+
 async function runEmailAgentSync() {
-  const combined = { gmail: null, outlook: null };
+  const combined = { gmail: null, outlook: null, hostinger: null };
   if (process.env.GMAIL_AGENT_ENABLED !== 'false') {
     combined.gmail = await runGmailAgentSync();
   } else {
@@ -37,12 +49,17 @@ async function runEmailAgentSync() {
   } else {
     combined.outlook = { skipped: true, reason: 'disabled' };
   }
+  if (process.env.HOSTINGER_AGENT_ENABLED !== 'false') {
+    combined.hostinger = await runHostingerAgentSync();
+  } else {
+    combined.hostinger = { skipped: true, reason: 'disabled' };
+  }
   return combined;
 }
 
 function startGmailAgentScheduler() {
-  if (process.env.GMAIL_AGENT_ENABLED === 'false' && process.env.OUTLOOK_AGENT_ENABLED === 'false') {
-    console.log('📬 Email agent schedulers disabled (Gmail and Outlook)');
+  if (process.env.GMAIL_AGENT_ENABLED === 'false' && process.env.OUTLOOK_AGENT_ENABLED === 'false' && process.env.HOSTINGER_AGENT_ENABLED === 'false') {
+    console.log('📬 Email agent schedulers disabled (Gmail, Outlook, and Hostinger)');
     return null;
   }
 
@@ -67,6 +84,7 @@ function startGmailAgentScheduler() {
 module.exports = {
   runGmailAgentSync,
   runOutlookAgentSync,
+  runHostingerAgentSync,
   runEmailAgentSync,
   startGmailAgentScheduler
 };
