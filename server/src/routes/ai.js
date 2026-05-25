@@ -29,7 +29,76 @@ router.use(auth);
 router.post('/actions/preview', async (req, res) => {
   try {
     const { actionType, input, sourceText } = req.body;
-    const preview = await createAIActionPreview({ req, actionType, input, sourceText });
+    let finalActionType = actionType;
+    let finalInput = input || {};
+
+    // 1. If actionType is missing but we have sourceText, classify the intent
+    if (!finalActionType && sourceText) {
+      const intentModel = process.env.OPENROUTER_INTENT_MODEL || process.env.OPENROUTER_CHAT_MODEL || DEFAULT_OPENROUTER_MODEL;
+      const intentSystem = `You are a strict classifier for TIALZ task management. Given ONE user message, output ONLY valid JSON (no markdown) with this exact shape:
+{"intent":"create_task"|"add_update"|"add_subtask"|"create_project"|"update_task"|"update_project"|"chat","text":"<string>"}
+Definitions:
+- create_task: A new standalone task.
+- add_update: Log progress or comment on an EXISTING task.
+- add_subtask: Add a child task.
+- create_project: A multi-task initiative.
+- update_task: Change fields on an existing task.
+- update_project: Change fields on an existing project.
+- chat: General conversation.
+Return only JSON.`;
+      
+      const intentRes = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: intentModel,
+          messages: [{ role: 'system', content: intentSystem }, { role: 'user', content: sourceText }],
+          max_tokens: 256,
+          temperature: 0.1
+        },
+        { headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' } }
+      );
+      const rawIntent = intentRes.data.choices?.[0]?.message?.content || '{}';
+      try {
+        const parsedIntent = JSON.parse(rawIntent.replace(/```json|```/g, '').trim());
+        finalActionType = parsedIntent.intent || 'chat';
+      } catch (e) {
+        finalActionType = 'chat';
+      }
+    }
+
+    // 2. If input is empty but we have an actionType, extract the parameters
+    if (Object.keys(finalInput).length === 0 && sourceText && finalActionType && finalActionType !== 'chat') {
+      const extractSystem = `You are a helpful AI assistant. The user wants to perform an action of type: "${finalActionType}".
+Given the user's message, extract the parameters for this action into a JSON object.
+Rules:
+- For create_task or add_subtask: output {"title": "...", "dueDate": "YYYY-MM-DD" or null, "description": "...", "priority": "LOW"|"MEDIUM"|"HIGH"|"URGENT"}
+- For update_task: output {"taskTitle": "...", "newTitle": "...", "status": "...", "dueDate": "...", "priority": "..."}
+- For create_project: output {"name": "...", "description": "..."}
+- For update_project: output {"projectName": "...", "newName": "...", "status": "..."}
+- For add_comment or add_update: output {"taskTitle": "...", "content": "..."}
+
+Return ONLY valid JSON without markdown fences.`;
+
+      const extractRes = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: OPENROUTER_STRUCTURED_MODEL,
+          messages: [{ role: 'system', content: extractSystem }, { role: 'user', content: sourceText }],
+          response_format: { type: "json_object" },
+          temperature: 0.1
+        },
+        { headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' } }
+      );
+      
+      const rawExtracted = extractRes.data.choices?.[0]?.message?.content || '{}';
+      try {
+        finalInput = JSON.parse(rawExtracted.replace(/```json|```/g, '').trim());
+      } catch (e) {
+        finalInput = {};
+      }
+    }
+
+    const preview = await createAIActionPreview({ req, actionType: finalActionType, input: finalInput, sourceText });
     res.json({ success: true, action: preview });
   } catch (error) {
     console.error('AI action preview error:', error);
