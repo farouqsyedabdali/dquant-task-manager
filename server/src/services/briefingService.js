@@ -394,19 +394,16 @@ async function previewBriefingForUser(user, kind) {
     const scored = allTasks.map(t => ({ ...t, _score: scoreTask(t, dayStart) }))
     scored.sort((a, b) => b._score - a._score)
 
-    // 6. Pick the top tasks as "Focus First" (top 5 highest scored)
-    const focusFirst = scored.slice(0, 5).map(t => ({ ...t, category: 'focus_first' }))
+    // 6. Pick the top tasks as "Focus First" (top 3 highest scored)
+    const focusFirst = scored.slice(0, 3).map(t => ({ ...t, category: 'focus_first' }))
     const focusIds = new Set(focusFirst.map(t => t.id))
 
-    // 7. Categorize the rest, but cap at 15 tasks so we don't overwhelm the user
-    // Since 'rest' is already sorted by score, we just take the top 15
-    const rest = scored.filter(t => !focusIds.has(t.id)).slice(0, 15)
+    // 7. Categorize the rest, but cap at 2 tasks so we don't overwhelm the user
+    // Since 'rest' is already sorted by score, we just take the top 2
+    const rest = scored.filter(t => !focusIds.has(t.id)).slice(0, 2)
     const categorized = rest.map(t => ({ ...t, category: t._category }))
 
     const tasks = [...focusFirst, ...categorized]
-
-    // Clean internal fields
-    tasks.forEach(t => { delete t._score; delete t._category })
 
     const stats = {
       total: tasks.length,
@@ -417,7 +414,18 @@ async function previewBriefingForUser(user, kind) {
       highPriority: allTasks.filter(t => t.priority === 'URGENT' || t.priority === 'HIGH').length,
     }
 
-    return { skipped: false, content: null, tasks, stats, localDate: localDateLabel }
+    const draft = buildMorningTemplate({
+      localDateLabel,
+      dueTodayOpen: tasks.filter(t => t._category === 'due_today' || t._category === 'high_priority' || t._category === 'upcoming'),
+      overdueOpen: tasks.filter(t => t._category === 'overdue')
+    })
+
+    // Clean internal fields
+    tasks.forEach(t => { delete t._score; delete t._category })
+
+    const content = await maybeEnhanceWithLlm('MORNING', draft)
+
+    return { skipped: false, content, tasks, stats, localDate: localDateLabel }
 
   } else {
     // EVENING briefing — recap of today + preview of tomorrow
@@ -454,11 +462,11 @@ async function previewBriefingForUser(user, kind) {
       }
     }
 
-    // Cap the lists so it's not overwhelming
-    const cappedCompleted = completed.slice(0, 10)
-    const cappedStillOpen = stillOpen.slice(0, 10)
-    const cappedCancelled = cancelled.slice(0, 5)
-    const cappedDueTomorrow = dueTomorrow.slice(0, 10)
+    // Cap the lists so it's not overwhelming (hard limit to 5 tasks total)
+    const cappedCompleted = completed.slice(0, 2)
+    const cappedStillOpen = stillOpen.slice(0, 2)
+    const cappedCancelled = cancelled.slice(0, 0)
+    const cappedDueTomorrow = dueTomorrow.slice(0, 1)
 
     const totalHidden = (completed.length - cappedCompleted.length) + 
                         (stillOpen.length - cappedStillOpen.length) + 
@@ -480,7 +488,15 @@ async function previewBriefingForUser(user, kind) {
       hidden: totalHidden
     }
 
-    return { skipped: false, content: null, tasks, stats, localDate: localDateLabel }
+    const draft = buildEveningTemplate({
+      localDateLabel,
+      dueTodayCompleted: cappedCompleted,
+      dueTodayStillOpen: cappedStillOpen,
+      dueTodayCancelled: cappedCancelled
+    })
+    const content = await maybeEnhanceWithLlm('EVENING', draft)
+
+    return { skipped: false, content, tasks, stats, localDate: localDateLabel }
   }
 }
 
