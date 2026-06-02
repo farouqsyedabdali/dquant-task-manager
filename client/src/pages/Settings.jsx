@@ -1549,8 +1549,8 @@ const Settings = () => {
         };
 
         const greetingText = previewBriefingKind === 'MORNING'
-          ? `Good morning${user?.name ? `, ${user.name.split(' ')[0]}` : ''}! I've picked the most important tasks for you to focus on today based on priority and deadlines.`
-          : `Good evening${user?.name ? `, ${user.name.split(' ')[0]}` : ''}! Here's how today went — and a heads-up for tomorrow.`;
+          ? `Good morning${user?.name ? `, ${user.name.split(' ')[0]}` : ''}! Hope you've got a warm cup of coffee ready. Here are the top 5 focus areas I've picked out for your day ahead. You've got this!`
+          : `Good evening${user?.name ? `, ${user.name.split(' ')[0]}` : ''}! Hope you had a wonderful and fulfilling day. Let's take a quick look at what you closed out, and get a gentle heads-up for what's waiting for you tomorrow. Rest up tonight!`;
 
         const totalTasks = previewBriefingTasks.length;
 
@@ -1600,12 +1600,12 @@ const Settings = () => {
 
                 {/* Greeting */}
                 {!isPreviewingBriefing && (
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                  <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--color-text-secondary)' }}>
                     {totalTasks === 0
                       ? previewBriefingKind === 'MORNING'
                         ? "You're all clear — no tasks due today and nothing overdue. Enjoy your day!"
                         : "No tasks were due today. Take it easy!"
-                      : greetingText
+                      : (previewBriefingContent || greetingText)
                     }
                   </p>
                 )}
@@ -1629,17 +1629,19 @@ const Settings = () => {
                       const meta = categoryMeta[category] || { title: category, icon: '📄', color: '#6b7280' };
                       return (
                         <div key={category}>
-                          <div className="flex items-center gap-2 mb-3">
-                            <span className="text-sm">{meta.icon}</span>
-                            <span
-                              className="text-xs font-semibold uppercase tracking-wider"
-                              style={{ color: meta.color }}
-                            >
-                              {meta.title} ({tasks.length})
-                            </span>
-                          </div>
+                          {category !== 'focus_first' && (
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="text-sm">{meta.icon}</span>
+                              <span
+                                className="text-xs font-semibold uppercase tracking-wider"
+                                style={{ color: meta.color }}
+                              >
+                                {meta.title} ({tasks.length})
+                              </span>
+                            </div>
+                          )}
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {tasks.map((task) => {
                               const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && (task.status === 'TODO' || task.status === 'IN_PROGRESS');
 
@@ -1650,7 +1652,7 @@ const Settings = () => {
                                     setShowBriefingModal(false);
                                     navigate(`/dashboard?taskId=${task.id}`);
                                   }}
-                                  className="w-full text-left rounded-lg border p-3 transition-all duration-150 group cursor-pointer flex flex-col h-full"
+                                  className="w-full text-left rounded-lg border p-3 transition-all duration-150 group cursor-pointer flex flex-col min-h-[185px] h-full"
                                   style={{
                                     backgroundColor: 'var(--color-bg-primary)',
                                     borderColor: isOverdue ? 'rgba(239, 68, 68, 0.4)' : 'var(--color-border-default)',
@@ -1723,22 +1725,7 @@ const Settings = () => {
                                           </div>
                                         )}
 
-                                        {task._count?.subtasks > 0 && (
-                                          <div className="flex items-center gap-1 flex-shrink-0">
-                                            <span>📝</span>
-                                            <span>{task._count.subtasks}</span>
-                                          </div>
-                                        )}
-
-                                        {task._count?.comments > 0 && (
-                                          <div className="flex items-center gap-1 flex-shrink-0">
-                                            <span>💬</span>
-                                            <span>{task._count.comments}</span>
-                                          </div>
-                                        )}
-
                                         <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0" style={{ color: 'var(--color-primary)' }}>
-                                          <span className="text-[11px] font-medium">Open</span>
                                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                           </svg>

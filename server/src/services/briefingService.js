@@ -104,14 +104,14 @@ async function maybeEnhanceWithLlm(kind, draftText) {
           {
             role: 'system',
             content:
-              'You are a warm, highly professional, and proactive executive assistant greeting your boss. Speak directly to them in a natural, conversational, and highly human tone—exactly like a real-life secretary would when handing them their morning coffee or giving an evening recap. Do not sound like a robot or AI. Avoid stiff corporate buzzwords. Instead of rigidly listing tasks, analyze their workload and provide a friendly, conversational summary (max ~1500 chars). Group related tasks, gently suggest what they should focus on first, and politely remind them of anything overdue. Offer a brief word of encouragement or a smart tip to set the tone for their day (or wrap up their evening). Keep facts exact; do not invent tasks or dates. Use plain text, no markdown. Do not start with robotic phrases like "Here is your briefing." Start naturally, like "Good morning! Hope you\'re doing well. Taking a look at your plate today..."'
+              'You are a warm, highly professional, and proactive executive assistant greeting your boss. Speak directly to them in a natural, conversational, and highly human tone. Avoid stiff corporate buzzwords. Summarize their plate today or recap their evening in a brief, friendly, single-paragraph message of MAX 300 characters total. Keep it extremely punchy, focusing only on the highest priority highlight or a quick word of support. Do not list everything. Use plain text, no markdown. Start naturally, e.g. "Good morning! Got your coffee ready..."'
           },
           {
             role: 'user',
             content: `Briefing type: ${kind}.\n\n${draftText}`
           }
         ],
-        max_tokens: 500,
+        max_tokens: 150,
         temperature: 0.3
       },
       {
@@ -394,16 +394,10 @@ async function previewBriefingForUser(user, kind) {
     const scored = allTasks.map(t => ({ ...t, _score: scoreTask(t, dayStart) }))
     scored.sort((a, b) => b._score - a._score)
 
-    // 6. Pick the top tasks as "Focus First" (top 5 highest scored)
+    // 6. Pick the top tasks with a hard limit of 5, categorized as focus_first
     const focusFirst = scored.slice(0, 5).map(t => ({ ...t, category: 'focus_first' }))
-    const focusIds = new Set(focusFirst.map(t => t.id))
 
-    // 7. Categorize the rest, but cap at 15 tasks so we don't overwhelm the user
-    // Since 'rest' is already sorted by score, we just take the top 15
-    const rest = scored.filter(t => !focusIds.has(t.id)).slice(0, 15)
-    const categorized = rest.map(t => ({ ...t, category: t._category }))
-
-    const tasks = [...focusFirst, ...categorized]
+    const tasks = [...focusFirst]
 
     // Clean internal fields
     tasks.forEach(t => { delete t._score; delete t._category })
@@ -417,7 +411,14 @@ async function previewBriefingForUser(user, kind) {
       highPriority: allTasks.filter(t => t.priority === 'URGENT' || t.priority === 'HIGH').length,
     }
 
-    return { skipped: false, content: null, tasks, stats, localDate: localDateLabel }
+    const draft = buildMorningTemplate({
+      localDateLabel,
+      dueTodayOpen: tasks,
+      overdueOpen: []
+    })
+    const content = await maybeEnhanceWithLlm('MORNING', draft)
+
+    return { skipped: false, content, tasks, stats, localDate: localDateLabel }
 
   } else {
     // EVENING briefing — recap of today + preview of tomorrow
@@ -480,7 +481,15 @@ async function previewBriefingForUser(user, kind) {
       hidden: totalHidden
     }
 
-    return { skipped: false, content: null, tasks, stats, localDate: localDateLabel }
+    const draft = buildEveningTemplate({
+      localDateLabel,
+      dueTodayCompleted: completed,
+      dueTodayStillOpen: stillOpen,
+      dueTodayCancelled: cancelled
+    })
+    const content = await maybeEnhanceWithLlm('EVENING', draft)
+
+    return { skipped: false, content, tasks, stats, localDate: localDateLabel }
   }
 }
 
