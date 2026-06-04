@@ -8,7 +8,31 @@ import { useAssistantStore } from '../stores/assistantStore';
 export default function AuthenticatedShell({ children }) {
   const isAssistantOpen = useAssistantStore((s) => s.isOpen);
   const closeAssistant = useAssistantStore((s) => s.close);
-  const assistantWidth = 'clamp(300px, 30vw, 360px)';
+  const width = useAssistantStore((s) => s.width || 360);
+  const setWidth = useAssistantStore((s) => s.setWidth);
+  const assistantWidth = `${width}px`;
+
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = width;
+
+    const handleMouseMove = (moveEvent) => {
+      const deltaX = startX - moveEvent.clientX;
+      const newWidth = startWidth + deltaX;
+      // Cap dynamically between 300px and 45vw or 600px
+      const maxW = Math.min(600, window.innerWidth * 0.45);
+      setWidth(Math.max(300, Math.min(maxW, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   return (
     <>
@@ -37,6 +61,14 @@ export default function AuthenticatedShell({ children }) {
               }}
               aria-label="AI Assistant"
             >
+              {/* Resizable drag handle on the left edge */}
+              <div
+                className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-indigo-500/20 active:bg-indigo-500/40 transition-colors z-50 flex items-center justify-center"
+                onMouseDown={handleMouseDown}
+                title="Drag to resize panel"
+              >
+                <div className="w-[1px] h-8 bg-neutral-400 opacity-50 rounded-full" />
+              </div>
               <AssistantPanel layout="rail" onClose={closeAssistant} />
             </aside>
           )}
