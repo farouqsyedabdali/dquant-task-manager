@@ -356,6 +356,100 @@ async function createTasksFromEmail({ account, ingestion, classification, cleanB
   return { createdTaskIds, actions: loggedActions };
 }
 
+async function isSenderAlwaysAllowed({ userId, provider, senderEmail }) {
+  const normalizedSender = String(senderEmail || '').trim().toLowerCase();
+  if (!normalizedSender) return false;
+
+  const rule = await prisma.emailSenderRule.findUnique({
+    where: {
+      userId_provider_senderEmail: {
+        userId,
+        provider,
+        senderEmail: normalizedSender
+      }
+    },
+    select: { alwaysAllow: true }
+  });
+
+  return Boolean(rule?.alwaysAllow);
+}
+
+async function handleIngestionAction({ userId, companyId, ingestionId, action }) {
+  const ingestion = await prisma.emailIngestion.findFirst({
+    where: { id: Number(ingestionId), userId, companyId }
+  });
+  if (!ingestion) throw new Error('Email ingestion not found');
+
+  if (action === 'skip_once') {
+    const updated = await prisma.emailIngestion.update({
+      where: { id: ingestion.id },
+      data: { status: 'SKIPPED' }
+    });
+    return { success: true, ingestion: updated };
+  }
+
+  // For allow_once and always_allow
+  const account = await prisma.connectedAccount.findFirst({
+    where: { id: ingestion.connectedAccountId, userId }
+  });
+  if (!account) throw new Error('Connected account not found');
+
+  let classification = ingestion.extractedActions;
+  if (!classification || Object.keys(classification).length === 0 || !classification.actions) {
+    const cleanBody = stripQuotedText(ingestion.snippet || '');
+    classification = await classifyAndExtractTasks({
+      subject: ingestion.subject || '',
+      cleanBody,
+      senderEmail: ingestion.senderEmail || '',
+      account
+    });
+  }
+
+  const created = await createTasksFromEmail({
+    account,
+    ingestion,
+    classification,
+    cleanBody: stripQuotedText(ingestion.snippet || ''),
+    auditAgentName: ingestion.provider === 'GOOGLE_GMAIL' ? 'Gmail agent' : ingestion.provider === 'MICROSOFT_OUTLOOK' ? 'Outlook agent' : 'Hostinger agent',
+    auditSource: ingestion.provider === 'GOOGLE_GMAIL' ? 'gmail_agent' : ingestion.provider === 'MICROSOFT_OUTLOOK' ? 'outlook_agent' : 'hostinger_agent'
+  });
+
+  const updatedIngestion = await prisma.emailIngestion.update({
+    where: { id: ingestion.id },
+    data: {
+      status: created.createdTaskIds.length > 0 ? 'TASK_CREATED' : 'SKIPPED',
+      extractedActions: classification,
+      createdTaskIds: created.createdTaskIds
+    }
+  });
+
+  if (action === 'always_allow') {
+    await prisma.emailSenderRule.upsert({
+      where: {
+        userId_provider_senderEmail: {
+          userId,
+          provider: ingestion.provider,
+          senderEmail: ingestion.senderEmail.toLowerCase()
+        }
+      },
+      create: {
+        userId,
+        companyId,
+        provider: ingestion.provider,
+        senderEmail: ingestion.senderEmail.toLowerCase(),
+        alwaysSkip: false,
+        alwaysAllow: true
+      },
+      update: {
+        alwaysSkip: false,
+        alwaysAllow: true
+      }
+    });
+  }
+
+  return { success: true, ingestion: updatedIngestion, createdTaskIds: created.createdTaskIds };
+}
+
 module.exports = {
   MIN_AUTO_CREATE_CONFIDENCE,
   getDefaultDueDate,
@@ -366,6 +460,8 @@ module.exports = {
   stripQuotedText,
   deterministicSkip,
   isSenderAlwaysSkipped,
+  isSenderAlwaysAllowed,
   classifyAndExtractTasks,
-  createTasksFromEmail
+  createTasksFromEmail,
+  handleIngestionAction
 };

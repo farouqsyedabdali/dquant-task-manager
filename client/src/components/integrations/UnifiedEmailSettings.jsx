@@ -12,6 +12,7 @@ import {
   FaTimes,
   FaUnlink,
   FaUserSlash,
+  FaCheckCircle,
 } from 'react-icons/fa';
 import IconButton from '../common/IconButton';
 import useAuthStore from '../../context/authStore';
@@ -66,6 +67,8 @@ const UnifiedEmailSettings = () => {
   const [error, setError] = useState('');
   const [openMenuId, setOpenMenuId] = useState(null);
   const [skipSendersModalOpen, setSkipSendersModalOpen] = useState(false);
+  const [allowSenders, setAllowSenders] = useState([]);
+  const [allowSendersModalOpen, setAllowSendersModalOpen] = useState(false);
 
   // Hostinger credentials form
   const [hostingerEmail, setHostingerEmail] = useState(user?.email || '');
@@ -93,6 +96,7 @@ const UnifiedEmailSettings = () => {
         setAccount(gmail.account);
         setRecent(Array.isArray(gmail.recent) ? gmail.recent : []);
         setSkipSenders(Array.isArray(gmail.skipSenders) ? gmail.skipSenders : []);
+        setAllowSenders(Array.isArray(gmail.allowSenders) ? gmail.allowSenders : []);
         setCalendarScopeGranted(Boolean(gmail.calendarScopeGranted));
         setGoogleCalendarWriteEnabled(Boolean(gmail.googleCalendarWriteEnabled));
       } else if (outlook.account && outlook.account.status !== 'REVOKED') {
@@ -100,16 +104,19 @@ const UnifiedEmailSettings = () => {
         setAccount(outlook.account);
         setRecent(Array.isArray(outlook.recent) ? outlook.recent : []);
         setSkipSenders(Array.isArray(outlook.skipSenders) ? outlook.skipSenders : []);
+        setAllowSenders(Array.isArray(outlook.allowSenders) ? outlook.allowSenders : []);
       } else if (hostinger.account && hostinger.account.status !== 'REVOKED') {
         setActiveProvider('hostinger');
         setAccount(hostinger.account);
         setRecent(Array.isArray(hostinger.recent) ? hostinger.recent : []);
         setSkipSenders(Array.isArray(hostinger.skipSenders) ? hostinger.skipSenders : []);
+        setAllowSenders(Array.isArray(hostinger.allowSenders) ? hostinger.allowSenders : []);
       } else {
         setActiveProvider(null);
         setAccount(null);
         setRecent([]);
         setSkipSenders([]);
+        setAllowSenders([]);
       }
     } catch (err) {
       setError('Failed to load email integration status');
@@ -212,7 +219,9 @@ const UnifiedEmailSettings = () => {
       setAccount(null);
       setRecent([]);
       setSkipSenders([]);
+      setAllowSenders([]);
       setSkipSendersModalOpen(false);
+      setAllowSendersModalOpen(false);
       setCalendarScopeGranted(false);
       setGoogleCalendarWriteEnabled(false);
     } catch (err) {
@@ -228,6 +237,7 @@ const UnifiedEmailSettings = () => {
       setIsWorking(true);
       const { data } = await api.addSkipSender(senderEmail);
       setSkipSenders(Array.isArray(data.skipSenders) ? data.skipSenders : skipSenders);
+      await loadStatuses();
       setOpenMenuId(null);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to add always-skip sender');
@@ -244,6 +254,49 @@ const UnifiedEmailSettings = () => {
       setSkipSenders(Array.isArray(data.skipSenders) ? data.skipSenders : []);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to remove always-skip sender');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const alwaysAllowSender = async (senderEmail) => {
+    if (!senderEmail || !api) return;
+    try {
+      setIsWorking(true);
+      const { data } = await api.addAllowSender(senderEmail);
+      setAllowSenders(Array.isArray(data.allowSenders) ? data.allowSenders : allowSenders);
+      await loadStatuses();
+      setOpenMenuId(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to add always-allow sender');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const undoAllowSender = async (ruleId) => {
+    if (!api) return;
+    try {
+      setIsWorking(true);
+      const { data } = await api.removeAllowSender(ruleId);
+      setAllowSenders(Array.isArray(data.allowSenders) ? data.allowSenders : []);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to remove always-allow sender');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const executeIngestionAction = async (ingestionId, action) => {
+    if (!ingestionId || !api) return;
+    try {
+      setIsWorking(true);
+      setError('');
+      await api.processIngestionAction(ingestionId, action);
+      await loadStatuses();
+      setOpenMenuId(null);
+    } catch (err) {
+      setError(err.response?.data?.error || `Failed to perform action: ${action}`);
     } finally {
       setIsWorking(false);
     }
@@ -420,6 +473,22 @@ const UnifiedEmailSettings = () => {
                 <IconButton
                   type="button"
                   size="sm"
+                  variant="secondary"
+                  icon={<FaCheckCircle />}
+                  label={
+                    allowSenders.length > 0
+                      ? `Allowed senders (${allowSenders.length})`
+                      : 'Allowed senders'
+                  }
+                  disabled={isWorking}
+                  onClick={() => {
+                    setOpenMenuId(null);
+                    setAllowSendersModalOpen(true);
+                  }}
+                />
+                <IconButton
+                  type="button"
+                  size="sm"
                   variant="danger"
                   icon={<FaUnlink />}
                   label="Disconnect"
@@ -466,10 +535,15 @@ const UnifiedEmailSettings = () => {
                           <div className="flex items-center gap-2">
                             <span
                               className="shrink-0 rounded-full px-2 py-0.5 text-[11px]"
-                              style={{
-                                backgroundColor: 'var(--color-bg-tertiary)',
-                                color: 'var(--color-text-secondary)',
-                              }}
+                              style={
+                                item.status === 'NEEDS_REVIEW'
+                                  ? { backgroundColor: 'rgba(245, 158, 11, 0.16)', color: '#d97706' }
+                                  : item.status === 'TASK_CREATED'
+                                  ? { backgroundColor: 'rgba(34, 197, 94, 0.12)', color: '#16a34a' }
+                                  : item.status === 'SKIPPED'
+                                  ? { backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }
+                                  : { backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }
+                              }
                             >
                               {humanize(item.status)}
                             </span>
@@ -493,21 +567,56 @@ const UnifiedEmailSettings = () => {
                                 </button>
                                 {openMenuId === item.id && (
                                   <div
-                                    className="absolute right-0 z-10 mt-1 rounded-md border p-1 shadow"
+                                    className="absolute right-0 z-20 mt-1 rounded-md border p-1.5 shadow flex flex-col gap-1 min-w-[120px]"
                                     style={{
                                       borderColor: 'var(--color-border-default)',
                                       backgroundColor: 'var(--color-bg-secondary)',
                                     }}
                                   >
-                                    <button
-                                      type="button"
-                                      onClick={() => alwaysSkipSender(item.senderEmail)}
-                                      disabled={isWorking}
-                                      className="whitespace-nowrap rounded px-2 py-1 text-xs font-medium disabled:opacity-50"
-                                      style={{ color: 'var(--color-text-primary)' }}
-                                    >
-                                      Always skip
-                                    </button>
+                                    {(item.status === 'NEEDS_REVIEW' || item.status === 'SKIPPED') && (
+                                      <button
+                                        type="button"
+                                        onClick={() => executeIngestionAction(item.id, 'allow_once')}
+                                        disabled={isWorking}
+                                        className="text-left w-full rounded px-2 py-1 text-xs font-medium hover:bg-opacity-10 disabled:opacity-50 transition-colors"
+                                        style={{ color: '#16a34a', backgroundColor: 'transparent' }}
+                                      >
+                                        Allow Once
+                                      </button>
+                                    )}
+                                    {item.senderEmail && !allowSenders.some(s => s.senderEmail === item.senderEmail) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => alwaysAllowSender(item.senderEmail)}
+                                        disabled={isWorking}
+                                        className="text-left w-full rounded px-2 py-1 text-xs font-medium hover:bg-opacity-10 disabled:opacity-50 transition-colors"
+                                        style={{ color: 'var(--color-primary)', backgroundColor: 'transparent' }}
+                                      >
+                                        Always Allow
+                                      </button>
+                                    )}
+                                    {item.status === 'NEEDS_REVIEW' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => executeIngestionAction(item.id, 'skip_once')}
+                                        disabled={isWorking}
+                                        className="text-left w-full rounded px-2 py-1 text-xs font-medium hover:bg-opacity-10 disabled:opacity-50 transition-colors"
+                                        style={{ color: 'var(--color-text-secondary)', backgroundColor: 'transparent' }}
+                                      >
+                                        Skip Once
+                                      </button>
+                                    )}
+                                    {item.senderEmail && !skipSenders.some(s => s.senderEmail === item.senderEmail) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => alwaysSkipSender(item.senderEmail)}
+                                        disabled={isWorking}
+                                        className="text-left w-full rounded px-2 py-1 text-xs font-medium hover:bg-opacity-10 disabled:opacity-50 transition-colors"
+                                        style={{ color: '#ef4444', backgroundColor: 'transparent' }}
+                                      >
+                                        Always Skip
+                                      </button>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -521,6 +630,50 @@ const UnifiedEmailSettings = () => {
                           >
                             {item.reason}
                           </p>
+                        )}
+                        {item.status === 'NEEDS_REVIEW' && (
+                          <div className="mt-2.5 flex items-center gap-2 border-t pt-2" style={{ borderColor: 'var(--color-border-default)' }}>
+                            <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Review action:</span>
+                            <button
+                              type="button"
+                              onClick={() => executeIngestionAction(item.id, 'allow_once')}
+                              disabled={isWorking}
+                              className="rounded border px-2 py-0.5 text-xs font-medium hover:bg-opacity-10 disabled:opacity-50 transition-colors"
+                              style={{
+                                color: '#16a34a',
+                                borderColor: 'rgba(34, 197, 94, 0.3)',
+                                backgroundColor: 'rgba(34, 197, 94, 0.05)',
+                              }}
+                            >
+                              Allow Once
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => alwaysAllowSender(item.senderEmail)}
+                              disabled={isWorking}
+                              className="rounded border px-2 py-0.5 text-xs font-medium disabled:opacity-50 transition-colors"
+                              style={{
+                                color: 'var(--color-primary)',
+                                borderColor: 'rgba(99, 102, 241, 0.3)',
+                                backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                              }}
+                            >
+                              Always Allow
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => executeIngestionAction(item.id, 'skip_once')}
+                              disabled={isWorking}
+                              className="rounded border px-2 py-0.5 text-xs font-medium disabled:opacity-50 transition-colors"
+                              style={{
+                                color: 'var(--color-text-secondary)',
+                                borderColor: 'var(--color-border-default)',
+                                backgroundColor: 'var(--color-bg-tertiary)',
+                              }}
+                            >
+                              Skip Once
+                            </button>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -791,6 +944,82 @@ const UnifiedEmailSettings = () => {
                       <button
                         type="button"
                         onClick={() => undoSkipSender(rule.id)}
+                        disabled={isWorking}
+                        className="rounded-md border px-2 py-1 text-xs font-medium shrink-0 disabled:opacity-50"
+                        style={{
+                          borderColor: 'var(--color-border-default)',
+                          color: 'var(--color-text-primary)',
+                        }}
+                      >
+                        Undo
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="modal-backdrop" aria-hidden="true" />
+        </div>
+      )}
+
+      {/* Allowed senders modal */}
+      {allowSendersModalOpen && (
+        <div className="modal modal-open backdrop-blur-sm animate-fadeIn" style={{ zIndex: 55 }}>
+          <div
+            className="modal-box max-w-lg max-h-[85vh] border flex flex-col"
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)',
+            }}
+          >
+            <div className="flex items-start justify-between gap-4 mb-4 shrink-0">
+              <div>
+                <h3
+                  className="text-xl font-bold"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  Always allowed senders
+                </h3>
+                <p
+                  className="text-sm mt-1"
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                >
+                  Emails from these addresses automatically create tasks bypassing confidence checks.
+                </p>
+              </div>
+              <IconButton
+                icon={<FaTimes />}
+                label="Close"
+                iconOnly
+                variant="ghost"
+                size="sm"
+                onClick={() => setAllowSendersModalOpen(false)}
+                className="!p-2 !rounded-full shrink-0"
+              />
+            </div>
+            <div className="overflow-y-auto flex-1 min-h-0 pr-1 -mr-1">
+              {allowSenders.length === 0 ? (
+                <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  No sender addresses are set to always allow.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {allowSenders.map((rule) => (
+                    <div
+                      key={rule.id}
+                      className="flex items-center justify-between rounded-lg border p-3 text-sm gap-3"
+                      style={{ borderColor: 'var(--color-border-default)' }}
+                    >
+                      <p
+                        className="truncate min-w-0"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {rule.senderEmail}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => undoAllowSender(rule.id)}
                         disabled={isWorking}
                         className="rounded-md border px-2 py-1 text-xs font-medium shrink-0 disabled:opacity-50"
                         style={{

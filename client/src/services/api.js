@@ -125,6 +125,9 @@ export const gmailAgentAPI = {
   disconnect: (accountId) => api.post(`/gmail-agent/accounts/${accountId}/disconnect`),
   addSkipSender: (senderEmail) => api.post('/gmail-agent/skip-senders', { senderEmail }),
   removeSkipSender: (ruleId) => api.delete(`/gmail-agent/skip-senders/${ruleId}`),
+  addAllowSender: (senderEmail) => api.post('/gmail-agent/allow-senders', { senderEmail }),
+  removeAllowSender: (ruleId) => api.delete(`/gmail-agent/allow-senders/${ruleId}`),
+  processIngestionAction: (ingestionId, action) => api.post(`/gmail-agent/ingestions/${ingestionId}/action`, { action }),
 };
 
 // Outlook / Microsoft 365 Agent API
@@ -136,6 +139,9 @@ export const outlookAgentAPI = {
   disconnect: (accountId) => api.post(`/outlook-agent/accounts/${accountId}/disconnect`),
   addSkipSender: (senderEmail) => api.post('/outlook-agent/skip-senders', { senderEmail }),
   removeSkipSender: (ruleId) => api.delete(`/outlook-agent/skip-senders/${ruleId}`),
+  addAllowSender: (senderEmail) => api.post('/outlook-agent/allow-senders', { senderEmail }),
+  removeAllowSender: (ruleId) => api.delete(`/outlook-agent/allow-senders/${ruleId}`),
+  processIngestionAction: (ingestionId, action) => api.post(`/outlook-agent/ingestions/${ingestionId}/action`, { action }),
 };
 
 // Email Provider Detection API
@@ -152,6 +158,9 @@ export const hostingerAgentAPI = {
   disconnect: (accountId) => api.post(`/hostinger-agent/accounts/${accountId}/disconnect`),
   addSkipSender: (senderEmail) => api.post('/hostinger-agent/skip-senders', { senderEmail }),
   removeSkipSender: (ruleId) => api.delete(`/hostinger-agent/skip-senders/${ruleId}`),
+  addAllowSender: (senderEmail) => api.post('/hostinger-agent/allow-senders', { senderEmail }),
+  removeAllowSender: (ruleId) => api.delete(`/hostinger-agent/allow-senders/${ruleId}`),
+  processIngestionAction: (ingestionId, action) => api.post(`/hostinger-agent/ingestions/${ingestionId}/action`, { action }),
 };
 
 // Task Share API

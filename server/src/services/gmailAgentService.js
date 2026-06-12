@@ -8,6 +8,7 @@ const {
   stripQuotedText,
   deterministicSkip,
   isSenderAlwaysSkipped,
+  isSenderAlwaysAllowed,
   classifyAndExtractTasks,
   createTasksFromEmail
 } = require('./emailAgentShared');
@@ -290,8 +291,14 @@ async function processGmailMessage(account, messageId) {
     });
   }
 
+  const alwaysAllowed = await isSenderAlwaysAllowed({
+    userId: account.userId,
+    provider: PROVIDER,
+    senderEmail
+  });
+
   const skipReason = deterministicSkip({ headers, senderEmail, subject });
-  if (skipReason) {
+  if (skipReason && !alwaysAllowed) {
     return prisma.emailIngestion.update({
       where: { id: ingestion.id },
       data: {
@@ -305,18 +312,24 @@ async function processGmailMessage(account, messageId) {
 
   try {
     const classification = await classifyAndExtractTasks({ subject, cleanBody, senderEmail, account });
+    
+    const shouldBypassConfidence = alwaysAllowed && classification.actions.length > 0;
+    
     if (
-      !classification.isActionable ||
-      classification.confidence < MIN_AUTO_CREATE_CONFIDENCE ||
-      classification.actions.length === 0
+      !shouldBypassConfidence && (
+        !classification.isActionable ||
+        classification.confidence < MIN_AUTO_CREATE_CONFIDENCE ||
+        classification.actions.length === 0
+      )
     ) {
+      const status = classification.isActionable && classification.actions.length > 0 ? 'NEEDS_REVIEW' : 'SKIPPED';
       return prisma.emailIngestion.update({
         where: { id: ingestion.id },
         data: {
-          status: 'SKIPPED',
+          status,
           classification: classification.isActionable ? 'LOW_CONFIDENCE_ACTIONABLE' : 'NON_ACTIONABLE',
           confidence: classification.confidence,
-          reason: classification.reason,
+          reason: alwaysAllowed && classification.actions.length === 0 ? 'always_allow_no_actions' : classification.reason,
           extractedActions: classification
         }
       });

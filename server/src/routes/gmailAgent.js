@@ -10,7 +10,10 @@ const {
   updateSettings,
   getCalendarEvents,
   addSkipSender,
-  removeSkipSender
+  removeSkipSender,
+  addAllowSender,
+  removeAllowSender,
+  processIngestionAction
 } = require('../controllers/gmailAgentController');
 
 const router = express.Router();
@@ -41,5 +44,15 @@ router.post(
   addSkipSender
 );
 router.delete('/skip-senders/:ruleId', removeSkipSender);
+
+router.post(
+  '/allow-senders',
+  body('senderEmail').isEmail().withMessage('senderEmail must be a valid email'),
+  handleValidationErrors,
+  addAllowSender
+);
+router.delete('/allow-senders/:ruleId', removeAllowSender);
+
+router.post('/ingestions/:ingestionId/action', processIngestionAction);
 
 module.exports = router;

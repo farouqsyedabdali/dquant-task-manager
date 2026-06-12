@@ -9,19 +9,20 @@ const {
 
 const getStatus = async (req, res) => {
   try {
-    const [status, skipSenders] = await Promise.all([
+    const [status, rules] = await Promise.all([
       getHostingerAgentStatus(req.user.id),
       prisma.emailSenderRule.findMany({
         where: {
           userId: req.user.id,
           provider: PROVIDER,
-          alwaysSkip: true,
         },
         orderBy: { senderEmail: 'asc' },
-        select: { id: true, senderEmail: true, createdAt: true },
+        select: { id: true, senderEmail: true, alwaysSkip: true, alwaysAllow: true, createdAt: true },
       }),
     ]);
-    res.json({ success: true, ...status, skipSenders });
+    const skipSenders = rules.filter((r) => r.alwaysSkip);
+    const allowSenders = rules.filter((r) => r.alwaysAllow);
+    res.json({ success: true, ...status, skipSenders, allowSenders });
   } catch (error) {
     console.error('Hostinger agent status error:', error);
     res.status(500).json({ error: 'Failed to fetch Hostinger agent status' });
@@ -230,6 +231,91 @@ const removeSkipSender = async (req, res) => {
   }
 };
 
+const addAllowSender = async (req, res) => {
+  try {
+    const senderEmail = String(req.body?.senderEmail || '').trim().toLowerCase();
+    if (!senderEmail) return res.status(400).json({ error: 'senderEmail is required' });
+
+    await prisma.emailSenderRule.upsert({
+      where: {
+        userId_provider_senderEmail: {
+          userId: req.user.id,
+          provider: PROVIDER,
+          senderEmail
+        }
+      },
+      create: {
+        userId: req.user.id,
+        companyId: req.user.companyId,
+        provider: PROVIDER,
+        senderEmail,
+        alwaysSkip: false,
+        alwaysAllow: true
+      },
+      update: { alwaysSkip: false, alwaysAllow: true }
+    });
+
+    const rules = await prisma.emailSenderRule.findMany({
+      where: { userId: req.user.id, provider: PROVIDER },
+      orderBy: { senderEmail: 'asc' },
+      select: { id: true, senderEmail: true, alwaysSkip: true, alwaysAllow: true, createdAt: true }
+    });
+    const allowSenders = rules.filter((r) => r.alwaysAllow);
+    res.json({ success: true, allowSenders });
+  } catch (error) {
+    console.error('Hostinger agent add allow sender error:', error);
+    res.status(500).json({ error: 'Failed to add always-allow sender' });
+  }
+};
+
+const removeAllowSender = async (req, res) => {
+  try {
+    const id = Number(req.params.ruleId);
+    if (!id) return res.status(400).json({ error: 'Invalid rule id' });
+
+    const rule = await prisma.emailSenderRule.findFirst({
+      where: { id, userId: req.user.id, provider: PROVIDER }
+    });
+    if (!rule) return res.status(404).json({ error: 'Allow sender rule not found' });
+
+    await prisma.emailSenderRule.delete({ where: { id } });
+    const rules = await prisma.emailSenderRule.findMany({
+      where: { userId: req.user.id, provider: PROVIDER },
+      orderBy: { senderEmail: 'asc' },
+      select: { id: true, senderEmail: true, alwaysSkip: true, alwaysAllow: true, createdAt: true }
+    });
+    const allowSenders = rules.filter((r) => r.alwaysAllow);
+    res.json({ success: true, allowSenders });
+  } catch (error) {
+    console.error('Hostinger agent remove allow sender error:', error);
+    res.status(500).json({ error: 'Failed to remove always-allow sender' });
+  }
+};
+
+const processIngestionAction = async (req, res) => {
+  try {
+    const ingestionId = Number(req.params.ingestionId);
+    const { action } = req.body;
+    if (!ingestionId) return res.status(400).json({ error: 'Invalid ingestion id' });
+    if (!['allow_once', 'always_allow', 'skip_once'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action type' });
+    }
+
+    const { handleIngestionAction } = require('../services/emailAgentShared');
+    const result = await handleIngestionAction({
+      userId: req.user.id,
+      companyId: req.user.companyId,
+      ingestionId,
+      action
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Hostinger process ingestion action error:', error);
+    res.status(500).json({ error: error.message || 'Failed to process email action' });
+  }
+};
+
 module.exports = {
   getStatus,
   connect,
@@ -238,4 +324,7 @@ module.exports = {
   runSyncNow,
   addSkipSender,
   removeSkipSender,
+  addAllowSender,
+  removeAllowSender,
+  processIngestionAction
 };
