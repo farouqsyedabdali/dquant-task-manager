@@ -5,6 +5,7 @@ const prisma = require('../lib/prisma');
 const emailService = require('../services/emailService');
 const emailVerificationEmail = require('../templates/emailVerificationEmail');
 const secureLogger = require('../middleware/secureLogger');
+const { normalizeTimeSlot, previewBriefingForUser } = require('../services/briefingService');
 const { 
   checkAccountLockout, 
   recordFailedLogin, 
@@ -879,6 +880,98 @@ const completeEmployeeSetup = async (req, res) => {
   }
 };
 
+const updateBriefingPreferences = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const {
+      briefingMorningEnabled,
+      briefingEveningEnabled,
+      briefingMorningTime,
+      briefingEveningTime,
+      briefingTimezone,
+    } = req.body;
+
+    const data = {};
+
+    if (typeof briefingMorningEnabled === 'boolean') {
+      data.briefingMorningEnabled = briefingMorningEnabled;
+    }
+    if (typeof briefingEveningEnabled === 'boolean') {
+      data.briefingEveningEnabled = briefingEveningEnabled;
+    }
+
+    if (briefingMorningTime !== undefined) {
+      const t = normalizeTimeSlot(briefingMorningTime);
+      if (!t) {
+        return res.status(400).json({ error: 'briefingMorningTime must be HH:mm (24h)' });
+      }
+      data.briefingMorningTime = t;
+    }
+    if (briefingEveningTime !== undefined) {
+      const t = normalizeTimeSlot(briefingEveningTime);
+      if (!t) {
+        return res.status(400).json({ error: 'briefingEveningTime must be HH:mm (24h)' });
+      }
+      data.briefingEveningTime = t;
+    }
+
+    if (briefingTimezone !== undefined) {
+      if (briefingTimezone === null || briefingTimezone === '') {
+        data.briefingTimezone = null;
+      } else {
+        const z = String(briefingTimezone).trim();
+        if (z.length > 120) {
+          return res.status(400).json({ error: 'Invalid timezone' });
+        }
+        try {
+          Intl.DateTimeFormat(undefined, { timeZone: z });
+        } catch {
+          return res.status(400).json({ error: 'Invalid IANA timezone' });
+        }
+        data.briefingTimezone = z;
+      }
+    }
+
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data,
+      include: { company: true },
+    });
+
+    const { password: _pw, ...safeUser } = updated;
+    const userWithCompany = {
+      ...safeUser,
+      companyName: updated.company?.name,
+      isPersonal: updated.company?.isPersonal || false,
+      autoArchivePeriod: updated.company?.autoArchivePeriod || null,
+    };
+
+    res.json({ user: userWithCompany });
+  } catch (error) {
+    console.error('Update briefing preferences error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const previewBriefing = async (req, res) => {
+  try {
+    const user = req.user;
+    const kind = req.params.kind.toUpperCase();
+    if (kind !== 'MORNING' && kind !== 'EVENING') {
+      return res.status(400).json({ error: 'Kind must be MORNING or EVENING' });
+    }
+    const result = await previewBriefingForUser(user, kind);
+    res.json(result);
+  } catch (error) {
+    console.error('Preview briefing error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -887,8 +980,10 @@ module.exports = {
   deleteCompany,
   getMe,
   updateAutoArchivePeriod,
+  updateBriefingPreferences,
   forgotPassword,
   verifyPasswordResetCode,
   resetPasswordWithCode,
-  completeEmployeeSetup
+  completeEmployeeSetup,
+  previewBriefing
 }; 

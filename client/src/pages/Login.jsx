@@ -4,6 +4,7 @@ import useAuthStore from '../context/authStore';
 import ForgotPasswordModal from '../components/modals/ForgotPasswordModal';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import useThemeLogo from '../hooks/useThemeLogo';
+import { getApiUrl } from '../config/api';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -90,11 +91,7 @@ const Login = () => {
   };
 
   const handleGoogleSignIn = () => {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 
-      (import.meta.env.MODE === 'production' 
-        ? 'https://dquant-task-manager-production.up.railway.app/api' 
-        : 'http://localhost:3000/api');
-    window.location.href = `${API_BASE_URL}/auth/google`;
+    window.location.href = getApiUrl('/auth/google');
   };
 
   return (

@@ -3,32 +3,595 @@ const { body } = require('express-validator');
 const axios = require('axios');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const { StringDecoder } = require('string_decoder');
 const { validators, handleValidationErrors } = require('../middleware/validators');
 const { parseLocalDate } = require('../utils/dateUtils');
+const {
+  createAIActionPreview,
+  executeAIAction,
+  rejectAIAction,
+  undoAIAction,
+  SUPPORTED_ACTIONS
+} = require('../services/aiActionRunner');
+const { DEFAULT_OPENROUTER_MODEL } = require('../config/openRouterDefaults');
+
+/** JSON extraction / structured OpenRouter calls (extract-task, identify-task-update, suggest-projects, generate-project-tasks). */
+const OPENROUTER_STRUCTURED_MODEL =
+  process.env.OPENROUTER_STRUCTURED_MODEL ||
+  process.env.OPENROUTER_CHAT_MODEL ||
+  DEFAULT_OPENROUTER_MODEL;
 
 const router = express.Router();
 
 // Apply authentication middleware to all AI routes
 router.use(auth);
 
-// Helper: Try to extract JSON command(s) from AI response
+router.post('/actions/preview', async (req, res) => {
+  try {
+    const { actionType, input, sourceText } = req.body;
+    let finalActionType = actionType;
+    let finalInput = input || {};
+
+    // 1. If actionType is missing but we have sourceText, classify the intent
+    if (!finalActionType && sourceText) {
+      const intentModel = process.env.OPENROUTER_INTENT_MODEL || process.env.OPENROUTER_CHAT_MODEL || DEFAULT_OPENROUTER_MODEL;
+      const intentSystem = `You are a strict classifier for TIALZ task management. Given ONE user message, output ONLY valid JSON (no markdown) with this exact shape:
+{"intent":"create_task"|"add_update"|"add_subtask"|"create_project"|"update_task"|"update_project"|"chat","text":"<string>"}
+Definitions:
+- create_task: A new standalone task.
+- add_update: Log progress or comment on an EXISTING task.
+- add_subtask: Add a child task.
+- create_project: A multi-task initiative.
+- update_task: Change fields on an existing task.
+- update_project: Change fields on an existing project.
+- chat: General conversation.
+Return only JSON.`;
+      
+      const intentRes = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: intentModel,
+          messages: [{ role: 'system', content: intentSystem }, { role: 'user', content: sourceText }],
+          max_tokens: 256,
+          temperature: 0.1
+        },
+        { headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' } }
+      );
+      const rawIntent = intentRes.data.choices?.[0]?.message?.content || '{}';
+      try {
+        const parsedIntent = JSON.parse(rawIntent.replace(/```json|```/g, '').trim());
+        finalActionType = parsedIntent.intent || 'chat';
+      } catch (e) {
+        finalActionType = 'chat';
+      }
+    }
+
+    // 2. If input is empty but we have an actionType, extract the parameters
+    if (Object.keys(finalInput).length === 0 && sourceText && finalActionType && finalActionType !== 'chat') {
+      const extractSystem = `You are a helpful AI assistant. The user wants to perform an action of type: "${finalActionType}".
+Given the user's message, extract the parameters for this action into a JSON object.
+Rules:
+- For create_task or add_subtask: output {"title": "...", "dueDate": "YYYY-MM-DD" or null, "description": "...", "priority": "LOW"|"MEDIUM"|"HIGH"|"URGENT"}
+- For update_task: output {"taskTitle": "...", "newTitle": "...", "status": "...", "dueDate": "...", "priority": "..."}
+- For create_project: output {"name": "...", "description": "..."}
+- For update_project: output {"projectName": "...", "newName": "...", "status": "..."}
+- For add_comment or add_update: output {"taskTitle": "...", "content": "..."}
+
+Return ONLY valid JSON without markdown fences.`;
+
+      const extractRes = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: OPENROUTER_STRUCTURED_MODEL,
+          messages: [{ role: 'system', content: extractSystem }, { role: 'user', content: sourceText }],
+          response_format: { type: "json_object" },
+          temperature: 0.1
+        },
+        { headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' } }
+      );
+      
+      const rawExtracted = extractRes.data.choices?.[0]?.message?.content || '{}';
+      try {
+        finalInput = JSON.parse(rawExtracted.replace(/```json|```/g, '').trim());
+      } catch (e) {
+        finalInput = {};
+      }
+    }
+
+    const preview = await createAIActionPreview({ req, actionType: finalActionType, input: finalInput, sourceText });
+    res.json({ success: true, action: preview });
+  } catch (error) {
+    console.error('AI action preview error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to preview AI action' });
+  }
+});
+
+router.post('/actions/execute', async (req, res) => {
+  try {
+    const { actionId } = req.body;
+    if (!actionId) return res.status(400).json({ error: 'actionId is required' });
+    const result = await executeAIAction({ req, actionId });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('AI action execute error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to execute AI action' });
+  }
+});
+
+router.post('/actions/reject', async (req, res) => {
+  try {
+    const { actionId } = req.body;
+    if (!actionId) return res.status(400).json({ error: 'actionId is required' });
+    const action = await rejectAIAction({ req, actionId });
+    res.json({ success: true, action });
+  } catch (error) {
+    console.error('AI action reject error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to reject AI action' });
+  }
+});
+
+router.post('/actions/undo', async (req, res) => {
+  try {
+    const { actionId } = req.body;
+    if (!actionId) return res.status(400).json({ error: 'actionId is required' });
+    const result = await undoAIAction({ req, actionId });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('AI action undo error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to undo AI action' });
+  }
+});
+
+function findMatchingCloser(s, startIdx, openCh, closeCh) {
+  let depth = 0;
+  for (let i = startIdx; i < s.length; i++) {
+    const c = s[i];
+    if (c === openCh) depth++;
+    else if (c === closeCh) {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+// Helper: extract task action objects from model output (handles multiline arrays/objects)
 function extractJsonCommands(text) {
-  // Remove code block markers (``` or ```json)
-  let cleaned = text.replace(/```json|```/g, '').trim();
-  // Try to match an array of JSON objects or a single object
-  const arrayMatch = cleaned.match(/\[.*?\]/s);
-  if (arrayMatch) {
+  const raw = String(text || '');
+  let cleaned = raw.replace(/```json/gi, '```').replace(/```[\s\S]*?```/g, '').trim();
+
+  const commands = [];
+  let pos = 0;
+  while (pos < cleaned.length) {
+    const lb = cleaned.indexOf('[', pos);
+    const oc = cleaned.indexOf('{', pos);
+    let start = -1;
+    let isArray = false;
+    if (lb === -1 && oc === -1) break;
+    if (oc === -1 || (lb !== -1 && lb < oc)) {
+      start = lb;
+      isArray = true;
+    } else {
+      start = oc;
+      isArray = false;
+    }
+
+    const end = isArray
+      ? findMatchingCloser(cleaned, start, '[', ']')
+      : findMatchingCloser(cleaned, start, '{', '}');
+    if (end === -1) {
+      pos = start + 1;
+      continue;
+    }
+    const slice = cleaned.slice(start, end + 1);
     try {
-      return JSON.parse(arrayMatch[0]);
-    } catch (e) { }
+      const parsed = JSON.parse(slice);
+      if (isArray && Array.isArray(parsed)) {
+        for (const item of parsed) {
+          if (item && typeof item === 'object' && item.action) commands.push(item);
+        }
+      } else if (!isArray && parsed && typeof parsed === 'object' && parsed.action) {
+        commands.push(parsed);
+      }
+    } catch {
+      /* skip */
+    }
+    pos = end + 1;
   }
-  const objMatches = [...cleaned.matchAll(/\{[\s\S]*?\}/g)];
-  if (objMatches.length > 0) {
-    return objMatches.map(m => {
-      try { return JSON.parse(m[0]); } catch { return null; }
-    }).filter(Boolean);
+  if (commands.length) return commands;
+
+  const fallback = [...raw.replace(/```json|```/g, '').trim().matchAll(/\{[\s\S]*?\}/g)];
+  const out = [];
+  for (const m of fallback) {
+    try {
+      const obj = JSON.parse(m[0]);
+      if (obj && obj.action) out.push(obj);
+    } catch {
+      /* ignore */
+    }
   }
-  return [];
+  return out;
+}
+
+const ROUTE_INTENT_ALLOWED = new Set([
+  'create_task',
+  'add_update',
+  'add_subtask',
+  'create_project',
+  'update_task',
+  'update_project',
+  'chat'
+]);
+
+/**
+ * Parse JSON from LLM for POST /ai/route-intent. Falls back to chat on parse errors.
+ */
+function parseRouteIntentResponse(rawText, fallbackMessage) {
+  const cleaned = (rawText || '').replace(/```json|```/g, '').trim();
+  let obj = null;
+  try {
+    obj = JSON.parse(cleaned);
+  } catch {
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (m) {
+      try {
+        obj = JSON.parse(m[0]);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  if (!obj || typeof obj !== 'object') {
+    return { intent: 'chat', text: fallbackMessage };
+  }
+  let intent = typeof obj.intent === 'string' ? obj.intent.trim() : 'chat';
+  if (!ROUTE_INTENT_ALLOWED.has(intent)) intent = 'chat';
+  const text =
+    typeof obj.text === 'string' && obj.text.trim() ? obj.text.trim() : fallbackMessage;
+  return { intent, text };
+}
+
+function sanitizeChatHistory(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const m of raw) {
+    if (!m || typeof m !== 'object') continue;
+    const role = m.role === 'assistant' || m.role === 'user' ? m.role : null;
+    const content = typeof m.content === 'string' ? m.content.trim() : '';
+    if (!role || !content) continue;
+    out.push({ role, content: content.slice(0, 12000) });
+  }
+  return out.slice(-48);
+}
+
+/** Shared DB + system prompt for assistant chat (non-stream and SSE). */
+async function buildAssistantChatContext(req, rawHistory) {
+  const history = sanitizeChatHistory(rawHistory);
+  const userId = req.user.id;
+  const companyId = req.user.companyId;
+  const userName = req.user.name;
+  const userRole = req.user.role;
+  const userTasks = await prisma.task.findMany({
+    where: {
+      companyId,
+      status: { in: ['TODO', 'IN_PROGRESS'] },
+      OR: [{ assigneeId: userId }, { assignerId: userId }],
+    },
+    include: {
+      assignee: { select: { name: true } },
+      assigner: { select: { name: true } },
+    },
+    orderBy: { updatedAt: 'desc' },
+    take: 10,
+  });
+  const systemPrompt = buildChatSystemPrompt(
+    userName,
+    userRole,
+    req.user.company?.name || 'Unknown Company',
+    userTasks
+  );
+  return { history, userId, companyId, userName, userRole, userTasks, systemPrompt };
+}
+
+function formatCurrentDateForPrompt() {
+  return new Date().toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  });
+}
+
+function buildChatSystemPrompt(userName, userRole, companyName, userTasks) {
+  const taskLines = userTasks.length
+    ? userTasks
+        .map((task, idx) => {
+          const due = task.dueDate
+            ? new Date(task.dueDate).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })
+            : 'no due date';
+          return `#${idx + 1}: [id:${task.id}] ${task.title} (${task.status}, ${task.priority} priority, due ${due}, assigned to ${task.assignee?.name || 'unassigned'})`;
+        })
+        .join('\n')
+    : '(none)';
+
+  return `
+You are an AI assistant for a task management system called TIALZ.
+You are in a multi-turn chat. Use the full conversation history to answer follow-ups (what the user asked earlier, what you already did, quoted email text, or agreed next steps). If they ask what they said first or to repeat earlier content, answer from the conversation. Do not reply with generic "I don't have enough context" when the answer is in the history; only ask for clarification when something is genuinely missing.
+
+Style rules:
+- Do NOT use emojis (no ✅, ⚠️, 🗑️, etc). Write clean, professional text.
+- Use light markdown when helpful: **bold** for emphasis, short bullet or numbered lists. Keep it concise.
+- Do NOT use markdown pipe tables (lines with | column | separators) for task lists, summaries, or "here are your tasks" — they read as glitchy spreadsheet dumps in chat. Write in natural sentences instead.
+- When the user asks about their tasks, what's due, or an overview: sound like a colleague — a brief opener, then bullets or short lines with title, status, priority, and due date woven into prose (e.g. "**Check CRA…** — still to do, medium priority, due May 9."). Group or order by urgency if useful. Only use a table layout if they explicitly ask for a table or spreadsheet-style output.
+- When creating or changing work, output the JSON command and add a short line like "Here's what I've put together — review the action below." The UI will show a visual card for the user to approve or decline.
+- Do not claim that you already changed something. The user must approve the action card first.
+- For create/change requests, always include the JSON command even if a field is missing, vague, in the past, or needs clarification. The action runner will turn invalid drafts into blocked review cards. Do not replace the JSON command with only a clarification sentence.
+- NEVER wrap action JSON in markdown code fences (no triple backticks).
+- NEVER paste a human-readable bullet list of JSON objects for the user to copy. One short sentence, then raw JSON only (array or object) that the UI parses — the user should only see cards, not raw data.
+- Keep machine JSON compact on its own lines; do not narrate the JSON field by field.
+
+If the user asks you to create or change tasks/projects/comments, output a JSON command (or an array of commands) in this format (on a new line):
+{ "action": "create_task", "title": "...", "assignee": "...", "description": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
+{ "action": "update_task", "taskId": 123, "taskTitle": "only when resolving by name (no taskId)", "newTitle": "only when renaming", "status": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm", "description": "..." }
+{ "action": "add_subtask", "parentTaskId": 123, "parentTaskTitle": "parent task if id is unknown", "title": "...", "description": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
+{ "action": "create_project", "name": "...", "description": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
+{ "action": "update_project", "projectId": 123, "projectName": "project name if id is unknown", "name": "...", "description": "...", "status": "ACTIVE|ON_HOLD|COMPLETED|ARCHIVED", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
+{ "action": "add_comment", "taskId": 123, "title": "task name if id is unknown", "content": "..." }
+{ "action": "list_tasks", "filter": { "status": "...", "priority": "...", "assignee": "..." } }
+- For multiple actions, output an array of JSON commands.
+- Prefer taskId/projectId when it is available in the active task context. If you only know a title, include the title and let the action runner resolve it.
+- Parse natural language dates (e.g., "by Friday", "EOD tomorrow", "next Monday 3pm") and convert to ISO-like format (YYYY-MM-DD or YYYY-MM-DDTHH:mm) in the dueDate field when applicable.
+- For references like "last task you created" or "second task in my list", use the user's recent tasks (provided below) and include the resolved title in the command.
+- IMPORTANT: You are only shown active tasks (TODO and IN_PROGRESS status) to help you focus on the most relevant work. This improves accuracy when there are many tasks.
+- For normal questions (what's due, priorities, summaries, "tell me about my tasks"), answer in plain conversational language from the task list below — not tables, not column grids. Be concise and fast.
+- Otherwise, just answer normally.
+
+Current User Context:
+- Name: ${userName}
+- Role: ${userRole}
+- Company: ${companyName || 'Unknown Company'}
+- Current date/time: ${formatCurrentDateForPrompt()}
+
+Active Tasks (${userTasks.length} - TODO and IN_PROGRESS only):
+${taskLines}
+`.trim();
+}
+
+async function runChatCommand(command, { userId, companyId, userTasks }) {
+  if (command.action === 'create_task') {
+    const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+    let priority = 'MEDIUM';
+    if (command.priority && typeof command.priority === 'string') {
+      const upper = command.priority.trim().toUpperCase();
+      if (allowedPriorities.includes(upper)) {
+        priority = upper;
+      }
+    }
+
+    let dueDate = null;
+    let dueDateError = null;
+    if (command.dueDate && typeof command.dueDate === 'string') {
+      let finalDueDate = command.dueDate;
+      if (!finalDueDate.includes('T')) {
+        finalDueDate = `${finalDueDate}T23:59:00`;
+      } else if (finalDueDate.includes('T') && !finalDueDate.includes(':')) {
+        finalDueDate = `${finalDueDate}23:59:00`;
+      }
+      const dueDateObj = new Date(finalDueDate);
+      if (isNaN(dueDateObj.getTime())) {
+        dueDateError = 'Invalid date format. Please provide a valid date.';
+      } else if (dueDateObj <= new Date()) {
+        dueDateError = 'Due date must be in the future.';
+      } else {
+        dueDate = dueDateObj.toISOString();
+      }
+    }
+
+    if (dueDateError) {
+      return { __type: 'error', message: dueDateError };
+    }
+
+    return {
+      __type: 'task_proposal',
+      title: command.title || 'Untitled Task',
+      description: command.description || '',
+      priority,
+      dueDate,
+      assignee: command.assignee || null,
+    };
+  } else if (command.action === 'delete_task') {
+    const task = await prisma.task.findFirst({
+      where: {
+        title: { equals: command.title, mode: 'insensitive' },
+        companyId: companyId
+      }
+    });
+    if (task) {
+      await prisma.task.delete({ where: { id: task.id } });
+      return `Task "${task.title}" has been deleted.`;
+    } else {
+      return `Could not find a task called "${command.title}".`;
+    }
+  } else if (command.action === 'update_task') {
+    let title = command.title;
+    if (title && title.toLowerCase().includes('last task')) {
+      if (userTasks.length > 0) title = userTasks[0].title;
+    } else if (title && title.toLowerCase().includes('second task')) {
+      if (userTasks.length > 1) title = userTasks[1].title;
+    }
+    const task = await prisma.task.findFirst({
+      where: {
+        title: { equals: title, mode: 'insensitive' },
+        companyId: companyId
+      }
+    });
+    if (task) {
+      const updateData = {};
+      if (command.status) {
+        const allowedStatuses = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED'];
+        const status = command.status.trim().toUpperCase();
+        if (allowedStatuses.includes(status)) updateData.status = status;
+      }
+      if (command.priority) {
+        const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+        const priority = command.priority.trim().toUpperCase();
+        if (allowedPriorities.includes(priority)) updateData.priority = priority;
+      }
+      if (command.dueDate && typeof command.dueDate === 'string') {
+        const parsed = new Date(command.dueDate);
+        if (!isNaN(parsed.getTime())) updateData.dueDate = parsed;
+      }
+      if (Object.keys(updateData).length > 0) {
+        await prisma.task.update({ where: { id: task.id }, data: updateData });
+        return `Task "${task.title}" updated${updateData.status ? ` — status: ${updateData.status}` : ''}${updateData.priority ? ` — priority: ${updateData.priority}` : ''}${updateData.dueDate ? ' — due date updated' : ''}.`;
+      } else {
+        return `No valid fields to update for task "${task.title}".`;
+      }
+    } else {
+      return `Could not find a task called "${title}".`;
+    }
+  } else if (command.action === 'list_tasks') {
+    const filter = command.filter || {};
+    let where = { companyId };
+    if (filter.status) {
+      where.status = filter.status.trim().toUpperCase();
+    }
+    if (filter.priority) {
+      where.priority = filter.priority.trim().toUpperCase();
+    }
+    if (filter.assignee) {
+      const assignee = await prisma.user.findFirst({
+        where: {
+          name: { equals: filter.assignee, mode: 'insensitive' },
+          companyId: companyId
+        }
+      });
+      if (assignee) where.assigneeId = assignee.id;
+    }
+    where.OR = [
+      { assigneeId: userId },
+      { assignerId: userId }
+    ];
+    if (!filter.status) {
+      where.status = {
+        in: ['TODO', 'IN_PROGRESS']
+      };
+    }
+    const tasks = await prisma.task.findMany({
+      where,
+      orderBy: { updatedAt: 'desc' },
+      take: 20
+    });
+    if (tasks.length === 0) return 'No matching tasks found.';
+    return 'Tasks:\n' + tasks.map(t => `- ${t.title} (${t.status}, ${t.priority})`).join('\n');
+  }
+  return null;
+}
+
+function stripJsonFromText(text) {
+  let cleaned = String(text || '')
+    .replace(/```json[\s\S]*?```/gi, '')
+    .replace(/```[\s\S]*?```/g, '');
+  const stripRanges = [];
+  let pos = 0;
+  while (pos < cleaned.length) {
+    const lb = cleaned.indexOf('[', pos);
+    const oc = cleaned.indexOf('{', pos);
+    let start = -1;
+    let isArr = false;
+    if (lb === -1 && oc === -1) break;
+    if (oc === -1 || (lb !== -1 && lb < oc)) {
+      start = lb;
+      isArr = true;
+    } else {
+      start = oc;
+    }
+    const end = isArr
+      ? findMatchingCloser(cleaned, start, '[', ']')
+      : findMatchingCloser(cleaned, start, '{', '}');
+    if (end === -1) {
+      pos = start + 1;
+      continue;
+    }
+    const slice = cleaned.slice(start, end + 1);
+    try {
+      const p = JSON.parse(slice);
+      const isAction =
+        (Array.isArray(p) && p.length && p[0]?.action) ||
+        (!Array.isArray(p) && p?.action);
+      if (isAction) stripRanges.push([start, end + 1]);
+    } catch {
+      /* skip */
+    }
+    pos = end + 1;
+  }
+  for (let i = stripRanges.length - 1; i >= 0; i--) {
+    cleaned = cleaned.slice(0, stripRanges[i][0]) + cleaned.slice(stripRanges[i][1]);
+  }
+  return cleaned.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+async function finalizeAiChatText(aiText, { req, userId, companyId, userTasks, sourceText }) {
+  const commands = extractJsonCommands(aiText);
+  if (commands.length > 0) {
+    const textParts = [];
+    const proposals = [];
+    for (const command of commands) {
+      try {
+        const actionType = normalizeActionName(command.action);
+        if (SUPPORTED_ACTIONS.has(actionType)) {
+          const { action, ...input } = command;
+          const proposal = await createAIActionPreview({
+            req,
+            actionType,
+            input,
+            sourceText,
+            sourceType: 'CHAT',
+            sourceMetadata: { command }
+          });
+          proposals.push(proposal);
+          continue;
+        }
+
+        const result = await runChatCommand(command, { userId, companyId, userTasks });
+        if (!result) continue;
+        if (result && typeof result === 'object' && result.__type === 'task_proposal') {
+          proposals.push(result);
+        } else if (result && typeof result === 'object' && result.__type === 'error') {
+          textParts.push(result.message);
+        } else if (typeof result === 'string') {
+          textParts.push(result);
+        }
+      } catch (err) {
+        textParts.push('Error processing command.');
+      }
+    }
+    const prose = stripJsonFromText(aiText);
+    const commandOutput = textParts.join('\n');
+    const combined = [prose, commandOutput].filter(Boolean).join('\n\n');
+    return { text: combined, proposals };
+  } else {
+    if (/^\s*\{[\s\S]*\}\s*$/.test(aiText) || /^\s*\[.*\]\s*$/s.test(aiText)) {
+      return { text: '', proposals: [] };
+    }
+    return { text: aiText, proposals: [] };
+  }
+}
+
+function normalizeActionName(action) {
+  const normalized = String(action || '').trim().toLowerCase();
+  if (normalized === 'add_update' || normalized === 'comment_task') return 'add_comment';
+  if (normalized === 'create_subtask') return 'add_subtask';
+  if (normalized === 'edit_task' || normalized === 'modify_task') return 'update_task';
+  if (normalized === 'edit_project' || normalized === 'modify_project') return 'update_project';
+  return normalized;
 }
 
 // POST /api/ai/chat
@@ -36,70 +599,35 @@ router.post('/chat',
   validators.aiText('message'),
   handleValidationErrors,
   async (req, res) => {
-    const { message } = req.body;
-
+    const { message, history: rawHistory } = req.body;
+    const fast = true;
     let responded = false;
 
     try {
-      // Get user context
-      const userId = req.user.id;
-      const userRole = req.user.role;
-      const companyId = req.user.companyId;
-      const userName = req.user.name;
+      const {
+        history,
+        userId,
+        companyId,
+        userTasks,
+        systemPrompt,
+      } = await buildAssistantChatContext(req, rawHistory);
 
-      // Fetch user's recent tasks for context (only TODO and IN_PROGRESS for better AI focus)
-      const userTasks = await prisma.task.findMany({
-        where: {
-          companyId: companyId,
-          status: {
-            in: ['TODO', 'IN_PROGRESS']
-          },
-          OR: [
-            { assigneeId: userId },
-            { assignerId: userId }
-          ]
-        },
-        include: {
-          assignee: { select: { name: true } },
-          assigner: { select: { name: true } }
-        },
-        orderBy: { updatedAt: 'desc' },
-        take: 10
-      });
+      const chatModel = process.env.OPENROUTER_CHAT_MODEL || DEFAULT_OPENROUTER_MODEL;
+      const maxTokens = fast
+        ? Math.min(Number(process.env.OPENROUTER_CHAT_MAX_TOKENS_FAST || 1024), 2048)
+        : Math.min(Number(process.env.OPENROUTER_CHAT_MAX_TOKENS || 2048), 8192);
+      const temperature = fast ? 0.38 : 0.45;
 
-      // System prompt for AI (now includes due date awareness and focuses on active tasks)
-      const systemPrompt = `
-You are an AI assistant for a task management system.
-If the user asks you to create, delete, update, or list tasks, output a JSON command (or an array of commands) in this format (on a new line):
-{ "action": "create_task", "title": "...", "assignee": "...", "description": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
-{ "action": "delete_task", "title": "..." }
-{ "action": "update_task", "title": "...", "status": "...", "priority": "...", "dueDate": "YYYY-MM-DD or YYYY-MM-DDTHH:mm" }
-{ "action": "list_tasks", "filter": { "status": "...", "priority": "...", "assignee": "..." } }
-- For multiple actions, output an array of JSON commands.
-- Parse natural language dates (e.g., "by Friday", "EOD tomorrow", "next Monday 3pm") and convert to ISO-like format (YYYY-MM-DD or YYYY-MM-DDTHH:mm) in the dueDate field when applicable.
-- For references like "last task you created" or "second task in my list", use the user's recent tasks (provided below) and include the resolved title in the command.
-- IMPORTANT: You are only shown active tasks (TODO and IN_PROGRESS status) to help you focus on the most relevant work. This improves accuracy when there are many tasks.
-- Otherwise, just answer normally.
-
-Current User Context:
-- Name: ${userName}
-- Role: ${userRole}
-- Company: ${req.user.company?.name || 'Unknown Company'}
-
-Active Tasks (${userTasks.length} - TODO and IN_PROGRESS only):
-${userTasks.map((task, idx) => `#${idx + 1}: ${task.title} (${task.status}, ${task.priority} priority, assigned to ${task.assignee?.name || 'unassigned'})`).join('\n')}
-`;
-
-      // Stream from OpenRouter API with Gemma 3 27B
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'arcee-ai/trinity-large-preview:free',
+        model: chatModel,
         messages: [
           { role: 'system', content: systemPrompt },
+          ...history,
           { role: 'user', content: message }
         ],
         stream: true,
-        max_tokens: 2000,
-        temperature: 0.7
+        max_tokens: maxTokens,
+        temperature
       }, {
         headers: {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -112,8 +640,9 @@ ${userTasks.map((task, idx) => `#${idx + 1}: ${task.title} (${task.status}, ${ta
 
       let fullContent = '';
       let buffer = '';
+      const decoder = new StringDecoder('utf8');
       openrouterRes.data.on('data', chunk => {
-        buffer += chunk.toString();
+        buffer += decoder.write(chunk);
         let lines = buffer.split('\n');
         buffer = lines.pop();
 
@@ -121,7 +650,7 @@ ${userTasks.map((task, idx) => `#${idx + 1}: ${task.title} (${task.status}, ${ta
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') {
-              handleAIResponse(fullContent.trim());
+              void handleAIResponse(fullContent.trim()).catch((err) => console.error('handleAIResponse', err));
               return;
             }
             try {
@@ -137,8 +666,9 @@ ${userTasks.map((task, idx) => `#${idx + 1}: ${task.title} (${task.status}, ${ta
         }
       });
       openrouterRes.data.on('end', () => {
+        buffer += decoder.end();
         if (!responded) {
-          handleAIResponse(fullContent.trim());
+          void handleAIResponse(fullContent.trim()).catch((err) => console.error('handleAIResponse', err));
         }
       });
       openrouterRes.data.on('error', err => {
@@ -148,192 +678,28 @@ ${userTasks.map((task, idx) => `#${idx + 1}: ${task.title} (${task.status}, ${ta
         }
       });
 
-      // Handle AI response: check for JSON command and execute if needed
       async function handleAIResponse(aiText) {
         if (responded) return;
         responded = true;
-        // Multi-action support: parse array or single command
-        const commands = extractJsonCommands(aiText);
-        if (commands.length > 0) {
-          let results = [];
-          for (const command of commands) {
-            try {
-              const result = await handleSingleCommand(command);
-              if (result) results.push(result);
-            } catch (err) {
-              results.push('⚠️ Error processing command.');
-            }
+        try {
+          const result = await finalizeAiChatText(aiText, {
+            req,
+            userId,
+            companyId,
+            userTasks,
+            sourceText: message
+          });
+          const payload = { response: result.text || '' };
+          if (result.proposals && result.proposals.length > 0) {
+            payload.proposals = result.proposals;
           }
-          // If all results are from list_tasks, join and return only those (suppress JSON)
-          if (results.length > 0 && results.every(r => typeof r === 'string' && (r.startsWith('Tasks:') || r.startsWith('No matching tasks found.')))) {
-            return res.json({ response: results.join('\n') });
-          }
-          // Otherwise, join all results (for create/delete/update, etc.)
-          return res.json({ response: results.join('\n') });
-        } else {
-          // If the AI's response is just a JSON command (code block), suppress it
-          if (/^\s*\{[\s\S]*\}\s*$/.test(aiText) || /^\s*\[.*\]\s*$/s.test(aiText)) {
-            return res.json({ response: '' });
-          }
-          // No command, just return the AI's response
-          return res.json({ response: aiText });
+          return res.json(payload);
+        } catch (err) {
+          console.error('AI chat finalize error:', err);
+          return res.status(500).json({ error: 'Failed to process AI response' });
         }
       }
 
-      // Handle a single command (create, delete, update, list)
-      async function handleSingleCommand(command) {
-        if (command.action === 'create_task') {
-          // Find assignee by name (if provided)
-          let assigneeId = null;
-          if (command.assignee) {
-            const assignee = await prisma.user.findFirst({
-              where: {
-                name: { equals: command.assignee, mode: 'insensitive' },
-                companyId: companyId
-              }
-            });
-            if (assignee) assigneeId = assignee.id;
-          }
-          // Validate priority
-          const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
-          let priority = 'MEDIUM';
-          if (command.priority && typeof command.priority === 'string') {
-            const upper = command.priority.trim().toUpperCase();
-            if (allowedPriorities.includes(upper)) {
-              priority = upper;
-            }
-          }
-          // Validate due date is required
-          if (!command.dueDate || typeof command.dueDate !== 'string') {
-            return `⚠️ Due date is required. Please provide a due date in the format YYYY-MM-DD or YYYY-MM-DDTHH:mm`;
-          }
-
-          // Parse and validate due date
-          let finalDueDate = command.dueDate;
-          if (!finalDueDate.includes('T')) {
-            // Date only format (YYYY-MM-DD), add 11:59 PM
-            finalDueDate = `${finalDueDate}T23:59:00`;
-          } else if (finalDueDate.includes('T') && !finalDueDate.includes(':')) {
-            // Date with T but no time (YYYY-MM-DDT), add 11:59 PM
-            finalDueDate = `${finalDueDate}23:59:00`;
-          }
-
-          const dueDateObj = new Date(finalDueDate);
-          const now = new Date();
-          if (isNaN(dueDateObj.getTime())) {
-            return `⚠️ Invalid due date format. Please use YYYY-MM-DD or YYYY-MM-DDTHH:mm format.`;
-          }
-          if (dueDateObj <= now) {
-            return `⚠️ Due date must be in the future. Please provide a future date.`;
-          }
-
-          // Create the task
-          const newTask = await prisma.task.create({
-            data: {
-              title: command.title || 'Untitled Task',
-              description: command.description || '',
-              priority,
-              assignerId: userId,
-              assigneeId: assigneeId || userId,
-              dueDate: dueDateObj,
-              companyId
-            }
-          });
-          return `✅ Task "${newTask.title}" created${assigneeId ? ` and assigned to ${command.assignee}` : ''}.`;
-        } else if (command.action === 'delete_task') {
-          // Find the task by title
-          const task = await prisma.task.findFirst({
-            where: {
-              title: { equals: command.title, mode: 'insensitive' },
-              companyId: companyId
-            }
-          });
-          if (task) {
-            await prisma.task.delete({ where: { id: task.id } });
-            return `🗑️ Task "${task.title}" deleted.`;
-          } else {
-            return `⚠️ Task "${command.title}" not found.`;
-          }
-        } else if (command.action === 'update_task') {
-          // Reference resolution: support "last task", "second task", etc.
-          let title = command.title;
-          if (title && title.toLowerCase().includes('last task')) {
-            if (userTasks.length > 0) title = userTasks[0].title;
-          } else if (title && title.toLowerCase().includes('second task')) {
-            if (userTasks.length > 1) title = userTasks[1].title;
-          }
-          // Find the task by title
-          const task = await prisma.task.findFirst({
-            where: {
-              title: { equals: title, mode: 'insensitive' },
-              companyId: companyId
-            }
-          });
-          if (task) {
-            const updateData = {};
-            if (command.status) {
-              const allowedStatuses = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED'];
-              const status = command.status.trim().toUpperCase();
-              if (allowedStatuses.includes(status)) updateData.status = status;
-            }
-            if (command.priority) {
-              const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
-              const priority = command.priority.trim().toUpperCase();
-              if (allowedPriorities.includes(priority)) updateData.priority = priority;
-            }
-            if (command.dueDate && typeof command.dueDate === 'string') {
-              const parsed = new Date(command.dueDate);
-              if (!isNaN(parsed.getTime())) updateData.dueDate = parsed;
-            }
-            if (Object.keys(updateData).length > 0) {
-              await prisma.task.update({ where: { id: task.id }, data: updateData });
-              return `✏️ Task "${task.title}" updated${updateData.status ? ` (status: ${updateData.status})` : ''}${updateData.priority ? ` (priority: ${updateData.priority})` : ''}${updateData.dueDate ? ' (due date updated)' : ''}.`;
-            } else {
-              return `⚠️ No valid fields to update for task "${task.title}".`;
-            }
-          } else {
-            return `⚠️ Task "${title}" not found.`;
-          }
-        } else if (command.action === 'list_tasks') {
-          // List or summarize tasks with filters
-          const filter = command.filter || {};
-          let where = { companyId };
-          if (filter.status) {
-            where.status = filter.status.trim().toUpperCase();
-          }
-          if (filter.priority) {
-            where.priority = filter.priority.trim().toUpperCase();
-          }
-          if (filter.assignee) {
-            const assignee = await prisma.user.findFirst({
-              where: {
-                name: { equals: filter.assignee, mode: 'insensitive' },
-                companyId
-              }
-            });
-            if (assignee) where.assigneeId = assignee.id;
-          }
-          // Only show tasks user can see and focus on active tasks (TODO and IN_PROGRESS)
-          where.OR = [
-            { assigneeId: userId },
-            { assignerId: userId }
-          ];
-          // If no specific status filter, default to active tasks only
-          if (!filter.status) {
-            where.status = {
-              in: ['TODO', 'IN_PROGRESS']
-            };
-          }
-          const tasks = await prisma.task.findMany({
-            where,
-            orderBy: { updatedAt: 'desc' },
-            take: 20
-          });
-          if (tasks.length === 0) return 'No matching tasks found.';
-          return 'Tasks:\n' + tasks.map(t => `- ${t.title} (${t.status}, ${t.priority})`).join('\n');
-        }
-        return null;
-      }
     } catch (err) {
       if (!responded) {
         responded = true;
@@ -342,6 +708,219 @@ ${userTasks.map((task, idx) => `#${idx + 1}: ${task.title} (${task.status}, ${ta
       }
     }
   });
+
+function writeSse(res, payload) {
+  res.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+// POST /api/ai/chat-stream — Server-Sent Events: token deltas, then final text + action proposals
+router.post('/chat-stream', validators.aiText('message'), handleValidationErrors, async (req, res) => {
+  const { message, history: rawHistory } = req.body;
+  const fast = true;
+
+  let upstream = null;
+  const safeEnd = () => {
+    try {
+      res.end();
+    } catch {
+      /* ignore */
+    }
+  };
+
+  try {
+    const { history, userId, companyId, userTasks, systemPrompt } = await buildAssistantChatContext(req, rawHistory);
+
+    res.status(200);
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (typeof res.flushHeaders === 'function') {
+      res.flushHeaders();
+    }
+
+    writeSse(res, { type: 'meta', phase: 'model' });
+
+    const chatModel = process.env.OPENROUTER_CHAT_MODEL || DEFAULT_OPENROUTER_MODEL;
+    const maxTokens = fast
+      ? Math.min(Number(process.env.OPENROUTER_CHAT_MAX_TOKENS_FAST || 1024), 2048)
+      : Math.min(Number(process.env.OPENROUTER_CHAT_MAX_TOKENS || 2048), 8192);
+    const temperature = fast ? 0.38 : 0.45;
+
+    const openrouterRes = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model: chatModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...history,
+          { role: 'user', content: message },
+        ],
+        stream: true,
+        max_tokens: maxTokens,
+        temperature,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0],
+          'X-Title': process.env.SITE_NAME || 'Tialz Task Manager',
+        },
+        responseType: 'stream',
+      }
+    );
+
+    upstream = openrouterRes.data;
+    let clientClosed = false;
+    req.on('close', () => {
+      clientClosed = true;
+      if (upstream && !upstream.destroyed) upstream.destroy();
+    });
+
+    let fullContent = '';
+    let buf = '';
+    let streamSettled = false;
+    const decoder = new StringDecoder('utf8');
+
+    try {
+      await new Promise((resolve, reject) => {
+        const finish = () => {
+          if (streamSettled) return;
+          buf += decoder.end();
+          streamSettled = true;
+          resolve();
+        };
+        upstream.on('data', (chunk) => {
+          if (clientClosed) return;
+          buf += decoder.write(chunk);
+          const lines = buf.split('\n');
+          buf = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') {
+              finish();
+              return;
+            }
+            try {
+              const parsed = JSON.parse(data);
+              const piece = parsed.choices && parsed.choices[0]?.delta?.content;
+              if (piece) {
+                fullContent += piece;
+                writeSse(res, { type: 'delta', text: piece });
+              }
+            } catch {
+              /* malformed or partial line */
+            }
+          }
+        });
+        upstream.on('end', finish);
+        upstream.on('error', (e) => reject(e));
+      });
+    } catch (streamErr) {
+      if (!clientClosed && res.headersSent) {
+        try {
+          writeSse(res, { type: 'error', message: streamErr.message || 'Stream interrupted' });
+        } catch {
+          /* ignore */
+        }
+      }
+      safeEnd();
+      return;
+    }
+
+    if (clientClosed) return;
+
+    writeSse(res, { type: 'meta', phase: 'finalizing' });
+    const result = await finalizeAiChatText(fullContent.trim(), {
+      req,
+      userId,
+      companyId,
+      userTasks,
+      sourceText: message,
+    });
+    writeSse(res, {
+      type: 'done',
+      response: result.text || '',
+      proposals: result.proposals || [],
+    });
+    safeEnd();
+  } catch (err) {
+    if (!res.headersSent) {
+      return res.status(500).json({ error: err.message || 'AI stream failed' });
+    }
+    try {
+      writeSse(res, { type: 'error', message: err.message || 'AI stream failed' });
+    } catch {
+      /* ignore */
+    }
+    safeEnd();
+  }
+});
+
+// POST /api/ai/route-intent — classify user message for quick actions vs general chat (client + shared aiQuickActions)
+router.post(
+  '/route-intent',
+  validators.aiText('message'),
+  handleValidationErrors,
+  async (req, res) => {
+    const { message } = req.body;
+    const model =
+      process.env.OPENROUTER_INTENT_MODEL ||
+      process.env.OPENROUTER_CHAT_MODEL ||
+      DEFAULT_OPENROUTER_MODEL;
+
+    const system = `You are a strict classifier for TIALZ task management. Given ONE user message, output ONLY valid JSON (no markdown, no explanation) with this exact shape:
+{"intent":"create_task"|"add_update"|"add_subtask"|"create_project"|"update_task"|"update_project"|"chat","text":"<string>"}
+
+Definitions:
+- create_task: A new standalone task, reminder, or todo (including deadlines and assignments).
+- add_update: Log progress, a note, or a comment on an EXISTING task the user refers to.
+- add_subtask: Add a child task under an existing parent task.
+- create_project: A multi-task initiative, project, campaign, or event that implies multiple steps or tasks.
+- update_task: Change fields on an existing task (deadline, status, priority, title rename, description).
+- update_project: Change fields on an existing project (name, deadline, status, description).
+- chat: Questions, summaries, listing tasks, greetings, general conversation, or unclear intent.
+
+Rules:
+- Prefer the most specific intent. If the user only wants one action item, use create_task, not create_project.
+- If unsure, use chat.
+- "text" must be the full user message to forward to tools (trimmed). You may lightly normalize wording but keep meaning.
+
+Return only the JSON object.`;
+
+    try {
+      const openrouterRes = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model,
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: message },
+          ],
+          max_tokens: 256,
+          temperature: 0.1,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0],
+            'X-Title': process.env.SITE_NAME || 'Tialz Task Manager',
+          },
+        }
+      );
+
+      const raw = openrouterRes.data.choices?.[0]?.message?.content?.trim() || '';
+      const { intent, text } = parseRouteIntentResponse(raw, message);
+      return res.json({ intent, text });
+    } catch (err) {
+      console.error('route-intent error:', err?.response?.data || err.message);
+      return res.status(500).json({ error: 'Intent routing failed' });
+    }
+  }
+);
 
 // POST /api/ai/extract-task
 router.post('/extract-task',
@@ -390,7 +969,7 @@ Output: {"title": "Update website homepage", "description": "Update the website 
 
       // Call OpenRouter for task extraction
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'arcee-ai/trinity-large-preview:free',
+        model: OPENROUTER_STRUCTURED_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Extract task information from this text: "${text}"` }
@@ -421,10 +1000,11 @@ Output: {"title": "Update website homepage", "description": "Update the website 
           }
         }, 30000);
 
+        const decoder = new StringDecoder('utf8');
         openrouterRes.data.on('data', chunk => {
           if (responseHandled) return; // Don't process if response already handled
 
-          buffer += chunk.toString();
+          buffer += decoder.write(chunk);
           let lines = buffer.split('\n');
           buffer = lines.pop();
 
@@ -442,6 +1022,7 @@ Output: {"title": "Update website homepage", "description": "Update the website 
               if (data === '[DONE]' && !responseHandled) {
                 responseHandled = true;
                 clearTimeout(timeoutId);
+                buffer += decoder.end();
 
                 try {
                   // Extract JSON from the response
@@ -511,10 +1092,12 @@ Output: {"title": "Update website homepage", "description": "Update the website 
       if (err.response?.data && typeof err.response.data.read === 'function') {
         try {
           let errorBody = '';
+          const errDecoder = new StringDecoder('utf8');
           err.response.data.on('data', chunk => {
-            errorBody += chunk.toString();
+            errorBody += errDecoder.write(chunk);
           });
           err.response.data.on('end', () => {
+            errorBody += errDecoder.end();
             console.error('OpenRouter actual error message:', errorBody);
           });
         } catch (readError) {
@@ -622,7 +1205,7 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
 
       // Call OpenRouter for task update identification
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'arcee-ai/trinity-large-preview:free',
+        model: OPENROUTER_STRUCTURED_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Analyze this text for task updates: "${text}"` }
@@ -643,6 +1226,7 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
       let fullContent = '';
       let buffer = '';
       let responseHandled = false;
+      const decoder = new StringDecoder('utf8');
 
       await new Promise((resolve, reject) => {
         const timeoutId = setTimeout(() => {
@@ -655,7 +1239,7 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
         openrouterRes.data.on('data', chunk => {
           if (responseHandled) return;
 
-          buffer += chunk.toString();
+          buffer += decoder.write(chunk);
           let lines = buffer.split('\n');
           buffer = lines.pop();
 
@@ -673,6 +1257,7 @@ Output: {"taskFound": true, "taskId": 789, "confidence": 0.95, "updateType": "co
               if (data === '[DONE]' && !responseHandled) {
                 responseHandled = true;
                 clearTimeout(timeoutId);
+                buffer += decoder.end();
 
                 try {
                   // Extract JSON from the response
@@ -831,7 +1416,7 @@ STRICT RULES:
 
       // Context-aware API call: analyze text context and generate appropriate suggestions
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'arcee-ai/trinity-large-preview:free',
+        model: OPENROUTER_STRUCTURED_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           {
@@ -1076,7 +1661,7 @@ Guidelines:
 
       // Optimized API call
       const openrouterRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'arcee-ai/trinity-large-preview:free',
+        model: OPENROUTER_STRUCTURED_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Create project "${ideaName}" from: "${text.substring(0, 500)}"` }

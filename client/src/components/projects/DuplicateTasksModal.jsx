@@ -397,7 +397,7 @@ const DuplicateTasksModal = ({ isOpen, onClose, tasks, projectId, onSuccess }) =
           />
         </div>
       </div>
-      <div className="modal-backdrop" onClick={onClose}></div>
+      <div className="modal-backdrop"></div>
     </div>
   );
 };

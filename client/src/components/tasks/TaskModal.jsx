@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import useTaskStore from '../../stores/taskStore';
 import useAuthStore from '../../context/authStore';
 import useUserStore from '../../stores/userStore';
-import { STATUS_LABELS, PRIORITY_LABELS } from '../../utils/constants';
-import { convertLocalDateTimeToUTC } from '../../utils/dateUtils';
+import { STATUS_LABELS, PRIORITY_LABELS, TASK_RECURRENCE, RECURRENCE_LABELS, RECURRENCE_OPTIONS } from '../../utils/constants';
+import { convertLocalDateTimeToUTC, formatDateForInput } from '../../utils/dateUtils';
 import CommentSection from '../comments/CommentSection';
 import AddSubtaskModal from './AddSubtaskModal';
 import AddTeamMemberModal from './AddTeamMemberModal';
@@ -13,18 +13,19 @@ import DeleteConfirmModal from '../common/DeleteConfirmModal';
 import TaskShareModal from './TaskShareModal';
 import TaskUpdatesModal from './TaskUpdatesModal';
 import SearchableDropdown from '../common/SearchableDropdown';
-import { usersAPI, tasksAPI, commentsAPI } from '../../services/api';
+import { usersAPI, tasksAPI, taskShareAPI } from '../../services/api';
 import useContactStore from '../../stores/contactStore';
 import AddContactModal from '../common/AddContactModal';
+import DatePicker from '../common/DatePicker';
 import IconButton from '../common/IconButton';
 import ConfirmModal from '../common/ConfirmModal';
 import AIWarning from '../common/AIWarning';
 import { useToastContext } from '../../context/ToastContext';
 import {
   FaTimes, FaEdit, FaTrash, FaArchive, FaShareAlt, FaChartBar,
-  FaMagic, FaSave, FaPlus, FaUserPlus, FaCheck,
+  FaSave, FaPlus, FaUserPlus, FaCheck,
   FaCircle, FaSpinner, FaCheckCircle, FaPauseCircle, FaTimesCircle,
-  FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle, FaUsers, FaSitemap
+  FaArrowDown, FaMinus, FaArrowUp, FaExclamationTriangle, FaUsers, FaSitemap, FaClock
 } from 'react-icons/fa';
 
 const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, extensionUpdateData = null, onTaskSwitch = null, onTaskChange = null }) => {
@@ -35,7 +36,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     priority: 'MEDIUM',
     assigneeId: '',
     externalContactId: '',
-    dueDate: ''
+    dueDate: '',
+    recurrence: TASK_RECURRENCE.NONE,
+    recurrenceEndsAt: ''
   });
   const [isEditing, setIsEditing] = useState(false);
   const [errors, setErrors] = useState({});
@@ -50,9 +53,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
   const [coAssignees, setCoAssignees] = useState([]);
   const [isLoadingCoAssignees, setIsLoadingCoAssignees] = useState(false);
   const [isAddingCoAssignee, setIsAddingCoAssignee] = useState(false);
-  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
-  const [summaryData, setSummaryData] = useState(null);
-  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isUpdatesModalOpen, setIsUpdatesModalOpen] = useState(false);
   const [isAddTeamMemberModalOpen, setIsAddTeamMemberModalOpen] = useState(false);
   const [contacts, setContacts] = useState([]);
@@ -153,6 +153,18 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
   // Show creator name ALWAYS (both business and personal accounts need to see who created the task)
   const shouldShowCreator = true;
+
+  const canEditRecurrence =
+    !viewedTask?.parentTaskId &&
+    ((isAdmin() && viewedTask?.companyId === user?.companyId) || viewedTask?.assignerId === user?.id) &&
+    !isSharedTask;
+
+  const showRecurrenceSection =
+    !viewedTask?.parentTaskId &&
+    (
+      (canEditRecurrence && isEditing) ||
+      (viewedTask.recurrence && viewedTask.recurrence !== TASK_RECURRENCE.NONE)
+    );
 
   const fetchUsers = async () => {
     try {
@@ -279,12 +291,9 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             return;
           }
 
-          const invitationData = {
-            recipientEmail: contact.email,
-            message: `Hi ${contact.name}, I'd like to invite you to collaborate on this task: "${viewedTask.title}"`
-          };
-
-          await tasksAPI.sendInvitation(viewedTask.id, invitationData);
+          // Use taskShareAPI to properly register the intended role as CO_ASSIGNEE
+          // This creates a TaskShare with permissionLevel='CO_ASSIGNEE' and sends the email
+          await taskShareAPI.shareTaskWithContact(viewedTask.id, contactId, 'CO_ASSIGNEE');
 
           // Refresh task data to show invitation status
           const result = await fetchTask(viewedTask.id);
@@ -329,7 +338,11 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
         priority: viewedTask.priority || 'MEDIUM',
         assigneeId: viewedTask.assigneeId?.toString() || '',
         externalContactId: viewedTask.externalContactId?.toString() || '',
-        dueDate: viewedTask.dueDate ? new Date(viewedTask.dueDate).toISOString().slice(0, 16) : ''
+        dueDate: viewedTask.dueDate ? new Date(viewedTask.dueDate).toISOString().slice(0, 16) : '',
+        recurrence: viewedTask.recurrence || TASK_RECURRENCE.NONE,
+        recurrenceEndsAt: viewedTask.recurrenceEndsAt
+          ? formatDateForInput(viewedTask.recurrenceEndsAt)
+          : ''
       });
     }
   }, [viewedTask]);
@@ -451,8 +464,17 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
       ...formData,
       assigneeId: formData.assigneeId ? parseInt(formData.assigneeId) : null,
       externalContactId: formData.externalContactId ? parseInt(formData.externalContactId) : null,
-      dueDate: convertLocalDateTimeToUTC(formData.dueDate) // Convert to UTC for server
+      dueDate: convertLocalDateTimeToUTC(formData.dueDate),
+      recurrence: formData.recurrence
     };
+    delete updateData.recurrenceEndsAt;
+    if (formData.recurrence === TASK_RECURRENCE.NONE) {
+      updateData.recurrenceEndsAt = null;
+    } else if (formData.recurrenceEndsAt) {
+      updateData.recurrenceEndsAt = convertLocalDateTimeToUTC(formData.recurrenceEndsAt);
+    } else {
+      updateData.recurrenceEndsAt = null;
+    }
 
     const result = await updateTask(viewedTask.id, updateData);
     if (result.success) {
@@ -477,7 +499,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
     setIsUnaccepting(true);
     try {
-      const response = await tasksAPI.unaccessTask(viewedTask.id);
+      const response = await tasksAPI.unacceptTask(viewedTask.id);
       if (response.data.success) {
         toast.success('You have successfully withdrawn from this task');
         setIsUnaccessConfirmOpen(false);
@@ -491,211 +513,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
     } finally {
       setIsUnaccepting(false);
     }
-  };
-
-  // Handle task summarization
-  const handleSummarizeTask = async () => {
-    if (!viewedTask) return;
-
-    setIsLoadingSummary(true);
-    try {
-      const summary = await createTaskSummary(viewedTask);
-      setSummaryData(summary);
-      setIsSummaryModalOpen(true);
-    } catch (error) {
-      console.error('Failed to create task summary:', error);
-      toast.error('Failed to create task summary');
-    } finally {
-      setIsLoadingSummary(false);
-    }
-  };
-
-  // Create a comprehensive task summary
-  const createTaskSummary = async (task) => {
-    const formatDate = (dateString) => {
-      if (!dateString) return 'No due date set';
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffTime = date.getTime() - now.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays < 0) {
-        return `Overdue by ${Math.abs(diffDays)} day(s)`;
-      } else if (diffDays === 0) {
-        return 'Due today';
-      } else if (diffDays === 1) {
-        return 'Due tomorrow';
-      } else {
-        return `Due in ${diffDays} day(s)`;
-      }
-    };
-
-    const getStatusEmoji = (status) => {
-      switch (status) {
-        case 'TODO': return '⏳';
-        case 'IN_PROGRESS': return '🔄';
-        case 'COMPLETED': return '✅';
-        case 'ON_HOLD': return '⏸️';
-        case 'CANCELLED': return '❌';
-        default: return '❓';
-      }
-    };
-
-    const getPriorityEmoji = (priority) => {
-      switch (priority) {
-        case 'URGENT': return '🚨';
-        case 'HIGH': return '🔴';
-        case 'MEDIUM': return '🟡';
-        case 'LOW': return '🟢';
-        default: return '⚪';
-      }
-    };
-
-    // Fetch comments for the task
-    let comments = [];
-    try {
-      const response = await commentsAPI.getByTaskId(task.id);
-      comments = response.data || [];
-    } catch (error) {
-      console.error('Failed to fetch comments for summary:', error);
-    }
-
-    // Create AI-style intelligent summary
-    const generateIntelligentSummary = () => {
-      let summary = '';
-
-      // Analyze task status and urgency
-      const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED';
-      const isUrgent = task.priority === 'URGENT' || task.priority === 'HIGH';
-      const hasSubtasks = task.subtasks && task.subtasks.length > 0;
-      const hasParent = task.parentTask;
-      const hasComments = comments.length > 0;
-
-      // Start with task overview
-      if (task.status === 'COMPLETED') {
-        summary += `✅ This task "${task.title}" has been completed`;
-      } else if (task.status === 'IN_PROGRESS') {
-        summary += `🔄 "${task.title}" is currently in progress`;
-      } else if (task.status === 'TODO') {
-        summary += `⏳ "${task.title}" is pending and ready to start`;
-      } else {
-        summary += `📋 "${task.title}" is currently ${task.status.toLowerCase().replace('_', ' ')}`;
-      }
-
-      // Add urgency context
-      if (isOverdue) {
-        summary += ' and is OVERDUE';
-      } else if (isUrgent && task.status !== 'COMPLETED') {
-        summary += ` with ${task.priority.toLowerCase()} priority`;
-      }
-
-      summary += '.';
-
-      // Add assignment context
-      if (task.assignee && task.assigner) {
-        if (task.assignee.id === task.assigner.id) {
-          summary += ` ${task.assignee.name} created this task for themselves`;
-        } else {
-          summary += ` Assigned by ${task.assigner.name} to ${task.assignee.name}`;
-        }
-      } else if (task.assignee) {
-        summary += ` Currently assigned to ${task.assignee.name}`;
-      } else if (task.assigner) {
-        summary += ` Created by ${task.assigner.name} but unassigned`;
-      }
-
-      // Add due date context
-      if (task.dueDate) {
-        const dueDate = new Date(task.dueDate);
-        const now = new Date();
-        const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (diffDays < 0) {
-          summary += ` and was due ${Math.abs(diffDays)} day(s) ago`;
-        } else if (diffDays === 0) {
-          summary += ' and is due today';
-        } else if (diffDays === 1) {
-          summary += ' and is due tomorrow';
-        } else if (diffDays <= 7) {
-          summary += ` and is due in ${diffDays} day(s)`;
-        } else {
-          summary += ` with a due date of ${dueDate.toLocaleDateString()}`;
-        }
-      }
-
-      summary += '.';
-
-      // Add description context if available
-      if (task.description && task.description.trim()) {
-        const descLength = task.description.length;
-        if (descLength > 100) {
-          summary += ` The task includes detailed requirements and specifications.`;
-        } else {
-          summary += ` Additional context: "${task.description.substring(0, 80)}${descLength > 80 ? '...' : ''}"`;
-        }
-      }
-
-      // Add hierarchy context
-      if (hasParent && hasSubtasks) {
-        summary += ` This is a mid-level task with ${task.subtasks.length} subtask(s) and is part of "${task.parentTask.title}".`;
-      } else if (hasParent) {
-        summary += ` This task is a subtask of "${task.parentTask.title}".`;
-      } else if (hasSubtasks) {
-        summary += ` This is a parent task managing ${task.subtasks.length} subtask(s).`;
-      }
-
-      // Add collaboration context
-      if (hasComments) {
-        const recentComments = comments.slice(0, 3);
-        const uniqueCommenters = [...new Set(recentComments.map(c => c.author?.name).filter(Boolean))];
-
-        if (uniqueCommenters.length > 1) {
-          summary += ` Active collaboration with ${comments.length} comment(s) from ${uniqueCommenters.length} team member(s).`;
-        } else if (comments.length > 1) {
-          summary += ` Includes ${comments.length} comment(s) with ongoing discussion.`;
-        } else {
-          summary += ` Has ${comments.length} comment for additional context.`;
-        }
-      }
-
-      // Add actionable insight
-      if (task.status !== 'COMPLETED') {
-        if (isOverdue && isUrgent) {
-          summary += ' ⚠️ IMMEDIATE ATTENTION REQUIRED - This high-priority task is overdue.';
-        } else if (isOverdue) {
-          summary += ' ⏰ This task requires attention as it has passed its due date.';
-        } else if (isUrgent && task.status === 'TODO') {
-          summary += ' 🚨 High priority task ready to begin.';
-        } else if (task.status === 'IN_PROGRESS') {
-          summary += ' 👍 Task is actively being worked on.';
-        }
-      } else {
-        summary += ' ✨ Task successfully completed.';
-      }
-
-      return summary;
-    };
-
-    const textSummary = generateIntelligentSummary();
-
-    return {
-      title: task.title,
-      description: task.description || 'No description provided',
-      textSummary: textSummary,
-      status: `${getStatusEmoji(task.status)} ${task.status.replace('_', ' ')}`,
-      priority: `${getPriorityEmoji(task.priority)} ${task.priority}`,
-      dueDate: formatDate(task.dueDate),
-      createdBy: task.assigner?.name || 'Unknown',
-      assignedTo: task.assignee?.name || 'Unassigned',
-      createdAt: new Date(task.createdAt).toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
-      comments: comments.length,
-      subtasks: task.subtasks?.length || 0
-    };
   };
 
   const getStatusColor = (status) => {
@@ -781,7 +598,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           animation: fadeIn 0.3s ease-out;
         }
       `}</style>
-      <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }} onClick={onClose}>
+      <div className="modal modal-open backdrop-blur-sm" style={{ zIndex: 70 }}>
         <div
           className="modal-box max-w-5xl max-h-[90vh] min-h-[550px] overflow-y-auto scrollbar-thin transition-colors duration-200"
           style={{
@@ -867,16 +684,16 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                     className="!bg-blue-600 hover:!bg-blue-700"
                   />
 
-                  <IconButton
-                    icon={<FaMagic />}
-                    label="Summary"
-                    variant="primary"
-                    size="sm"
-                    onClick={handleSummarizeTask}
-                    disabled={isLoadingSummary}
-                    loading={isLoadingSummary}
-                    className="!bg-purple-600 hover:!bg-purple-700"
-                  />
+                  {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
+                    <IconButton
+                      icon={<FaPlus />}
+                      label="Add subtask"
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setIsAddSubtaskOpen(true)}
+                      className="!bg-purple-600 hover:!bg-purple-700"
+                    />
+                  )}
 
                   {canShare && (
                     <IconButton
@@ -1125,25 +942,15 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                   </h4>
                   {isEditing ? (
                     <div>
-                      <input
-                        type="datetime-local"
+                      <DatePicker
                         name="dueDate"
                         value={formData.dueDate}
                         onChange={handleChange}
-                        className={`input w-full transition-colors duration-200 ${errors.dueDate ? 'input-error' : ''}`}
-                        style={{
-                          backgroundColor: 'var(--color-bg-tertiary)',
-                          borderColor: errors.dueDate ? '#ef4444' : 'var(--color-border-default)',
-                          color: 'var(--color-text-primary)',
-                        }}
-                        required
+                        placeholder="Select due date and time"
+                        showTime={true}
+                        timeOptional={false}
                         min={new Date().toISOString().slice(0, 16)}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-primary)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = errors.dueDate ? '#ef4444' : 'var(--color-border-default)';
-                        }}
+                        error={!!errors.dueDate}
                       />
                       {errors.dueDate && (
                         <label className="label">
@@ -1182,6 +989,79 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                   )}
                 </div>
               </div>
+
+              {/* Repeat (weekly / monthly) — not for subtasks */}
+              {showRecurrenceSection && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <h4
+                      className="text-base font-semibold mb-3 transition-colors duration-200"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      Repeat
+                    </h4>
+                    {canEditRecurrence && isEditing ? (
+                      <>
+                        <select
+                          name="recurrence"
+                          value={formData.recurrence}
+                          onChange={handleChange}
+                          className="select w-full transition-colors duration-200"
+                          style={{
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            borderColor: 'var(--color-border-default)',
+                            color: 'var(--color-text-primary)',
+                          }}
+                        >
+                          {RECURRENCE_OPTIONS.map(({ value, label }) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
+                        </select>
+                        <p className="text-xs mt-2 opacity-80" style={{ color: 'var(--color-text-tertiary)' }}>
+                          Completing this task creates the next one with the updated due date.
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-base" style={{ color: 'var(--color-text-primary)' }}>
+                        {RECURRENCE_LABELS[viewedTask.recurrence || TASK_RECURRENCE.NONE]}
+                      </span>
+                    )}
+                  </div>
+                  {(canEditRecurrence && isEditing
+                    ? formData.recurrence !== TASK_RECURRENCE.NONE
+                    : viewedTask.recurrence &&
+                      viewedTask.recurrence !== TASK_RECURRENCE.NONE) && (
+                    <div>
+                      <h4
+                        className="text-base font-semibold mb-3 transition-colors duration-200"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        Stop repeating after
+                      </h4>
+                      {canEditRecurrence && isEditing ? (
+                        <DatePicker
+                          name="recurrenceEndsAt"
+                          value={formData.recurrenceEndsAt || ''}
+                          onChange={handleChange}
+                          placeholder="Optional — pick last repeat date"
+                          showTime={false}
+                          timeOptional={false}
+                        />
+                      ) : (
+                        <span className="text-base" style={{ color: 'var(--color-text-primary)' }}>
+                          {viewedTask.recurrenceEndsAt
+                            ? new Date(viewedTask.recurrenceEndsAt).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                            : '—'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Tabbed Interface for Team & Hierarchy */}
               <div className="border-t pt-4 mt-4" style={{ borderColor: 'var(--color-border-default)' }}>
@@ -1500,6 +1380,10 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
                             {/* Shared With Users */}
                             {viewedTask.sharedWith && viewedTask.sharedWith.map((share) => {
+                              // Skip ghost records with no identifiable person
+                              const shareName = share.user?.name || share.contact?.name || share.email;
+                              if (!shareName) return null;
+
                               // Skip if user is already in the list as assignee, co-assignee, or collaborator
                               if (share.userId === viewedTask.assigneeId ||
                                 coAssignees.some(co => co.userId === share.userId) ||
@@ -1535,7 +1419,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                           lineHeight: '1'
                                         }}
                                       >
-                                        {share.user?.name?.charAt(0) || '?'}
+                                        {shareName.charAt(0)}
                                       </span>
                                     </div>
                                     <div className="min-w-0 flex-1">
@@ -1544,7 +1428,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                           className="text-sm block truncate transition-colors duration-200"
                                           style={{ color: 'var(--color-text-primary)' }}
                                         >
-                                          {share.user?.name || share.email || 'Unknown'}
+                                          {shareName}
                                         </span>
                                         <span
                                           className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
@@ -1566,7 +1450,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                                           color: 'var(--color-text-primary)',
                                         }}
                                       >
-                                        {share.user?.email || share.email}
+                                        {share.user?.email || share.contact?.email || share.email}
                                       </div>
                                     )}
                                   </div>
@@ -1574,11 +1458,174 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
                               );
                             })}
 
+                            {/* Pending Invitations */}
+                            {viewedTask.invitations && viewedTask.invitations.length > 0 && (
+                              viewedTask.invitations.map((invitation) => {
+                                // Try to find a matching contact name for this email
+                                const matchingContact = contacts.find(
+                                  c => c.email?.toLowerCase() === invitation.recipientEmail?.toLowerCase()
+                                );
+                                const displayName = matchingContact?.name || invitation.recipientEmail;
+                                const initial = matchingContact?.name?.charAt(0) || invitation.recipientEmail?.charAt(0)?.toUpperCase() || '?';
+
+                                return (
+                                  <div key={invitation.id} className="flex items-center justify-between gap-3 group relative">
+                                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                      <div
+                                        className="rounded-full flex items-center justify-center flex-shrink-0"
+                                        style={{
+                                          backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                                          border: '2px dashed #eab308',
+                                          width: '32px',
+                                          height: '32px',
+                                          minWidth: '32px',
+                                          minHeight: '32px',
+                                          maxWidth: '32px',
+                                          maxHeight: '32px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          lineHeight: '1'
+                                        }}
+                                      >
+                                        <span
+                                          className="text-sm"
+                                          style={{
+                                            color: '#eab308',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            lineHeight: '1'
+                                          }}
+                                        >
+                                          {initial}
+                                        </span>
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span
+                                            className="text-sm block truncate transition-colors duration-200"
+                                            style={{ color: 'var(--color-text-primary)', opacity: 0.7 }}
+                                          >
+                                            {displayName}
+                                          </span>
+                                          <span
+                                            className="text-xs px-1.5 py-0.5 rounded uppercase font-medium flex items-center gap-1"
+                                            style={{
+                                              backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                                              color: '#eab308',
+                                            }}
+                                          >
+                                            <FaClock className="w-2.5 h-2.5" />
+                                            PENDING
+                                          </span>
+                                        </div>
+                                        {matchingContact?.name && (
+                                          <span
+                                            className="text-xs block truncate"
+                                            style={{ color: 'var(--color-text-tertiary)' }}
+                                          >
+                                            {invitation.recipientEmail}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {/* Email tooltip */}
+                                      <div
+                                        className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                        style={{
+                                          backgroundColor: 'var(--color-bg-primary)',
+                                          color: 'var(--color-text-primary)',
+                                        }}
+                                      >
+                                        Invitation sent to {invitation.recipientEmail}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+
+                            {/* External Contact — pending lead assignee acceptance */}
+                            {!viewedTask.assignee && viewedTask.externalContact && (
+                              <div className="flex items-center justify-between gap-3 group relative">
+                                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                  <div
+                                    className="rounded-full flex items-center justify-center flex-shrink-0"
+                                    style={{
+                                      backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                                      border: '2px dashed #eab308',
+                                      width: '32px',
+                                      height: '32px',
+                                      minWidth: '32px',
+                                      minHeight: '32px',
+                                      maxWidth: '32px',
+                                      maxHeight: '32px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1'
+                                    }}
+                                  >
+                                    <span
+                                      className="text-sm"
+                                      style={{
+                                        color: '#eab308',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        lineHeight: '1'
+                                      }}
+                                    >
+                                      {viewedTask.externalContact.name?.charAt(0) || '?'}
+                                    </span>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span
+                                        className="text-sm block truncate transition-colors duration-200"
+                                        style={{ color: 'var(--color-text-primary)', opacity: 0.7 }}
+                                      >
+                                        {viewedTask.externalContact.name}
+                                      </span>
+                                      <span
+                                        className="text-xs px-1.5 py-0.5 rounded uppercase font-medium flex items-center gap-1"
+                                        style={{
+                                          backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                                          color: '#eab308',
+                                        }}
+                                      >
+                                        <FaClock className="w-2.5 h-2.5" />
+                                        PENDING ACCEPTANCE
+                                      </span>
+                                    </div>
+                                    <span
+                                      className="text-xs block truncate"
+                                      style={{ color: 'var(--color-text-tertiary)' }}
+                                    >
+                                      {viewedTask.externalContact.email}
+                                    </span>
+                                  </div>
+                                  {/* Email tooltip */}
+                                  <div
+                                    className="absolute left-0 top-full mt-2 px-2 py-1 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 whitespace-nowrap"
+                                    style={{
+                                      backgroundColor: 'var(--color-bg-primary)',
+                                      color: 'var(--color-text-primary)',
+                                    }}
+                                  >
+                                    Assigned — awaiting acceptance from {viewedTask.externalContact.email}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
                             {/* Empty State */}
                             {!viewedTask.assignee &&
+                              !viewedTask.externalContact &&
                               (!coAssignees || coAssignees.length === 0) &&
                               (!viewedTask.collaborators || viewedTask.collaborators.length === 0) &&
-                              (!viewedTask.sharedWith || viewedTask.sharedWith.length === 0) && (
+                              (!viewedTask.sharedWith || viewedTask.sharedWith.length === 0) &&
+                              (!viewedTask.invitations || viewedTask.invitations.length === 0) && (
                                 <p
                                   className="text-sm text-center py-4 transition-colors duration-200"
                                   style={{ color: 'var(--color-text-tertiary)' }}
@@ -1937,22 +1984,13 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
 
                         {/* Subtasks */}
                         <div>
-                          <div className="flex items-center justify-between mb-2 h-8">
+                          <div className="mb-2">
                             <h4
                               className="text-sm font-semibold transition-colors duration-200"
                               style={{ color: 'var(--color-text-secondary)' }}
                             >
                               Subtasks {viewedTask.subtasks && viewedTask.subtasks.length > 0 && `(${viewedTask.subtasks.length})`}
                             </h4>
-                            {(viewedTask.assignerId === user?.id || viewedTask.assigneeId === user?.id) && (
-                              <IconButton
-                                icon={<FaPlus />}
-                                label="Add"
-                                variant="primary"
-                                size="sm"
-                                onClick={() => setIsAddSubtaskOpen(true)}
-                              />
-                            )}
                           </div>
 
                           {viewedTask.subtasks && viewedTask.subtasks.length > 0 ? (
@@ -2081,6 +2119,7 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
             </div>
           </div>
         </div>
+      </div>
 
         {/* Delete Confirmation Modal */}
         <DeleteConfirmModal
@@ -2210,145 +2249,6 @@ const TaskModal = ({ task, isOpen, onClose, onDelete, onArchive, onUnarchive, ex
           ]}
         />
 
-        {/* Task Summary Modal */}
-        {isSummaryModalOpen && summaryData && (
-          <div 
-            className="modal modal-open backdrop-blur-sm" 
-            style={{ zIndex: 60 }}
-            onClick={(e) => {
-              // Only close if clicking directly on the backdrop
-              if (e.target === e.currentTarget) {
-                e.stopPropagation(); // Prevent event from bubbling to parent TaskModal
-                setIsSummaryModalOpen(false);
-                setSummaryData(null);
-              }
-            }}
-          >
-            <div
-              className="modal-box max-w-6xl max-h-[95vh] overflow-y-auto"
-              style={{
-                backgroundColor: 'var(--color-bg-secondary)',
-                borderColor: 'var(--color-border-default)',
-                color: 'var(--color-text-primary)',
-              }}
-            >
-              <div className="flex justify-between items-start mb-6">
-                <h3
-                  className="text-2xl font-bold"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  Task Summary
-                </h3>
-                <IconButton
-                  icon={<FaTimes />}
-                  label="Close"
-                  iconOnly={true}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setIsSummaryModalOpen(false);
-                    setSummaryData(null);
-                  }}
-                  className="!p-2 !rounded-full"
-                />
-              </div>
-
-              <div className="space-y-6">
-                {/* AI Analysis Section */}
-                <div
-                  className="rounded-lg p-4"
-                  style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-                >
-                  <h4
-                    className="text-lg font-semibold mb-3"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    Content Summary
-                  </h4>
-                  <div
-                    className="rounded p-3 leading-relaxed"
-                    style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}
-                  >
-                    {summaryData.textSummary}
-                  </div>
-                </div>
-
-                {/* Task Details Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Status & Priority */}
-                  <div
-                    className="rounded-lg p-4"
-                    style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-                  >
-                    <h4
-                      className="text-lg font-semibold mb-3"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      📊 Status &amp; Priority
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Status:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.status}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Priority:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.priority}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Due Date:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.dueDate}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Assignment */}
-                  <div
-                    className="rounded-lg p-4"
-                    style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
-                  >
-                    <h4
-                      className="text-lg font-semibold mb-3"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      👥 Assignment
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Created By:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.createdBy}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Assigned To:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.assignedTo}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span style={{ color: 'var(--color-text-secondary)' }}>Created:</span>
-                        <span style={{ color: 'var(--color-text-primary)' }}>{summaryData.createdAt}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Activity */}
-                  <div className="bg-gray-700 rounded-lg p-4">
-                    <h4 className="text-lg font-semibold text-white mb-3">📈 Activity</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">Comments:</span>
-                        <span className="text-white">{summaryData.comments}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">Subtasks:</span>
-                        <span className="text-white">{summaryData.subtasks}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
     </>
   );
 

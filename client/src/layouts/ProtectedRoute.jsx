@@ -7,19 +7,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log('🛡️ PROTECTED ROUTE CHECK:', {
-      path: window.location.pathname,
-      isAuthenticated: isAuthenticated(),
-      userRole: user?.role,
-      allowedRoles,
-      isSuperAdmin: isSuperAdmin(),
-      isAdmin: isAdmin(),
-      isSysAdmin: isSysAdmin(),
-      isEmployee: isEmployee()
-    });
-
     if (!isAuthenticated()) {
-      console.log('❌ NOT AUTHENTICATED, redirecting to login');
       navigate('/login');
       return;
     }
@@ -34,30 +22,17 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
         return false;
       });
 
-      console.log('🔍 ROLE CHECK RESULT:', {
-        hasRequiredRole,
-        allowedRoles,
-        userRole: user?.role
-      });
-
       if (!hasRequiredRole) {
-        console.log('❌ INSUFFICIENT PERMISSIONS, redirecting...');
         // Redirect to appropriate dashboard based on user role
         if (isSuperAdmin()) {
-          console.log('🔄 Redirecting to /super-admin');
           navigate('/super-admin');
         } else if (isAdmin()) {
-          console.log('🔄 Redirecting to /admin');
           navigate('/admin');
         } else if (isEmployee()) {
-          console.log('🔄 Redirecting to /employee');
           navigate('/employee');
         } else {
-          console.log('🔄 Redirecting to /login');
           navigate('/login');
         }
-      } else {
-        console.log('✅ ROLE CHECK PASSED');
       }
     }
   }, [isAuthenticated, user, isAdmin, isEmployee, isSysAdmin, isSuperAdmin, allowedRoles, navigate]);

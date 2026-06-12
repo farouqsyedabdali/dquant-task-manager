@@ -1,11 +1,6 @@
 import { create } from 'zustand';
 import api from '../services/api';
-
-// Use same API_BASE_URL logic as api.js
-const API_BASE_URL = import.meta.env.VITE_API_URL ||
-  (import.meta.env.MODE === 'production'
-    ? 'https://dquant-task-manager-production.up.railway.app/api'
-    : 'http://localhost:3000/api');
+import { getApiUrl } from '../config/api';
 
 const useGoogleContactsStore = create((set, get) => ({
   // State
@@ -127,7 +122,7 @@ const useGoogleContactsStore = create((set, get) => ({
       if (errorData?.needsBasicAuth) {
         console.log('🔄 User needs basic auth, redirecting to Google auth');
         // Redirect to regular Google auth using same pattern as other components
-        window.location.href = `${API_BASE_URL}/auth/google`;
+        window.location.href = getApiUrl('/auth/google');
         return { success: false, needsBasicAuth: true };
       }
       set({ error: error.response?.data?.error || 'Failed to connect Google account' });

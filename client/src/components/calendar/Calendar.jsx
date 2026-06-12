@@ -3,6 +3,97 @@ import useTaskStore from '../../stores/taskStore';
 import TaskCard from '../tasks/TaskCard';
 import IconButton from '../common/IconButton';
 import { FaCalendarAlt } from 'react-icons/fa';
+import { gmailAgentAPI } from '../../services/api';
+
+/** Match visible month grid (Sun–Sat weeks spanning partial adjacent months). */
+function getMonthGridTimeRange(currentDate) {
+  const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+  const startDate = new Date(monthStart);
+  startDate.setDate(startDate.getDate() - monthStart.getDay());
+  const days = [];
+  const iter = new Date(startDate);
+  while (iter <= monthEnd || iter.getDay() !== 0) {
+    days.push(new Date(iter));
+    iter.setDate(iter.getDate() + 1);
+  }
+  const start = new Date(Math.min(...days.map((d) => d.getTime())));
+  const end = new Date(Math.max(...days.map((d) => d.getTime())));
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function getWeekTimeRange(currentDate) {
+  const start = new Date(currentDate);
+  const day = start.getDay();
+  start.setDate(start.getDate() - day);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function googleEventOverlapsLocalDay(event, day) {
+  const sod = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0);
+  const eod = new Date(sod.getTime() + 86400000);
+  if (event.allDay) {
+    const [ys, ms, ds] = event.start.split('-').map(Number);
+    const evStart = new Date(ys, ms - 1, ds, 0, 0, 0, 0);
+    const [ye, me, de] = event.end.split('-').map(Number);
+    const evEndEx = new Date(ye, me - 1, de, 0, 0, 0, 0);
+    return evStart < eod && evEndEx > sod;
+  }
+  const a = new Date(event.start);
+  const b = new Date(event.end);
+  return a < eod && b > sod;
+}
+
+function getGoogleEventsForDate(events, date) {
+  if (!events?.length) return [];
+  return events.filter((e) => googleEventOverlapsLocalDay(e, date));
+}
+
+function getGoogleAllDayEventsForDate(events, date) {
+  return getGoogleEventsForDate(events, date).filter((e) => e.allDay);
+}
+
+function getGoogleTimedEventsForSlot(events, day, timeSlot) {
+  if (!events?.length) return [];
+  const targetDate = new Date(day);
+  const startOfSlot = new Date(
+    targetDate.getFullYear(),
+    targetDate.getMonth(),
+    targetDate.getDate(),
+    timeSlot.getHours(),
+    timeSlot.getMinutes(),
+    0
+  );
+  const endOfSlot = new Date(startOfSlot.getTime() + 30 * 60 * 1000);
+  return events.filter((e) => {
+    if (e.allDay) return false;
+    const a = new Date(e.start);
+    const b = new Date(e.end);
+    return a < endOfSlot && b > startOfSlot;
+  });
+}
+
+function formatGoogleEventRange(ev, timeFmt) {
+  if (ev.allDay) return 'All day';
+  const s = new Date(ev.start);
+  const e = new Date(ev.end);
+  const opts = timeFmt === '24'
+    ? { hour: '2-digit', minute: '2-digit', hour12: false }
+    : { hour: 'numeric', minute: '2-digit', hour12: true };
+  return `${s.toLocaleTimeString('en-US', opts)} – ${e.toLocaleTimeString('en-US', opts)}`;
+}
+
+const googleEventChipStyle = {
+  backgroundColor: 'rgba(99, 102, 241, 0.18)',
+  color: '#4338ca',
+  border: '1px solid rgba(99, 102, 241, 0.45)',
+};
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -10,7 +101,44 @@ const Calendar = () => {
   const [calendarView, setCalendarView] = useState('month'); // 'month' or 'week'
   const [timeFormat, setTimeFormat] = useState('12'); // '12' or '24'
   const [statusFilter, setStatusFilter] = useState(''); // Filter by status (comma-separated)
-  const { tasks } = useTaskStore();
+  const [googleEvents, setGoogleEvents] = useState([]);
+  const [calendarScopeGranted, setCalendarScopeGranted] = useState(false);
+  const [googleAccountConnected, setGoogleAccountConnected] = useState(false);
+  const [googleCalendarWriteEnabled, setGoogleCalendarWriteEnabled] = useState(true);
+  const { tasks, fetchTasks } = useTaskStore();
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  useEffect(() => {
+    const { start, end } =
+      calendarView === 'month'
+        ? getMonthGridTimeRange(currentDate)
+        : getWeekTimeRange(currentDate);
+    const timeMin = start.toISOString();
+    const timeMax = end.toISOString();
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await gmailAgentAPI.getCalendarEvents({ timeMin, timeMax });
+        if (cancelled) return;
+        setGoogleEvents(Array.isArray(data.events) ? data.events : []);
+        setCalendarScopeGranted(Boolean(data.calendarScopeGranted));
+        setGoogleAccountConnected(Boolean(data.googleAccountConnected));
+        setGoogleCalendarWriteEnabled(data.googleCalendarWriteEnabled !== false);
+      } catch (err) {
+        if (cancelled) return;
+        setGoogleEvents([]);
+        setCalendarScopeGranted(false);
+        setGoogleAccountConnected(false);
+        setGoogleCalendarWriteEnabled(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentDate, calendarView]);
 
   // Get current month's start and end dates
   const getMonthStart = (date) => {
@@ -340,10 +468,38 @@ const Calendar = () => {
           </button>
           
           <h3 
-            className="text-2xl font-semibold min-w-[250px] text-center mx-4"
+            className="text-2xl font-semibold min-w-[250px] text-center mx-4 flex items-center justify-center gap-2"
             style={{ color: 'var(--color-text-primary)' }}
           >
-            {weekRange}
+            {calendarView === 'week' ? weekRange : (
+              <>
+                <select
+                  value={currentDate.getMonth()}
+                  onChange={(e) => setCurrentDate(new Date(currentDate.getFullYear(), parseInt(e.target.value), 1))}
+                  className="bg-transparent border-0 outline-none cursor-pointer hover:bg-[var(--color-bg-tertiary)] rounded px-2 py-1 appearance-none transition-colors text-center"
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i} value={i} style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-primary)', fontSize: '1rem' }}>
+                      {new Date(0, i).toLocaleDateString('en-US', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={currentDate.getFullYear()}
+                  onChange={(e) => setCurrentDate(new Date(parseInt(e.target.value), currentDate.getMonth(), 1))}
+                  className="bg-transparent border-0 outline-none cursor-pointer hover:bg-[var(--color-bg-tertiary)] rounded px-2 py-1 appearance-none transition-colors text-center"
+                >
+                  {Array.from({ length: 30 }, (_, i) => {
+                    const y = new Date().getFullYear() - 15 + i;
+                    return (
+                      <option key={y} value={y} style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-primary)', fontSize: '1rem' }}>
+                        {y}
+                      </option>
+                    );
+                  })}
+                </select>
+              </>
+            )}
           </h3>
           
           <button
@@ -577,6 +733,16 @@ const Calendar = () => {
               size="sm"
             />
           </div>
+          {googleAccountConnected && !calendarScopeGranted && (
+            <p className="text-xs mt-3" style={{ color: 'var(--color-text-tertiary)' }}>
+              Your Google connection needs Calendar permission. Open Settings → Integrations and use Connect again to add Google Calendar to this view.
+            </p>
+          )}
+          {googleAccountConnected && calendarScopeGranted && !googleCalendarWriteEnabled && (
+            <p className="text-xs mt-3" style={{ color: 'var(--color-text-tertiary)' }}>
+              Reconnect Google under Settings → Integrations so Tialz can add tasks to your Google Calendar (event write permission).
+            </p>
+          )}
         </div>
 
           {/* Calendar Grid */}
@@ -600,6 +766,8 @@ const Calendar = () => {
                 const isCurrentMonthDate = isCurrentMonth(date);
                 const tasksForDate = getTasksForDate(date);
                 const overdueTasks = getOverdueTasksForDate(date);
+                const googleForDate = getGoogleEventsForDate(googleEvents, date);
+                const totalCount = overdueTasks.length + tasksForDate.length + googleForDate.length;
                 
                 return (
                   <div
@@ -652,8 +820,8 @@ const Calendar = () => {
                         {date.getDate()}
                       </span>
                      
-                     {/* Task Count Badge */}
-                     {(overdueTasks.length > 0 || tasksForDate.length > 0) && (
+                     {/* Task + Google count badge */}
+                     {totalCount > 0 && (
                        <div 
                          className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold"
                          style={overdueTasks.length > 0 ? {
@@ -663,41 +831,62 @@ const Calendar = () => {
                            backgroundColor: 'var(--color-primary)',
                            color: '#ffffff'
                          }}
-                         title={`${overdueTasks.length + tasksForDate.length} task(s)`}
+                         title={`${totalCount} item(s) (tasks + calendar)`}
                        >
-                         {overdueTasks.length + tasksForDate.length}
+                         {totalCount}
                        </div>
                      )}
                    </div>
 
-                   {/* Task Preview */}
-                   {isCurrentMonthDate && (tasksForDate.length > 0 || overdueTasks.length > 0) && (
+                   {/* Task & Google preview */}
+                   {isCurrentMonthDate && totalCount > 0 && (
                      <div className="space-y-1.5">
-                       {/* Combine and sort all tasks by status */}
                        {(() => {
                          const allTasks = sortTasksByStatus([...overdueTasks, ...tasksForDate]);
-                         return allTasks.slice(0, 2).map((task, taskIndex) => {
-                           const isOverdue = overdueTasks.some(t => t.id === task.id);
-                           const statusColors = getStatusColors(task.status, isOverdue);
-                           return (
-                             <div 
-                               key={`task-${taskIndex}`} 
+                         const maxLines = 3;
+                         const lines = [];
+                         for (const task of allTasks) {
+                           if (lines.length >= maxLines) break;
+                           const isOverdue = overdueTasks.some((t) => t.id === task.id);
+                           lines.push({
+                             type: 'task',
+                             key: `task-${task.id}`,
+                             task,
+                             isOverdue,
+                           });
+                         }
+                         for (const ev of googleForDate) {
+                           if (lines.length >= maxLines) break;
+                           lines.push({ type: 'google', key: `g-${ev.id}`, ev });
+                         }
+                         return lines.map((line) =>
+                           line.type === 'task' ? (
+                             <div
+                               key={line.key}
                                className="text-xs px-2 py-1 rounded truncate"
-                               style={statusColors}
+                               style={getStatusColors(line.task.status, line.isOverdue)}
                              >
-                               {task.title}
+                               {line.task.title}
                              </div>
-                           );
-                         });
+                           ) : (
+                             <div
+                               key={line.key}
+                               className="text-xs px-2 py-1 rounded truncate"
+                               style={googleEventChipStyle}
+                               title="Google Calendar"
+                             >
+                               {line.ev.title}
+                             </div>
+                           )
+                         );
                        })()}
                        
-                       {/* Show count if more tasks */}
-                       {(overdueTasks.length + tasksForDate.length) > 2 && (
+                       {totalCount > 3 && (
                          <div 
                            className="text-xs text-center mt-1"
                            style={{ color: 'var(--color-text-secondary)' }}
                          >
-                           +{(overdueTasks.length + tasksForDate.length) - 2} more
+                           +{totalCount - 3} more
                          </div>
                        )}
                      </div>
@@ -731,7 +920,9 @@ const Calendar = () => {
                   const isTodayDate = isToday(day);
                   const tasksForDay = getTasksForDate(day);
                   const overdueTasksForDay = getOverdueTasksForDate(day);
-                  const totalTasks = tasksForDay.length + overdueTasksForDay.length;
+                  const googleForDay = getGoogleEventsForDate(googleEvents, day);
+                  const allDayGoogle = getGoogleAllDayEventsForDate(googleEvents, day);
+                  const totalTasks = tasksForDay.length + overdueTasksForDay.length + googleForDay.length;
                   
                   return (
                     <div 
@@ -762,12 +953,21 @@ const Calendar = () => {
                               backgroundColor: 'var(--color-primary)',
                               color: '#ffffff'
                             }}
-                            title={`${totalTasks} task${totalTasks !== 1 ? 's' : ''}`}
+                            title={`${totalTasks} item${totalTasks !== 1 ? 's' : ''} (tasks + calendar)`}
                           >
                             {totalTasks}
                           </div>
                         )}
                       </div>
+                      {allDayGoogle.length > 0 && (
+                        <div
+                          className="text-[10px] mt-1 px-1 truncate"
+                          style={{ color: '#4338ca' }}
+                          title={allDayGoogle.map((e) => e.title).join(', ')}
+                        >
+                          All day · {allDayGoogle.length}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -812,6 +1012,7 @@ const Calendar = () => {
                       {/* Day Columns */}
                       {weekDays.map((day, dayIndex) => {
                         const tasksForSlot = getTasksForTimeSlot(day, timeSlot);
+                        const googleForSlot = getGoogleTimedEventsForSlot(googleEvents, day, timeSlot);
                         const isTodayDate = isToday(day);
                         
                         return (
@@ -838,7 +1039,6 @@ const Calendar = () => {
                             }}
                             onClick={() => setSelectedDate(day)}
                           >
-                            {/* Task Items in Time Slot */}
                             {tasksForSlot.slice(0, 2).map((task, taskIndex) => {
                               // Check if task is overdue (only for TODO or IN_PROGRESS)
                               const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
@@ -847,7 +1047,7 @@ const Calendar = () => {
                               
                               return (
                               <div
-                                key={taskIndex}
+                                key={task.id}
                                   className="text-xs px-2 py-1 rounded mb-1 truncate"
                                   style={statusColors}
                                 title={task.title}
@@ -856,14 +1056,23 @@ const Calendar = () => {
                               </div>
                               );
                             })}
+                            {googleForSlot.slice(0, 2).map((ev) => (
+                              <div
+                                key={ev.id}
+                                className="text-xs px-2 py-1 rounded mb-1 truncate"
+                                style={googleEventChipStyle}
+                                title={ev.title}
+                              >
+                                {ev.title}
+                              </div>
+                            ))}
                             
-                            {/* Show more indicator */}
-                            {tasksForSlot.length > 2 && (
+                            {(tasksForSlot.length + googleForSlot.length) > 2 && (
                               <div 
                                 className="text-xs text-center"
                                 style={{ color: 'var(--color-text-secondary)' }}
                               >
-                                +{tasksForSlot.length - 2} more
+                                +{(tasksForSlot.length + googleForSlot.length) - 2} more
                               </div>
                             )}
                           </div>
@@ -883,7 +1092,6 @@ const Calendar = () => {
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-500 ease-out"
-            onClick={() => setSelectedDate(null)}
           />
           
           {/* Slide-in Panel */}
@@ -942,8 +1150,16 @@ const Calendar = () => {
                     {(() => {
                       const overdueTasks = getOverdueTasksForDate(selectedDate);
                       const tasksForDate = getTasksForDate(selectedDate);
-                      const total = overdueTasks.length + tasksForDate.length;
-                      return `${total} task${total !== 1 ? 's' : ''}`;
+                      const gCount = getGoogleEventsForDate(googleEvents, selectedDate).length;
+                      const taskTotal = overdueTasks.length + tasksForDate.length;
+                      const total = taskTotal + gCount;
+                      if (gCount && taskTotal) {
+                        return `${total} item${total !== 1 ? 's' : ''} (${taskTotal} task${taskTotal !== 1 ? 's' : ''}, ${gCount} calendar)`;
+                      }
+                      if (gCount) {
+                        return `${gCount} calendar event${gCount !== 1 ? 's' : ''}`;
+                      }
+                      return `${taskTotal} task${taskTotal !== 1 ? 's' : ''}`;
                     })()}
                   </p>
                 </div>
@@ -963,6 +1179,7 @@ const Calendar = () => {
                   {(() => {
                     const overdueTasks = getOverdueTasksForDate(selectedDate);
                     const tasksForDate = getTasksForDate(selectedDate);
+                    const googleForSelected = getGoogleEventsForDate(googleEvents, selectedDate);
 
                     // Group tasks by status
                     const tasksByStatus = {
@@ -975,20 +1192,69 @@ const Calendar = () => {
                     };
 
                     const hasAnyTasks = Object.values(tasksByStatus).some(arr => arr.length > 0);
-                    if (!hasAnyTasks) {
+                    if (!hasAnyTasks && googleForSelected.length === 0) {
                       return (
                         <div
                           className="text-center py-12"
                           style={{ color: 'var(--color-text-secondary)' }}
                         >
-                          <p className="text-lg mb-2">No tasks scheduled</p>
-                          <p className="text-sm">Click a time slot to create a task</p>
+                          <p className="text-lg mb-2">Nothing on this day</p>
+                          <p className="text-sm">No tasks or Google Calendar events.</p>
                         </div>
                       );
                     }
 
                     return (
                       <div className="space-y-4">
+                        {googleForSelected.length > 0 && (
+                          <div>
+                            <h5
+                              className="font-medium mb-2"
+                              style={{ color: '#4338ca' }}
+                            >
+                              Google Calendar ({googleForSelected.length})
+                            </h5>
+                            <div className="space-y-2">
+                              {googleForSelected.map((ev) => (
+                                <div
+                                  key={ev.id}
+                                  className="rounded-lg border p-3 text-sm"
+                                  style={{
+                                    borderColor: 'rgba(99, 102, 241, 0.45)',
+                                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                                  }}
+                                >
+                                  <p
+                                    className="font-medium"
+                                    style={{ color: 'var(--color-text-primary)' }}
+                                  >
+                                    {ev.title}
+                                  </p>
+                                  <p
+                                    className="text-xs mt-1"
+                                    style={{ color: 'var(--color-text-secondary)' }}
+                                  >
+                                    {formatGoogleEventRange(ev, timeFormat)}
+                                  </p>
+                                  {ev.htmlLink && (
+                                    <a
+                                      href={ev.htmlLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs mt-2 inline-block underline"
+                                      style={{ color: '#4338ca' }}
+                                    >
+                                      Open in Google Calendar
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {!hasAnyTasks ? null : (
+                          <>
                         {/* Overdue Tasks */}
                         {tasksByStatus.overdue.length > 0 && (
                           <div>
@@ -1125,6 +1391,8 @@ const Calendar = () => {
                               ))}
                             </div>
                           </div>
+                        )}
+                          </>
                         )}
                       </div>
                     );

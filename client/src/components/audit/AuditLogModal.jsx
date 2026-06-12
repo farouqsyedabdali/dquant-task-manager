@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { auditAPI } from '../../services/api';
 import useAuthStore from '../../context/authStore';
+import DatePicker from '../common/DatePicker';
 
 const AuditLogModal = ({ isOpen, onClose }) => {
   const { user } = useAuthStore();
@@ -350,16 +351,13 @@ const AuditLogModal = ({ isOpen, onClose }) => {
                     Start Date
                   </span>
                 </label>
-                <input
-                  type="date"
-                  className="input input-bordered w-full"
-                  style={{
-                    backgroundColor: 'var(--color-bg-secondary)',
-                    borderColor: 'var(--color-border-default)',
-                    color: 'var(--color-text-primary)',
-                  }}
+                <DatePicker
+                  name="startDate"
                   value={filters.startDate}
                   onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                  placeholder="Start date"
+                  showTime={false}
+                  timeOptional={false}
                 />
               </div>
 
@@ -372,16 +370,14 @@ const AuditLogModal = ({ isOpen, onClose }) => {
                     End Date
                   </span>
                 </label>
-                <input
-                  type="date"
-                  className="input input-bordered w-full"
-                  style={{
-                    backgroundColor: 'var(--color-bg-secondary)',
-                    borderColor: 'var(--color-border-default)',
-                    color: 'var(--color-text-primary)',
-                  }}
+                <DatePicker
+                  name="endDate"
                   value={filters.endDate}
                   onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                  placeholder="End date"
+                  showTime={false}
+                  timeOptional={false}
+                  min={filters.startDate || undefined}
                 />
               </div>
 

@@ -1,17 +1,5 @@
 import axios from 'axios';
-
-// Use VITE_API_URL environment variable, or detect environment
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.MODE === 'production' 
-    ? 'https://dquant-task-manager-production.up.railway.app/api' 
-    : 'http://localhost:3000/api');
-
-// Debug log
-console.log('🔌 API Configuration:', {
-  VITE_API_URL: import.meta.env.VITE_API_URL,
-  MODE: import.meta.env.MODE,
-  API_BASE_URL
-});
+import { API_BASE_URL } from '../config/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -55,6 +43,8 @@ export const authAPI = {
   registerPersonal: (personalData) => api.post('/auth/register-personal', personalData),
   deleteCompany: () => api.delete('/auth/company'),
   getMe: () => api.get('/auth/me'),
+  updateBriefingPreferences: (payload) => api.patch('/auth/briefing-preferences', payload),
+  previewBriefing: (kind) => api.get(`/auth/preview-briefing/${kind}`),
   updateAutoArchivePeriod: (autoArchivePeriod) => api.put('/auth/company/auto-archive', { autoArchivePeriod }),
   sendVerificationEmail: (email) => api.post('/email-verification/send', email),
   verifyEmail: (token) => api.post('/email-verification/verify', token),
@@ -84,7 +74,7 @@ export const tasksAPI = {
   // Task Invitation API
   sendInvitation: (taskId, invitationData) => api.post(`/tasks/${taskId}/send-invitation`, invitationData),
   // Unaccept task (remove yourself from an accepted task)
-  unaccessTask: (taskId) => api.post(`/tasks/${taskId}/unaccept`),
+  unacceptTask: (taskId) => api.post(`/tasks/${taskId}/unaccept`),
 };
 
 // Comments API
@@ -109,12 +99,68 @@ export const usersAPI = {
 
 // AI API
 export const aiAPI = {
-  chat: (message) => api.post('/ai/chat', { message }),
+  /** @param {string} message @param {{ role: 'user'|'assistant', content: string }[]} [history] prior turns only */
+  chat: (message, history = []) => api.post('/ai/chat', { message, history }),
+  /** Classify message for quick actions vs chat — same capabilities as header AI Actions */
+  routeIntent: (message) => api.post('/ai/route-intent', { message }),
   extractTask: (text) => api.post('/ai/extract-task', { text }),
   identifyTaskUpdate: (text) => api.post('/ai/identify-task-update', { text }),
   suggestProjectIdeas: (text) => api.post('/ai/suggest-project-ideas', { text }),
   createProjectFromIdea: (text, selectedIdea, projectName, dueDate) => 
     api.post('/ai/create-project-from-idea', { text, selectedIdea, projectName, dueDate }),
+  previewAction: (actionType, input, sourceText) => api.post('/ai/actions/preview', { actionType, input, sourceText }),
+  executeAction: (actionId) => api.post('/ai/actions/execute', { actionId }),
+  rejectAction: (actionId) => api.post('/ai/actions/reject', { actionId }),
+  undoAction: (actionId) => api.post('/ai/actions/undo', { actionId }),
+};
+
+// Gmail Agent API
+export const gmailAgentAPI = {
+  getStatus: () => api.get('/gmail-agent/status'),
+  /** @param {{ timeMin: string, timeMax: string }} params ISO range for Google Calendar primary calendar */
+  getCalendarEvents: (params) => api.get('/gmail-agent/calendar/events', { params }),
+  connect: () => api.post('/gmail-agent/connect'),
+  updateSettings: (accountId, settings) => api.patch(`/gmail-agent/accounts/${accountId}`, settings),
+  syncNow: (accountId) => api.post(`/gmail-agent/accounts/${accountId}/sync`),
+  disconnect: (accountId) => api.post(`/gmail-agent/accounts/${accountId}/disconnect`),
+  addSkipSender: (senderEmail) => api.post('/gmail-agent/skip-senders', { senderEmail }),
+  removeSkipSender: (ruleId) => api.delete(`/gmail-agent/skip-senders/${ruleId}`),
+  addAllowSender: (senderEmail) => api.post('/gmail-agent/allow-senders', { senderEmail }),
+  removeAllowSender: (ruleId) => api.delete(`/gmail-agent/allow-senders/${ruleId}`),
+  processIngestionAction: (ingestionId, action) => api.post(`/gmail-agent/ingestions/${ingestionId}/action`, { action }),
+};
+
+// Outlook / Microsoft 365 Agent API
+export const outlookAgentAPI = {
+  getStatus: () => api.get('/outlook-agent/status'),
+  connect: () => api.post('/outlook-agent/connect'),
+  updateSettings: (accountId, settings) => api.patch(`/outlook-agent/accounts/${accountId}`, settings),
+  syncNow: (accountId) => api.post(`/outlook-agent/accounts/${accountId}/sync`),
+  disconnect: (accountId) => api.post(`/outlook-agent/accounts/${accountId}/disconnect`),
+  addSkipSender: (senderEmail) => api.post('/outlook-agent/skip-senders', { senderEmail }),
+  removeSkipSender: (ruleId) => api.delete(`/outlook-agent/skip-senders/${ruleId}`),
+  addAllowSender: (senderEmail) => api.post('/outlook-agent/allow-senders', { senderEmail }),
+  removeAllowSender: (ruleId) => api.delete(`/outlook-agent/allow-senders/${ruleId}`),
+  processIngestionAction: (ingestionId, action) => api.post(`/outlook-agent/ingestions/${ingestionId}/action`, { action }),
+};
+
+// Email Provider Detection API
+export const emailProviderAPI = {
+  detect: () => api.get('/email-provider/detect'),
+};
+
+// Hostinger IMAP Agent API
+export const hostingerAgentAPI = {
+  getStatus: () => api.get('/hostinger-agent/status'),
+  connect: (email, password) => api.post('/hostinger-agent/connect', { email, password }),
+  updateSettings: (accountId, settings) => api.patch(`/hostinger-agent/accounts/${accountId}`, settings),
+  syncNow: (accountId) => api.post(`/hostinger-agent/accounts/${accountId}/sync`),
+  disconnect: (accountId) => api.post(`/hostinger-agent/accounts/${accountId}/disconnect`),
+  addSkipSender: (senderEmail) => api.post('/hostinger-agent/skip-senders', { senderEmail }),
+  removeSkipSender: (ruleId) => api.delete(`/hostinger-agent/skip-senders/${ruleId}`),
+  addAllowSender: (senderEmail) => api.post('/hostinger-agent/allow-senders', { senderEmail }),
+  removeAllowSender: (ruleId) => api.delete(`/hostinger-agent/allow-senders/${ruleId}`),
+  processIngestionAction: (ingestionId, action) => api.post(`/hostinger-agent/ingestions/${ingestionId}/action`, { action }),
 };
 
 // Task Share API

@@ -169,13 +169,14 @@ const googleInvitationsController = {
 
             // Create notification if recipient is a registered user
             if (existingUser) {
-              await createNotification({
-                type: 'TASK_INVITATION_RECEIVED',
-                title: 'Task Invitation',
-                message: `${sender.name} invited you to collaborate on "${task.title}"`,
-                taskId: task.id,
-                userId: existingUser.id
-              });
+              await createNotification(
+                'TASK_INVITATION_RECEIVED',
+                'Task Invitation',
+                `${sender.name} invited you to collaborate on "${task.title}"`,
+                task.id,
+                existingUser.id,
+                existingUser.companyId
+              );
             }
 
             // Log audit action

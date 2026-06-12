@@ -8,12 +8,11 @@ const {
   deleteTask,
   updateTaskStatus,
   updateTaskPriority,
-  debugCompanyTasks,
   addCoAssignee,
   removeCoAssignee,
   getCoAssignees
 } = require('../controllers/taskController');
-const { sendInvitation, unaccessTask } = require('../controllers/taskInvitationController');
+const { sendInvitation, unacceptTask } = require('../controllers/taskInvitationController');
 const auth = require('../middleware/auth');
 const { adminOnly } = require('../middleware/roleCheck');
 const { validators, handleValidationErrors } = require('../middleware/validators');
@@ -22,9 +21,6 @@ const router = express.Router();
 
 // All routes require authentication
 router.use(auth);
-
-// Debug endpoint to check company data
-router.get('/debug', debugCompanyTasks);
 
 // Get tasks (admin: all tasks, employee: assigned tasks)
 router.get('/', getTasks);
@@ -119,6 +115,6 @@ router.post('/:taskId/send-invitation',
 );
 
 // Unaccept task (remove yourself from an accepted task)
-router.post('/:taskId/unaccept', validators.id('taskId'), handleValidationErrors, unaccessTask);
+router.post('/:taskId/unaccept', validators.id('taskId'), handleValidationErrors, unacceptTask);
 
 module.exports = router; 

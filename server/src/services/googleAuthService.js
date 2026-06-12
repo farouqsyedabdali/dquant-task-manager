@@ -1,10 +1,44 @@
 const { OAuth2Client } = require('google-auth-library');
+const crypto = require('crypto');
 
 const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
   process.env.GOOGLE_REDIRECT_URI
 );
+
+const createOAuthState = (payload = {}) => {
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', process.env.JWT_SECRET)
+    .update(body)
+    .digest('base64url');
+
+  return `${body}.${signature}`;
+};
+
+const parseOAuthState = (state) => {
+  if (!state) return {};
+
+  const [body, signature] = state.split('.');
+  if (!body || !signature) {
+    throw new Error('Invalid OAuth state format');
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.JWT_SECRET)
+    .update(body)
+    .digest('base64url');
+
+  const provided = Buffer.from(signature);
+  const expected = Buffer.from(expectedSignature);
+
+  if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) {
+    throw new Error('Invalid OAuth state signature');
+  }
+
+  return JSON.parse(Buffer.from(body, 'base64url').toString());
+};
 
 // Get Google OAuth URL (basic scopes only)
 const getAuthUrl = () => {
@@ -20,7 +54,7 @@ const getAuthUrl = () => {
 
 // Get Google OAuth URL with contacts scope (incremental authorization)
 const getContactsAuthUrl = () => {
-  const state = Buffer.from(JSON.stringify({ isIncrementalAuth: true })).toString('base64');
+  const state = createOAuthState({ isIncrementalAuth: true });
 
   return client.generateAuthUrl({
     access_type: 'offline',
@@ -32,6 +66,24 @@ const getContactsAuthUrl = () => {
     prompt: 'consent',
     include_granted_scopes: true, // This enables incremental authorization
     state // Pass incremental auth flag
+  });
+};
+
+// Get Google OAuth URL for the Gmail agent (restricted scope, test/dev first)
+const getGmailAgentAuthUrl = (userId) => {
+  const state = createOAuthState({ isGmailAgentAuth: true, userId });
+
+  return client.generateAuthUrl({
+    access_type: 'offline',
+    scope: [
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/calendar.events'
+    ],
+    prompt: 'consent',
+    include_granted_scopes: true,
+    state
   });
 };
 
@@ -106,6 +158,9 @@ const verifyToken = async (code) => {
 module.exports = {
   getAuthUrl,
   getContactsAuthUrl,
+  getGmailAgentAuthUrl,
+  createOAuthState,
+  parseOAuthState,
   verifyToken,
   verifyIdToken
 };

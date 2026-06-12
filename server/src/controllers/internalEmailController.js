@@ -3,11 +3,18 @@ const prisma = require('../lib/prisma');
 const emailService = require('../services/emailService');
 const secureLogger = require('../middleware/secureLogger');
 const { parseLocalDate } = require('../utils/dateUtils');
+const { DEFAULT_OPENROUTER_MODEL } = require('../config/openRouterDefaults');
+const { scheduleGoogleCalendarSyncForTask } = require('../services/gmailAgentService');
 
 const PERSONAL_MONTHLY_LIMIT = 100;
 const BUSINESS_MONTHLY_LIMIT = 300;
 const MAX_TASKS_PER_EMAIL = 10;
 const DEFAULT_DUE_DATE_DAYS = 7;
+
+const OPENROUTER_STRUCTURED_MODEL =
+  process.env.OPENROUTER_STRUCTURED_MODEL ||
+  process.env.OPENROUTER_CHAT_MODEL ||
+  DEFAULT_OPENROUTER_MODEL;
 
 function getMonthRange(now = new Date()) {
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -126,7 +133,7 @@ Rules:
   const response = await axios.post(
     'https://openrouter.ai/api/v1/chat/completions',
     {
-      model: 'arcee-ai/trinity-large-preview:free',
+      model: OPENROUTER_STRUCTURED_MODEL,
       messages: [
         { role: 'system', content: prompt },
         {
@@ -224,6 +231,8 @@ async function createTasksFromEmail({ user, senderEmail, subject, cleanBody }) {
         companyId: user.companyId
       }
     });
+
+    scheduleGoogleCalendarSyncForTask(createdTask.id);
   }
 
   secureLogger.info('Inbound email tasks created successfully', {
@@ -254,14 +263,16 @@ const processInboundEmail = async (req, res) => {
   try {
     const { senderEmail, subject, cleanBody } = req.body;
 
-    const user = await prisma.user.findFirst({
+    const matchingUsers = await prisma.user.findMany({
       where: {
         email: senderEmail.toLowerCase()
       },
       include: {
         company: true
-      }
+      },
+      take: 2
     });
+    const user = matchingUsers[0];
 
     if (!user) {
       secureLogger.warn('Inbound email ignored because sender was not found', {
@@ -272,6 +283,18 @@ const processInboundEmail = async (req, res) => {
         accepted: false,
         status: 'ignored',
         reason: 'user_not_found'
+      });
+    }
+
+    if (matchingUsers.length > 1) {
+      secureLogger.warn('Inbound email ignored because sender email matched multiple tenants', {
+        senderEmail
+      });
+
+      return res.status(202).json({
+        accepted: false,
+        status: 'ignored',
+        reason: 'ambiguous_sender_email'
       });
     }
 

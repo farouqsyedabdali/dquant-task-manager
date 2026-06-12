@@ -1,7 +1,8 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { login, register, registerCompany, registerPersonal, deleteCompany, getMe, updateAutoArchivePeriod, forgotPassword, verifyPasswordResetCode, resetPasswordWithCode, completeEmployeeSetup } = require('../controllers/authController');
+const { login, register, registerCompany, registerPersonal, deleteCompany, getMe, updateAutoArchivePeriod, updateBriefingPreferences, previewBriefing, forgotPassword, verifyPasswordResetCode, resetPasswordWithCode, completeEmployeeSetup } = require('../controllers/authController');
 const { initiateGoogleAuth, handleGoogleCallback, handleGoogleIdToken } = require('../controllers/googleAuthController');
+const { handleMicrosoftCallback } = require('../controllers/microsoftAuthController');
 const auth = require('../middleware/auth');
 const { adminOnly, sysAdminOnly } = require('../middleware/roleCheck');
 const { validators, handleValidationErrors } = require('../middleware/validators');
@@ -58,6 +59,9 @@ router.post('/complete-employee-setup',
 router.get('/google', initiateGoogleAuth);
 router.get('/google/callback', handleGoogleCallback);
 
+// Microsoft OAuth (Outlook email agent)
+router.get('/microsoft/callback', handleMicrosoftCallback);
+
 // Google Sign-In for mobile apps (accepts idToken from SDK, returns Tialz JWT)
 router.post('/google-id-token',
   body('idToken').trim().notEmpty().withMessage('idToken is required'),
@@ -89,6 +93,8 @@ router.post('/reset-password-with-code',
 
 // Protected routes
 router.get('/me', auth, getMe);
+router.patch('/briefing-preferences', auth, updateBriefingPreferences);
+router.get('/preview-briefing/:kind', auth, previewBriefing);
 router.put('/company/auto-archive', auth, updateAutoArchivePeriod); // Update auto-archive period
 router.delete('/company', auth, sysAdminOnly, deleteCompany); // Only SYSDMIN can delete company
 

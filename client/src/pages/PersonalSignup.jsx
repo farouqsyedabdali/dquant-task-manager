@@ -6,6 +6,7 @@ import LegalDocumentModal from '../components/legal/LegalDocumentModal';
 import { validatePassword } from '../utils/passwordValidation';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import useThemeLogo from '../hooks/useThemeLogo';
+import { getApiUrl } from '../config/api';
 
 const PersonalSignup = () => {
   const [formData, setFormData] = useState({
@@ -114,7 +115,7 @@ const PersonalSignup = () => {
       } else {
         setErrors({ submit: result.error || 'Registration failed' });
       }
-    } catch (error) {
+    } catch {
       setErrors({ submit: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsLoading(false);
@@ -162,11 +163,7 @@ const PersonalSignup = () => {
           <button
             type="button"
             onClick={() => {
-              const API_BASE_URL = import.meta.env.VITE_API_URL || 
-                (import.meta.env.MODE === 'production' 
-                  ? 'https://dquant-task-manager-production.up.railway.app/api' 
-                  : 'http://localhost:3000/api');
-              window.location.href = `${API_BASE_URL}/auth/google?signupType=personal`;
+              window.location.href = getApiUrl('/auth/google?signupType=personal');
             }}
             className="btn border w-full mb-6 flex items-center justify-center gap-3"
             style={{ 

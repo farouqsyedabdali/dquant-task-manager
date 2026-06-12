@@ -1,9 +1,12 @@
 const rateLimit = require('express-rate-limit');
+const secureLogger = require('./secureLogger');
+
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 // Strict rate limit for authentication endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window
+  max: isDevelopment ? 50 : 5,
   message: {
     error: 'Too many login attempts from this IP. Please try again in 15 minutes.'
   },
@@ -11,7 +14,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   skipSuccessfulRequests: false, // Count successful requests
   handler: (req, res) => {
-    console.warn('⚠️  Rate limit exceeded for auth endpoint:', {
+    secureLogger.warn('Rate limit exceeded for auth endpoint', {
       ip: req.ip,
       path: req.path,
       timestamp: new Date().toISOString()
@@ -25,7 +28,7 @@ const authLimiter = rateLimit({
 // General API rate limit
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window per IP
+  max: isDevelopment ? 1000 : 100,
   message: {
     error: 'Too many requests from this IP. Please try again later.'
   },
@@ -33,7 +36,7 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful requests
   handler: (req, res) => {
-    console.warn('⚠️  Rate limit exceeded for API:', {
+    secureLogger.warn('Rate limit exceeded for API', {
       ip: req.ip,
       path: req.path,
       timestamp: new Date().toISOString()
@@ -55,7 +58,7 @@ const aiLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: false,
   handler: (req, res) => {
-    console.warn('⚠️  AI rate limit exceeded:', {
+    secureLogger.warn('AI rate limit exceeded', {
       ip: req.ip,
       userId: req.user?.id,
       timestamp: new Date().toISOString()
@@ -77,7 +80,7 @@ const feedbackLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
-    console.warn('⚠️  Feedback rate limit exceeded:', {
+    secureLogger.warn('Feedback rate limit exceeded', {
       ip: req.ip,
       timestamp: new Date().toISOString()
     });
