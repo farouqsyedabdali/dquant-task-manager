@@ -1,8 +1,6 @@
 const prisma = require('../lib/prisma');
 const { createNotification } = require('./notificationController');
-
-
-
+const { scheduleGoogleCalendarSyncForTask } = require('../services/gmailAgentService');
 // Archive a task
 const archiveTask = async (req, res) => {
   try {
@@ -110,6 +108,8 @@ const archiveTask = async (req, res) => {
     } catch (auditError) {
       console.error('Failed to log audit action:', auditError);
     }
+
+    scheduleGoogleCalendarSyncForTask(parseInt(taskId));
 
     res.json({ 
       message: 'Task archived successfully',
@@ -229,6 +229,8 @@ const unarchiveTask = async (req, res) => {
     } catch (auditError) {
       console.error('Failed to log audit action:', auditError);
     }
+
+    scheduleGoogleCalendarSyncForTask(parseInt(taskId));
 
     res.json({ 
       message: 'Task unarchived successfully',

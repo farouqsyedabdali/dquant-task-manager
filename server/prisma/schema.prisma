@@ -21,6 +21,10 @@ model Company {
   markedForDeletion Boolean            @default(false)
   isPersonal        Boolean            @default(false)
   auditLogs         AuditLog[]
+  aiActions         AIAction[]
+  connectedAccounts ConnectedAccount[]
+  emailSenderRules  EmailSenderRule[]
+  emailIngestions   EmailIngestion[]
   comments          Comment[]
   notifications     Notification[]
   projects          Project[]
@@ -30,6 +34,7 @@ model Company {
   taskCollaborators TaskCollaborator[]
   taskShares        TaskShare[]
   users             User[]
+  briefingLogs     BriefingLog[]
 }
 
 model User {
@@ -60,6 +65,10 @@ model User {
   googleTokenExpiry        DateTime?
   googleContactsScope      Boolean            @default(false)
   auditLogs                AuditLog[]
+  aiActions                AIAction[]
+  connectedAccounts        ConnectedAccount[]
+  emailSenderRules         EmailSenderRule[]
+  emailIngestions          EmailIngestion[]
   comments                 Comment[]
   contacts                 Contact[]
   notifications            Notification[]
@@ -74,7 +83,14 @@ model User {
   projectMemberships       ProjectMember[]
   projectTemplates         ProjectTemplate[]
   templateTasks            TemplateTask[]
+  deviceTokens             DeviceToken[]
+  briefingLogs             BriefingLog[]
   company                  Company            @relation(fields: [companyId], references: [id])
+  briefingMorningEnabled   Boolean            @default(false)
+  briefingEveningEnabled   Boolean            @default(false)
+  briefingMorningTime      String             @default("08:00")
+  briefingEveningTime      String             @default("18:00")
+  briefingTimezone         String?
 
   @@unique([email, companyId])
 }
@@ -93,12 +109,18 @@ model Task {
   parentTaskId          Int?
   projectId             Int?
   dueDate               DateTime?
+  recurrence            TaskRecurrence     @default(NONE)
+  recurrenceSeriesId    Int?
+  recurrenceAnchorDate  DateTime?
+  recurrenceEndsAt      DateTime?
   statusManuallyChanged Boolean            @default(false)
   archived              Boolean            @default(false)
   externalContactId     Int?
   isDraft               Boolean            @default(false)
   sentAt                DateTime?
   declinedReason        String?
+  googleCalendarEventId      String?
+  googleCalendarSyncedUserId Int?
   comments              Comment[]
   notifications         Notification[]
   reminders             TaskReminder[]
@@ -116,6 +138,13 @@ model Task {
 
   @@index([projectId])
   @@index([isDraft])
+  @@index([recurrenceSeriesId])
+}
+
+enum TaskRecurrence {
+  NONE
+  WEEKLY
+  MONTHLY
 }
 
 model Project {
@@ -219,13 +248,28 @@ model Notification {
   message   String
   isRead    Boolean          @default(false)
   readAt    DateTime?
-  taskId    Int
+  taskId    Int?
   userId    Int
   companyId Int
   createdAt DateTime         @default(now())
   company   Company          @relation(fields: [companyId], references: [id])
-  task      Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task      Task?            @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BriefingLog {
+  id        Int          @id @default(autoincrement())
+  userId    Int
+  companyId Int
+  kind      BriefingKind
+  localDate String
+  content   String
+  createdAt DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, localDate])
+  @@index([companyId])
 }
 
 model TaskCoAssignee {
@@ -300,6 +344,19 @@ model TaskInvitation {
   @@index([recipientEmail])
 }
 
+model DeviceToken {
+  id        Int      @id @default(autoincrement())
+  token     String
+  platform  String   // "android", "ios", or "web"
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([token, userId])
+  @@index([userId])
+}
+
 model AuditLog {
   id          Int         @id @default(autoincrement())
   action      AuditAction
@@ -318,6 +375,116 @@ model AuditLog {
   @@index([companyId, createdAt])
   @@index([userId, createdAt])
   @@index([action, createdAt])
+}
+
+model AIAction {
+  id            String    @id @default(cuid())
+  actionType    String
+  status        String    @default("PENDING")
+  riskLevel     String    @default("LOW")
+  sourceType    String    @default("CHAT")
+  sourceText    String?
+  sourceMetadata Json?
+  input         Json
+  resolvedInput Json?
+  preview       Json?
+  beforeState   Json?
+  result        Json?
+  undoData      Json?
+  error         String?
+  userId        Int
+  companyId     Int
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  executedAt    DateTime?
+  undoneAt      DateTime?
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([actionType, createdAt])
+  @@index([sourceType, createdAt])
+}
+
+model ConnectedAccount {
+  id                    Int                    @id @default(autoincrement())
+  provider              ConnectedProvider
+  email                 String
+  encryptedAccessToken  String?
+  encryptedRefreshToken String?
+  tokenExpiry           DateTime?
+  scopes                String[]               @default([])
+  status                ConnectedAccountStatus @default(ACTIVE)
+  syncEnabled           Boolean                @default(true)
+  lastSyncedAt          DateTime?
+  lastHistoryId         String?
+  lastError             String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  userId                Int
+  companyId             Int
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  emailIngestions       EmailIngestion[]
+  tialzGoogleCalendarId String?
+
+  @@unique([provider, userId, email])
+  @@index([provider, status, syncEnabled])
+  @@index([userId, provider])
+  @@index([companyId])
+}
+
+model EmailSenderRule {
+  id          Int               @id @default(autoincrement())
+  userId      Int
+  companyId   Int
+  provider    ConnectedProvider
+  senderEmail String
+  alwaysSkip  Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company     Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider, senderEmail])
+  @@index([userId, provider, alwaysSkip])
+  @@index([companyId, provider])
+}
+
+model EmailIngestion {
+  id                 Int                  @id @default(autoincrement())
+  provider           ConnectedProvider
+  providerMessageId  String
+  threadId           String?
+  senderEmail        String?
+  senderName         String?
+  subject            String?
+  snippet            String?
+  receivedAt         DateTime?
+  classification     String?
+  confidence         Float?
+  reason             String?
+  status             EmailIngestionStatus @default(RECEIVED)
+  extractedActions   Json?
+  createdTaskIds     Int[]                @default([])
+  error              String?
+  rawMetadata        Json?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  connectedAccountId Int
+  userId             Int
+  companyId          Int
+  connectedAccount   ConnectedAccount     @relation(fields: [connectedAccountId], references: [id], onDelete: Cascade)
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company            Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerMessageId, userId])
+  @@index([userId, createdAt])
+  @@index([companyId, createdAt])
+  @@index([status, createdAt])
+  @@index([connectedAccountId, createdAt])
 }
 
 model Contact {
@@ -356,6 +523,27 @@ enum Role {
   ADMIN
   EMPLOYEE
   SUPER_ADMIN
+}
+
+enum ConnectedProvider {
+  GOOGLE_GMAIL
+  MICROSOFT_OUTLOOK
+  HOSTINGER_IMAP
+  CALDAV
+}
+
+enum ConnectedAccountStatus {
+  ACTIVE
+  REVOKED
+  ERROR
+}
+
+enum EmailIngestionStatus {
+  RECEIVED
+  SKIPPED
+  TASK_CREATED
+  NEEDS_REVIEW
+  ERROR
 }
 
 enum TaskStatus {
@@ -402,6 +590,13 @@ enum NotificationType {
   PROJECT_TASK_ACCEPTED
   PROJECT_TASK_DECLINED
   PROJECT_TASK_REASSIGNED
+  MORNING_BRIEFING
+  EVENING_BRIEFING
+}
+
+enum BriefingKind {
+  MORNING
+  EVENING
 }
 
 enum AuditAction {

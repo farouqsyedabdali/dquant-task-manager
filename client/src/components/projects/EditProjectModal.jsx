@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { projectsAPI } from '../../services/api';
 import { formatDateForInput } from '../../utils/dateUtils';
 import IconButton from '../common/IconButton';
+import DatePicker from '../common/DatePicker';
 import { FaTimes, FaCheck } from 'react-icons/fa';
 
 const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
@@ -263,16 +264,13 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
               Due Date (optional)
             </label>
-            <input
-              type="date"
+            <DatePicker
+              name="dueDate"
               value={formData.dueDate}
-              onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-              className="input input-bordered w-full"
-              style={{
-                backgroundColor: 'var(--color-bg-tertiary)',
-                borderColor: 'var(--color-border-default)',
-                color: 'var(--color-text-primary)',
-              }}
+              onChange={(e) => setFormData((prev) => ({ ...prev, dueDate: e.target.value }))}
+              placeholder="Select due date"
+              showTime={false}
+              timeOptional={false}
             />
           </div>
 

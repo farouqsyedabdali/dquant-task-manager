@@ -1,6 +1,15 @@
 const { Resend } = require('resend');
+const secureLogger = require('../middleware/secureLogger');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+const logEmailError = (message, error) => {
+  secureLogger.error(message, {
+    message: error.message,
+    statusCode: error.statusCode,
+    name: error.name
+  });
+};
 
 const emailService = {
   /**
@@ -13,18 +22,15 @@ const emailService = {
    */
   async sendEmail({ to, subject, html, text }) {
     try {
-      console.log('📧 Attempting to send email...');
-      console.log('To:', to);
-      console.log('Subject:', subject);
-      console.log('From:', process.env.EMAIL_FROM || 'onboarding@resend.dev');
-      console.log('Has HTML:', !!html);
-      console.log('Has Text:', !!text);
+      secureLogger.info('Sending email', {
+        recipientCount: Array.isArray(to) ? to.length : 1,
+        hasSubject: !!subject,
+        hasHtml: !!html,
+        hasText: !!text
+      });
       
-      // Check if using test API key
-      if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.startsWith('re_')) {
-        console.log('⚠️  Using Resend API key');
-      } else {
-        console.log('⚠️  WARNING: RESEND_API_KEY not configured or invalid!');
+      if (!process.env.RESEND_API_KEY) {
+        secureLogger.warn('RESEND_API_KEY is not configured');
       }
       
       const result = await resend.emails.send({
@@ -35,15 +41,10 @@ const emailService = {
         text
       });
       
-      console.log('✅ Email sent successfully:', result);
+      secureLogger.info('Email sent successfully', { emailId: result?.data?.id || result?.id });
       return { success: true, data: result };
     } catch (error) {
-      console.error('❌ Error sending email:', error);
-      console.error('Error details:', {
-        message: error.message,
-        statusCode: error.statusCode,
-        name: error.name
-      });
+      logEmailError('Error sending email', error);
       return { success: false, error: error.message };
     }
   },
@@ -65,7 +66,10 @@ const emailService = {
     // Check if recipient is a registered user
     const prisma = require('../lib/prisma');
     const isRegisteredUser = await prisma.user.findFirst({
-      where: { email: recipientEmail.toLowerCase() }
+      where: {
+        email: recipientEmail.toLowerCase(),
+        companyId: task.companyId
+      }
     }) !== null;
     
     const { taskInvitationTemplate } = require('../templates/taskInvitationEmail');
@@ -89,10 +93,10 @@ const emailService = {
         text,
       });
 
-      console.log('Email sent successfully:', result);
+      secureLogger.info('Task invitation email sent successfully', { emailId: result?.data?.id || result?.id });
       return { success: true, data: result };
     } catch (error) {
-      console.error('Error sending email:', error);
+      logEmailError('Error sending task invitation email', error);
       return { success: false, error: error.message };
     }
   },
@@ -116,10 +120,10 @@ const emailService = {
         text,
       });
 
-      console.log('Acceptance notification sent:', result);
+      secureLogger.info('Invitation acceptance notification sent', { emailId: result?.data?.id || result?.id });
       return { success: true, data: result };
     } catch (error) {
-      console.error('Error sending acceptance notification:', error);
+      logEmailError('Error sending acceptance notification', error);
       return { success: false, error: error.message };
     }
   },
@@ -138,10 +142,7 @@ const emailService = {
     });
 
     try {
-      console.log('📧 Sending feedback email...');
-      console.log('From:', process.env.EMAIL_FROM || 'onboarding@resend.dev');
-      console.log('To:', 'feedback@tialz.com');
-      console.log('Subject:', `💬 New Feedback from ${name}`);
+      secureLogger.info('Sending feedback email');
       
       const result = await resend.emails.send({
         from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
@@ -151,22 +152,17 @@ const emailService = {
         replyTo: email, // Allow you to reply directly to the user
       });
 
-      console.log('✅ Feedback email sent successfully:', JSON.stringify(result, null, 2));
+      secureLogger.info('Feedback email sent successfully', { emailId: result?.data?.id || result?.id });
       
       // Check for error in response
       if (result.error) {
-        console.error('❌ Resend returned an error:', result.error);
+        secureLogger.error('Resend returned an error', { message: result.error.message });
         return { success: false, error: result.error.message };
       }
       
       return { success: true, data: result };
     } catch (error) {
-      console.error('❌ Error sending feedback email:', error);
-      console.error('Error details:', {
-        message: error.message,
-        statusCode: error.statusCode,
-        name: error.name
-      });
+      logEmailError('Error sending feedback email', error);
       return { success: false, error: error.message };
     }
   },
@@ -192,9 +188,7 @@ const emailService = {
     });
 
     try {
-      console.log('📧 Sending task reminder email...');
-      console.log('To:', recipientEmail);
-      console.log('Task:', task.title);
+      secureLogger.info('Sending task reminder email', { taskId });
       
       const text = `Task Reminder: "${task.title}" is due in 48 hours\n\nHi ${userName},\n\nThis is a reminder that your task "${task.title}" is due soon.\nPriority: ${task.priority}\nStatus: ${task.status}\nDue: ${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}\n\nView task: ${taskLink}\n\n© ${new Date().getFullYear()} Tialz. All rights reserved.`;
 
@@ -206,15 +200,10 @@ const emailService = {
         text,
       });
 
-      console.log('✅ Task reminder email sent successfully:', result);
+      secureLogger.info('Task reminder email sent successfully', { taskId, emailId: result?.data?.id || result?.id });
       return { success: true, data: result };
     } catch (error) {
-      console.error('❌ Error sending task reminder email:', error);
-      console.error('Error details:', {
-        message: error.message,
-        statusCode: error.statusCode,
-        name: error.name
-      });
+      logEmailError('Error sending task reminder email', error);
       return { success: false, error: error.message };
     }
   }

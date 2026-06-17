@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../context/authStore';
 import CalendarIcon from '../icons/CalendarIcon';
 import QuickActionsDropdown from './QuickActionsDropdown';
-import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaUserFriends, FaProjectDiagram, FaComment, FaBook } from 'react-icons/fa';
+import { FaHome, FaUsers, FaCog, FaSignOutAlt, FaUserFriends, FaProjectDiagram, FaComment, FaBook, FaComments } from 'react-icons/fa';
 import UserManualModal from '../common/UserManualModal';
 import useThemeLogo from '../../hooks/useThemeLogo';
+import { useAssistantStore } from '../../stores/assistantStore';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,7 +16,9 @@ const Header = () => {
   const { user, logout, isAdmin, isSysAdmin, isSuperAdmin } = useAuthStore();
   const navigate = useNavigate();
   const tialzLogo = useThemeLogo();
-  
+  const assistantOpen = useAssistantStore((s) => s.isOpen);
+  const toggleAssistant = useAssistantStore((s) => s.toggle);
+
   // Check if this is a personal account
   const isPersonalAccount = user?.isPersonal || false;
 
@@ -194,6 +197,22 @@ const Header = () => {
 
           {/* User Menu */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            <button
+              type="button"
+              onClick={toggleAssistant}
+              className="px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors"
+              style={{
+                backgroundColor: assistantOpen ? 'var(--color-bg-tertiary)' : 'transparent',
+                color: assistantOpen ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                borderWidth: 1,
+                borderColor: 'var(--color-border-default)',
+              }}
+              title="Toggle AI assistant (Ctrl+/)"
+              aria-pressed={assistantOpen}
+            >
+              <FaComments className="w-4 h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Assistant</span>
+            </button>
             {/* Quick Actions Dropdown */}
             <QuickActionsDropdown />
 

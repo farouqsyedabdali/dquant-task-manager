@@ -572,6 +572,7 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
                 Due Date *
               </label>
               <DatePicker
+                name="dueDate"
                 value={formData.dueDate || ''}
                 onChange={(e) => {
                   handleChange({
@@ -580,17 +581,15 @@ const AddSubtaskModal = ({ isOpen, onClose, parentTask, extensionUpdateData = nu
                       value: e.target.value
                     }
                   });
-                  // Clear error when user selects a date
                   if (errors.dueDate) {
-                    setErrors(prev => ({ ...prev, dueDate: '' }));
+                    setErrors((prev) => ({ ...prev, dueDate: '' }));
                   }
                 }}
                 placeholder="Select due date"
                 showTime={false}
                 timeOptional={true}
                 min={new Date().toISOString()}
-                className={errors.dueDate ? 'border-red-500' : ''}
-                style={errors.dueDate ? { borderColor: '#ef4444' } : {}}
+                error={!!errors.dueDate}
               />
               {errors.dueDate && (
                 <p

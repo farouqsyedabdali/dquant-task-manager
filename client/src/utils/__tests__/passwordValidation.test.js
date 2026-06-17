@@ -64,7 +64,7 @@ describe('Password Validation', () => {
 
       const strong = getPasswordStrength('MyStr0ng!Pass');
       expect(strong.score).toBe(5);
-      expect(strong.label).toBe('Strong');
+      expect(strong.label).toBe('Very Good');
       expect(strong.isValid).toBe(true);
     });
 

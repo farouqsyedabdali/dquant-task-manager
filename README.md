@@ -1,237 +1,121 @@
 # Tialz Task Manager
 
-A modern, Jira-like task management system built with React, Node.js, and PostgreSQL. Features role-based access control with admin and employee user types.
+Tialz is an AI-native task management workspace for turning conversations, emails, browser snippets, and team instructions into structured tasks and projects. The current codebase is an alpha product with a React web app, Express API, PostgreSQL database, optional Electron desktop wrapper, browser extension, and Python email worker.
 
-## Features
+## Product Scope
 
-### Admin Features
-- **Full Task Management**: Create, edit, delete, and assign tasks
-- **Priority Management**: Set and change task priorities (Low, Medium, High, Urgent)
-- **Status Management**: Update task statuses (To Do, In Progress, Completed)
-- **User Management**: View all employees and assign tasks
-- **Comments**: Add, edit, and delete comments on any task
-- **Dashboard**: Overview of all tasks with statistics
+- Company and personal workspaces
+- Admin, employee, system admin, and super admin roles
+- Tasks, subtasks, priorities, statuses, due dates, comments, co-assignees, collaborators, sharing, and invitations
+- Projects and reusable project templates
+- Contacts and Google Contacts integration
+- Notifications, reminders, archive settings, audit logs, and security/admin screens
+- AI chat, quick actions, task extraction, task updates, and project idea generation
+- Internal email worker support for converting important inbound emails into tasks
+- Optional desktop shell and browser extension
 
-### Employee Features
-- **Task Viewing**: View only assigned tasks
-- **Status Updates**: Mark tasks as completed or in progress
-- **Comments**: Add comments to assigned tasks
-- **Dashboard**: Personal task overview
+## Stack
 
-### Shared Features
-- **Modern UI**: Beautiful, responsive interface with Tailwind CSS and DaisyUI
-- **Real-time Updates**: Live task updates and notifications
-- **Search & Filtering**: Advanced search and filter capabilities
-- **Sorting**: Sort tasks by any column
-- **Mobile Responsive**: Works perfectly on all devices
+- **Client:** React 19, Vite, React Router, Zustand, Tailwind CSS, DaisyUI, Framer Motion
+- **Server:** Node.js, Express, Prisma, PostgreSQL, JWT, bcrypt, Resend, OpenRouter, Google APIs, Firebase Admin
+- **Database:** Azure PostgreSQL in the current deployment plan
+- **Hosting:** Railway backend, Vercel frontend
+- **Worker:** Python email agent under `tialz_agent/`
+- **Desktop:** Electron wrapper under `desktop/`
 
-## Tech Stack
+## Repository Layout
 
-### Frontend
-- **React 19** - Modern React with hooks
-- **Vite** - Fast build tool and dev server
-- **Tailwind CSS** - Utility-first CSS framework
-- **DaisyUI** - Component library for Tailwind
-- **Zustand** - Lightweight state management
-- **React Router** - Client-side routing
-- **Axios** - HTTP client
-
-### Backend
-- **Node.js** - JavaScript runtime
-- **Express** - Web framework
-- **Prisma** - Database ORM
-- **PostgreSQL** - Database
-- **JWT** - Authentication
-- **bcrypt** - Password hashing
-- **CORS** - Cross-origin resource sharing
-
-## Prerequisites
-
-- Node.js 18+ 
-- PostgreSQL 12+
-- npm or yarn
-
-## Installation
-
-### 1. Clone the repository
-```bash
-git clone <repository-url>
-cd company-name-task-manager
+```text
+client/              React/Vite frontend
+server/              Express/Prisma backend
+desktop/             Electron desktop wrapper
+browser-extension/   Chrome extension for sending selected text to the assistant
+tialz_agent/         Python email worker
 ```
 
-### 2. Set up the database
+The repository/package names have not been renamed yet, so some package metadata may still use older placeholder names.
+
+## Local Setup
+
+### 1. Install dependencies
+
 ```bash
-# Create a PostgreSQL database
-createdb company_name_task_manager
-```
-
-### 3. Configure environment variables
-
-Create a `.env` file in the `server` directory:
-```env
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/company_name_task_manager"
-
-# JWT Secret
-JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-
-# Server Configuration
-PORT=3000
-NODE_ENV=development
-
-# Client URL for CORS
-CLIENT_URL="http://localhost:5173"
-```
-
-### 4. Install dependencies
-```bash
-# Install server dependencies
 cd server
 npm install
 
-# Install client dependencies
 cd ../client
 npm install
 ```
 
-### 5. Set up the database
+### 2. Configure environment variables
+
+Copy the examples and fill in real values:
+
 ```bash
-# From the server directory
+cp server/.env.example server/.env
+cp client/.env.example client/.env
+```
+
+Important local values:
+
+```env
+# server/.env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require"
+JWT_SECRET="replace-with-a-long-random-secret"
+CLIENT_URL="http://localhost:5173"
+PORT=3000
+
+# client/.env
+VITE_API_URL="http://localhost:3000/api"
+```
+
+### 3. Prepare the database
+
+```bash
 cd server
-
-# Generate Prisma client
 npx prisma generate
-
-# Run database migrations
 npx prisma migrate dev
-
-# Seed the database with sample data
 npm run seed
 ```
 
-### 6. Start the development servers
+### 4. Run the app
 
-**Terminal 1 - Start the backend:**
 ```bash
+# Terminal 1
 cd server
 npm run dev
-```
 
-**Terminal 2 - Start the frontend:**
-```bash
+# Terminal 2
 cd client
 npm run dev
 ```
 
-The application will be available at:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3000
+Frontend: `http://localhost:5173`  
+Backend: `http://localhost:3000/api`
 
-## Demo Credentials
+## Tests and Validation
 
-After running the seed script, you can use these credentials:
+```bash
+cd client
+npm run lint
+npm test
+npm run build
 
-### Admin User
-- **Email**: admin@companyname.com
-- **Password**: admin123
-
-### Employee Users
-- **Email**: john@companyname.com
-- **Password**: employee123
-- **Email**: jane@companyname.com
-- **Password**: employee123
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - Register new user (admin only)
-- `GET /api/auth/me` - Get current user info
-
-### Tasks
-- `GET /api/tasks` - Get tasks (admin: all, employee: assigned)
-- `POST /api/tasks` - Create task (admin only)
-- `GET /api/tasks/:id` - Get single task
-- `PUT /api/tasks/:id` - Update task
-- `DELETE /api/tasks/:id` - Delete task (admin only)
-- `PATCH /api/tasks/:id/status` - Update task status
-- `PATCH /api/tasks/:id/priority` - Update task priority (admin only)
-
-### Comments
-- `GET /api/comments/task/:taskId` - Get task comments
-- `POST /api/comments/task/:taskId` - Add comment
-- `PUT /api/comments/:id` - Update comment (admin only)
-- `DELETE /api/comments/:id` - Delete comment (admin only)
-
-## Project Structure
-
-```
-company-name-task-manager/
-├── client/                          # React Frontend
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── auth/                # Authentication components
-│   │   │   ├── tasks/               # Task-related components
-│   │   │   ├── comments/            # Comment components
-│   │   │   └── layout/              # Layout components
-│   │   ├── pages/                   # Page components
-│   │   ├── stores/                  # Zustand stores
-│   │   ├── services/                # API services
-│   │   ├── utils/                   # Utility functions
-│   │   └── context/                 # React context
-│   └── public/
-├── server/                          # Node.js Backend
-│   ├── src/
-│   │   ├── controllers/             # Route controllers
-│   │   ├── middleware/              # Express middleware
-│   │   ├── routes/                  # API routes
-│   │   └── utils/                   # Utility functions
-│   ├── prisma/                      # Database schema and migrations
-│   └── index.js                     # Server entry point
-└── README.md
+cd ../server
+npx prisma validate
+npm test
 ```
 
-## Database Schema
+CI is configured in `.github/workflows/ci.yml` for client lint/test/build and server Prisma validation/test.
 
-### Users
-- `id` - Primary key
-- `name` - User's full name
-- `email` - Unique email address
-- `password` - Hashed password
-- `role` - User role (ADMIN/EMPLOYEE)
-- `createdAt` - Account creation timestamp
-- `updatedAt` - Last update timestamp
+## Deployment Notes
 
-### Tasks
-- `id` - Primary key
-- `title` - Task title
-- `description` - Task description (optional)
-- `status` - Task status (TODO/IN_PROGRESS/COMPLETED)
-- `priority` - Task priority (LOW/MEDIUM/HIGH/URGENT)
-- `assignedToId` - Foreign key to assigned user
-- `createdById` - Foreign key to task creator
-- `createdAt` - Task creation timestamp
-- `updatedAt` - Last update timestamp
+- Backend deploys to Railway.
+- Frontend deploys to Vercel.
+- Database is Azure PostgreSQL.
+- Configure `VITE_API_URL` in Vercel instead of hardcoding the Railway API URL in app code.
+- Configure Railway with the server env values from `server/.env.example`.
 
-### Comments
-- `id` - Primary key
-- `content` - Comment text
-- `taskId` - Foreign key to task
-- `authorId` - Foreign key to comment author
-- `createdAt` - Comment creation timestamp
+## Current Status
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For support, email support@companyname.com or create an issue in the repository. 
+This is an alpha codebase. Before using Tialz with real customer data, complete the remaining hardening work: production secrets review, Google token encryption, deeper tenant isolation tests, full AI action safety controls, billing, observability, and a production incident/recovery plan.

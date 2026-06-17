@@ -3,7 +3,7 @@ import useTaskStore from '../../stores/taskStore';
 import useUserStore from '../../stores/userStore';
 import useAuthStore from '../../context/authStore';
 import useContactStore from '../../stores/contactStore';
-import { PRIORITY_OPTIONS, getDefaultDueDate } from '../../utils/constants';
+import { PRIORITY_OPTIONS, getDefaultDueDate, TASK_RECURRENCE, RECURRENCE_OPTIONS } from '../../utils/constants';
 import { convertLocalDateTimeToUTC } from '../../utils/dateUtils';
 import { usersAPI } from '../../services/api';
 import SearchableDropdown from '../common/SearchableDropdown';
@@ -22,7 +22,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
     description: '',
     priority: 'MEDIUM',
     assignee: '', // Will store as "type_id" format (e.g., "user_123" or "contact_456")
-    dueDate: getDefaultDueDate()
+    dueDate: getDefaultDueDate(),
+    recurrence: TASK_RECURRENCE.NONE,
+    recurrenceEndsAt: ''
   });
   const [errors, setErrors] = useState({});
   const [users, setUsers] = useState([]);
@@ -255,7 +257,11 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
         priority: formData.priority,
         assigneeId,
         externalContactId,
-        dueDate: convertLocalDateTimeToUTC(formData.dueDate)
+        dueDate: convertLocalDateTimeToUTC(formData.dueDate),
+        recurrence: formData.recurrence,
+        ...(formData.recurrence !== TASK_RECURRENCE.NONE && formData.recurrenceEndsAt
+          ? { recurrenceEndsAt: convertLocalDateTimeToUTC(formData.recurrenceEndsAt) }
+          : {})
       };
       
       try {
@@ -265,7 +271,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
           description: '',
           priority: 'MEDIUM',
           assignee: !isPersonalAccount && user ? `user_${user.id.toString()}` : '',
-          dueDate: getDefaultDueDate()
+          dueDate: getDefaultDueDate(),
+          recurrence: TASK_RECURRENCE.NONE,
+          recurrenceEndsAt: ''
         });
         setErrors({});
         toast.success('Task added to project as draft!');
@@ -282,7 +290,11 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
         priority: formData.priority,
         assigneeId,
         externalContactId,
-        dueDate: convertLocalDateTimeToUTC(formData.dueDate)
+        dueDate: convertLocalDateTimeToUTC(formData.dueDate),
+        recurrence: formData.recurrence,
+        ...(formData.recurrence !== TASK_RECURRENCE.NONE && formData.recurrenceEndsAt
+          ? { recurrenceEndsAt: convertLocalDateTimeToUTC(formData.recurrenceEndsAt) }
+          : {})
       };
       
       const result = await createTask(createData);
@@ -292,7 +304,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
           description: '',
           priority: 'MEDIUM',
           assignee: !isPersonalAccount && user ? `user_${user.id.toString()}` : '',
-          dueDate: getDefaultDueDate()
+          dueDate: getDefaultDueDate(),
+          recurrence: TASK_RECURRENCE.NONE,
+          recurrenceEndsAt: ''
         });
         setErrors({});
         onClose();
@@ -378,7 +392,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
       description: '',
       priority: 'MEDIUM',
       assignee: !isPersonalAccount && user ? `user_${user.id.toString()}` : '',
-      dueDate: getDefaultDueDate()
+      dueDate: getDefaultDueDate(),
+      recurrence: TASK_RECURRENCE.NONE,
+      recurrenceEndsAt: ''
     });
     setErrors({});
     onClose();
@@ -389,14 +405,14 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
   return (
     <div className="modal modal-open backdrop-blur-sm">
       <div
-        className="modal-box max-w-2xl border transition-all duration-300"
+        className="modal-box max-w-2xl border transition-all duration-300 max-h-[min(92dvh,900px)] flex flex-col overflow-hidden"
         style={{
           backgroundColor: 'var(--color-bg-secondary)',
           borderColor: 'var(--color-border-default)',
         }}
       >
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 flex-shrink-0">
           <div>
             <h3
               className="text-2xl font-bold transition-colors duration-200"
@@ -416,8 +432,9 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
           />
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Scrollable fields — keeps modal height bounded; assign dropdown uses viewport positioning */}
+          <div className="space-y-6 flex-1 min-h-0 overflow-y-auto pr-1 pb-2 scrollbar-thin">
           {/* Title */}
           <div>
             <label
@@ -530,6 +547,7 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
                 Due Date *
               </label>
               <DatePicker
+                name="dueDate"
                 value={formData.dueDate || ''}
                 onChange={(e) => {
                   handleChange({
@@ -538,21 +556,67 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
                       value: e.target.value
                     }
                   });
-                  // Clear error when user selects a date
                   if (errors.dueDate) {
-                    setErrors(prev => ({ ...prev, dueDate: '' }));
+                    setErrors((prev) => ({ ...prev, dueDate: '' }));
                   }
                 }}
                 placeholder="Select due date"
                 showTime={false}
                 timeOptional={true}
-                className={errors.dueDate ? 'border-red-500' : ''}
-                style={errors.dueDate ? { borderColor: '#ef4444' } : {}}
+                error={!!errors.dueDate}
               />
               {errors.dueDate && (
                 <p className="text-red-400 text-sm mt-1">{errors.dueDate}</p>
               )}
             </div>
+          </div>
+
+          {/* Repeat (weekly / monthly) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label
+                className="block text-sm font-medium mb-2 transition-colors duration-200"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Repeat
+              </label>
+              <select
+                name="recurrence"
+                value={formData.recurrence}
+                onChange={handleChange}
+                className="select w-full transition-colors duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderColor: 'var(--color-border-default)',
+                  color: 'var(--color-text-primary)',
+                }}
+              >
+                {RECURRENCE_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+              <p className="text-xs mt-1 opacity-75" style={{ color: 'var(--color-text-tertiary)' }}>
+                The next task is created when this one is marked complete.
+              </p>
+            </div>
+            {formData.recurrence !== TASK_RECURRENCE.NONE && (
+              <div>
+                <label
+                  className="block text-sm font-medium mb-2 transition-colors duration-200"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Stop repeating after (optional)
+                </label>
+                <DatePicker
+                  name="recurrenceEndsAt"
+                  value={formData.recurrenceEndsAt || ''}
+                  onChange={handleChange}
+                  placeholder="Optional — pick last repeat date"
+                  showTime={false}
+                  timeOptional={false}
+                />
+              </div>
+            )}
           </div>
 
           {/* Assignee Selection - Show for company accounts */}
@@ -750,9 +814,13 @@ const AddTaskModal = ({ isOpen, onClose, initialData = null, projectId = null })
           {showAIWarning && (
             <AIWarning className="mb-4" />
           )}
+          </div>
 
-          {/* Submit Buttons */}
-          <div className="flex justify-between items-center pt-4">
+          {/* Submit Buttons — sticky at bottom of modal */}
+          <div
+            className="flex justify-between items-center pt-4 flex-shrink-0 border-t mt-2"
+            style={{ borderColor: 'var(--color-border-default)' }}
+          >
             <IconButton
               icon={<img src={tialzFavicon} alt="" />}
               label="Smart Pre-fill"

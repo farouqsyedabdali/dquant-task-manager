@@ -3,13 +3,52 @@ const { createNotification, notifyTaskUsers } = require('./notificationControlle
 const { logAuditActionDirect } = require('../middleware/auditLogger')
 const { autoChangeStatusToInProgress, markStatusAsManuallyChanged } = require('../utils/autoStatusManager')
 const { parseLocalDate, isDateInFuture } = require('../utils/dateUtils')
+const { spawnNextRecurrenceAfterCompletion } = require('../services/taskRecurrenceService')
+const {
+  scheduleGoogleCalendarSyncForTask,
+  deleteGoogleCalendarEventForTask
+} = require('../services/gmailAgentService')
+
+function normalizeTaskRecurrenceInput(raw, parentTaskId) {
+  if (parentTaskId) return 'NONE'
+  if (raw === 'WEEKLY' || raw === 'MONTHLY') return raw
+  return 'NONE'
+}
+
+/** Main dashboard visibility (non-draft, non-archived): same rules as default “all” task list. */
+function buildDashboardTaskVisibilityWhere(user) {
+  const userId = user.id
+  const userRole = user.role
+  const companyId = user.companyId
+  const base = { archived: false }
+  if (userRole === 'EMPLOYEE') {
+    return {
+      ...base,
+      OR: [
+        { AND: [{ assigneeId: userId }, { isDraft: false }] },
+        { AND: [{ assignerId: userId }, { isDraft: false }] },
+        { AND: [{ coAssignees: { some: { userId } } }, { isDraft: false }] },
+        { AND: [{ sharedWith: { some: { userId } } }, { isDraft: false }] },
+        { AND: [{ collaborators: { some: { userId } } }, { isDraft: false }] }
+      ]
+    }
+  }
+  return {
+    ...base,
+    OR: [
+      { AND: [{ companyId }, { isDraft: false }] },
+      { AND: [{ assigneeId: userId }, { isDraft: false }] },
+      { AND: [{ sharedWith: { some: { userId } } }, { isDraft: false }] },
+      { AND: [{ collaborators: { some: { userId } } }, { isDraft: false }] }
+    ]
+  }
+}
 
 // Get tasks based on user role and assignments
 const getTasks = async (req, res) => {
   try {
     const { status, priority, search, type = 'all', dueDateFilter } = req.query;
     const userId = req.user.id;
-    const userRole = req.user.role;
     const companyId = req.user.companyId;
 
     let whereClause = {
@@ -24,30 +63,14 @@ const getTasks = async (req, res) => {
         { AND: [{ assigneeId: userId }, { isDraft: false }] }, // Exclude drafts
         { AND: [{ coAssignees: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft co-assignments
         { AND: [{ sharedWith: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft shares
-        { AND: [{ collaborators: { some: { userId: userId, companyId: companyId } } }, { isDraft: false }] } // Exclude draft collaborations
+        { AND: [{ collaborators: { some: { userId: userId } } }, { isDraft: false }] } // Exclude draft collaborations (any company)
       ];
     } else if (type === 'created-by-me') {
       // Only show non-draft tasks they created (drafts only visible in project view)
       whereClause.assignerId = userId;
       whereClause.isDraft = false;
-    } else if (userRole === 'EMPLOYEE') {
-      // Employees see tasks assigned to them, tasks they created, tasks they're co-assigned to, shared with them, or collaborating
-      // EXCLUDE ALL DRAFT TASKS - they should only be visible in project view
-      whereClause.OR = [
-        { AND: [{ assigneeId: userId }, { isDraft: false }] },
-        { AND: [{ assignerId: userId }, { isDraft: false }] }, // Exclude drafts from created tasks too
-        { AND: [{ coAssignees: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft co-assignments
-        { AND: [{ sharedWith: { some: { userId: userId } } }, { isDraft: false }] }, // Exclude draft shares
-        { AND: [{ collaborators: { some: { userId: userId, companyId: companyId } } }, { isDraft: false }] } // Exclude draft collaborations
-      ];
     } else {
-      // Admins see all tasks in their company OR tasks they're collaborating on OR tasks assigned to them
-      // EXCLUDE ALL DRAFT TASKS - they should only be visible in project view
-      whereClause.OR = [
-        { AND: [{ companyId: companyId }, { isDraft: false }] }, // Exclude drafts from company tasks
-        { AND: [{ assigneeId: userId }, { isDraft: false }] },
-        { AND: [{ collaborators: { some: { userId: userId, companyId: companyId } } }, { isDraft: false }] } // Exclude draft collaborations
-      ];
+      Object.assign(whereClause, buildDashboardTaskVisibilityWhere(req.user))
     }
 
     // Add filters
@@ -137,6 +160,13 @@ const getTasks = async (req, res) => {
             email: true
           }
         },
+        externalContact: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
         parentTask: {
           select: {
             id: true,
@@ -216,8 +246,30 @@ const getTasks = async (req, res) => {
                 name: true,
                 email: true
               }
+            },
+            contact: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
             }
           }
+        },
+        invitations: {
+          where: { status: 'PENDING' },
+          select: {
+            id: true,
+            recipientEmail: true,
+            status: true,
+            message: true,
+            createdAt: true,
+            expiresAt: true,
+            sender: {
+              select: { id: true, name: true }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
         },
         project: {
           select: {
@@ -340,44 +392,21 @@ const getTask = async (req, res) => {
     // Check if user has access to this task
     if (userRole === 'EMPLOYEE') {
       whereClause.OR = [
-        // Internal company access
-        { 
-          AND: [
-            { companyId: companyId },
-            {
-              OR: [
-                { assigneeId: userId },
-                { assignerId: userId },
-                { coAssignees: { some: { userId: userId } } },
-                { sharedWith: { some: { userId: userId } } }
-              ]
-            }
-          ]
-        },
-        // External collaborator access
-        { 
-          collaborators: { 
-            some: { 
-              userId: userId,
-              companyId: companyId
-            }
-          }
-        }
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
       ];
-    } else {
-      // Admins can see all tasks in their company OR tasks they're collaborating on
-      // OR tasks they created (as assigner)
+    } else if (userRole === 'ADMIN') {
+      // Admins can see all tasks in their company OR tasks they are explicitly associated with
       whereClause.OR = [
         { companyId: companyId },
-        {
-          collaborators: {
-            some: {
-              userId: userId,
-              companyId: companyId
-            }
-          }
-        },
-        { assignerId: userId }
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
       ];
     }
 
@@ -394,6 +423,13 @@ const getTask = async (req, res) => {
           }
         },
         assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        externalContact: {
           select: {
             id: true,
             name: true,
@@ -454,6 +490,56 @@ const getTask = async (req, res) => {
             }
           }
         },
+        collaborators: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            },
+            company: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        },
+        sharedWith: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            },
+            contact: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        },
+        invitations: {
+          where: { status: 'PENDING' },
+          select: {
+            id: true,
+            recipientEmail: true,
+            status: true,
+            message: true,
+            createdAt: true,
+            expiresAt: true,
+            sender: {
+              select: { id: true, name: true }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+        },
         project: {
           select: {
             id: true,
@@ -494,7 +580,17 @@ const getTask = async (req, res) => {
 // Create task (anyone can create tasks)
 const createTask = async (req, res) => {
   try {
-    const { title, description, priority, assigneeId, externalContactId, parentTaskId, dueDate } = req.body;
+    const {
+      title,
+      description,
+      priority,
+      assigneeId,
+      externalContactId,
+      parentTaskId,
+      dueDate,
+      recurrence: recurrenceRaw,
+      recurrenceEndsAt: recurrenceEndsAtRaw
+    } = req.body;
     const assignerId = req.user.id;
     const companyId = req.user.companyId;
 
@@ -579,80 +675,110 @@ const createTask = async (req, res) => {
       }
     }
 
-    const task = await prisma.task.create({
-      data: {
-        title,
-        description,
-        priority: priority || 'MEDIUM',
-        assignerId,
-        assigneeId: assigneeId ? parseInt(assigneeId) : null,
-        externalContactId: externalContactId ? parseInt(externalContactId) : null,
-        parentTaskId: parentTaskId ? parseInt(parentTaskId) : null,
-        dueDate: dueDateObj, // Required, already validated
-        companyId
+    const recurrence = normalizeTaskRecurrenceInput(recurrenceRaw, parentTaskId ? parseInt(parentTaskId) : null)
+
+    let recurrenceEndsAtObj = null
+    if (recurrence !== 'NONE' && recurrenceEndsAtRaw) {
+      recurrenceEndsAtObj = parseLocalDate(recurrenceEndsAtRaw)
+      if (Number.isNaN(recurrenceEndsAtObj.getTime())) {
+        return res.status(400).json({ error: 'Invalid recurrence end date format' })
+      }
+    }
+
+    const taskInclude = {
+      assigner: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          companyId: true
+        }
       },
-      include: {
-        assigner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            companyId: true
-          }
-        },
-        assignee: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        externalContact: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            company: true,
-            isPersonal: true
-          }
-        },
-        parentTask: {
-          select: {
-            id: true,
-            title: true
-          }
-        },
-        subtasks: {
-          include: {
-            assigner: {
-              select: {
-                id: true,
-                name: true
-              }
-            },
-            assignee: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
-          }
-        },
-        comments: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                name: true
-              }
+      assignee: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      externalContact: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          company: true,
+          isPersonal: true
+        }
+      },
+      parentTask: {
+        select: {
+          id: true,
+          title: true
+        }
+      },
+      subtasks: {
+        include: {
+          assigner: {
+            select: {
+              id: true,
+              name: true
             }
           },
-          orderBy: {
-            createdAt: 'desc'
+          assignee: {
+            select: {
+              id: true,
+              name: true
+            }
           }
         }
+      },
+      comments: {
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
       }
-    });
+    }
+
+    const task = await prisma.$transaction(async (tx) => {
+      const created = await tx.task.create({
+        data: {
+          title,
+          description,
+          priority: priority || 'MEDIUM',
+          assignerId,
+          assigneeId: assigneeId ? parseInt(assigneeId) : null,
+          externalContactId: externalContactId ? parseInt(externalContactId) : null,
+          parentTaskId: parentTaskId ? parseInt(parentTaskId) : null,
+          dueDate: dueDateObj, // Required, already validated
+          companyId,
+          recurrence,
+          recurrenceAnchorDate: recurrence !== 'NONE' ? dueDateObj : null,
+          recurrenceEndsAt: recurrence !== 'NONE' ? recurrenceEndsAtObj : null,
+          recurrenceSeriesId: null
+        },
+        include: taskInclude
+      })
+
+      if (recurrence !== 'NONE' && !parentTaskId) {
+        return tx.task.update({
+          where: { id: created.id },
+          data: {
+            recurrenceSeriesId: created.id
+          },
+          include: taskInclude
+        })
+      }
+
+      return created
+    })
 
     // Create notification for the assignee (only for internal users)
     if (task.assigneeId && task.assigneeId !== assignerId) {
@@ -732,6 +858,8 @@ const createTask = async (req, res) => {
       }
     });
 
+    scheduleGoogleCalendarSyncForTask(task.id);
+
     res.status(201).json(task);
   } catch (error) {
     console.error('Create task error:', error);
@@ -748,25 +876,51 @@ const updateTask = async (req, res) => {
     const companyId = req.user.companyId;
     const updateData = req.body;
 
+    let whereClause = {
+      id: parseInt(id)
+    };
+
+    if (userRole === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    } else if (userRole === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    }
+
     // Find the task first to check permissions
     const task = await prisma.task.findFirst({
-      where: { 
-        id: parseInt(id),
-        companyId: companyId
-      }
+      where: whereClause
     });
 
     if (!task) {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Check permissions - company admin, system admin, assigner, or assignee
+    // Check permissions - company admin, system admin, assigner, assignee, or co-assignee
     const isCompanyAdmin = userRole === 'ADMIN' && task.companyId === companyId;
     const isSystemAdmin = userRole === 'SYSDMIN';
     const isAssigner = task.assignerId === userId;
     const isAssignee = task.assigneeId === userId;
+    const isCoAssignee = await prisma.taskCoAssignee.findFirst({
+      where: {
+        taskId: task.id,
+        userId: userId
+      }
+    }) !== null;
 
-    if (!isCompanyAdmin && !isSystemAdmin && !isAssigner && !isAssignee) {
+    if (!isCompanyAdmin && !isSystemAdmin && !isAssigner && !isAssignee && !isCoAssignee) {
       return res.status(403).json({ error: 'You do not have permission to update this task' });
     }
 
@@ -839,7 +993,51 @@ const updateTask = async (req, res) => {
           allowedUpdates.assigneeId = null;
         }
       }
-    } else if (isAssignee) {
+
+      // Recurrence (weekly / monthly); subtasks cannot repeat
+      if (updateData.recurrence !== undefined) {
+        const r = normalizeTaskRecurrenceInput(updateData.recurrence, task.parentTaskId)
+        if (task.parentTaskId && r !== 'NONE') {
+          return res.status(400).json({ error: 'Subtasks cannot repeat' })
+        }
+        allowedUpdates.recurrence = r
+        if (r === 'NONE') {
+          allowedUpdates.recurrenceSeriesId = null
+          allowedUpdates.recurrenceAnchorDate = null
+          allowedUpdates.recurrenceEndsAt = null
+        } else {
+          const anchorSource = allowedUpdates.dueDate !== undefined ? allowedUpdates.dueDate : task.dueDate
+          if (!anchorSource) {
+            return res.status(400).json({ error: 'Due date is required for recurring tasks' })
+          }
+          allowedUpdates.recurrenceAnchorDate = anchorSource
+          allowedUpdates.recurrenceSeriesId = task.recurrenceSeriesId || task.id
+          if (updateData.recurrenceEndsAt !== undefined) {
+            if (updateData.recurrenceEndsAt === null || updateData.recurrenceEndsAt === '') {
+              allowedUpdates.recurrenceEndsAt = null
+            } else {
+              const end = parseLocalDate(updateData.recurrenceEndsAt)
+              if (Number.isNaN(end.getTime())) {
+                return res.status(400).json({ error: 'Invalid recurrence end date format' })
+              }
+              allowedUpdates.recurrenceEndsAt = end
+            }
+          }
+        }
+      } else if (updateData.recurrenceEndsAt !== undefined) {
+        if (task.recurrence === 'NONE') {
+          allowedUpdates.recurrenceEndsAt = null
+        } else if (updateData.recurrenceEndsAt === null || updateData.recurrenceEndsAt === '') {
+          allowedUpdates.recurrenceEndsAt = null
+        } else {
+          const end = parseLocalDate(updateData.recurrenceEndsAt)
+          if (Number.isNaN(end.getTime())) {
+            return res.status(400).json({ error: 'Invalid recurrence end date format' })
+          }
+          allowedUpdates.recurrenceEndsAt = end
+        }
+      }
+    } else if (isAssignee || isCoAssignee) {
       // Assignee can only update status (not to COMPLETED — only assigner/admins can complete)
       if (updateData.status === 'COMPLETED') {
         return res.status(403).json({
@@ -1132,7 +1330,21 @@ const updateTask = async (req, res) => {
       }
     }
 
-    res.json(updatedTask);
+    let responsePayload = updatedTask
+    if (updateData.status === 'COMPLETED' && task.status !== 'COMPLETED') {
+      try {
+        const spawned = await spawnNextRecurrenceAfterCompletion(updatedTask)
+        if (spawned) {
+          responsePayload = { ...updatedTask, spawnedRecurringTask: spawned }
+        }
+      } catch (recErr) {
+        console.error('Recurring task spawn error:', recErr)
+      }
+    }
+
+    scheduleGoogleCalendarSyncForTask(updatedTask.id);
+
+    res.json(responsePayload);
   } catch (error) {
     console.error('Update task error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -1147,12 +1359,32 @@ const deleteTask = async (req, res) => {
     const userRole = req.user.role;
     const companyId = req.user.companyId;
 
+    let whereClause = {
+      id: parseInt(id)
+    };
+
+    if (userRole === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    } else if (userRole === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    }
+
     // Find the task first to check permissions
     const task = await prisma.task.findFirst({
-      where: { 
-        id: parseInt(id),
-        companyId: companyId
-      },
+      where: whereClause,
       include: {
         subtasks: true
       }
@@ -1208,6 +1440,8 @@ const deleteTask = async (req, res) => {
       }
     });
 
+    await deleteGoogleCalendarEventForTask(task, { clearTaskFields: false });
+
     await prisma.task.delete({
       where: { id: parseInt(id) }
     });
@@ -1232,12 +1466,32 @@ const updateTaskStatus = async (req, res) => {
       return res.status(400).json({ error: 'Status is required' });
     }
 
+    let whereClause = {
+      id: parseInt(id)
+    };
+
+    if (userRole === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    } else if (userRole === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    }
+
     // Find the task first to check permissions
     const task = await prisma.task.findFirst({
-      where: {
-        id: parseInt(id),
-        companyId: companyId
-      }
+      where: whereClause
     });
 
     if (!task) {
@@ -1245,12 +1499,18 @@ const updateTaskStatus = async (req, res) => {
     }
 
     // Check permissions
-    const isAdmin = userRole === 'ADMIN';
+    const isAdmin = userRole === 'ADMIN' && task.companyId === companyId;
     const isSystemAdmin = userRole === 'SYSDMIN';
     const isAssigner = task.assignerId === userId;
     const isAssignee = task.assigneeId === userId;
+    const isCoAssignee = await prisma.taskCoAssignee.findFirst({
+      where: {
+        taskId: task.id,
+        userId: userId
+      }
+    }) !== null;
 
-    if (!isAdmin && !isSystemAdmin && !isAssigner && !isAssignee) {
+    if (!isAdmin && !isSystemAdmin && !isAssigner && !isAssignee && !isCoAssignee) {
       return res.status(403).json({ error: 'You do not have permission to update this task status' });
     }
 
@@ -1320,12 +1580,26 @@ const updateTaskStatus = async (req, res) => {
       }
     });
 
+    let statusPayload = updatedTask
+    if (status === 'COMPLETED' && task.status !== 'COMPLETED') {
+      try {
+        const spawned = await spawnNextRecurrenceAfterCompletion(updatedTask)
+        if (spawned) {
+          statusPayload = { ...updatedTask, spawnedRecurringTask: spawned }
+        }
+      } catch (recErr) {
+        console.error('Recurring task spawn error:', recErr)
+      }
+    }
+
     // If status was changed and the user is the creator (assigner), mark as manually changed
     if (status !== task.status && isAssigner) {
       await markStatusAsManuallyChanged(parseInt(id), companyId);
     }
 
-    res.json(updatedTask);
+    scheduleGoogleCalendarSyncForTask(parseInt(id));
+
+    res.json(statusPayload);
   } catch (error) {
     console.error('Update task status error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -1345,12 +1619,32 @@ const updateTaskPriority = async (req, res) => {
       return res.status(400).json({ error: 'Priority is required' });
     }
 
+    let whereClause = {
+      id: parseInt(id)
+    };
+
+    if (userRole === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    } else if (userRole === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: userId },
+        { assignerId: userId },
+        { coAssignees: { some: { userId: userId } } },
+        { sharedWith: { some: { userId: userId } } },
+        { collaborators: { some: { userId: userId } } }
+      ];
+    }
+
     // Find the task first to check permissions
     const task = await prisma.task.findFirst({
-      where: { 
-        id: parseInt(id),
-        companyId: companyId
-      }
+      where: whereClause
     });
 
     if (!task) {
@@ -1358,7 +1652,7 @@ const updateTaskPriority = async (req, res) => {
     }
 
     // Check permissions
-    const isAdmin = userRole === 'ADMIN';
+    const isAdmin = userRole === 'ADMIN' && task.companyId === companyId;
     const isSystemAdmin = userRole === 'SYSDMIN';
     const isAssigner = task.assignerId === userId;
 
@@ -1424,6 +1718,7 @@ const updateTaskPriority = async (req, res) => {
     });
 
     res.json(updatedTask);
+    scheduleGoogleCalendarSyncForTask(parseInt(id));
   } catch (error) {
     console.error('Update task priority error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -1446,20 +1741,52 @@ const createSubtask = async (req, res) => {
       return res.status(400).json({ error: 'Assignee is required' });
     }
 
+    let parentWhere = {
+      id: parseInt(id)
+    };
+
+    if (req.user.role === 'EMPLOYEE') {
+      parentWhere.OR = [
+        { assigneeId: req.user.id },
+        { assignerId: req.user.id },
+        { coAssignees: { some: { userId: req.user.id } } },
+        { sharedWith: { some: { userId: req.user.id } } },
+        { collaborators: { some: { userId: req.user.id } } }
+      ];
+    } else if (req.user.role === 'ADMIN') {
+      parentWhere.OR = [
+        { companyId: companyId },
+        { assigneeId: req.user.id },
+        { assignerId: req.user.id },
+        { coAssignees: { some: { userId: req.user.id } } },
+        { sharedWith: { some: { userId: req.user.id } } },
+        { collaborators: { some: { userId: req.user.id } } }
+      ];
+    }
+
     // Verify parent task exists and user is assigner or assignee (works for any task, including subtasks)
     const parentTask = await prisma.task.findFirst({
-      where: {
-        id: parseInt(id),
-        companyId: companyId,
-        OR: [
-          { assigneeId: req.user.id }, // User is assignee
-          { assignerId: req.user.id }  // User is assigner
-        ]
-      }
+      where: parentWhere
     });
 
     if (!parentTask) {
       return res.status(404).json({ error: 'Parent task not found or you do not have permission to create subtasks for it' });
+    }
+
+    // Explicitly verify they are authorized to create subtasks (assigner, lead assignee, co-assignee, or admin)
+    const isParentAssigner = parentTask.assignerId === req.user.id;
+    const isParentAssignee = parentTask.assigneeId === req.user.id;
+    const isParentCoAssignee = await prisma.taskCoAssignee.findFirst({
+      where: {
+        taskId: parentTask.id,
+        userId: req.user.id
+      }
+    }) !== null;
+    const isParentAdmin = req.user.role === 'ADMIN' && parentTask.companyId === companyId;
+    const isParentSystemAdmin = req.user.role === 'SYSDMIN';
+
+    if (!isParentAssigner && !isParentAssignee && !isParentCoAssignee && !isParentAdmin && !isParentSystemAdmin) {
+      return res.status(403).json({ error: 'You do not have permission to create subtasks for this task' });
     }
 
     // Verify assignee exists in the same company
@@ -1543,12 +1870,32 @@ const addCoAssignee = async (req, res) => {
 
     console.log('Adding co-assignee for taskId:', taskId, 'userId:', userId, 'companyId:', companyId);
 
+    let whereClause = {
+      id: parseInt(taskId)
+    };
+
+    if (req.user.role === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: currentUserId },
+        { assignerId: currentUserId },
+        { coAssignees: { some: { userId: currentUserId } } },
+        { sharedWith: { some: { userId: currentUserId } } },
+        { collaborators: { some: { userId: currentUserId } } }
+      ];
+    } else if (req.user.role === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: currentUserId },
+        { assignerId: currentUserId },
+        { coAssignees: { some: { userId: currentUserId } } },
+        { sharedWith: { some: { userId: currentUserId } } },
+        { collaborators: { some: { userId: currentUserId } } }
+      ];
+    }
+
     // Get the task to check permissions
     const task = await prisma.task.findFirst({
-      where: {
-        id: parseInt(taskId),
-        companyId: companyId
-      },
+      where: whereClause,
       include: {
         assignee: true
       }
@@ -1653,12 +2000,32 @@ const removeCoAssignee = async (req, res) => {
 
     console.log('Removing co-assignee for taskId:', taskId, 'userId:', userId, 'companyId:', companyId);
 
+    let whereClause = {
+      id: parseInt(taskId)
+    };
+
+    if (req.user.role === 'EMPLOYEE') {
+      whereClause.OR = [
+        { assigneeId: currentUserId },
+        { assignerId: currentUserId },
+        { coAssignees: { some: { userId: currentUserId } } },
+        { sharedWith: { some: { userId: currentUserId } } },
+        { collaborators: { some: { userId: currentUserId } } }
+      ];
+    } else if (req.user.role === 'ADMIN') {
+      whereClause.OR = [
+        { companyId: companyId },
+        { assigneeId: currentUserId },
+        { assignerId: currentUserId },
+        { coAssignees: { some: { userId: currentUserId } } },
+        { sharedWith: { some: { userId: currentUserId } } },
+        { collaborators: { some: { userId: currentUserId } } }
+      ];
+    }
+
     // Get the task to check permissions
     const task = await prisma.task.findFirst({
-      where: {
-        id: parseInt(taskId),
-        companyId: companyId
-      }
+      where: whereClause
     });
 
     if (!task) {
@@ -1777,6 +2144,7 @@ const getCoAssignees = async (req, res) => {
 };
 
 module.exports = {
+  buildDashboardTaskVisibilityWhere,
   getTasks,
   getTask,
   createTask,

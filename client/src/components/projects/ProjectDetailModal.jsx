@@ -13,6 +13,7 @@ import SearchableDropdown from '../common/SearchableDropdown';
 import AddContactModal from '../common/AddContactModal';
 import { FaTrash, FaPlus, FaPaperPlane, FaSave, FaEdit, FaCheck, FaTimes, FaCopy } from 'react-icons/fa';
 import IconButton from '../common/IconButton';
+import DatePicker from '../common/DatePicker';
 import { formatDateForInput, convertLocalDateTimeToUTC } from '../../utils/dateUtils';
 
 const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onProjectDeleted, initialSuccessMessage }) => {
@@ -1296,39 +1297,42 @@ const ProjectDetailModal = ({ isOpen, onClose, projectId, onProjectUpdated, onPr
                       <div
                         className="col-span-2"
                         onClick={(e) => {
-                          // Stop propagation if clicking on date input
-                          if (e.target.tagName === 'INPUT' || e.target.closest('input') || e.target.tagName === 'LABEL') {
+                          if (
+                            e.target.tagName === 'BUTTON' ||
+                            e.target.closest('button') ||
+                            e.target.tagName === 'INPUT' ||
+                            e.target.closest('input') ||
+                            e.target.tagName === 'LABEL'
+                          ) {
                             e.stopPropagation();
                           }
                         }}
                       >
-                        {/* Show date input for all tasks */}
-                        <input
-                          type={taskTimeSettings[task.id] ? 'datetime-local' : 'date'}
-                          onClick={(e) => e.stopPropagation()}
-                          value={task.dueDate ? (
-                            taskTimeSettings[task.id]
-                              ? (() => {
-                                const date = new Date(task.dueDate);
-                                const year = date.getFullYear();
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const day = String(date.getDate()).padStart(2, '0');
-                                const hours = String(date.getHours()).padStart(2, '0');
-                                const minutes = String(date.getMinutes()).padStart(2, '0');
-                                return `${year}-${month}-${day}T${hours}:${minutes}`;
-                              })()
-                              : formatDateForInput(task.dueDate)
-                          ) : ''}
+                        <DatePicker
+                          key={`${task.id}-dt-${taskTimeSettings[task.id] ? '1' : '0'}`}
+                          name={`dueDate-${task.id}`}
+                          value={
+                            task.dueDate
+                              ? taskTimeSettings[task.id]
+                                ? (() => {
+                                    const date = new Date(task.dueDate);
+                                    const year = date.getFullYear();
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    const hours = String(date.getHours()).padStart(2, '0');
+                                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                                    return `${year}-${month}-${day}T${hours}:${minutes}`;
+                                  })()
+                                : formatDateForInput(task.dueDate)
+                              : ''
+                          }
                           onChange={(e) => handleQuickDueDateChange(task.id, e.target.value)}
-                          className="input input-sm input-bordered w-full"
-                          style={{
-                            backgroundColor: 'var(--color-bg-tertiary)',
-                            borderColor: 'var(--color-border-default)',
-                            color: 'var(--color-text-primary)',
-                          }}
+                          placeholder="Due date"
+                          showTime={!!taskTimeSettings[task.id]}
+                          timeOptional={false}
+                          className="!text-sm"
                         />
 
-                        {/* Time checkbox */}
                         <label
                           className="flex items-center mt-1 cursor-pointer"
                           onClick={(e) => e.stopPropagation()}

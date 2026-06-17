@@ -1,8 +1,21 @@
 const app = require('./src/app')
 const { startReminderScheduler } = require('./src/utils/taskReminderScheduler')
 const { startAutoArchiveScheduler } = require('./src/utils/autoArchiveScheduler')
+const { startGmailAgentScheduler } = require('./src/utils/gmailAgentScheduler')
+const { startNotificationCleanupScheduler } = require('./src/utils/notificationCleanupScheduler')
+const { startBriefingScheduler } = require('./src/utils/briefingScheduler')
 const secureLogger = require('./src/middleware/secureLogger')
 const PORT = process.env.PORT || 3000
+
+function validateRequiredEnv() {
+  const required = ['DATABASE_URL', 'JWT_SECRET', 'CLIENT_URL'];
+  const missing = required.filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    secureLogger.error('Missing required environment variables', { missing });
+    process.exit(1);
+  }
+}
 
 // Helper function to mask password in database URL
 function maskDatabaseUrl(url) {
@@ -35,6 +48,7 @@ async function testDatabaseConnection() {
 
 // Start server after database test
 async function startServer() {
+  validateRequiredEnv()
   await testDatabaseConnection()
   
   app.listen(PORT, () => {
@@ -51,6 +65,14 @@ async function startServer() {
     
     // Start the auto-archive scheduler
     startAutoArchiveScheduler()
+
+    // Start the Gmail agent scheduler
+    startGmailAgentScheduler()
+
+    // Drop notifications older than 3 months (daily)
+    startNotificationCleanupScheduler()
+
+    startBriefingScheduler()
   })
 }
 

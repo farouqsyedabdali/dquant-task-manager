@@ -406,7 +406,7 @@ const resetAllPasswords = async (req, res) => {
     }
 
     // Hash the new password
-    const bcrypt = require('bcryptjs');
+    const bcrypt = require('bcrypt');
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update all user passwords

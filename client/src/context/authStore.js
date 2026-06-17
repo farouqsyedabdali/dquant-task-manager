@@ -12,7 +12,7 @@ function getSafeParsedLocalStorage(key) {
       return null;
     }
     return JSON.parse(raw);
-  } catch (_err) {
+  } catch {
     // If parsing fails, clean up the bad value and return null
     localStorage.removeItem(key);
     return null;
@@ -127,6 +127,8 @@ const useAuthStore = create((set, get) => ({
     localStorage.removeItem('user');
     localStorage.removeItem('rememberMe');
     localStorage.removeItem('tokenExpiry');
+    localStorage.removeItem('aiConversation');
+    localStorage.removeItem('aiConversation:v2');
     set({ user: null, token: null, error: null });
   },
 
@@ -209,13 +211,7 @@ const useAuthStore = create((set, get) => ({
 
   isSuperAdmin: () => {
     const { user } = get();
-    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-    console.log('🔍 isSuperAdmin check:', { 
-      userRole: user?.role, 
-      isSuperAdmin,
-      userEmail: user?.email 
-    });
-    return isSuperAdmin;
+    return user?.role === 'SUPER_ADMIN';
   },
 
   isAdmin: () => {

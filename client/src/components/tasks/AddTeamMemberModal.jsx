@@ -78,18 +78,18 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
   const getOptionValue = useCallback((option) => `${option.type}_${option.id}`, []);
 
   const renderOption = useCallback((option) => (
-    <div className="flex items-center space-x-2">
-      <div className={`w-2 h-2 rounded-full ${option.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-      <span>{option.displayName || option.name}</span>
+    <div className="flex items-center space-x-2 w-full overflow-hidden">
+      <div className={`flex-shrink-0 w-2 h-2 rounded-full ${option.type === 'contact' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+      <span className="truncate font-medium">{option.displayName || option.name}</span>
       <span
-        className="transition-colors duration-200"
+        className="truncate flex-1 text-sm transition-colors duration-200"
         style={{ color: 'var(--color-text-tertiary)' }}
       >
         ({option.email})
       </span>
       {option.type === 'contact' && (
         <span
-          className="text-xs px-2 py-0.5 rounded transition-colors duration-200"
+          className="flex-shrink-0 text-xs px-2 py-0.5 rounded transition-colors duration-200"
           style={{
             backgroundColor: 'var(--color-bg-tertiary)',
             color: 'var(--color-text-secondary)'
@@ -160,7 +160,7 @@ const AddTeamMemberModal = ({ isOpen, onClose, onAdd, excludeUserIds = [], exclu
   if (!isOpen) return null;
 
   return (
-    <div className="modal modal-open backdrop-blur-sm" onClick={onClose}>
+    <div className="modal modal-open backdrop-blur-sm">
       <div 
         className="modal-box max-w-2xl w-full border transition-all duration-300 animate-fadeIn"
         style={{

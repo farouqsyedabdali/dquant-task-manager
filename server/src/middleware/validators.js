@@ -130,6 +130,25 @@ const validators = {
       .withMessage('Status must be TODO, IN_PROGRESS, COMPLETED, ON_HOLD, or CANCELLED')
   ],
 
+  recurrenceType: (field = 'recurrenceType') => [
+    body(field)
+      .optional({ nullable: true, checkFalsy: true })
+      .isIn(['WEEKLY', 'MONTHLY'])
+      .withMessage('Recurrence type must be WEEKLY or MONTHLY')
+  ],
+
+  boolean: (field, optional = true) => {
+    const validator = body(field)
+      .isBoolean()
+      .withMessage(`${field} must be a boolean`)
+      .toBoolean();
+
+    if (optional) {
+      return [validator.optional({ nullable: true })];
+    }
+    return [validator.notEmpty().withMessage(`${field} is required`)];
+  },
+
   // Role validation
   role: (field = 'role') => [
     body(field)

@@ -10,7 +10,7 @@ const NotFound = () => {
   const authed = isAuthenticated();
   const tialzLogo = useThemeLogo();
 
-  const dashboardPath = user?.isPersonal ? '/personal-dashboard' : '/dashboard';
+  const dashboardPath = '/dashboard';
 
   return (
     <div

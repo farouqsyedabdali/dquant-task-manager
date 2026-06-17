@@ -373,7 +373,7 @@
       const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const apiURL = isDev 
         ? 'http://localhost:3000/api'
-        : (import.meta?.env?.VITE_API_URL || window.VITE_API_URL || 'https://dquant-task-manager-production.up.railway.app/api');
+        : (window.VITE_API_URL || '/api');
       
       const response = await fetch(`${apiURL}/ai/${endpoint}`, {
         method: 'POST',
