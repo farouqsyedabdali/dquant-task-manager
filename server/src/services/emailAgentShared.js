@@ -87,6 +87,24 @@ async function isSenderAlwaysSkipped({ userId, provider, senderEmail }) {
   return Boolean(rule?.alwaysSkip);
 }
 
+async function isSenderAlwaysAllowed({ userId, provider, senderEmail }) {
+  const normalizedSender = String(senderEmail || '').trim().toLowerCase();
+  if (!normalizedSender) return false;
+
+  const rule = await prisma.emailSenderRule.findUnique({
+    where: {
+      userId_provider_senderEmail: {
+        userId,
+        provider,
+        senderEmail: normalizedSender
+      }
+    },
+    select: { alwaysSkip: true }
+  });
+
+  return rule ? rule.alwaysSkip === false : false;
+}
+
 async function classifyAndExtractTasks({ subject, cleanBody, senderEmail, account }) {
   if (!process.env.OPENROUTER_API_KEY) {
     return {
@@ -214,7 +232,145 @@ Use at most 5 actions.
   }
 }
 
-async function createTasksFromEmail({ account, ingestion, classification, cleanBody, auditAgentName, auditSource }) {
+function getCreateActionsFromClassification(classification) {
+  if (!classification || typeof classification !== 'object') return [];
+  const actions = Array.isArray(classification.actions) ? classification.actions : [];
+  return actions.filter(
+    (item) => (item.actionType || 'create_task') === 'create_task' && String(item.title || '').trim()
+  );
+}
+
+async function summarizeEmailForTask({ subject, cleanBody, senderEmail }) {
+  if (!process.env.OPENROUTER_API_KEY) {
+    return null;
+  }
+
+  const prompt = `
+The user explicitly approved this email to become a task. Summarize it into one clear, actionable task.
+Write the title and description in your own words — do not copy the subject line or email body verbatim.
+
+Return ONLY valid JSON with this shape:
+{
+  "title": "short actionable task title",
+  "description": "concise summary of what needs to be done",
+  "priority": "LOW"|"MEDIUM"|"HIGH"|"URGENT",
+  "dueDate": "YYYY-MM-DD or natural date string or null"
+}
+`.trim();
+
+  try {
+    const response = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model: process.env.EMAIL_AGENT_MODEL || process.env.OPENROUTER_CHAT_MODEL || DEFAULT_OPENROUTER_MODEL,
+        messages: [
+          { role: 'system', content: prompt },
+          { role: 'user', content: `From: ${senderEmail}\nSubject: ${subject}\n\n${cleanBody}` }
+        ],
+        temperature: 0.2,
+        max_tokens: 600
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0],
+          'X-Title': process.env.SITE_NAME || 'Tialz Task Manager'
+        }
+      }
+    );
+
+    const parsed = parseJsonObject(response.data?.choices?.[0]?.message?.content || '') || {};
+    const title = String(parsed.title || '').trim();
+    if (!title) return null;
+
+    return {
+      title,
+      description: String(parsed.description || '').trim(),
+      priority: normalizePriority(parsed.priority),
+      dueDate: parsed.dueDate || null
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function createAllowedTaskFromEmail({ account, ingestion, cleanBody, auditAgentName, auditSource }) {
+  const subject = String(ingestion.subject || '').trim() || '(No subject)';
+  const senderEmail = String(ingestion.senderEmail || '').trim();
+  const body = String(cleanBody || ingestion.snippet || '').trim();
+
+  let classification = ingestion.extractedActions;
+  let createActions = getCreateActionsFromClassification(classification);
+
+  if (createActions.length === 0) {
+    classification = await classifyAndExtractTasks({ subject, cleanBody: body, senderEmail, account });
+    createActions = getCreateActionsFromClassification(classification);
+  }
+
+  if (createActions.length > 0) {
+    return createTasksFromEmail({
+      account,
+      ingestion,
+      classification: { ...classification, actions: createActions },
+      cleanBody: body,
+      auditAgentName,
+      auditSource,
+      allowOverride: true
+    });
+  }
+
+  const summary = await summarizeEmailForTask({ subject, cleanBody: body, senderEmail });
+  if (!summary) {
+    throw new Error('Could not summarize email into a task');
+  }
+
+  const task = await prisma.task.create({
+    data: {
+      title: summary.title.slice(0, 200),
+      description: summary.description.slice(0, 1200) || null,
+      priority: summary.priority,
+      dueDate: resolveDueDate(summary.dueDate),
+      status: 'TODO',
+      assignerId: account.userId,
+      assigneeId: account.userId,
+      companyId: account.companyId
+    }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      action: 'TASK_CREATED',
+      entityType: 'Task',
+      entityId: task.id,
+      description: `${auditAgentName} created task "${task.title}" from an allowed email`,
+      metadata: {
+        source: auditSource,
+        emailIngestionId: ingestion.id,
+        messageId: ingestion.providerMessageId,
+        senderEmail: ingestion.senderEmail,
+        allowOverride: true
+      },
+      userId: account.userId,
+      companyId: account.companyId
+    }
+  });
+
+  return {
+    createdTaskIds: [task.id],
+    actions: [{ actionType: 'create_task', taskId: task.id, title: task.title, allowOverride: true }]
+  };
+}
+
+async function createTasksFromEmail({
+  account,
+  ingestion,
+  classification,
+  cleanBody,
+  auditAgentName,
+  auditSource,
+  allowOverride = false
+}) {
   const createdTaskIds = [];
   const loggedActions = [];
 
@@ -251,7 +407,8 @@ async function createTasksFromEmail({ account, ingestion, classification, cleanB
             source: auditSource,
             emailIngestionId: ingestion.id,
             messageId: ingestion.providerMessageId,
-            senderEmail: ingestion.senderEmail
+            senderEmail: ingestion.senderEmail,
+            ...(allowOverride ? { allowOverride: true } : {})
           },
           userId: account.userId,
           companyId: account.companyId
@@ -366,6 +523,9 @@ module.exports = {
   stripQuotedText,
   deterministicSkip,
   isSenderAlwaysSkipped,
+  isSenderAlwaysAllowed,
   classifyAndExtractTasks,
+  summarizeEmailForTask,
+  createAllowedTaskFromEmail,
   createTasksFromEmail
 };

@@ -8,7 +8,9 @@ const {
   stripQuotedText,
   deterministicSkip,
   isSenderAlwaysSkipped,
+  isSenderAlwaysAllowed,
   classifyAndExtractTasks,
+  createAllowedTaskFromEmail,
   createTasksFromEmail
 } = require('./emailAgentShared');
 
@@ -272,6 +274,35 @@ async function processGmailMessage(account, messageId) {
       }
     }
   });
+
+  const alwaysAllowed = await isSenderAlwaysAllowed({
+    userId: account.userId,
+    provider: PROVIDER,
+    senderEmail
+  });
+  if (alwaysAllowed) {
+    const created = await createAllowedTaskFromEmail({
+      account,
+      ingestion,
+      cleanBody,
+      auditAgentName: 'Gmail agent',
+      auditSource: 'gmail_agent_allow_always'
+    });
+    for (const tid of created.createdTaskIds) {
+      scheduleGoogleCalendarSyncForTask(tid);
+    }
+    return prisma.emailIngestion.update({
+      where: { id: ingestion.id },
+      data: {
+        status: 'TASK_CREATED',
+        classification: 'ACTIONABLE',
+        confidence: 1,
+        reason: 'always_allow_sender',
+        extractedActions: created.actions,
+        createdTaskIds: created.createdTaskIds
+      }
+    });
+  }
 
   const alwaysSkipped = await isSenderAlwaysSkipped({
     userId: account.userId,

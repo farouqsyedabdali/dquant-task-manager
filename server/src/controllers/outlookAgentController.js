@@ -1,6 +1,11 @@
 const prisma = require('../lib/prisma');
 const { getOutlookAgentAuthUrl } = require('../services/microsoftAuthService');
 const { getOutlookAgentStatus, syncOutlookAccount, PROVIDER } = require('../services/outlookAgentService');
+const { scheduleGoogleCalendarSyncForTask } = require('../services/gmailAgentService');
+const {
+  allowIngestionOnce,
+  allowSenderAlways
+} = require('../services/emailAllowService');
 
 const getStatus = async (req, res) => {
   try {
@@ -165,6 +170,43 @@ const removeSkipSender = async (req, res) => {
   }
 };
 
+const allowOnce = async (req, res) => {
+  try {
+    const result = await allowIngestionOnce({
+      userId: req.user.id,
+      provider: PROVIDER,
+      ingestionId: req.params.ingestionId,
+      auditAgentName: 'Outlook agent',
+      auditSource: 'outlook_agent_allow_once',
+      scheduleTask: scheduleGoogleCalendarSyncForTask
+    });
+    const status = await getOutlookAgentStatus(req.user.id);
+    res.json({ success: true, ...result, ...status });
+  } catch (error) {
+    console.error('Outlook agent allow once error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to allow email once' });
+  }
+};
+
+const allowAlways = async (req, res) => {
+  try {
+    const senderEmail = String(req.body?.senderEmail || '').trim().toLowerCase();
+    const result = await allowSenderAlways({
+      user: req.user,
+      provider: PROVIDER,
+      senderEmail,
+      auditAgentName: 'Outlook agent',
+      auditSource: 'outlook_agent_allow_always',
+      scheduleTask: scheduleGoogleCalendarSyncForTask
+    });
+    const status = await getOutlookAgentStatus(req.user.id);
+    res.json({ success: true, ...result, ...status });
+  } catch (error) {
+    console.error('Outlook agent allow always error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to allow sender always' });
+  }
+};
+
 module.exports = {
   getStatus,
   connect,
@@ -172,5 +214,7 @@ module.exports = {
   disconnect,
   runSyncNow,
   addSkipSender,
-  removeSkipSender
+  removeSkipSender,
+  allowOnce,
+  allowAlways
 };

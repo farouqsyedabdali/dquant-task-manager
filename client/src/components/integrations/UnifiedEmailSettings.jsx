@@ -249,6 +249,35 @@ const UnifiedEmailSettings = () => {
     }
   };
 
+  const allowEmailOnce = async (ingestionId) => {
+    if (!ingestionId || !api) return;
+    try {
+      setIsWorking(true);
+      const { data } = await api.allowOnce(ingestionId);
+      setRecent(Array.isArray(data.recent) ? data.recent : recent);
+      setOpenMenuId(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to allow email once');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const allowSenderAlways = async (senderEmail) => {
+    if (!senderEmail || !api) return;
+    try {
+      setIsWorking(true);
+      const { data } = await api.allowAlways(senderEmail);
+      setRecent(Array.isArray(data.recent) ? data.recent : recent);
+      setSkipSenders(Array.isArray(data.skipSenders) ? data.skipSenders : skipSenders);
+      setOpenMenuId(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to allow sender always');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
   // ---- Derived state ----
   const connected = account && account.status !== 'REVOKED';
   const displayProvider = activeProvider || detectedProvider?.provider || 'unknown';
@@ -503,11 +532,33 @@ const UnifiedEmailSettings = () => {
                                       type="button"
                                       onClick={() => alwaysSkipSender(item.senderEmail)}
                                       disabled={isWorking}
-                                      className="whitespace-nowrap rounded px-2 py-1 text-xs font-medium disabled:opacity-50"
+                                      className="block w-full whitespace-nowrap rounded px-2 py-1 text-left text-xs font-medium disabled:opacity-50"
                                       style={{ color: 'var(--color-text-primary)' }}
                                     >
                                       Always skip
                                     </button>
+                                    {item.status === 'SKIPPED' && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => allowEmailOnce(item.id)}
+                                          disabled={isWorking}
+                                          className="block w-full whitespace-nowrap rounded px-2 py-1 text-left text-xs font-medium disabled:opacity-50"
+                                          style={{ color: 'var(--color-text-primary)' }}
+                                        >
+                                          Allow once
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => allowSenderAlways(item.senderEmail)}
+                                          disabled={isWorking}
+                                          className="block w-full whitespace-nowrap rounded px-2 py-1 text-left text-xs font-medium disabled:opacity-50"
+                                          style={{ color: 'var(--color-text-primary)' }}
+                                        >
+                                          Allow always
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
                                 )}
                               </div>

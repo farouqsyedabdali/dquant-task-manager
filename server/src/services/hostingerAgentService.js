@@ -7,7 +7,9 @@ const {
   stripQuotedText,
   deterministicSkip,
   isSenderAlwaysSkipped,
+  isSenderAlwaysAllowed,
   classifyAndExtractTasks,
+  createAllowedTaskFromEmail,
   createTasksFromEmail,
 } = require('./emailAgentShared');
 
@@ -202,6 +204,32 @@ async function processImapMessage(account, msgData) {
       },
     },
   });
+
+  const alwaysAllowed = await isSenderAlwaysAllowed({
+    userId: account.userId,
+    provider: PROVIDER,
+    senderEmail,
+  });
+  if (alwaysAllowed) {
+    const created = await createAllowedTaskFromEmail({
+      account,
+      ingestion,
+      cleanBody,
+      auditAgentName: 'Hostinger agent',
+      auditSource: 'hostinger_agent_allow_always',
+    });
+    return prisma.emailIngestion.update({
+      where: { id: ingestion.id },
+      data: {
+        status: 'TASK_CREATED',
+        classification: 'ACTIONABLE',
+        confidence: 1,
+        reason: 'always_allow_sender',
+        extractedActions: created.actions,
+        createdTaskIds: created.createdTaskIds,
+      },
+    });
+  }
 
   // Check always-skip sender
   const alwaysSkipped = await isSenderAlwaysSkipped({

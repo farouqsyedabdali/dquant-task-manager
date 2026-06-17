@@ -6,6 +6,10 @@ const {
   syncHostingerAccount,
   PROVIDER,
 } = require('../services/hostingerAgentService');
+const {
+  allowIngestionOnce,
+  allowSenderAlways
+} = require('../services/emailAllowService');
 
 const getStatus = async (req, res) => {
   try {
@@ -230,6 +234,41 @@ const removeSkipSender = async (req, res) => {
   }
 };
 
+const allowOnce = async (req, res) => {
+  try {
+    const result = await allowIngestionOnce({
+      userId: req.user.id,
+      provider: PROVIDER,
+      ingestionId: req.params.ingestionId,
+      auditAgentName: 'Hostinger agent',
+      auditSource: 'hostinger_agent_allow_once',
+    });
+    const status = await getHostingerAgentStatus(req.user.id);
+    res.json({ success: true, ...result, ...status });
+  } catch (error) {
+    console.error('Hostinger agent allow once error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to allow email once' });
+  }
+};
+
+const allowAlways = async (req, res) => {
+  try {
+    const senderEmail = String(req.body?.senderEmail || '').trim().toLowerCase();
+    const result = await allowSenderAlways({
+      user: req.user,
+      provider: PROVIDER,
+      senderEmail,
+      auditAgentName: 'Hostinger agent',
+      auditSource: 'hostinger_agent_allow_always',
+    });
+    const status = await getHostingerAgentStatus(req.user.id);
+    res.json({ success: true, ...result, ...status });
+  } catch (error) {
+    console.error('Hostinger agent allow always error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to allow sender always' });
+  }
+};
+
 module.exports = {
   getStatus,
   connect,
@@ -238,4 +277,6 @@ module.exports = {
   runSyncNow,
   addSkipSender,
   removeSkipSender,
+  allowOnce,
+  allowAlways,
 };

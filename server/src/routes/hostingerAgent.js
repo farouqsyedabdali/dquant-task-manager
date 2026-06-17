@@ -10,6 +10,8 @@ const {
   updateSettings,
   addSkipSender,
   removeSkipSender,
+  allowOnce,
+  allowAlways,
 } = require('../controllers/hostingerAgentController');
 
 const router = express.Router();
@@ -39,5 +41,12 @@ router.post(
   addSkipSender
 );
 router.delete('/skip-senders/:ruleId', removeSkipSender);
+router.post('/ingestions/:ingestionId/allow-once', allowOnce);
+router.post(
+  '/allow-senders',
+  body('senderEmail').isEmail().withMessage('senderEmail must be a valid email'),
+  handleValidationErrors,
+  allowAlways
+);
 
 module.exports = router;
