@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const prisma = require('../lib/prisma');
 const emailService = require('../services/emailService');
 const emailVerificationEmail = require('../templates/emailVerificationEmail');
+const passwordResetEmail = require('../templates/passwordResetEmail');
 const secureLogger = require('../middleware/secureLogger');
 const { normalizeTimeSlot, previewBriefingForUser } = require('../services/briefingService');
 const { 
@@ -660,22 +661,12 @@ const forgotPassword = async (req, res) => {
 
     // Send email with verification code
     try {
+      const emailData = passwordResetEmail(user.name, verificationCode);
       await emailService.sendEmail({
         to: user.email,
-        subject: 'Password Reset Code',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #4F46E5;">Password Reset Code</h2>
-            <p>Hello ${user.name},</p>
-            <p>You requested a password reset for your account. Use the following code to reset your password:</p>
-            <div style="background-color: #F3F4F6; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
-              <h1 style="color: #4F46E5; margin: 0; font-size: 32px; letter-spacing: 4px;">${verificationCode}</h1>
-            </div>
-            <p>This code will expire in 15 minutes.</p>
-            <p>If you didn't request this password reset, please ignore this email.</p>
-            <p>Best regards,<br>${user.company.name} Team</p>
-          </div>
-        `
+        subject: emailData.subject,
+        html: emailData.html,
+        text: emailData.text
       });
     } catch (emailError) {
       console.error('Email sending error:', emailError);

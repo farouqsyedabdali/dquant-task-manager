@@ -1,5 +1,5 @@
 const { format } = require('date-fns');
-const { BRAND, emailShell, escapeHtml } = require('./emailBase');
+const { BRAND, emailShell, escapeHtml, card, badge, ctaButton, warningBox, infoBox } = require('./emailBase');
 
 const taskReminderTemplate = ({ userName, task, taskLink }) => {
   const priorityColors = {
@@ -43,30 +43,34 @@ const taskReminderTemplate = ({ userName, task, taskLink }) => {
 
   const body = `
     <!-- Alert Banner -->
-    <div class="warning-box" style="display: flex; align-items: center; gap: 12px;">
-      <div style="font-size: 24px;">&#9888;&#65039;</div>
-      <div>
-        <strong style="font-size: 15px;">Upcoming Deadline</strong>
-        <p style="margin: 4px 0 0; font-size: 14px;">This task is due in approximately ${hoursUntilDue} hours</p>
-      </div>
-    </div>
+    ${warningBox(`
+      <table cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="vertical-align: middle; padding-right: 12px; font-size: 24px;">&#9888;&#65039;</td>
+          <td style="vertical-align: middle;">
+            <strong style="font-size: 15px;">Upcoming Deadline</strong>
+            <p style="margin: 4px 0 0; font-size: 14px;">This task is due in approximately ${hoursUntilDue} hours</p>
+          </td>
+        </tr>
+      </table>
+    `)}
 
-    <p style="font-size: 15px; color: ${BRAND.textMedium}; margin-bottom: 20px;">
+    <p style="font-size: 15px; color: ${BRAND.textMedium}; margin: 0 0 20px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
       Hi ${escapeHtml(userName)},
     </p>
 
-    <p style="font-size: 15px; color: ${BRAND.textMedium}; line-height: 1.6;">
+    <p style="font-size: 15px; color: ${BRAND.textMedium}; line-height: 1.6; margin: 0 0 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
       This is a friendly reminder that the following task is <strong>due in 48 hours</strong>:
     </p>
 
     <!-- Task Card -->
-    <div class="card" style="border: 2px solid #fbbf24;">
-      <h2 style="font-size: 20px; font-weight: 700; color: ${BRAND.textDark}; margin: 0 0 16px 0;">
+    ${card(`
+      <h2 style="font-size: 20px; font-weight: 700; color: ${BRAND.textDark}; margin: 0 0 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
         ${escapeHtml(task.title)}
       </h2>
       
       ${task.description ? `
-        <p style="font-size: 14px; color: ${BRAND.textMuted}; line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap; max-height: 150px; overflow: hidden;">
+        <p style="font-size: 14px; color: ${BRAND.textMuted}; line-height: 1.6; margin: 0 0 20px 0; white-space: pre-wrap; max-height: 150px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
           ${escapeHtml(task.description)}
         </p>
       ` : ''}
@@ -74,37 +78,35 @@ const taskReminderTemplate = ({ userName, task, taskLink }) => {
       <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 16px;">
         <tr>
           <td style="padding: 8px 0;">
-            <span style="font-size: 12px; text-transform: uppercase; font-weight: 600; color: ${BRAND.textMuted};">Priority</span><br>
-            <span class="badge" style="background-color: ${priorityColor}; margin-top: 4px;">${task.priority}</span>
+            <span style="font-size: 12px; text-transform: uppercase; font-weight: 600; color: ${BRAND.textMuted}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">Priority</span><br>
+            ${badge(task.priority, priorityColor)}
           </td>
           <td style="padding: 8px 0;">
-            <span style="font-size: 12px; text-transform: uppercase; font-weight: 600; color: ${BRAND.textMuted};">Status</span><br>
-            <span class="badge" style="background-color: ${statusColor}; margin-top: 4px;">${statusLabel}</span>
+            <span style="font-size: 12px; text-transform: uppercase; font-weight: 600; color: ${BRAND.textMuted}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">Status</span><br>
+            ${badge(statusLabel, statusColor)}
           </td>
         </tr>
       </table>
-    </div>
+    `, ' border: 2px solid #fbbf24;')}
 
     <!-- Due Date Highlight -->
-    <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
-      <p style="font-size: 18px; font-weight: 700; color: #991b1b; margin: 0 0 4px 0;">Due: ${formattedDueDate}</p>
-      ${formattedDueTime ? `<p style="font-size: 14px; color: #dc2626; margin: 0;">${formattedDueTime}</p>` : ''}
-    </div>
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 8px; margin: 20px 0;">
+      <tr>
+        <td align="center" style="padding: 20px;">
+          <p style="font-size: 18px; font-weight: 700; color: #991b1b; margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">Due: ${formattedDueDate}</p>
+          ${formattedDueTime ? `<p style="font-size: 14px; color: #dc2626; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${formattedDueTime}</p>` : ''}
+        </td>
+      </tr>
+    </table>
 
-    ${task.assignee ? `
-      <div class="info-box">
-        <strong style="font-size: 12px; text-transform: uppercase;">Assigned By</strong>
-        <p style="margin: 4px 0 0; font-weight: 600;">${escapeHtml(task.assignee.name)}</p>
-      </div>
-    ` : ''}
+    ${task.assignee ? infoBox(`
+      <strong style="font-size: 12px; text-transform: uppercase;">Assigned By</strong>
+      <p style="margin: 4px 0 0; font-weight: 600;">${escapeHtml(task.assignee.name)}</p>
+    `) : ''}
 
-    <div style="text-align: center; margin: 28px 0;">
-      <a href="${taskLink}" class="cta-btn" style="color: white;">
-        View Task Details
-      </a>
-    </div>
+    ${ctaButton(taskLink, 'View Task Details')}
 
-    <p style="font-size: 14px; color: ${BRAND.textMuted}; text-align: center; margin-top: 24px;">
+    <p style="font-size: 14px; color: ${BRAND.textMuted}; text-align: center; margin: 24px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
       Click the button above to view the full task details and update its status.
     </p>
   `;
@@ -113,7 +115,7 @@ const taskReminderTemplate = ({ userName, task, taskLink }) => {
     'Task Reminder',
     'Your task is due soon!',
     body,
-    `<p style="font-size: 13px; color: ${BRAND.textMuted}; margin-bottom: 8px;">You're receiving this because you're assigned to this task.</p>`
+    `<p style="font-size: 13px; color: ${BRAND.textMuted}; margin: 0 0 8px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">You're receiving this because you're assigned to this task.</p>`
   );
 };
 
