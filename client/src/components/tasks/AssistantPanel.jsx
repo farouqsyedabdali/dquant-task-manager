@@ -2,8 +2,41 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { aiAPI } from '../../services/api';
 import { consumeAiChatStream } from '../../services/aiChatStream';
-import { FaCheck, FaPaperPlane, FaPen, FaRegTrashAlt, FaStop, FaTimes, FaUndo } from 'react-icons/fa';
+import { FaCheck, FaPaperPlane, FaPen, FaRegTrashAlt, FaStop, FaTimes, FaUndo, FaRedo } from 'react-icons/fa';
 import IconButton from '../common/IconButton';
+
+const RenderDiff = ({ before, after }) => {
+  const beforeLines = typeof before === 'string' ? before.split('\n') : [String(before || '')];
+  const afterLines = typeof after === 'string' ? after.split('\n') : [String(after || '')];
+
+  return (
+    <div className="mt-1.5 grid grid-cols-2 gap-2 font-mono text-[10px] leading-4 border rounded-lg p-2 overflow-x-auto"
+         style={{ borderColor: 'var(--color-border-default)', backgroundColor: 'var(--color-bg-secondary)' }}>
+      <div className="border-r pr-2 space-y-0.5 border-dashed" style={{ borderColor: 'var(--color-border-default)' }}>
+        <p className="text-[9px] font-sans font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--color-text-tertiary)' }}>Before</p>
+        {beforeLines.map((line, idx) => (
+          <div key={idx} className="bg-red-500/10 text-red-400 px-1 rounded break-all whitespace-pre-wrap">
+            - {line}
+          </div>
+        ))}
+      </div>
+      <div className="pl-1 space-y-0.5">
+        <p className="text-[9px] font-sans font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--color-text-tertiary)' }}>After</p>
+        {afterLines.map((line, idx) => (
+          <div key={idx} className="bg-green-500/10 text-green-400 px-1 rounded break-all whitespace-pre-wrap">
+            + {line}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const isLongText = (change) => {
+  const beforeStr = String(change.before || '');
+  const afterStr = String(change.after || '');
+  return change.field === 'description' || change.field === 'content' || beforeStr.length > 40 || afterStr.length > 40;
+};
 
 const STORAGE_KEY = 'aiConversation:v2';
 const LEGACY_STORAGE_KEY = 'aiConversation';
@@ -116,6 +149,74 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
   const [error, setError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState('Ready');
+  const [selectedProposalIds, setSelectedProposalIds] = useState(new Set());
+
+  const currentPendingProposals = useMemo(() => {
+    return collectExecutablePendingChain(messages);
+  }, [messages]);
+
+  useEffect(() => {
+    setSelectedProposalIds(new Set(currentPendingProposals.map(p => p.id)));
+  }, [currentPendingProposals]);
+
+  const handleBulkApprove = async () => {
+    if (selectedProposalIds.size === 0 || isProcessing) return;
+    setIsProcessing(true);
+    setStatusText(`Applying ${selectedProposalIds.size} updates…`);
+    try {
+      const stepsToExecute = currentPendingProposals.filter(p => selectedProposalIds.has(p.id));
+      for (const step of stepsToExecute) {
+        const { messageIndex, proposalIndex, id } = step;
+        updateProposalStatus(messageIndex, proposalIndex, { status: 'EXECUTING' });
+        const { data } = await aiAPI.executeAction(id);
+        updateProposalStatus(messageIndex, proposalIndex, {
+          ...(data.action || {}),
+          status: data.action?.status || 'EXECUTED',
+          result: data.result,
+        });
+      }
+      setStatusText('Ready');
+      if (onAction) onAction();
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not apply updates'));
+      setStatusText('Needs attention');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    if (selectedProposalIds.size === 0 || isProcessing) return;
+    setIsProcessing(true);
+    setStatusText(`Rejecting ${selectedProposalIds.size} drafts…`);
+    try {
+      const stepsToReject = currentPendingProposals.filter(p => selectedProposalIds.has(p.id));
+      for (const step of stepsToReject) {
+        const { messageIndex, proposalIndex, id } = step;
+        updateProposalStatus(messageIndex, proposalIndex, { status: 'REJECTING' });
+        const { data } = await aiAPI.rejectAction(id);
+        updateProposalStatus(messageIndex, proposalIndex, {
+          ...(data.action || {}),
+          status: data.action?.status || 'REJECTED',
+        });
+      }
+      setStatusText('Ready');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to reject selected drafts'));
+      setStatusText('Needs attention');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRetry = async (msgIdx) => {
+    const userMsg = messages[msgIdx];
+    if (!userMsg || userMsg.role !== 'user') return;
+    const nextMessages = messages.slice(0, msgIdx + 1);
+    setMessages(nextMessages);
+    setError(null);
+    await handleSend(userMsg.content);
+  };
   const messagesScrollRef = useRef(null);
   const streamAbortRef = useRef(null);
   /** Coalesce SSE deltas to one React update per animation frame (avoids Markdown/layout thrash). */
@@ -223,7 +324,7 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
       updateProposalStatus(messageIndex, proposalIndex, { status: 'UPDATING' });
       setStatusText('Updating draft');
       try {
-        const { data } = await aiAPI.previewAction(proposal.actionType, action.input, action.sourceText || 'Edited draft');
+        const { data } = await aiAPI.previewAction(action.actionType || proposal.actionType, action.input, action.sourceText || 'Edited draft');
         updateProposalStatus(messageIndex, proposalIndex, {
           ...(data.action || {}),
           status: data.action?.status || 'PENDING',
@@ -602,7 +703,9 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
 
         <div
           ref={messagesScrollRef}
-          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-3"
+          className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-3 relative ${
+            currentPendingProposals.length > 1 ? 'pb-16' : ''
+          }`}
           style={{
             backgroundColor: 'var(--color-bg-tertiary)',
             scrollBehavior: messages[messages.length - 1]?.streaming ? 'auto' : 'smooth',
@@ -617,17 +720,79 @@ const AssistantPanel = ({ layout = 'rail', onAction, onClose }) => {
           />
         )}
 
-        {messages.map((msg, idx) => (
-          <MessageGroup
-            key={msg.id || `${msg.role}-${idx}-${msg.content?.slice(0, 20) || 'msg'}`}
-            message={msg}
-            messageIndex={idx}
-            onProposalAction={handleProposalAction}
-          />
-        ))}
+        {messages.map((msg, idx) => {
+          const isRetryable = (() => {
+            if (msg.role !== 'user') return false;
+            const isLastUser = !messages.slice(idx + 1).some(m => m.role === 'user');
+            if (!isLastUser) return false;
+            const nextMsg = messages[idx + 1];
+            const hasError = error || (nextMsg && nextMsg.role === 'assistant' && (nextMsg.content?.includes('(Something went wrong)') || nextMsg.proposals?.some(p => p.status === 'ERROR')));
+            return !!hasError;
+          })();
+          return (
+            <MessageGroup
+              key={msg.id || `${msg.role}-${idx}-${msg.content?.slice(0, 20) || 'msg'}`}
+              message={msg}
+              messageIndex={idx}
+              onProposalAction={handleProposalAction}
+              currentPendingProposals={currentPendingProposals}
+              selectedProposalIds={selectedProposalIds}
+              setSelectedProposalIds={setSelectedProposalIds}
+              isRetryable={isRetryable}
+              onRetry={() => handleRetry(idx)}
+            />
+          );
+        })}
 
         {isProcessing && !messages[messages.length - 1]?.streaming && (
           <ThinkingIndicator label={statusText} />
+        )}
+
+        {currentPendingProposals.length > 1 && (
+          <div
+            className="absolute bottom-3 left-3 right-3 z-30 rounded-xl border p-2 flex items-center justify-between gap-2 shadow-lg"
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderColor: 'var(--color-border-default)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <div className="flex items-center gap-2 pl-1">
+              <input
+                type="checkbox"
+                className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                checked={selectedProposalIds.size === currentPendingProposals.length}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedProposalIds(new Set(currentPendingProposals.map(p => p.id)));
+                  } else {
+                    setSelectedProposalIds(new Set());
+                  }
+                }}
+              />
+              <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+                All ({currentPendingProposals.length})
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleBulkApprove}
+                disabled={selectedProposalIds.size === 0 || isProcessing}
+                className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 transition-colors"
+              >
+                Approve ({selectedProposalIds.size})
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkReject}
+                disabled={selectedProposalIds.size === 0 || isProcessing}
+                className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 transition-colors"
+              >
+                Reject ({selectedProposalIds.size})
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -726,7 +891,16 @@ const AssistantEmptyState = ({ onSuggestion }) => (
   </div>
 );
 
-const MessageGroup = ({ message, messageIndex, onProposalAction }) => {
+const MessageGroup = ({
+  message,
+  messageIndex,
+  onProposalAction,
+  currentPendingProposals = [],
+  selectedProposalIds = new Set(),
+  setSelectedProposalIds,
+  isRetryable,
+  onRetry
+}) => {
   const isUser = message.role === 'user';
   const assistantBody = !isUser ? maskAssistantStreamText(message) : '';
   const showUserBubble = isUser && message.content && message.content !== '(No response)';
@@ -738,51 +912,80 @@ const MessageGroup = ({ message, messageIndex, onProposalAction }) => {
   return (
     <div className={`flex min-w-0 w-full max-w-full flex-col ${isUser ? 'items-end' : 'items-start'}`}>
       {shouldShowBubble && (
-        <div
-          className={`max-w-[min(94%,100%)] rounded-2xl px-3 py-2 text-sm leading-5 shadow-sm ${isUser ? 'text-white' : 'border'}`}
-          style={
-            isUser
-              ? { backgroundColor: 'var(--color-primary)' }
-              : {
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  color: 'var(--color-text-primary)',
-                  borderColor: 'var(--color-border-default)',
-                }
-          }
-        >
-          {isUser ? (
-            <p className="whitespace-pre-wrap break-words">{message.content}</p>
-          ) : (
-            <div className="ai-markdown min-h-[1.25rem] max-w-full overflow-x-hidden break-words [text-rendering:optimizeLegibility] [-webkit-font-smoothing:antialiased]">
-              {assistantBody ? (
-                message.streaming ? (
-                  <p className="whitespace-pre-wrap break-words text-sm leading-relaxed tracking-[0.01em]">
-                    {assistantBody}
-                  </p>
-                ) : (
-                  <ReactMarkdown>{assistantBody}</ReactMarkdown>
-                )
-              ) : message.streaming ? (
-                <span
-                  className="inline-block h-4 w-0.5 animate-pulse rounded-sm opacity-60"
-                  style={{ backgroundColor: 'var(--color-text-secondary)' }}
-                  aria-hidden
-                />
-              ) : null}
-            </div>
+        <div className="flex items-center gap-2 max-w-[min(94%,100%)]">
+          {isUser && isRetryable && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="p-1.5 rounded-lg border bg-neutral-800/10 hover:bg-neutral-800/20 text-neutral-600 dark:text-neutral-400 dark:bg-neutral-200/10 dark:hover:bg-neutral-200/20 transition-colors shrink-0"
+              title="Retry this message"
+            >
+              <FaRedo className="h-3.5 w-3.5" />
+            </button>
           )}
+          <div
+            className={`rounded-2xl px-3 py-2 text-sm leading-5 shadow-sm ${isUser ? 'text-white' : 'border'}`}
+            style={
+              isUser
+                ? { backgroundColor: 'var(--color-primary)' }
+                : {
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text-primary)',
+                    borderColor: 'var(--color-border-default)',
+                  }
+            }
+          >
+            {isUser ? (
+              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+            ) : (
+              <div className="ai-markdown min-h-[1.25rem] max-w-full overflow-x-hidden break-words [text-rendering:optimizeLegibility] [-webkit-font-smoothing:antialiased]">
+                {assistantBody ? (
+                  message.streaming ? (
+                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed tracking-[0.01em]">
+                      {assistantBody}
+                    </p>
+                  ) : (
+                    <ReactMarkdown>{assistantBody}</ReactMarkdown>
+                  )
+                ) : message.streaming ? (
+                  <span
+                    className="inline-block h-4 w-0.5 animate-pulse rounded-sm opacity-60"
+                    style={{ backgroundColor: 'var(--color-text-secondary)' }}
+                    aria-hidden
+                  />
+                ) : null}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {message.role === 'assistant' && Array.isArray(message.proposals) && message.proposals.length > 0 && (
         <div className="mt-2 w-full min-w-0 max-w-full space-y-2.5">
-          {message.proposals.map((proposal, proposalIndex) => (
-            <AIActionCard
-              key={proposal.id || proposalIndex}
-              proposal={proposal}
-              onAction={(action) => onProposalAction(messageIndex, proposalIndex, action)}
-            />
-          ))}
+          {message.proposals.map((proposal, proposalIndex) => {
+            const isExecutablePending = proposal.status === 'PENDING' && proposal.canExecute !== false;
+            const isMultiPending = currentPendingProposals.length > 1 && isExecutablePending;
+            return (
+              <AIActionCard
+                key={proposal.id || proposalIndex}
+                proposal={proposal}
+                onAction={(action) => onProposalAction(messageIndex, proposalIndex, action)}
+                isMultiPending={isMultiPending}
+                isSelected={selectedProposalIds.has(proposal.id)}
+                onSelectToggle={() => {
+                  setSelectedProposalIds(prev => {
+                    const next = new Set(prev);
+                    if (next.has(proposal.id)) {
+                      next.delete(proposal.id);
+                    } else {
+                      next.add(proposal.id);
+                    }
+                    return next;
+                  });
+                }}
+              />
+            );
+          })}
         </div>
       )}
     </div>
@@ -858,14 +1061,23 @@ const ThinkingIndicator = ({ label }) => (
   </div>
 );
 
-const AIActionCard = ({ proposal, onAction }) => {
+const AIActionCard = ({ proposal, onAction, isMultiPending, isSelected, onSelectToggle }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(() => buildEditableDraft(proposal));
+  const [mergingCandidateId, setMergingCandidateId] = useState(null);
+  const [mergeFields, setMergeFields] = useState({
+    title: false,
+    description: 'append',
+    dueDate: false,
+    priority: false,
+    status: false
+  });
 
   useEffect(() => {
     setDraft(buildEditableDraft(proposal));
     setIsEditing(false);
-  }, [proposal.id, proposal.status]);
+    setMergingCandidateId(null);
+  }, [proposal.id, proposal.status, proposal]);
 
   const status = proposal.status || 'PENDING';
   const statusCopy = STATUS_COPY[status] || { label: humanize(status), tone: 'muted' };
@@ -901,11 +1113,21 @@ const AIActionCard = ({ proposal, onAction }) => {
       }}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
-            {actionCopy.label}
-          </p>
-          <p className="mt-1 break-words text-sm font-semibold leading-5">{getProposalTitle(proposal, resolved)}</p>
+        <div className="flex items-start gap-2.5 min-w-0">
+          {isMultiPending && (
+            <input
+              type="checkbox"
+              className="mt-0.5 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer shrink-0"
+              checked={isSelected}
+              onChange={onSelectToggle}
+            />
+          )}
+          <div className="min-w-0">
+            <p className="text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
+              {actionCopy.label}
+            </p>
+            <p className="mt-1 break-words text-sm font-semibold leading-5">{getProposalTitle(proposal, resolved)}</p>
+          </div>
         </div>
         <StatusPill copy={statusCopy} />
       </div>
@@ -949,16 +1171,20 @@ const AIActionCard = ({ proposal, onAction }) => {
             {diff.map((change) => (
               <div key={change.field} className="text-xs">
                 <p className="font-medium capitalize" style={{ color: 'var(--color-text-primary)' }}>{humanize(change.field)}</p>
-                <p style={{ color: 'var(--color-text-secondary)' }}>
-                  {formatValue(change.before)} -&gt; {formatValue(change.after)}
-                </p>
+                {isLongText(change) ? (
+                  <RenderDiff before={change.before} after={change.after} />
+                ) : (
+                  <p style={{ color: 'var(--color-text-secondary)' }}>
+                    {formatValue(change.before)} -&gt; {formatValue(change.after)}
+                  </p>
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {duplicateCandidates.length > 0 && (
+      {duplicateCandidates.length > 0 && !mergingCandidateId && (
         <div className="mt-2.5 rounded-xl border p-2.5 text-xs" style={{ borderColor: 'rgba(245, 158, 11, 0.35)', backgroundColor: 'rgba(245, 158, 11, 0.08)', color: 'var(--color-text-secondary)' }}>
           <p className="font-medium" style={{ color: 'var(--color-text-primary)' }}>Possible duplicate</p>
           <p className="mt-1">I found existing work that looks like this draft.</p>
@@ -974,12 +1200,169 @@ const AIActionCard = ({ proposal, onAction }) => {
             <ActionButton onClick={() => onAction({ type: 'create-anyway' })} disabled={isBusy} variant="primary">
               Create anyway
             </ActionButton>
+            {duplicateCandidates.map((candidate) => (
+              <ActionButton
+                key={`merge-${candidate.id}`}
+                onClick={() => {
+                  setMergingCandidateId(candidate.id);
+                  setMergeFields({
+                    title: false,
+                    description: 'append',
+                    dueDate: draft.dueDate ? true : false,
+                    priority: draft.priority !== candidate.priority,
+                    status: false
+                  });
+                }}
+                disabled={isBusy}
+              >
+                Merge into "{candidate.title.slice(0, 15)}..."
+              </ActionButton>
+            ))}
             <ActionButton onClick={() => onAction('reject')} disabled={isBusy}>
               Cancel
             </ActionButton>
           </div>
         </div>
       )}
+
+      {duplicateCandidates.length > 0 && mergingCandidateId && (() => {
+        const candidate = duplicateCandidates.find(c => c.id === mergingCandidateId);
+        if (!candidate) return null;
+        return (
+          <div className="mt-2.5 rounded-xl border p-3 text-xs space-y-3" style={{ borderColor: 'rgba(245, 158, 11, 0.45)', backgroundColor: 'var(--color-bg-tertiary)' }}>
+            <p className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>
+              Merge properties into existing task
+            </p>
+            <p style={{ color: 'var(--color-text-secondary)' }}>
+              Choose which draft properties to overwrite or append to task #{candidate.id}.
+            </p>
+
+            <div className="space-y-2.5 border-y py-2.5" style={{ borderColor: 'var(--color-border-default)' }}>
+              <div className="grid grid-cols-[80px_1fr_1fr] gap-2 items-center">
+                <span className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>Title</span>
+                <div className="bg-neutral-500/10 p-1.5 rounded truncate" title={candidate.title}>
+                  {candidate.title}
+                </div>
+                <label className="flex items-center gap-1.5 cursor-pointer min-w-0">
+                  <input
+                    type="checkbox"
+                    checked={mergeFields.title}
+                    onChange={(e) => setMergeFields(prev => ({ ...prev, title: e.target.checked }))}
+                    className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                  />
+                  <span className="truncate font-medium text-indigo-500" title={draft.title}>Overwrite: {draft.title}</span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-[80px_1fr_1fr] gap-2 items-start">
+                <span className="font-medium mt-1" style={{ color: 'var(--color-text-secondary)' }}>Description</span>
+                <div className="bg-neutral-500/10 p-1.5 rounded max-h-16 overflow-y-auto whitespace-pre-wrap">
+                  {candidate.description || '(none)'}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="merge-desc"
+                      checked={mergeFields.description === 'keep'}
+                      onChange={() => setMergeFields(prev => ({ ...prev, description: 'keep' }))}
+                      className="text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                    />
+                    <span>Keep existing</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="merge-desc"
+                      checked={mergeFields.description === 'overwrite'}
+                      onChange={() => setMergeFields(prev => ({ ...prev, description: 'overwrite' }))}
+                      className="text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                    />
+                    <span>Overwrite</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="merge-desc"
+                      checked={mergeFields.description === 'append'}
+                      onChange={() => setMergeFields(prev => ({ ...prev, description: 'append' }))}
+                      className="text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                    />
+                    <span>Append draft</span>
+                  </label>
+                </div>
+              </div>
+
+              {draft.dueDate && (
+                <div className="grid grid-cols-[80px_1fr_1fr] gap-2 items-center">
+                  <span className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>Due Date</span>
+                  <div className="bg-neutral-500/10 p-1.5 rounded truncate">
+                    {candidate.dueDate ? formatValue(candidate.dueDate) : '(none)'}
+                  </div>
+                  <label className="flex items-center gap-1.5 cursor-pointer min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={mergeFields.dueDate}
+                      onChange={(e) => setMergeFields(prev => ({ ...prev, dueDate: e.target.checked }))}
+                      className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                    />
+                    <span className="truncate font-medium text-indigo-500">Overwrite: {formatValue(draft.dueDate)}</span>
+                  </label>
+                </div>
+              )}
+
+              <div className="grid grid-cols-[80px_1fr_1fr] gap-2 items-center">
+                <span className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>Priority</span>
+                <div className="bg-neutral-500/10 p-1.5 rounded truncate">
+                  {candidate.priority}
+                </div>
+                <label className="flex items-center gap-1.5 cursor-pointer min-w-0">
+                  <input
+                    type="checkbox"
+                    checked={mergeFields.priority}
+                    onChange={(e) => setMergeFields(prev => ({ ...prev, priority: e.target.checked }))}
+                    className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                  />
+                  <span className="font-medium text-indigo-500">Overwrite: {draft.priority}</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <ActionButton
+                onClick={() => {
+                  const nextInput = {
+                    taskId: candidate.id,
+                    taskTitle: candidate.title,
+                  };
+                  if (mergeFields.title) nextInput.newTitle = draft.title;
+                  if (mergeFields.description === 'overwrite') {
+                    nextInput.description = draft.description;
+                  } else if (mergeFields.description === 'append') {
+                    nextInput.description = [candidate.description, draft.description].filter(Boolean).join('\n\n');
+                  }
+                  if (mergeFields.dueDate) nextInput.dueDate = draft.dueDate;
+                  if (mergeFields.priority) nextInput.priority = draft.priority;
+                  
+                  onAction({
+                    type: 'update-draft',
+                    actionType: 'update_task',
+                    input: nextInput,
+                    sourceText: `Merge duplicate into task #${candidate.id}`
+                  });
+                  setMergingCandidateId(null);
+                }}
+                variant="primary"
+              >
+                Confirm Merge
+              </ActionButton>
+              <ActionButton onClick={() => setMergingCandidateId(null)}>
+                Cancel
+              </ActionButton>
+            </div>
+          </div>
+        );
+      })()}
 
       {Array.isArray(proposal.candidates) && proposal.candidates.length > 0 && (
         <div className="mt-3 rounded-xl border p-3 text-xs" style={{ borderColor: 'rgba(245, 158, 11, 0.35)', backgroundColor: 'rgba(245, 158, 11, 0.08)', color: 'var(--color-text-secondary)' }}>

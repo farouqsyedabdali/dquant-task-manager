@@ -264,14 +264,151 @@ function sanitizeChatHistory(raw) {
   return out.slice(-48);
 }
 
+const AI_TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'create_task',
+      description: 'Create a new standalone task, reminder, or draft todo item.',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: 'The title/name of the task' },
+          description: { type: 'string', description: 'A detailed description' },
+          priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'], description: 'Urgency of the task' },
+          dueDate: { type: 'string', description: 'Due date in YYYY-MM-DD or YYYY-MM-DDTHH:mm format' },
+          assignee: { type: 'string', description: 'Name of the user assigned to this task' }
+        },
+        required: ['title']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_task',
+      description: 'Update/modify fields of an existing task.',
+      parameters: {
+        type: 'object',
+        properties: {
+          taskId: { type: 'integer', description: 'The database ID of the task to update (if known)' },
+          taskTitle: { type: 'string', description: 'Title of the task to update (useful for searching task if ID is unknown)' },
+          newTitle: { type: 'string', description: 'A new title to rename the task to' },
+          status: { type: 'string', enum: ['TODO', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED'] },
+          priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] },
+          dueDate: { type: 'string', description: 'Due date in YYYY-MM-DD or YYYY-MM-DDTHH:mm format' },
+          description: { type: 'string', description: 'New task description' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'add_subtask',
+      description: 'Add a child subtask under an existing parent task.',
+      parameters: {
+        type: 'object',
+        properties: {
+          parentTaskId: { type: 'integer', description: 'The database ID of the parent task' },
+          parentTaskTitle: { type: 'string', description: 'Title of the parent task (if ID is unknown)' },
+          title: { type: 'string', description: 'Title of the subtask' },
+          description: { type: 'string', description: 'Subtask description' },
+          priority: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] },
+          dueDate: { type: 'string', description: 'Due date in YYYY-MM-DD or YYYY-MM-DDTHH:mm format' }
+        },
+        required: ['title']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_project',
+      description: 'Create a new project container for grouping multiple tasks.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Name of the project' },
+          description: { type: 'string', description: 'Description of the project' },
+          dueDate: { type: 'string', description: 'Project deadline in YYYY-MM-DD' }
+        },
+        required: ['name']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_project',
+      description: 'Update the fields/status of an existing project.',
+      parameters: {
+        type: 'object',
+        properties: {
+          projectId: { type: 'integer', description: 'The database ID of the project' },
+          projectName: { type: 'string', description: 'The name of the project (if ID is unknown)' },
+          name: { type: 'string', description: 'A new name for the project' },
+          description: { type: 'string', description: 'New project description' },
+          status: { type: 'string', enum: ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'] },
+          dueDate: { type: 'string', description: 'New project deadline' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'add_comment',
+      description: 'Add a comment/update to an existing task.',
+      parameters: {
+        type: 'object',
+        properties: {
+          taskId: { type: 'integer', description: 'The database ID of the task' },
+          title: { type: 'string', description: 'The title of the task (if ID is unknown)' },
+          content: { type: 'string', description: 'The text content of the comment' }
+        },
+        required: ['content']
+      }
+    }
+  }
+];
+
 /** Shared DB + system prompt for assistant chat (non-stream and SSE). */
-async function buildAssistantChatContext(req, rawHistory) {
+async function buildAssistantChatContext(req, rawHistory, message = '') {
   const history = sanitizeChatHistory(rawHistory);
   const userId = req.user.id;
   const companyId = req.user.companyId;
   const userName = req.user.name;
   const userRole = req.user.role;
-  const userTasks = await prisma.task.findMany({
+
+  // On-demand keyword text search (RAG) prior to sending prompt when references detected
+  const stopwords = new Set(['create', 'update', 'delete', 'add', 'comment', 'task', 'project', 'subtask', 'the', 'a', 'an', 'is', 'of', 'to', 'and', 'for', 'with', 'on', 'in', 'at', 'by', 'from', 'about', 'me', 'you', 'my', 'your', 'please', 'can', 'should', 'need']);
+  const keywords = String(message || '')
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !stopwords.has(w));
+
+  let matchedTasks = [];
+  if (keywords.length > 0) {
+    matchedTasks = await prisma.task.findMany({
+      where: {
+        companyId,
+        status: { in: ['TODO', 'IN_PROGRESS'] },
+        OR: [
+          ...keywords.map(kw => ({ title: { contains: kw, mode: 'insensitive' } })),
+          ...keywords.map(kw => ({ description: { contains: kw, mode: 'insensitive' } }))
+        ]
+      },
+      include: {
+        assignee: { select: { name: true } },
+        assigner: { select: { name: true } },
+      },
+      take: 8
+    });
+  }
+
+  const recentTasks = await prisma.task.findMany({
     where: {
       companyId,
       status: { in: ['TODO', 'IN_PROGRESS'] },
@@ -282,8 +419,19 @@ async function buildAssistantChatContext(req, rawHistory) {
       assigner: { select: { name: true } },
     },
     orderBy: { updatedAt: 'desc' },
-    take: 10,
+    take: 8,
   });
+
+  const mergedTasksMap = new Map();
+  for (const t of matchedTasks) {
+    mergedTasksMap.set(t.id, t);
+  }
+  for (const t of recentTasks) {
+    if (mergedTasksMap.size >= 15) break;
+    mergedTasksMap.set(t.id, t);
+  }
+  const userTasks = Array.from(mergedTasksMap.values());
+
   const systemPrompt = buildChatSystemPrompt(
     userName,
     userRole,
@@ -538,8 +686,30 @@ function stripJsonFromText(text) {
   return cleaned.replace(/\n{3,}/g, '\n\n').trim();
 }
 
-async function finalizeAiChatText(aiText, { req, userId, companyId, userTasks, sourceText }) {
-  const commands = extractJsonCommands(aiText);
+async function finalizeAiChatText(aiText, { req, userId, companyId, userTasks, sourceText, toolCalls }) {
+  const commands = [];
+  if (toolCalls && toolCalls.length > 0) {
+    for (const tc of toolCalls) {
+      if (tc && tc.function) {
+        try {
+          const args = JSON.parse(tc.function.arguments || '{}');
+          commands.push({
+            action: tc.function.name,
+            ...args
+          });
+        } catch (e) {
+          console.error('Failed to parse tool call arguments:', tc.function.arguments, e);
+        }
+      }
+    }
+  }
+
+  // Fallback to regex string-scraping if no native function calls were successfully parsed
+  if (commands.length === 0) {
+    const textCommands = extractJsonCommands(aiText);
+    commands.push(...textCommands);
+  }
+
   if (commands.length > 0) {
     const textParts = [];
     const proposals = [];
@@ -627,7 +797,8 @@ router.post('/chat',
         ],
         stream: true,
         max_tokens: maxTokens,
-        temperature
+        temperature,
+        tools: AI_TOOLS,
       }, {
         headers: {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -639,6 +810,7 @@ router.post('/chat',
       });
 
       let fullContent = '';
+      let toolCalls = [];
       let buffer = '';
       const decoder = new StringDecoder('utf8');
       openrouterRes.data.on('data', chunk => {
@@ -650,14 +822,37 @@ router.post('/chat',
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') {
-              void handleAIResponse(fullContent.trim()).catch((err) => console.error('handleAIResponse', err));
+              void handleAIResponse(fullContent.trim(), toolCalls).catch((err) => console.error('handleAIResponse', err));
               return;
             }
             try {
               const parsed = JSON.parse(data);
-              if (parsed.choices && parsed.choices[0]?.delta?.content) {
-                const content = parsed.choices[0].delta.content;
-                fullContent += content;
+              if (parsed.choices && parsed.choices[0]) {
+                const delta = parsed.choices[0].delta;
+                if (delta?.content) {
+                  fullContent += delta.content;
+                }
+                if (delta?.tool_calls) {
+                  for (const tc of delta.tool_calls) {
+                    const idx = tc.index;
+                    if (!toolCalls[idx]) {
+                      toolCalls[idx] = {
+                        id: tc.id || '',
+                        type: tc.type || 'function',
+                        function: {
+                          name: tc.function?.name || '',
+                          arguments: ''
+                        }
+                      };
+                    } else {
+                      if (tc.id) toolCalls[idx].id = tc.id;
+                      if (tc.function?.name) toolCalls[idx].function.name = tc.function.name;
+                    }
+                    if (tc.function?.arguments) {
+                      toolCalls[idx].function.arguments += tc.function.arguments;
+                    }
+                  }
+                }
               }
             } catch (e) {
               // Skip malformed JSON
@@ -668,7 +863,7 @@ router.post('/chat',
       openrouterRes.data.on('end', () => {
         buffer += decoder.end();
         if (!responded) {
-          void handleAIResponse(fullContent.trim()).catch((err) => console.error('handleAIResponse', err));
+          void handleAIResponse(fullContent.trim(), toolCalls).catch((err) => console.error('handleAIResponse', err));
         }
       });
       openrouterRes.data.on('error', err => {
@@ -678,7 +873,7 @@ router.post('/chat',
         }
       });
 
-      async function handleAIResponse(aiText) {
+      async function handleAIResponse(aiText, finalToolCalls) {
         if (responded) return;
         responded = true;
         try {
@@ -687,7 +882,8 @@ router.post('/chat',
             userId,
             companyId,
             userTasks,
-            sourceText: message
+            sourceText: message,
+            toolCalls: finalToolCalls
           });
           const payload = { response: result.text || '' };
           if (result.proposals && result.proposals.length > 0) {
@@ -759,6 +955,7 @@ router.post('/chat-stream', validators.aiText('message'), handleValidationErrors
         stream: true,
         max_tokens: maxTokens,
         temperature,
+        tools: AI_TOOLS,
       },
       {
         headers: {
@@ -779,6 +976,7 @@ router.post('/chat-stream', validators.aiText('message'), handleValidationErrors
     });
 
     let fullContent = '';
+    let toolCalls = [];
     let buf = '';
     let streamSettled = false;
     const decoder = new StringDecoder('utf8');
@@ -805,10 +1003,33 @@ router.post('/chat-stream', validators.aiText('message'), handleValidationErrors
             }
             try {
               const parsed = JSON.parse(data);
-              const piece = parsed.choices && parsed.choices[0]?.delta?.content;
-              if (piece) {
-                fullContent += piece;
-                writeSse(res, { type: 'delta', text: piece });
+              if (parsed.choices && parsed.choices[0]) {
+                const delta = parsed.choices[0].delta;
+                if (delta?.content) {
+                  fullContent += delta.content;
+                  writeSse(res, { type: 'delta', text: delta.content });
+                }
+                if (delta?.tool_calls) {
+                  for (const tc of delta.tool_calls) {
+                    const idx = tc.index;
+                    if (!toolCalls[idx]) {
+                      toolCalls[idx] = {
+                        id: tc.id || '',
+                        type: tc.type || 'function',
+                        function: {
+                          name: tc.function?.name || '',
+                          arguments: ''
+                        }
+                      };
+                    } else {
+                      if (tc.id) toolCalls[idx].id = tc.id;
+                      if (tc.function?.name) toolCalls[idx].function.name = tc.function.name;
+                    }
+                    if (tc.function?.arguments) {
+                      toolCalls[idx].function.arguments += tc.function.arguments;
+                    }
+                  }
+                }
               }
             } catch {
               /* malformed or partial line */
@@ -839,6 +1060,7 @@ router.post('/chat-stream', validators.aiText('message'), handleValidationErrors
       companyId,
       userTasks,
       sourceText: message,
+      toolCalls,
     });
     writeSse(res, {
       type: 'done',
